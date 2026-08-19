@@ -1,0 +1,20 @@
+* inrush R=10.4
+.model DBR D(IS=1e-9 N=1.8 RS=0.03)
+VLINE ac 0 SIN(0 170 60 0 0 90)
+RLIM ac a 10.4
+D1 a  dcp DBR
+D2 0  dcp DBR
+D3 dcn 0  DBR
+D4 dcn a  DBR
+RESR dcp c 0.15
+CBULK c dcn 560u IC=0
+RB1 dcp 0 1meg
+RB2 dcn 0 1meg
+RLOAD dcp dcn 120
+.options reltol=0.003 abstol=1e-6 vntol=1e-4
+.tran 5u 30m 0 10u uic
+.control
+run
+wrdata inrush_104.txt i(VLINE)
+.endc
+.end

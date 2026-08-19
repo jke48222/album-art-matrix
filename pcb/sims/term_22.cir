@@ -1,0 +1,22 @@
+* term Rs=22
+VDRV drv 0 PULSE(0 5 2n 1.5n 1.5n 18n 40n)
+RDRV drv b 18
+RS   b   l0 22
+L1 l0 l1 25n
+C1 l1 0 2.5p
+L2 l1 l2 25n
+C2 l2 0 2.5p
+L3 l2 l3 25n
+C3 l3 0 2.5p
+L4 l3 l4 25n
+C4 l4 0 2.5p
+L5 l4 l5 25n
+C5 l5 0 2.5p
+L6 l5 lo 25n
+CL lo 0 18p
+.tran 0.05n 85n
+.control
+run
+wrdata term_22.txt v(lo)
+.endc
+.end

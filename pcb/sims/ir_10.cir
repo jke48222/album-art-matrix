@@ -1,0 +1,19 @@
+* irdrop trunk=1.0 m 14AWG round-trip, 12 A section
+VSRC src 0 5.0
+RT src sec 0.0166
+* three panels, each: fuse+clips 7 mOhm, harness 0.4 m 18AWG round trip
+RF1 sec f1 0.007
+RH1 f1 p1 0.016800000000000002
+IP1 p1 0 4
+RF2 sec f2 0.007
+RH2 f2 p2 0.016800000000000002
+IP2 p2 0 4
+RF3 sec f3 0.007
+RH3 f3 p3 0.016800000000000002
+IP3 p3 0 4
+.dc VSRC 5.0 5.35 0.025
+.control
+run
+wrdata ir_10.txt v(p1)
+.endc
+.end

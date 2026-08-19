@@ -1,0 +1,77 @@
+ref,value,mpn,footprint,note
+C1,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
+C2,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
+C3,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
+C4,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
+C5,100nF,,Capacitor_SMD:C_0603_1608Metric,
+CB11,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CB12,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CB21,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CB22,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CB31,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CB32,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
+CM11,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM12,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM13,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM14,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM21,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM22,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM23,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM24,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM31,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM32,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM33,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+CM34,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
+D1,SMBJ5.0A,SMBJ5.0A,Diode_SMD:D_SMB,
+F1,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 1
+F2,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 2
+F3,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 3
+F4,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 4
+F5,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 5
+F6,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 6
+F7,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 7
+F8,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 8
+F9,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 9
+JP1,PI_PWR_EN,,Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm,close = Pi from VP1
+JP_E1,E_PIN8_or_PIN4,,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm,E-line select
+JP_E2,E_PIN8_or_PIN4,,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm,E-line select
+JP_E3,E_PIN8_or_PIN4,,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm,E-line select
+J_HUB1,HUB75_IDC_2x8,3M 30316-6002HB,Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical,chain 1 out
+J_HUB2,HUB75_IDC_2x8,3M 30316-6002HB,Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical,chain 2 out
+J_HUB3,HUB75_IDC_2x8,3M 30316-6002HB,Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical,chain 3 out
+J_PI,PI5_GPIO_2x20,generic 2x20 socket,Connector_PinSocket_2.54mm:PinSocket_2x20_P2.54mm_Vertical,
+J_PNL1,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 1 5V
+J_PNL2,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 2 5V
+J_PNL3,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 3 5V
+J_PNL4,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 4 5V
+J_PNL5,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 5 5V
+J_PNL6,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 6 5V
+J_PNL7,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 7 5V
+J_PNL8,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 8 5V
+J_PNL9,PANEL_5V_OUT,,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",panel 9 5V
+J_QT1,STEMMAQT_I2C0,SM04B-SRSS-TB,Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal,
+J_QT2,STEMMAQT_I2C0,SM04B-SRSS-TB,Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal,
+LED1,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
+LED2,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
+LED3,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
+PF1,POLYFUSE_5A,MF-R500,Fuse:Fuse_Bourns_MF-R400,
+RL1,1k,,Resistor_SMD:R_0805_2012Metric,
+RL2,1k,,Resistor_SMD:R_0805_2012Metric,
+RL3,1k,,Resistor_SMD:R_0805_2012Metric,
+RN1,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN2,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN3,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN4,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN5,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN6,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RN7,33Rx4,YC164-JR-0733RL,Resistor_SMD:R_Array_Convex_4x0603,
+RP1,10k,,Resistor_SMD:R_0603_1608Metric,I2C0 pullup
+RP2,10k,,Resistor_SMD:R_0603_1608Metric,I2C0 pullup
+TB1,TRUNK_IN_12A,MKDS 3/2-7.62 class,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",section 1 5V in
+TB2,TRUNK_IN_12A,MKDS 3/2-7.62 class,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",section 2 5V in
+TB3,TRUNK_IN_12A,MKDS 3/2-7.62 class,"TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal",section 3 5V in
+U1,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
+U2,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
+U3,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
+U4,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
+U5,VEML7700,VEML7700-TT,OptoDevice:Vishay_VEML7700,ambient light

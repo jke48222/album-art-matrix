@@ -1,0 +1,14 @@
+[Unit]
+Description=Album-Art Matrix brain (now-playing -> art pipeline -> renderer)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/album-art-matrix
+ExecStart=/home/pi/album-art-matrix/.venv/bin/python -m brain.main --config config.toml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

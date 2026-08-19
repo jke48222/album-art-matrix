@@ -1,0 +1,42 @@
+# Copy to config.toml and adjust. Nothing to sign up for: the Apple Music
+# adapter reads the Music app plus the MusicKit helper already configured in
+# ~/.config/widgetsuite/ (the same stack the Übersicht widgets use).
+
+[panel]
+width = 64      # S1: one 64x64 P2.5 panel. Later: 128 (4 panels) / 192 (9).
+height = 64
+
+[whitebalance]
+# Applied in LINEAR light before re-encode. HUB75 primaries are green/blue-
+# biased; these starting gains are the research's typical values — a GUESS.
+# Measure with the Pico 2 W + TCS34725 (scripts/WB-PROCEDURE.md) and update.
+# Skipping this step is why almost all LED-matrix art looks cyan.
+r = 1.00
+g = 0.75
+b = 0.55
+
+[pipeline]
+unsharp_radius = 1.0
+unsharp_percent = 60    # light unsharp after Lanczos; 0 disables
+
+[nowplaying]
+adapters = ["applemusic"]   # priority order; add "spotify" to resurrect it
+poll_seconds = 5.0
+
+[applemusic]
+# "" = brain runs on this Mac and reads Music/MusicKit directly.
+# On the Pi, point at the reporter running on the Mac:
+#   endpoint = "http://Jalens-MacBook-Pro.local:8787"
+endpoint = ""
+
+[spotify]
+# Dormant adapter, kept for the day it's wanted: create an app at
+# developer.spotify.com/dashboard with redirect URI
+# http://127.0.0.1:8888/callback and paste the Client ID here.
+client_id = ""
+redirect_port = 8888
+
+[sink]
+type = "preview"                 # "preview" on the Mac, "pi" on the Pi
+fifo = "/tmp/album-frame.fifo"   # must match pi/run_renderer.sh
+preview_dir = "preview_out"

@@ -1,0 +1,8 @@
+.venv/
+__pycache__/
+*.pyc
+preview_out/
+config.toml
+renderer/art_display
+.DS_Store
+._*

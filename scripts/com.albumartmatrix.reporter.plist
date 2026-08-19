@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Optional autostart for the now-playing reporter the Pi polls.
+     Install:
+       cp scripts/com.albumartmatrix.reporter.plist ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/com.albumartmatrix.reporter.plist
+     Caveat: launchd-run processes can hit the Automation permission in odd
+     ways. If now-playing goes quiet, run the reporter once from a Terminal
+     tab to (re)grant, or simply keep it in a tmux pane instead. -->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.albumartmatrix.reporter</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/jalenedusei/fun-project/album-art-matrix/scripts/mac_reporter.py</string>
+  </array>
+  <key>RunAtLoad</key><true/>
+  <key>KeepAlive</key><true/>
+  <key>StandardOutPath</key><string>/tmp/albumartmatrix-reporter.log</string>
+  <key>StandardErrorPath</key><string>/tmp/albumartmatrix-reporter.log</string>
+</dict>
+</plist>
