@@ -17,6 +17,29 @@ lacks. Prices checked 2026-08-19 where noted.
 | Wire strippers, precision screwdrivers, heat-shrink kit, F-F jumper wires | search each; Inland versions exist | ~$25 |
 | **Shelf-luck checks** (buy on sight, skips the Adafruit order): Adafruit Triple LED Matrix Bonnet #6358, TCS34725 breakout, any 64×64 P2.5/P3 HUB75 panel | https://www.microcenter.com/search/search_results.aspx?Ntt=adafruit+triple+led+matrix+bonnet · ?Ntt=tcs34725 · ?Ntt=hub75 | — |
 
+## 1a · Marietta shelf check — 2026-08-23 (store 041 site data)
+"Where" is the store's own Located-In label from each product page; stock counts same source.
+| Item | Where in store | Stock | Verdict |
+|---|---|---|---|
+| Pi 5 — 1GB, $42.99 | Maker & STEM | 10 | **No 2 GB or 4 GB bare boards listed at Marietta** (only 1/8/16 GB). Buy the 1 GB. |
+| MC 32 GB microSD, $9.99 | Checkout racks | 25+ | In-store only item; it's by the registers |
+| RPi 27 W USB-C PSU (white) | Maker & STEM | 4 | |
+| Official Active Cooler | **not stocked standalone** | — | Only bundles: CanaKit case w/ cooler $19.99 (case lid conflicts with the Triple Bonnet), 52Pi PoE hat $37.99. Add the ~$5 cooler to the Adafruit order instead. |
+| IEC power cord — Micro Connectors NEMA 5-15P→C13 | **Aisle 24** | 16 | |
+| Soldering station — Inland not carried | Maker & STEM | Aoyue 60 W $39.99 ×3 · YIHUA 939D $34.99 · Hakko FX888DX $129.99 ×3 | Aoyue or YIHUA fills the budget slot |
+| 63/37 solder — MG Chem Sn63/Pb37 0.032" 18 g, $5.99 | Maker & STEM | **1 left** | Full 0.032" spool $39.99 also ×1 |
+| Multimeter — Inland not carried | Maker & STEM (budget) / Aisle 25 (Fluke) | Eclipse MT-1210 $20.49 ×2 · Klein MM325 $34.99 ×3 | Either works for DC-side checks |
+| Wire stripper — Eclipse AWG 20-10 | **Aisle 4** | 2 | Range covers the 14 AWG power drops |
+| Heat-shrink 120 pc set | Maker & STEM | 4 | |
+| Inland 40-pin F-F jumper wires, 30 cm | Maker & STEM | **1 left** | |
+| Inland 25 pc precision screwdriver set, $14.99 | Maker & STEM | — | |
+
+**Shelf-luck verdicts (checked, all ✗):** Triple Bonnet #6358 ✗ · TCS34725 ✗ ·
+VEML7700 ✗ · 64×64 HUB75 ✗. Closest panel on shelf: Adafruit **64×32** P2.5
+$44.99 ×1 (Maker & STEM) — usable for S1 bench first-light (1/16 scan, config
+differs from the 64×64 wall panels). → Adafruit order confirmed needed:
+#6358 + riser + TCS34725 + Active Cooler.
+
 ## 2 · AliExpress — one bulk order (all stages, 2-4 week freight)
 | Item | Search | Price |
 |---|---|---|
