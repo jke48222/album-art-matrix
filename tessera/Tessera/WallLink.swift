@@ -80,17 +80,24 @@ final class WallSession {
     }()
 
     /// The frame is what changes; the settings are not. Poll them at
-    /// different rates so the screen can answer the wall rather than a clock.
+    /// different rates so the screen can answer the wall rather than a clock,
+    /// and follow the frame harder when the wall is actually animating.
+    ///
+    /// The wall runs its animated modes at ~115 fps. The phone cannot and
+    /// should not mirror that: each new frame costs a 4,096-emitter raster.
+    /// 8 fps is enough for a spinning disc to read as spinning, and a static
+    /// sleeve does not need even that.
     func start() {
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
             var tick = 0
             while !Task.isCancelled {
                 guard let self else { return }
-                if tick % 8 == 0 { await self.pollState() }   // every 2s
-                await self.pullFrame()                        // every 250ms
+                let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
+                if tick % 16 == 0 { await self.pollState() }          // 2s
+                if animating || tick % 2 == 0 { await self.pullFrame() }
                 tick &+= 1
-                try? await Task.sleep(for: .milliseconds(250))
+                try? await Task.sleep(for: .milliseconds(125))
             }
         }
     }

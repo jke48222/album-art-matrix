@@ -105,7 +105,14 @@ def main():
     poll_s = float(cfg.get("nowplaying", {}).get("poll_seconds", 5.0))
 
     anim = cfg.get("animation", {})
-    anim_fps = float(anim.get("fps", 20))
+    anim_fps = float(anim.get("fps", 120))
+    # The achieved rate is a measurement, not the target: if the Pi cannot hold
+    # anim_fps this is where you find out, instead of guessing from a video.
+    fps_count, fps_since, fps_last = 0, time.monotonic(), 0.0
+    # Absolute deadline, not "now + budget". Event.wait() overshoots by around
+    # a millisecond, and adding that to a fresh `now` every pass compounds it:
+    # at a 120 fps target that alone cost ~15% of the frames.
+    deadline = time.monotonic()
     ctrl = ControlState(seed={
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
@@ -253,8 +260,9 @@ def main():
                         continue
                     f = ticker.frame_at(tick - ticker_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    if ctrl.dirty.wait(max(0.0, 1.0 / anim_fps
-                                           - (time.monotonic() - tick))):
+                    deadline = max(deadline + 1.0 / anim_fps, tick)
+                    gap = deadline - time.monotonic()
+                    if gap > 0 and ctrl.dirty.wait(gap):
                         ctrl.dirty.clear()
                     continue
 
@@ -296,8 +304,15 @@ def main():
                     tick = time.monotonic()
                     f = ambient.frame_at(tick - amb_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    if ctrl.dirty.wait(max(0.0, 1.0 / anim_fps
-                                           - (time.monotonic() - tick))):
+                    fps_count += 1
+                    if tick - fps_since >= 5.0:
+                        fps_last = fps_count / (tick - fps_since)
+                        print(f"[main] {fps_last:.0f} fps sustained "
+                              f"(target {anim_fps:.0f})")
+                        fps_count, fps_since = 0, tick
+                    deadline = max(deadline + 1.0 / anim_fps, tick)
+                    gap = deadline - time.monotonic()
+                    if gap > 0 and ctrl.dirty.wait(gap):
                         ctrl.dirty.clear()
                     continue
 
@@ -307,8 +322,15 @@ def main():
                     tick = time.monotonic()
                     f = animator.frame_at(tick - t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    if ctrl.dirty.wait(max(0.0, 1.0 / anim_fps
-                                           - (time.monotonic() - tick))):
+                    fps_count += 1
+                    if tick - fps_since >= 5.0:
+                        fps_last = fps_count / (tick - fps_since)
+                        print(f"[main] {fps_last:.0f} fps sustained "
+                              f"(target {anim_fps:.0f})")
+                        fps_count, fps_since = 0, tick
+                    deadline = max(deadline + 1.0 / anim_fps, tick)
+                    gap = deadline - time.monotonic()
+                    if gap > 0 and ctrl.dirty.wait(gap):
                         ctrl.dirty.clear()
                     continue
 

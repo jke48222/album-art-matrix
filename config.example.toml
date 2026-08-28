@@ -44,7 +44,21 @@ preview_dir = "preview_out"
 [animation]
 mode = "static"   # "cd" = spinning sleeve (S5 preview); BPM beat-lock lands at S4
 rpm = 7.5         # one revolution per four bars at 120 BPM
-fps = 20
+
+# Animation frame rate. NOT the panel's refresh rate: the library's 9600 Hz is
+# the BCM bit-plane refresh, which builds colour depth by rescanning a row, and
+# is a different number from how often new content appears.
+#
+# 120 is chosen from measurement, not taste. `scripts/bench_frames.py` puts the
+# slowest animated mode (the spinning disc, the only one doing real work) at
+# ~540 fps on an M-series Mac. A Pi 5 running the same NumPy is slower, and the
+# renderer and white balance share that CPU, so this leaves roughly 4x headroom
+# even if the Pi is 4x slower. The brain logs the rate it actually achieves, so
+# if the Pi cannot hold 120 you will see it say so rather than silently drop.
+#
+# Raising this further is unlikely to be visible: the panel's own frame ceiling
+# has never been measured, and nothing in the eye needs more than this.
+fps = 120
 
 [control]
 port = 8788     # wall control API (iOS companion posts here)
