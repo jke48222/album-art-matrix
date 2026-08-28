@@ -209,18 +209,40 @@ struct WallHero: View {
     @State private var holdWork: DispatchWorkItem? = nil
     @State private var moved = false
 
+    // Arrival: a new sleeve does not cross-dissolve onto a wall of LEDs, it
+    // repaints. The outgoing frame is extinguished column by column, then the
+    // incoming one is lit in the same order.
+    @State private var outgoing: UIImage? = nil
+    @State private var scan: Double = 1          // 1 = settled
+    @State private var scanPhase: ScanPhase = .idle
+
+    private enum ScanPhase { case idle, blanking, lighting }
+
     private var duty: Double { dragging ?? confirmed }
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .bottomLeading) {
                 Color.black
+
+                // outgoing frame, being extinguished left to right
+                if scanPhase == .blanking, let old = outgoing {
+                    Image(uiImage: old)
+                        .interpolation(.high)
+                        .resizable()
+                        .mask(alignment: .trailing) {
+                            edge(reveal: 1 - scan, from: .trailing)
+                        }
+                }
+
                 if let panel = reading.panel {
                     Image(uiImage: panel)
                         .interpolation(.high)
                         .resizable()
-                        .id(reading.key)
-                        .transition(.opacity)
+                        .mask(alignment: .leading) {
+                            scanPhase == .lighting ? edge(reveal: scan, from: .leading) : edge(reveal: 1, from: .leading)
+                        }
+                        .opacity(scanPhase == .blanking ? 0 : 1)
                 }
 
                 // The wall's last confirmed level, drawn on the object itself.
@@ -277,8 +299,9 @@ struct WallHero: View {
                         dragging = nil
                     }
             )
-            .animation(Motion.scene, value: reading.key)
             .overlay(alignment: .topTrailing) { staleStamp }
+            .onChange(of: reading.key) { _, _ in arrive() }
+            .onAppear { outgoing = reading.panel }
             .accessibilityElement()
             .accessibilityLabel("The wall")
             .accessibilityValue("Brightness \(Int(duty * 100)) percent")
@@ -288,6 +311,44 @@ struct WallHero: View {
             }
         }
         .aspectRatio(1, contentMode: .fit)
+    }
+
+    /// A few columns wide, so it reads as emitters going out in order rather
+    /// than a curtain being drawn.
+    private func edge(reveal: Double, from side: HorizontalAlignment) -> some View {
+        GeometryReader { g in
+            let w = g.size.width
+            let soft = w * 0.05
+            let cut = w * reveal
+            Path { p in
+                p.addRect(CGRect(
+                    x: side == .leading ? 0 : w - cut,
+                    y: 0, width: cut, height: g.size.height
+                ))
+            }
+            .fill(.black)
+            .blur(radius: soft * 0.5)
+        }
+    }
+
+    private func arrive() {
+        guard !Motion.reduced else {
+            outgoing = reading.panel
+            return
+        }
+        outgoing = outgoing ?? reading.panel
+        scanPhase = .blanking
+        scan = 0
+        withAnimation(.easeIn(duration: 0.18)) { scan = 1 }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
+            scanPhase = .lighting
+            scan = 0
+            withAnimation(.easeOut(duration: 0.32)) { scan = 1 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+                scanPhase = .idle
+                outgoing = reading.panel
+            }
+        }
     }
 
     private func scheduleHold() {

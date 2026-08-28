@@ -16,6 +16,7 @@ struct WallScreen: View {
     /// Rises when a new sleeve lands and settles back. The room reacts a beat
     /// after the panel does, because light reaches the room second.
     @State private var arrival: Double = 0
+    @State private var showSetup = false
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
@@ -81,6 +82,9 @@ struct WallScreen: View {
             Room(palette: isOff ? [] : reading.palette, light: roomLight, surge: arrival)
         }
         .preferredColorScheme(.dark)
+        .sheet(isPresented: $showSetup) {
+            SettingsSheet(accent: accent).environment(wall)
+        }
         .onAppear { wall.start() }
         .onChange(of: wall.state.title ?? "") { _, new in
             // A new sleeve landing on 4,096 LEDs is an event, not a fade.
@@ -105,7 +109,14 @@ struct WallScreen: View {
                 .kerning(3.0)
                 .foregroundStyle(litInk)
             Spacer()
-            LinkChip(link: wall.link)
+            Button {
+                Taps.detent()
+                showSetup = true
+            } label: {
+                LinkChip(link: wall.link)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Setup. Link is \(wall.link.isLive ? "live" : "not answering").")
         }
         .padding(.top, 4)
     }

@@ -137,6 +137,28 @@ final class WallSession {
         }
     }
 
+    /// Put a flat field on the wall for a panel check, through the brain's
+    /// own /frame endpoint (base64 of 64*64*3 raw RGB, mode becomes "frame").
+    func pushFlat(r: UInt8, g: UInt8, b: UInt8) {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        for i in stride(from: 0, to: px.count, by: 3) {
+            px[i] = r; px[i + 1] = g; px[i + 2] = b
+        }
+        guard let u = url("/frame"),
+              let body = try? JSONSerialization.data(
+                withJSONObject: ["px": Data(px).base64EncodedString()]
+              ) else { return }
+        var req = URLRequest(url: u)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        Task { [http] in
+            if (try? await http.data(for: req)) == nil {
+                await MainActor.run { Taps.error() }
+            }
+        }
+    }
+
     /// POST a partial state patch. Optimistic locally, honest on failure:
     /// the next poll re-syncs whatever the wall actually accepted.
     func send(_ patch: [String: Any]) {
