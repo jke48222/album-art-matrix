@@ -20,6 +20,7 @@ been ordered; no panel has arrived. The section below is exact about what exists
 | Wall control API (`brain/control.py`) | Built, 305 lines. Serves mode, brightness, spin rate, and ambient settings on port 8788. Exercised only against the laptop preview sink. |
 | Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, ambient light effects, clock and ticker over a hand made pixel font. All verified as PNGs, none on an LED. |
 | iOS companion (`ios-companion/`) | Built, 4,330 lines of Swift. Reads the on device now playing state and pushes it to the reporter, and remote controls the wall. Runs on device. **The simulator cannot exercise it**, because MediaPlayer is stubbed there, so it stops at the first run screen. |
+| Web app (`web/`) | Built and runs (TanStack Start + React). The whole pipeline reimplemented in TypeScript — Lanczos-3, Pillow-semantics unsharp, gamma 2.2, WB in linear light — plus a seven-source now-playing chain, an LED wall simulator, history, WB profiles, a wiring calculator, and push-to-wall. Verified live against `scripts/mac_reporter.py`; the brain push matches `brain/control.py`'s contract but has not been fired at the real Pi yet. |
 | Panel intake QA (`scripts/panel_qa.py`) | Test pattern generator and procedure written, 271 reference frames rendered in `qa_preview/`. `qa/QA-SHEET.md` is an **empty template**. No panel has been through it. |
 | Now playing, Apple Music (`brain/nowplaying/applemusic.py`) | Built, 216 lines. |
 | Now playing, Spotify (`brain/nowplaying/spotify.py`) | Built, 223 lines, dormant behind a config flag. |
@@ -410,6 +411,11 @@ ios-companion/          AlbumWall, 4,330 lines of Swift
 ├── AlbumWallWidgets/   Home screen widgets and the Live Activity surface
 └── design/             Screen designs the app was built from
 
+web/                    The control plane in a browser: pipeline (same math,
+                        TypeScript), source chain, wall simulator, history,
+                        WB profiles, power model, push to the Pi brain.
+                        `cd web && npm install && npm run dev`. See web/README.md.
+
 pcb/
 ├── DESIGN.md           The backplane's rationale, signal design, power design, costs
 ├── circuit.py          The circuit as data. Emits the two files below.
@@ -459,6 +465,10 @@ Stated plainly, because the value of everything above depends on this list being
   recorded, so there is no history of what has played and nothing to replay.
 - **The remote control app is unproven against a wall.** It talks to `brain/control.py`, and that
   API has only ever driven a PNG on a laptop.
+- **The web app's push-to-wall has not touched the Pi.** Its "Pi brain" push format matches
+  `brain/control.py`'s `/frame` contract byte for byte, and the CORS headers that let a browser call
+  that API are committed here, but the Pi was offline when this landed, so the loop web → brain →
+  panel has never been closed. The Apple Music bridge path, by contrast, was verified live.
 - **The white balance gains are unmeasured**, and labelled as such in the config.
 - **No automated tests.** `scripts/smoke_test.py` is a visual check that writes PNGs for a human to
   look at, plus one assertion on frame size. There is no test runner and no CI.

@@ -1,0 +1,388 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Album Art Matrix — "Dark Gallery".
+ *
+ * A room with the lights off and one object in it that emits light.
+ * The wall is the only source of colour; everything it touches is lit by it
+ * (the --amb-* variables are sampled from the actual framebuffer at runtime).
+ * The chrome is museum placards: warm ink on near-black, hairline rules,
+ * Archivo for names, IBM Plex Mono for machine values. Flat everywhere.
+ * Signal red is reserved for primary actions and genuine warnings.
+ */
+
+@font-face {
+  font-family: "Archivo Var";
+  src: url("/fonts/Archivo-Variable.ttf") format("truetype-variations");
+  font-weight: 100 900;
+  font-stretch: 62.5% 125%;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("/fonts/IBMPlexMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Plex Mono";
+  src: url("/fonts/IBMPlexMono-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-glow: var(--primary-glow);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --font-sans: var(--font-display);
+  --font-mono: var(--font-mono);
+}
+
+:root {
+  --radius: 0.5rem;
+  --font-display: "Archivo Var", "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Plex Mono", "IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+
+  /* The room. Warm near-black — a gallery at night, not a blue OLED void. */
+  --background: oklch(0.155 0.006 75);
+  --foreground: oklch(0.925 0.018 85);
+  --surface: oklch(0.195 0.008 75);
+  --surface-sunk: oklch(0.13 0.005 75);
+
+  --card: oklch(0.185 0.007 75);
+  --card-foreground: oklch(0.925 0.018 85);
+  --popover: oklch(0.205 0.008 75);
+  --popover-foreground: oklch(0.925 0.018 85);
+
+  /* Signal red — primary actions and genuine alerts only. */
+  --primary: oklch(0.585 0.192 32);
+  --primary-foreground: oklch(0.975 0.012 85);
+  --primary-glow: oklch(0.585 0.192 32);
+  --secondary: oklch(0.24 0.009 75);
+  --secondary-foreground: oklch(0.925 0.018 85);
+  --muted: oklch(0.225 0.008 75);
+  --muted-foreground: oklch(0.66 0.02 80);
+  --accent: oklch(0.26 0.01 75);
+  --accent-foreground: oklch(0.925 0.018 85);
+
+  --success: oklch(0.68 0.12 150);
+  --warning: oklch(0.75 0.13 82);
+  --destructive: oklch(0.585 0.192 32);
+  --destructive-foreground: oklch(0.975 0.012 85);
+
+  --border: oklch(0.95 0.02 85 / 11%);
+  --input: oklch(0.95 0.02 85 / 15%);
+  --ring: oklch(0.585 0.192 32);
+
+  /* Charts default to the art accent; fixed hues only where series must differ. */
+  --chart-1: var(--art);
+  --chart-2: oklch(0.68 0.12 150);
+  --chart-3: oklch(0.75 0.13 82);
+  --chart-4: oklch(0.6 0.1 260);
+  --chart-5: oklch(0.66 0.02 80);
+
+  --sidebar: oklch(0.185 0.007 75);
+  --sidebar-foreground: oklch(0.925 0.018 85);
+  --sidebar-primary: oklch(0.585 0.192 32);
+  --sidebar-primary-foreground: oklch(0.975 0.012 85);
+  --sidebar-accent: oklch(0.24 0.009 75);
+  --sidebar-accent-foreground: oklch(0.925 0.018 85);
+  --sidebar-border: oklch(0.95 0.02 85 / 11%);
+  --sidebar-ring: oklch(0.585 0.192 32);
+
+  /* Lit by the wall — overwritten at runtime from the actual framebuffer. */
+  --amb-1: rgb(64 52 38);
+  --amb-2: rgb(38 32 46);
+  /* Art accent: the frame's dominant colour, lifted to a usable UI tint. */
+  --art: oklch(0.72 0.09 75);
+  /* 0 when the wall is dark, 1 when it is lit — gates all spill. */
+  --wall-lit: 0;
+
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-snap: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    background: var(--background);
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-display);
+    font-optical-sizing: auto;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: color-mix(in oklab, var(--art) 40%, transparent);
+  }
+  canvas {
+    image-rendering: pixelated;
+  }
+}
+
+/* ---------- type utilities ---------- */
+
+/* Museum placard microlabel: mono, tracked, uppercase. */
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* Machine value: mono, tabular. */
+@utility num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+/* Display face: Archivo pushed wide and heavy, like the iOS app's masthead. */
+@utility display-wide {
+  font-family: var(--font-display);
+  font-variation-settings:
+    "wdth" 125,
+    "wght" 800;
+  letter-spacing: -0.01em;
+}
+
+@utility display-mid {
+  font-family: var(--font-display);
+  font-variation-settings:
+    "wdth" 112,
+    "wght" 700;
+  letter-spacing: -0.01em;
+}
+
+/* ---------- surfaces ---------- */
+
+/* A placard: flat panel, hairline border, no shadow, no blur. */
+@utility placard {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@utility placard-sunk {
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@utility hairline-t {
+  border-top: 1px solid var(--border);
+}
+@utility hairline-b {
+  border-bottom: 1px solid var(--border);
+}
+
+/* ---------- the room ---------- */
+
+/*
+ * Light spilling off the wall. Two soft pools from the frame's own colours,
+ * gated by --wall-lit so a black wall leaves the room genuinely dark.
+ */
+@utility roomlight {
+  background:
+    radial-gradient(
+      42% 34% at 50% 26%,
+      color-mix(in oklab, var(--amb-1) 26%, transparent),
+      transparent 70%
+    ),
+    radial-gradient(
+      60% 44% at 50% 30%,
+      color-mix(in oklab, var(--amb-2) 14%, transparent),
+      transparent 72%
+    );
+  opacity: calc(var(--wall-lit) * 1);
+  transition: opacity 1.8s ease;
+}
+
+/* The floor catching the wall's glow beneath the panel. */
+@utility floorlight {
+  background: radial-gradient(
+    50% 100% at 50% 0%,
+    color-mix(in oklab, var(--amb-1) 20%, transparent),
+    transparent 78%
+  );
+  opacity: calc(var(--wall-lit) * 0.8);
+  transition: opacity 1.8s ease;
+}
+
+/* ---------- interaction ---------- */
+
+@utility press {
+  transition:
+    transform 160ms var(--ease-snap),
+    opacity 160ms ease;
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+/* Focus ring: hairline, art-tinted. */
+:where(button, a, input, select, [role="slider"], [tabindex]):focus-visible {
+  outline: 1px solid color-mix(in oklab, var(--art) 70%, var(--foreground));
+  outline-offset: 2px;
+}
+
+/* ---------- fader (tick-rail slider) ---------- */
+
+.fader {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 28px;
+  background: transparent;
+  cursor: pointer;
+}
+.fader::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--border);
+}
+.fader::-moz-range-track {
+  height: 2px;
+  background: var(--border);
+}
+.fader::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 4px;
+  height: 18px;
+  margin-top: -8px;
+  border-radius: 1px;
+  background: var(--foreground);
+  border: none;
+  transition: background 160ms ease;
+}
+.fader::-moz-range-thumb {
+  width: 4px;
+  height: 18px;
+  border-radius: 1px;
+  background: var(--foreground);
+  border: none;
+}
+.fader:active::-webkit-slider-thumb {
+  background: var(--art);
+}
+.fader:active::-moz-range-thumb {
+  background: var(--art);
+}
+
+/* ---------- entrances ---------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@utility enter {
+  animation: rise 420ms var(--ease-spring) both;
+}
+@utility enter-1 {
+  animation: rise 420ms var(--ease-spring) both;
+  animation-delay: 50ms;
+}
+@utility enter-2 {
+  animation: rise 420ms var(--ease-spring) both;
+  animation-delay: 100ms;
+}
+@utility enter-3 {
+  animation: rise 420ms var(--ease-spring) both;
+  animation-delay: 150ms;
+}
+
+/* The wall breathing very slowly while lit. Spill only; the panel never moves. */
+@keyframes room-breathe {
+  0%,
+  100% {
+    opacity: calc(var(--wall-lit) * 1);
+  }
+  50% {
+    opacity: calc(var(--wall-lit) * 0.82);
+  }
+}
+@utility breathing {
+  animation: room-breathe 9s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
+}
+@utility pulse-dot {
+  animation: pulse-dot 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

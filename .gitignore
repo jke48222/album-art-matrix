@@ -12,3 +12,10 @@ ios-companion/build/
 ios-companion/build-device/
 *.xcuserdatad/
 *.pbxproj.bak
+
+# web app build output and deps
+web/node_modules/
+web/.output/
+web/.wrangler/
+web/.nitro/
+web/.tanstack/

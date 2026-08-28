@@ -183,8 +183,19 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
+            # The web control plane calls this API from a browser; without
+            # CORS headers the browser refuses to deliver the response.
+            self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(body)
+
+        def do_OPTIONS(self):
+            # Preflight for browser POSTs (application/json).
+            self.send_response(204)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.end_headers()
 
         def _body(self) -> dict | None:
             try:
@@ -207,6 +218,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
                 self.send_header("Content-Length", str(len(px)))
+                self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
                 self.wfile.write(px)
                 return
