@@ -19,3 +19,6 @@ web/.output/
 web/.wrangler/
 web/.nitro/
 web/.tanstack/
+
+# tessera iOS app build output
+tessera/build/
