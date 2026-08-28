@@ -170,3 +170,36 @@ struct MiniGlyphButton: View {
         .accessibilityLabel(label)
     }
 }
+
+/// The mark. One lit tessera in a dark lattice, the same object the icon is
+/// and the same rules the panel is drawn by. It takes the wall's own colour,
+/// so the logo is lit by the art like everything else.
+struct TesseraMark: View {
+    var accent: Color = Ink.tile
+    var lit: Double = 1
+    var side: CGFloat = 18
+
+    var body: some View {
+        Canvas { ctx, size in
+            let grid = 3
+            let cell = size.width / CGFloat(grid)
+            let r = cell * 0.30
+            for gy in 0..<grid {
+                for gx in 0..<grid {
+                    let cx = CGFloat(gx) * cell + cell / 2
+                    let cy = CGFloat(gy) * cell + cell / 2
+                    let dot = Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+                    if gx == 1 && gy == 1 {
+                        ctx.fill(dot, with: .color(accent))
+                    } else {
+                        // neighbours catch a little of the lit tile
+                        ctx.fill(dot, with: .color(accent.opacity(0.14 + 0.16 * lit)))
+                    }
+                }
+            }
+        }
+        .frame(width: side, height: side)
+        .shadow(color: accent.opacity(0.55 * lit), radius: 6)
+        .accessibilityHidden(true)
+    }
+}

@@ -79,12 +79,18 @@ final class WallSession {
         return URLSession(configuration: cfg)
     }()
 
+    /// The frame is what changes; the settings are not. Poll them at
+    /// different rates so the screen can answer the wall rather than a clock.
     func start() {
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
+            var tick = 0
             while !Task.isCancelled {
-                await self?.poll()
-                try? await Task.sleep(for: .seconds(2))
+                guard let self else { return }
+                if tick % 8 == 0 { await self.pollState() }   // every 2s
+                await self.pullFrame()                        // every 250ms
+                tick &+= 1
+                try? await Task.sleep(for: .milliseconds(250))
             }
         }
     }
@@ -96,7 +102,9 @@ final class WallSession {
 
     private func url(_ path: String) -> URL? { URL(string: "http://\(host)\(path)") }
 
-    func poll() async {
+    func poll() async { await pollState() }
+
+    func pollState() async {
         guard let stateURL = url("/state") else { return }
         do {
             let (data, _) = try await http.data(from: stateURL)
@@ -108,7 +116,6 @@ final class WallSession {
             if !wasLive { Taps.found() }   // the lamp switched on
             wasLive = true
             link = .live
-            await pullFrame()
         } catch {
             if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
@@ -124,7 +131,9 @@ final class WallSession {
         if let (data, resp) = try? await http.data(from: frameURL),
            (resp as? HTTPURLResponse)?.statusCode == 200,
            data.count == 64 * 64 * 3 {
-            frame = data
+            // Only publish when the bytes actually changed. Two identical
+            // frames must leave the screen perfectly still.
+            if data != frame { frame = data }
         }
     }
 

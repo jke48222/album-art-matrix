@@ -16,11 +16,17 @@ import UIKit
 
 struct FrameReading {
     let panel: UIImage?
-    let glow: Color
+    /// Up to three hue-distinct colours the art actually contains, most
+    /// present first. This is what lights the room.
+    let palette: [Color]
     let lit: Double          // 0...1 before duty; how much light the art has
     let key: String
 
-    static let dark = FrameReading(panel: nil, glow: Ink.tile, lit: 0, key: "dark")
+    var glow: Color { palette.first ?? Ink.tile }
+    /// A second light, for the far side of the room. Falls back to the first.
+    var glow2: Color { palette.count > 1 ? palette[1] : glow }
+
+    static let dark = FrameReading(panel: nil, palette: [], lit: 0, key: "dark")
 }
 
 enum FrameRenderer {
@@ -50,7 +56,7 @@ enum FrameRenderer {
 
         let reading = FrameReading(
             panel: render(data, lum: lum, duty: duty),
-            glow: dominantChroma(data, lum: lum),
+            palette: palette(data, lum: lum),
             lit: lit,
             key: "\(data.hashValue)"
         )
@@ -59,11 +65,14 @@ enum FrameRenderer {
         return reading
     }
 
-    /// What the room catches: the frame's dominant CHROMA. On a photographic
-    /// sleeve the brightest average is the white highlights, and a wall of
-    /// colour would light the room grey, so near-greys are excluded outright
-    /// and population is weighted by saturation.
-    private static func dominantChroma(_ data: Data, lum: [Float]) -> Color {
+    /// What the room catches: the colours the art actually contains.
+    ///
+    /// On a photographic sleeve the brightest average is the white highlights,
+    /// and a wall of colour would light the room grey, so near-greys are
+    /// excluded outright and population is weighted by saturation. Then the
+    /// top buckets are filtered for hue distance, so a room lit by two lights
+    /// is lit by two different colours rather than one colour twice.
+    private static func palette(_ data: Data, lum: [Float]) -> [Color] {
         var buckets: [Int: (n: Float, r: Float, g: Float, b: Float, sat: Float)] = [:]
         buckets.reserveCapacity(256)
         data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
@@ -80,17 +89,43 @@ enum FrameRenderer {
                 buckets[key] = e
             }
         }
-        var best: (score: Float, r: Float, g: Float, b: Float) = (0, 0, 0, 0)
-        for e in buckets.values {
-            let score = e.n * (0.2 + (e.sat / e.n) * 0.8)
-            if score > best.score { best = (score, e.r / e.n, e.g / e.n, e.b / e.n) }
+
+        let ranked = buckets.values
+            .map { e -> (score: Float, r: Float, g: Float, b: Float) in
+                (e.n * (0.2 + (e.sat / e.n) * 0.8), e.r / e.n, e.g / e.n, e.b / e.n)
+            }
+            .sorted { $0.score > $1.score }
+
+        var out: [Color] = []
+        var hues: [Float] = []
+        for c in ranked {
+            let h = hue(c.r, c.g, c.b)
+            // 40 degrees apart, so the second light is a different colour
+            if hues.contains(where: { abs(angleDelta($0, h)) < 40 }) { continue }
+            hues.append(h)
+            let mx = max(c.r, c.g, c.b, 1)
+            let k = (255 / mx) * 0.92
+            out.append(Color(red: Double(min(255, c.r * k) / 255),
+                             green: Double(min(255, c.g * k) / 255),
+                             blue: Double(min(255, c.b * k) / 255)))
+            if out.count == 3 { break }
         }
-        guard best.score > 0 else { return Ink.tile }
-        let mx = max(best.r, best.g, best.b, 1)
-        let k = (255 / mx) * 0.92
-        return Color(red: Double(min(255, best.r * k) / 255),
-                     green: Double(min(255, best.g * k) / 255),
-                     blue: Double(min(255, best.b * k) / 255))
+        return out
+    }
+
+    private static func hue(_ r: Float, _ g: Float, _ b: Float) -> Float {
+        let mx = max(r, g, b), mn = min(r, g, b), d = mx - mn
+        guard d > 0 else { return 0 }
+        var h: Float
+        if mx == r { h = 60 * ((g - b) / d) }
+        else if mx == g { h = 60 * (2 + (b - r) / d) }
+        else { h = 60 * (4 + (r - g) / d) }
+        return h < 0 ? h + 360 : h
+    }
+
+    private static func angleDelta(_ a: Float, _ b: Float) -> Float {
+        let d = abs(a - b).truncatingRemainder(dividingBy: 360)
+        return d > 180 ? 360 - d : d
     }
 
     private static let cell: CGFloat = 9

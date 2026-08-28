@@ -13,6 +13,9 @@ struct WallScreen: View {
     /// Non-nil only while a finger is on the panel adjusting the light.
     @State private var dragLight: Double? = nil
     @State private var lastTrackKey: String = ""
+    /// Rises when a new sleeve lands and settles back. The room reacts a beat
+    /// after the panel does, because light reaches the room second.
+    @State private var arrival: Double = 0
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
@@ -75,37 +78,28 @@ struct WallScreen: View {
         }
         .scrollIndicators(.hidden)
         .background {
-            // The room. Lit only by the wall, and dark when the wall is dark.
-            ZStack(alignment: .top) {
-                Ink.ground
-                RadialGradient(
-                    colors: [accent.opacity(0.20 * roomLight), .clear],
-                    center: .init(x: 0.5, y: 0.26),
-                    startRadius: 0,
-                    endRadius: 520
-                )
-            }
-            .ignoresSafeArea()
-            .animation(.easeInOut(duration: 1.2), value: roomLight)
-            .animation(.easeInOut(duration: 1.2), value: reading.key)
+            Room(palette: isOff ? [] : reading.palette, light: roomLight, surge: arrival)
         }
         .preferredColorScheme(.dark)
         .onAppear { wall.start() }
-        .onChange(of: reading.key) { _, new in
-            // A new sleeve arriving on 4,096 LEDs is an event, not a fade.
-            guard !lastTrackKey.isEmpty, new != lastTrackKey, !isOff else {
+        .onChange(of: wall.state.title ?? "") { _, new in
+            // A new sleeve landing on 4,096 LEDs is an event, not a fade.
+            guard !lastTrackKey.isEmpty, new != lastTrackKey, !isOff, !new.isEmpty else {
                 lastTrackKey = new
                 return
             }
             lastTrackKey = new
             Taps.landed()
+            withAnimation(.easeOut(duration: 0.25)) { arrival = 0.30 }
+            withAnimation(.easeInOut(duration: 0.9).delay(0.25)) { arrival = 0 }
         }
     }
 
     // MARK: - Pieces
 
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .center, spacing: 10) {
+            TesseraMark(accent: accent, lit: roomLight, side: 17)
             Text("TESSERA")
                 .font(.display(18))
                 .kerning(3.0)
