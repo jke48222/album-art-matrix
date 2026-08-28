@@ -68,6 +68,58 @@ final class Canvas64 {
         revision &+= 1
     }
 
+    /// Words are the third way of filling the canvas. Laid out in the wall's
+    /// own font at the largest scale that fits, wrapped and centred, over
+    /// whatever `base` already held so typing never destroys a drawing.
+    func stamp(text: String, over base: [UInt8], rgb: (UInt8, UInt8, UInt8)) {
+        var out = base
+        let words = PixelFont.normalize(text)
+        guard !words.trimmingCharacters(in: .whitespaces).isEmpty else {
+            load(out)
+            return
+        }
+
+        // biggest scale whose wrapped block still fits the panel
+        var scale = 4
+        var lines: [String] = []
+        while scale >= 1 {
+            lines = PixelFont.wrap(words, maxWidth: 62, scale: scale)
+            let blockHeight = lines.count * (PixelFont.height * scale + scale) - scale
+            let widest = lines.map { PixelFont.textWidth($0, scale: scale) }.max() ?? 0
+            if blockHeight <= 62 && widest <= 62 { break }
+            scale -= 1
+        }
+        scale = max(1, scale)
+
+        let lineStep = PixelFont.height * scale + scale
+        let blockHeight = lines.count * lineStep - scale
+        var y = (64 - blockHeight) / 2
+
+        for line in lines {
+            let w = PixelFont.textWidth(line, scale: scale)
+            var x = (64 - w) / 2
+            for ch in line {
+                let rows = PixelFont.glyph(ch)
+                for (ry, mask) in rows.enumerated() {
+                    for rx in 0..<PixelFont.width where mask & (1 << (4 - rx)) != 0 {
+                        for sy in 0..<scale {
+                            for sx in 0..<scale {
+                                let xx = x + rx * scale + sx
+                                let yy = y + ry * scale + sy
+                                guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
+                                let o = (yy * 64 + xx) * 3
+                                out[o] = rgb.0; out[o + 1] = rgb.1; out[o + 2] = rgb.2
+                            }
+                        }
+                    }
+                }
+                x += PixelFont.advance * scale
+            }
+            y += lineStep
+        }
+        load(out)
+    }
+
     /// A photo becomes 4,096 tiles immediately, on this same canvas, so it can
     /// be drawn on afterwards.
     func load(image: UIImage) {
@@ -165,12 +217,19 @@ struct StudioScreen: View {
     @State private var last: (Int, Int)? = nil
     @State private var photo: PhotosPickerItem? = nil
     @State private var sent = false
+    @State private var words = ""
+    @State private var writing = false
+    /// What the canvas held before words started, so typing composes over a
+    /// drawing instead of replacing it.
+    @State private var beneath: [UInt8] = []
+    @FocusState private var typing: Bool
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     board
+                    if writing { compose }
                     inks
                     tools
                     send
@@ -325,6 +384,19 @@ struct StudioScreen: View {
             BrushButton(thick: thick, accent: accent) { thick.toggle() }
                 .frame(maxWidth: .infinity)
 
+            GlyphButton(glyph: .letters, label: "words", active: writing,
+                        accent: accent, lit: 0.6, diameter: 54) {
+                if writing {
+                    writing = false
+                    typing = false
+                } else {
+                    beneath = canvas.px
+                    writing = true
+                    typing = true
+                }
+            }
+            .frame(maxWidth: .infinity)
+
             PhotosPicker(selection: $photo, matching: .images) {
                 VStack(spacing: 8) {
                     ZStack {
@@ -343,6 +415,38 @@ struct StudioScreen: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    /// The wall's own font, so what you type here is what it letters.
+    private var compose: some View {
+        HStack(spacing: 12) {
+            TextField("say something", text: $words)
+                .font(.machine(14))
+                .foregroundStyle(Ink.ink)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .focused($typing)
+                .submitLabel(.done)
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(Ink.sunk)
+                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+
+            Button {
+                Taps.detent()
+                words = ""
+                canvas.load(beneath)
+            } label: {
+                Text("undo")
+                    .font(.ui(13, .medium))
+                    .foregroundStyle(Ink.dim)
+            }
+            .buttonStyle(.plain)
+        }
+        .onChange(of: words) { _, new in
+            canvas.stamp(text: new, over: beneath, rgb: erasing ? (255, 255, 255) : ink)
+        }
+        .transition(.opacity)
     }
 
     // MARK: Send
