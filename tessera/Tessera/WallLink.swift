@@ -163,6 +163,12 @@ final class WallSession {
         for i in stride(from: 0, to: px.count, by: 3) {
             px[i] = r; px[i + 1] = g; px[i + 2] = b
         }
+        pushFrame(px)
+    }
+
+    /// Put an exact 64x64 frame on the wall. What you drew is what it lights.
+    func pushFrame(_ px: [UInt8]) {
+        guard px.count == 64 * 64 * 3 else { return }
         guard let u = url("/frame"),
               let body = try? JSONSerialization.data(
                 withJSONObject: ["px": Data(px).base64EncodedString()]

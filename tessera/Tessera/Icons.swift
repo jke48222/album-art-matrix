@@ -12,6 +12,9 @@ import SwiftUI
 
 enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
+    // Utility glyphs. Deliberately not part of the mode row: that set is four
+    // states of one object and it stays four.
+    case make, erase, photo, letters
 }
 
 struct GlyphShape: View {
@@ -83,6 +86,52 @@ struct GlyphShape: View {
                 // the panel, unlit
                 ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
                            with: .color(.white), lineWidth: lw)
+
+            case .make:
+                // the panel, with a stroke being drawn across it
+                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
+                           with: .color(.white), lineWidth: lw)
+                var nib = Path()
+                nib.move(to: CGPoint(x: box.minX + box.width * 0.24, y: box.maxY - box.height * 0.24))
+                nib.addLine(to: CGPoint(x: box.maxX - box.width * 0.20, y: box.minY + box.height * 0.20))
+                ctx.stroke(nib, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round))
+
+            case .erase:
+                // a tile going dark: outline plus a slash
+                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
+                           with: .color(.white), lineWidth: lw)
+                var slash = Path()
+                slash.move(to: CGPoint(x: box.minX + 2 * u, y: box.maxY - 2 * u))
+                slash.addLine(to: CGPoint(x: box.maxX - 2 * u, y: box.minY + 2 * u))
+                ctx.stroke(slash, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
+
+            case .photo:
+                // a frame with a horizon in it
+                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
+                           with: .color(.white), lineWidth: lw)
+                var hill = Path()
+                hill.move(to: CGPoint(x: box.minX + 1.5 * u, y: box.maxY - 4 * u))
+                hill.addLine(to: CGPoint(x: box.midX - 1 * u, y: box.midY))
+                hill.addLine(to: CGPoint(x: box.maxX - 1.5 * u, y: box.maxY - 4 * u))
+                ctx.stroke(hill, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineJoin: .round))
+                let sun = 1.6 * u
+                ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - 5.5 * u, y: box.minY + 3 * u,
+                                                width: sun * 2, height: sun * 2)),
+                         with: .color(.white))
+
+            case .letters:
+                // three stacked bars: a line of type at 64 pixels
+                for (i, w) in [0.86, 0.62, 0.74].enumerated() {
+                    let y = box.minY + box.height * (0.24 + Double(i) * 0.26)
+                    var bar = Path()
+                    bar.move(to: CGPoint(x: box.minX, y: y))
+                    bar.addLine(to: CGPoint(x: box.minX + box.width * w, y: y))
+                    ctx.stroke(bar, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw * 1.3, lineCap: .round))
+                }
             }
         }
         .accessibilityHidden(true)

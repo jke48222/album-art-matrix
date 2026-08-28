@@ -30,6 +30,7 @@ struct RootView: View {
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
     @State private var showSetup = false
+    @State private var showStudio = false
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
@@ -54,8 +55,13 @@ struct RootView: View {
             )
 
             TabView(selection: $page) {
-                WallScreen(light: light, dragLight: $dragLight, onSetup: { showSetup = true })
-                    .tag(0)
+                WallScreen(
+                    light: light,
+                    dragLight: $dragLight,
+                    onSetup: { showSetup = true },
+                    onStudio: { showStudio = true }
+                )
+                .tag(0)
                 ArchiveScreen(accent: light.accent)
                     .tag(1)
             }
@@ -67,6 +73,13 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showSetup) {
             SettingsSheet(accent: light.accent).environment(wall)
+        }
+        // The studio is a place you go into and come back from, not a third
+        // page: drawing needs the whole surface, and a horizontal stroke must
+        // not turn into a page swipe.
+        .fullScreenCover(isPresented: $showStudio) {
+            StudioScreen(roomPalette: light.reading.palette, accent: light.accent)
+                .environment(wall)
         }
         .onAppear { wall.start() }
         .onChange(of: wall.state.title ?? "") { _, new in

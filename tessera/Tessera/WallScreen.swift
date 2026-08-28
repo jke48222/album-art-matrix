@@ -15,6 +15,7 @@ struct WallScreen: View {
     /// Non-nil only while a finger is on the panel adjusting the light.
     @Binding var dragLight: Double?
     var onSetup: () -> Void
+    var onStudio: () -> Void
 
     private var duty: Double { light.duty }
     private var isOff: Bool { light.isOff }
@@ -68,13 +69,28 @@ struct WallScreen: View {
     // MARK: - Pieces
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 12) {
             TesseraMark(accent: accent, lit: roomLight, side: 17)
             Text("TESSERA")
                 .font(.display(18))
                 .kerning(3.0)
                 .foregroundStyle(litInk)
             Spacer()
+            Button {
+                Taps.detent()
+                onStudio()
+            } label: {
+                ZStack {
+                    Circle().strokeBorder(Ink.hairline, lineWidth: 1)
+                    GlyphShape(glyph: .make, lineWidth: 1.5)
+                        .frame(width: 15, height: 15)
+                        .foregroundStyle(Ink.dim)
+                }
+                .frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Make something for the wall")
+
             Button {
                 Taps.detent()
                 onSetup()
