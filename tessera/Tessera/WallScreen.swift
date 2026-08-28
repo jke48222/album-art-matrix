@@ -10,34 +10,19 @@ import SwiftUI
 struct WallScreen: View {
     @Environment(WallSession.self) private var wall
 
+    /// The room's light, computed once by RootView and shared with Archive.
+    let light: Lighting
     /// Non-nil only while a finger is on the panel adjusting the light.
-    @State private var dragLight: Double? = nil
-    @State private var lastTrackKey: String = ""
-    /// Rises when a new sleeve lands and settles back. The room reacts a beat
-    /// after the panel does, because light reaches the room second.
-    @State private var arrival: Double = 0
-    @State private var showSetup = false
+    @Binding var dragLight: Double?
+    var onSetup: () -> Void
 
-    private var duty: Double { dragLight ?? wall.state.brightness }
-    private var isOff: Bool { wall.state.mode == "off" }
-
-    private var reading: FrameReading {
-        FrameRenderer.read(wall.frame, duty: isOff ? 0.05 : duty)
-    }
-
-    /// The room's colour: the brain's own dominant chroma when it has one,
-    /// otherwise the frame's.
-    private var accent: Color {
-        if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
-        return reading.glow
-    }
-
-    /// How much light is actually in the room right now. Everything visual
-    /// is scaled by this, so the phone dims as the wall dims.
-    private var roomLight: Double { isOff ? 0 : reading.lit * duty }
-
-    private var litInk: Color { Ink.ink.lit(by: accent, 0.20 * roomLight) }
-    private var litDim: Color { Ink.dim.lit(by: accent, 0.16 * roomLight) }
+    private var duty: Double { light.duty }
+    private var isOff: Bool { light.isOff }
+    private var reading: FrameReading { light.reading }
+    private var accent: Color { light.accent }
+    private var roomLight: Double { light.room }
+    private var litInk: Color { light.litInk }
+    private var litDim: Color { light.litDim }
 
     var body: some View {
         ScrollView {
@@ -78,25 +63,6 @@ struct WallScreen: View {
             .animation(Motion.settle, value: isOff)
         }
         .scrollIndicators(.hidden)
-        .background {
-            Room(palette: isOff ? [] : reading.palette, light: roomLight, surge: arrival)
-        }
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $showSetup) {
-            SettingsSheet(accent: accent).environment(wall)
-        }
-        .onAppear { wall.start() }
-        .onChange(of: wall.state.title ?? "") { _, new in
-            // A new sleeve landing on 4,096 LEDs is an event, not a fade.
-            guard !lastTrackKey.isEmpty, new != lastTrackKey, !isOff, !new.isEmpty else {
-                lastTrackKey = new
-                return
-            }
-            lastTrackKey = new
-            Taps.landed()
-            withAnimation(.easeOut(duration: 0.25)) { arrival = 0.30 }
-            withAnimation(.easeInOut(duration: 0.9).delay(0.25)) { arrival = 0 }
-        }
     }
 
     // MARK: - Pieces
@@ -111,7 +77,7 @@ struct WallScreen: View {
             Spacer()
             Button {
                 Taps.detent()
-                showSetup = true
+                onSetup()
             } label: {
                 LinkChip(link: wall.link)
             }

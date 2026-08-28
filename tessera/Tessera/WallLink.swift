@@ -137,6 +137,25 @@ final class WallSession {
         }
     }
 
+    /// Wear a journal entry again. The wall pins it for ten minutes so the
+    /// currently playing track does not immediately steamroll it.
+    func replay(ts: Int) {
+        guard let u = url("/replay"),
+              let body = try? JSONSerialization.data(withJSONObject: ["ts": ts]) else { return }
+        var req = URLRequest(url: u)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        Task { [http] in
+            if let (_, resp) = try? await http.data(for: req),
+               (resp as? HTTPURLResponse)?.statusCode == 200 {
+                await MainActor.run { Taps.landed() }
+            } else {
+                await MainActor.run { Taps.error() }
+            }
+        }
+    }
+
     /// Put a flat field on the wall for a panel check, through the brain's
     /// own /frame endpoint (base64 of 64*64*3 raw RGB, mode becomes "frame").
     func pushFlat(r: UInt8, g: UInt8, b: UInt8) {

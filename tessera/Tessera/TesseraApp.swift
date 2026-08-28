@@ -12,7 +12,7 @@ struct TesseraApp: App {
 
     var body: some Scene {
         WindowGroup {
-            WallScreen()
+            RootView()
                 .environment(wall)
         }
     }
