@@ -14,8 +14,8 @@ been ordered; no panel has arrived. The section below is exact about what exists
 | --- | --- |
 | Circuit simulation (`pcb/sims/`) | Done and reproducible. Eight ngspice decks, verified to regenerate their committed outputs bit for bit. |
 | Backplane circuit (`pcb/circuit.py`) | Done as a netlist and BOM. 76 components, 105 nets, 345 pin connections. |
-| PCB layout (`pcb/backplane.kicad_pcb`) | Laid out and mostly routed. 20 design rule check runs are committed as `pcb/drc1.json` through `drc20.json`; the last one is **0 errors, 7 unconnected items**, so the board is not finished. Of its 107 warnings, 26 are silkscreen clearance and the rest are KiCad reporting that the vendored `pcb/footprints/` are not installed as a system library. |
-| Fab outputs (`pcb/fab/`) | Gerbers, drill, pick and place, and board views are exported, but they were exported over those 7 missing connections. **Do not order this board yet.** |
+| PCB layout (`pcb/backplane.kicad_pcb`) | Routed. 20 design rule check runs are committed as `pcb/drc1.json` through `drc20.json`, and reading them in order is the honest record of the layout. The last run has **no rule violations and no unrouted signal**. What it still reports is 7 ground pour islands: the GND zone fragmented into pieces that no via stitches together, on a board whose entire power argument rests on a continuous return path. Its 107 warnings are 26 silkscreen clearances and, for the rest, KiCad noting that the vendored `pcb/footprints/` are not installed as a system library. |
+| Fab outputs (`pcb/fab/`) | Gerbers, drill, pick and place, and board views are exported. **Stitch the ground islands before ordering.** |
 | Art pipeline (`brain/art/`) | Built, runs on a laptop, has an offline test. |
 | Wall control API (`brain/control.py`) | Built, 305 lines. Serves mode, brightness, spin rate, and ambient settings on port 8788. Exercised only against the laptop preview sink. |
 | Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, ambient light effects, clock and ticker over a hand made pixel font. All verified as PNGs, none on an LED. |
@@ -416,10 +416,10 @@ pcb/
 ├── backplane.net       Generated KiCad netlist, 76 parts, 105 nets
 ├── bom.csv             Generated bill of materials
 ├── layout.py           Placement, driving the KiCad board file
-├── backplane.kicad_pcb The board. Mostly routed, 7 connections still missing.
+├── backplane.kicad_pcb The board. Routed; 7 ground pour islands left to stitch.
 ├── drc*.json           20 design rule check runs, in order. The trend is the story.
 ├── footprints/         Vendored .kicad_mod files, so the board opens anywhere
-├── fab/                Gerbers, drill, pick and place, board views. Premature.
+├── fab/                Gerbers, drill, pick and place, board views
 └── sims/               ngspice decks, numeric outputs, three figures, run_sims.py
 
 renderer/               art_display.c (92 lines) and its Makefile. Never compiled.
@@ -442,9 +442,10 @@ Stated plainly, because the value of everything above depends on this list being
 
 - **No hardware has been driven.** Some first light parts are ordered; no panel has arrived, and
   nothing in this repository has lit an LED.
-- **The PCB is not finished.** It is laid out and mostly routed, and the last design rule check is
-  clean of errors, but 7 connections are still missing. Gerbers exist and should not be sent to a
-  fab in that state. The board is also still parked: the build uses the bonnet and bus bar path.
+- **The PCB is routed but not signed off.** The last design rule check finds no violations and no
+  unrouted signal, but it still reports 7 ground pour islands, which is the one defect that matters
+  most on a board whose power design assumes a continuous return. Gerbers exist; stitch the ground
+  first. The board is also still parked: the build uses the bonnet and bus bar path.
 - **The iOS app has never been verified end to end.** It builds and runs on device, but the
   simulator stubs MediaPlayer, so its now playing path has only been reasoned about, not watched.
 - **No panel has been through intake QA.** The patterns and the procedure exist; the results sheet
