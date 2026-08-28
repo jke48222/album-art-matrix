@@ -64,13 +64,11 @@ for s in range(1, 4):          # per section: bulk + fuses + panel outs
     for k in (1, 2, 3, 4):
         part(f"CM{s}{k}", "22uF_10V", "Capacitor_SMD:C_1206_3216Metric", "X5R")
 for i in range(1, 10):
-    part(f"F{i}", "ATO_FUSE_10A", "Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2", "Keystone 3557 clips x2", f"panel {i}")
+    part(f"F{i}", "ATO_FUSE_10A", "Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin", "Keystone 3557 clips x2", f"panel {i}")
     part(f"J_PNL{i}", "PANEL_5V_OUT", "TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2_1x02_P5.00mm_Horizontal", "", f"panel {i} 5V")
 part("JP1", "PI_PWR_EN", "Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm", "", "close = Pi from VP1")
-part("PF1", "POLYFUSE_5A", "Fuse:Fuse_Bourns_MF-R400", "MF-R500")
+part("PF1", "POLYFUSE_5A", "Fuse:Fuse_Bourns_MF-RG500", "MF-R500")
 part("D1", "SMBJ5.0A", "Diode_SMD:D_SMB", "SMBJ5.0A")
-part("U5", "VEML7700", "OptoDevice:Vishay_VEML7700", "VEML7700-TT", "ambient light")
-part("C5", "100nF", "Capacitor_SMD:C_0603_1608Metric", "")
 for i in (1, 2):
     part(f"J_QT{i}", "STEMMAQT_I2C0", "Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1.00mm_Horizontal", "SM04B-SRSS-TB")
     part(f"RP{i}", "10k", "Resistor_SMD:R_0603_1608Metric", "", "I2C0 pullup")
@@ -166,9 +164,7 @@ wire("VP1", "JP1", 1); wire("PIPWR_F", "JP1", 2)      # optional Pi power
 wire("PIPWR_F", "PF1", 1); wire("V5_PI", "PF1", 2)
 wire("V5_PI", "D1", 1); wire("GND", "D1", 2)
 
-wire("3V3", "U5", 1); wire("GND", "U5", 2)            # VEML7700 + I2C0
-wire("SDA0", "U5", 4); wire("SCL0", "U5", 3)
-wire("3V3", "C5", 1); wire("GND", "C5", 2)
+# VEML7700 rides a StemmaQT cable to the frame edge (light lives out there)
 nets["SDA0"].append(("J_PI", str(BCM[0]))); nets["SCL0"].append(("J_PI", str(BCM[1])))
 for i in (1, 2):
     wire("GND", f"J_QT{i}", 1); wire("3V3", f"J_QT{i}", 2)

@@ -21,6 +21,7 @@
 #include <sys/stat.h>
 
 #include <rpihub75/rpihub75.h>
+#include <rpihub75/util.h>   // default_scene() lives here as of lib v0.2
 #include <rpihub75/pixels.h>
 #include <rpihub75/gpu.h>
 

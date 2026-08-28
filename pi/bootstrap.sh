@@ -9,10 +9,14 @@ sudo apt-get install -y build-essential gcc make git python3-venv python3-dev \
   libgles2-mesa-dev libgbm-dev libegl1-mesa-dev libavformat-dev libswscale-dev
 
 echo ">>> zram swap (keeps the 1-2 GB boards comfortable; harmless on bigger ones)"
-sudo apt-get install -y zram-tools
-if ! grep -q '^PERCENT=' /etc/default/zramswap 2>/dev/null; then
-  printf 'ALGO=zstd\nPERCENT=60\n' | sudo tee /etc/default/zramswap >/dev/null
-  sudo systemctl restart zramswap 2>/dev/null || true
+if grep -q '^/dev/zram' /proc/swaps; then
+  echo "    OS already manages zram swap (Pi OS Trixie rpi-swap) — skipping zram-tools"
+else
+  sudo apt-get install -y zram-tools
+  if ! grep -q '^PERCENT=' /etc/default/zramswap 2>/dev/null; then
+    printf 'ALGO=zstd\nPERCENT=60\n' | sudo tee /etc/default/zramswap >/dev/null
+    sudo systemctl restart zramswap 2>/dev/null || true
+  fi
 fi
 
 echo ">>> bitslip6/rpi-gpu-hub75-matrix (built for the Adafruit Triple Bonnet)"
@@ -44,7 +48,8 @@ echo ">>> building the renderer"
 cd "$HOME/album-art-matrix/renderer"
 make
 
-echo ">>> systemd unit (installed but not enabled — enable once it all works)"
+echo ">>> systemd units (installed but not enabled, enable once it all works)"
+sudo cp "$HOME/album-art-matrix/pi/album-art-renderer.service" /etc/systemd/system/
 sudo cp "$HOME/album-art-matrix/pi/album-art-matrix.service" /etc/systemd/system/
 sudo systemctl daemon-reload
 
@@ -54,3 +59,5 @@ if [ "${NEED_REBOOT:-0}" = 1 ]; then
   echo ">>> cmdline.txt changed: REBOOT NOW (sudo reboot) before the first render."
 fi
 echo "Then: pi/run_renderer.sh in one shell, brain in another (see README)."
+echo "At the end of first light, both units survive a reboot with:"
+echo "  sudo systemctl enable --now album-art-renderer album-art-matrix"

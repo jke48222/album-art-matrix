@@ -6,3 +6,9 @@ config.toml
 renderer/art_display
 .DS_Store
 ._*
+
+# Xcode build output (ios-companion) — 600M+ of DerivedData, regenerated on build
+ios-companion/build/
+ios-companion/build-device/
+*.xcuserdatad/
+*.pbxproj.bak

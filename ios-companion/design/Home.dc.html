@@ -1,0 +1,99 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0812; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #ffd9a0; } a:hover { color: #ffe6bd; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0a0812">
+  <img src="cover512.png" alt="" style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; object-fit: cover; filter: blur(70px) brightness(0.55) saturate(1.25)">
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(180deg, rgba(10,8,18,0.25) 0%, rgba(10,8,18,0.45) 55%, rgba(10,8,18,0.8) 100%)"></div>
+
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; display: flex; flex-direction: column; gap: 22px; padding: 62px 26px 40px 26px">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="position: relative; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.22)">
+        <img src="cover64.png" alt="on the wall" style="width: 44px; height: 44px; image-rendering: pixelated; display: block">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95)">On the wall</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.6)">Live · 64 × 64</div>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round">
+        <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.2"></circle>
+        <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.2"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.2"></circle>
+      </svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 20px; margin-top: 8px">
+      <img src="cover512.png" alt="Warm Static" style="width: 342px; height: 342px; border-radius: 16px; display: block; box-shadow: 0 34px 70px rgba(0,0,0,0.55)">
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 5px">
+        <div style="font-size: 28px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px">Warm Static</div>
+        <div style="font-size: 17px; color: rgba(255,255,255,0.7)">Analog Motel</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; padding: 7px 14px; backdrop-filter: blur(20px)">
+        <div style="width: 7px; height: 7px; border-radius: 50%; background: #57d97a"></div>
+        <div style="font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.9)">iPhone → Wall · pushing</div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; gap: 3px; background: rgba(120,120,128,0.28); border-radius: 12px; padding: 3px; backdrop-filter: blur(20px)">
+        <sc-for list="{{ modes }}" as="item" hint-placeholder-count="4">
+          <div style="{{ item.segStyle }}" onClick="{{ item.pick }}">{{ item.label }}</div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; align-items: center; gap: 14px; padding: 0 4px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8 M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5 5l1.4 1.4 M17.6 17.6 19 19 M19 5l-1.4 1.4 M6.4 17.6 5 19"></path></svg>
+      <div style="position: relative; flex-grow: 1; height: 28px">
+        <div style="position: absolute; top: 11px; left: 0; width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.28)"></div>
+        <div style="position: absolute; top: 11px; left: 0; width: 82%; height: 6px; border-radius: 999px; background: #ffffff"></div>
+        <div style="position: absolute; top: 0; left: calc(82% - 14px); width: 28px; height: 28px; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4)"></div>
+      </div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8 M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5 5l1.4 1.4 M17.6 17.6 19 19 M19 5l-1.4 1.4 M6.4 17.6 5 19"></path></svg>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'art' };
+  }
+  renderVals() {
+    const base = 'flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; ';
+    const modes = [
+      { id: 'art', label: 'Art' }, { id: 'cd', label: 'Spin' },
+      { id: 'ambient', label: 'Ambient' }, { id: 'off', label: 'Off' }
+    ].map((m) => {
+      const sel = m.id === this.state.mode;
+      return {
+        ...m,
+        pick: () => this.setState({ mode: m.id }),
+        segStyle: base + (sel
+          ? 'background: rgba(255,255,255,0.93); color: #15151a; box-shadow: 0 1px 5px rgba(0,0,0,0.3);'
+          : 'color: rgba(255,255,255,0.85);')
+      };
+    });
+    return { modes };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,45 @@
+{
+  "pages": [
+    { "id": "page-4", "name": "v3 — Paper" },
+    { "id": "page-3", "name": "v2 — Machine (rejected)" },
+    { "id": "page-2", "name": "v1 — Glass (rejected)" },
+    { "id": "page-1", "name": "Directions" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html", "title": "A — Little Wall", "x": 0, "y": 0, "w": 430, "h": 932, "page": "page-1" },
+    { "file": "ArtFirst.dc.html", "title": "B — Art First", "x": 530, "y": 0, "w": 430, "h": 932, "page": "page-1" },
+    { "file": "ControlRoom.dc.html", "title": "C — Control Room", "x": 1060, "y": 0, "w": 430, "h": 932, "page": "page-1" },
+    { "file": "Home.dc.html", "title": "1 · Home — Art", "x": 0, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Spin.dc.html", "title": "2 · Spin", "x": 530, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Ambient.dc.html", "title": "3 · Ambient", "x": 1060, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Off.dc.html", "title": "4 · Off", "x": 1590, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Settings.dc.html", "title": "Settings sheet", "x": 2220, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Offline.dc.html", "title": "Wall unreachable", "x": 2750, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "FirstRun.dc.html", "title": "First run", "x": 3280, "y": 0, "w": 430, "h": 932, "page": "page-2" },
+    { "file": "Home2.dc.html", "title": "1 · Home — Art", "x": 0, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Spin2.dc.html", "title": "2 · Spin", "x": 530, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Ambient2.dc.html", "title": "3 · Ambient", "x": 1060, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Off2.dc.html", "title": "4 · Off", "x": 1590, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Settings2.dc.html", "title": "Settings sheet", "x": 2220, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Offline2.dc.html", "title": "Wall unreachable", "x": 2750, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "FirstRun2.dc.html", "title": "First run", "x": 3280, "y": 0, "w": 430, "h": 932, "page": "page-3" },
+    { "file": "Brand.dc.html", "title": "Design language", "x": 3880, "y": 0, "w": 800, "h": 932, "page": "page-3" },
+    { "file": "Home3.dc.html", "title": "1 · Home — Art", "x": 0, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Spin3.dc.html", "title": "2 · Spin", "x": 530, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Ambient3.dc.html", "title": "3 · Ambient", "x": 1060, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Off3.dc.html", "title": "4 · Off", "x": 1590, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Settings3.dc.html", "title": "Settings", "x": 2170, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Offline3.dc.html", "title": "Wall unreachable", "x": 2700, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "FirstRun3.dc.html", "title": "First run", "x": 3230, "y": 0, "w": 430, "h": 932, "page": "page-4" },
+    { "file": "Journal3.dc.html", "title": "Journal — proposed", "x": 3810, "y": 0, "w": 430, "h": 932, "page": "page-4" }
+  ],
+  "annotations": [
+    { "id": "pick-a-direction", "x": 0, "y": -170, "w": 430, "text": "Direction vote, 2026-08-24: B — Art First won. Current work lives on the \"v3 — Paper\" page.", "page": "page-1" },
+    { "id": "flow-modes", "x": 0, "y": -150, "w": 520, "text": "v1 flow — rejected as AI-looking (glass cards, blurred-art chrome). Kept for history.", "page": "page-2" },
+    { "id": "v2-system", "x": 0, "y": -150, "w": 520, "text": "v2 — rejected as AI-looking (dark + glow + dot-matrix + grain). Kept for history.", "page": "page-3" },
+    { "id": "v3-system", "x": 0, "y": -210, "w": 560, "text": "v3 — Paper. The brief from the Lovable prompt, executed: one warm paper ground, ink typography (Archivo), IBM Plex Mono only for machine values, hairline rules, flat surfaces, zero glow, zero grain, one signal-red accent used only for primary actions and alerts. The wall preview is the product photo: a black panel in a hairline frame, always in the same place. The only colour on screen is whatever the wall is showing. Mode/effect/preset strips are tappable.", "page": "page-4" },
+    { "id": "v3-strip", "x": 530, "y": -130, "w": 460, "text": "Controls are one component: a hairline strip whose active cell inverts to ink. Sliders are tick rails with a flat round knob. No shadows anywhere on this page.", "page": "page-4" },
+    { "id": "v3-journal", "x": 3810, "y": -130, "w": 460, "text": "Journal — PROPOSED feature, not in the app yet: the brain logs every push, the app shows what the wall has worn; tap a row to send it back. One of several feature candidates listed in chat.", "page": "page-4" }
+  ],
+  "launch": { "view": "canvas", "page": "page-4" }
+}

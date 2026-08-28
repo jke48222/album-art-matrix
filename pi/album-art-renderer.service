@@ -1,0 +1,19 @@
+[Unit]
+Description=Album-Art Matrix renderer (FIFO frames -> HUB75 panels)
+# The brain tolerates a missing renderer, but the wall does not: without this
+# unit the panels stay dark after a reboot until run_renderer.sh is started by
+# hand. Ordered before the brain so the fifo exists when the brain first writes.
+Before=album-art-matrix.service
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/album-art-matrix
+ExecStart=/home/pi/album-art-matrix/pi/run_renderer.sh
+Restart=on-failure
+RestartSec=5
+# gpio/video/render come from bootstrap.sh. Listed again so a fresh install
+# that skipped the re-login still gets the device access.
+SupplementaryGroups=gpio video render
+
+[Install]
+WantedBy=multi-user.target

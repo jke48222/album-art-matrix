@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0B0910; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #FFA24D; } a:hover { color: #FFB878; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0B0910">
+
+  <img src="cover512.png" alt="" style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; object-fit: cover; filter: blur(80px) brightness(0.26) saturate(1.1)">
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: rgba(8,6,10,0.55)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background-image: url(./grain.png); opacity: 0.45"></div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 430px; height: 748px; display: flex; flex-direction: column; background: #0F0D14; border-top: 1px solid rgba(255,255,255,0.1); border-radius: 26px 26px 0 0; padding: 12px 28px 34px 28px">
+
+    <div style="display: flex; justify-content: center; padding-bottom: 16px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.22)"></div>
+    </div>
+
+    <div style="display: flex; align-items: baseline; padding-bottom: 24px">
+      <div style="font-family: 'Instrument Serif', serif; font-size: 34px; color: #F4F1EC">Settings</div>
+      <div style="flex-grow: 1"></div>
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 13px; letter-spacing: 2px; color: #FFA24D; cursor: pointer">DONE</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px dotted rgba(255,255,255,0.16); padding: 16px 0 20px 0">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.38)">LINK</div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="font-size: 15px; color: rgba(244,241,236,0.92)">Wall · Raspberry Pi</div>
+          <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; color: rgba(244,241,236,0.42)">album-matrix.local:8788</div>
+        </div>
+        <div style="flex-grow: 1"></div>
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: #63DE8A; box-shadow: 0 0 8px rgba(99,222,138,0.7)"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 1px; color: #63DE8A">OK</div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div style="display: flex; flex-direction: column; gap: 4px">
+          <div style="font-size: 15px; color: rgba(244,241,236,0.92)">Reporter · Mac</div>
+          <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; letter-spacing: 0.5px; color: rgba(244,241,236,0.42)">Jalens-MacBook-Pro.local:8787</div>
+        </div>
+        <div style="flex-grow: 1"></div>
+        <div style="width: 6px; height: 6px; border-radius: 50%; background: #63DE8A; box-shadow: 0 0 8px rgba(99,222,138,0.7)"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 1px; color: #63DE8A">OK</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px dotted rgba(255,255,255,0.16); padding: 16px 0 20px 0">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.38)">PUSH</div>
+      <div style="display: flex; align-items: center">
+        <div style="font-size: 15px; color: rgba(244,241,236,0.92)">Background keepalive</div>
+        <div style="flex-grow: 1"></div>
+        <div style="position: relative; width: 46px; height: 28px; border-radius: 999px; background: #FFA24D">
+          <div style="position: absolute; top: 2px; left: 20px; width: 24px; height: 24px; border-radius: 50%; background: #14110A; box-shadow: 0 1px 3px rgba(0,0,0,0.4)"></div>
+        </div>
+      </div>
+      <div style="font-size: 12px; line-height: 1.5; color: rgba(244,241,236,0.4); max-width: 330px">A silent audio session keeps pushes flowing while your phone is locked. Costs almost nothing.</div>
+      <div style="display: flex; align-items: center">
+        <div style="font-size: 15px; color: rgba(244,241,236,0.92)">Last push</div>
+        <div style="flex-grow: 1"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 1px; color: rgba(244,241,236,0.6)">0:02 AGO</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 14px; border-top: 1px dotted rgba(255,255,255,0.16); padding: 16px 0 20px 0">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.38)">PRIVACY</div>
+      <div style="display: flex; align-items: center">
+        <div style="font-size: 15px; color: rgba(244,241,236,0.92)">Apple Music access</div>
+        <div style="flex-grow: 1"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 1px; color: #63DE8A">GRANTED</div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <div style="display: flex; justify-content: center; border-top: 1px dotted rgba(255,255,255,0.16); padding-top: 18px">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 2.5px; color: rgba(244,241,236,0.25)">ALBUMWALL 0.2 · 4096 LEDS · BITSLIP6</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

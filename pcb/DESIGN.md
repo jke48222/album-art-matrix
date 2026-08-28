@@ -1,5 +1,17 @@
 # matrix-backplane rev A — one board instead of the parts pile
 
+> **PARKED 2026-08-26. Not part of the current build.**
+> The wall is being built on the Adafruit Triple Bonnet, bus bar and inline
+> fuse path instead. Nothing here is deleted. Rev A is routed, DRC-clean and
+> fab-ready, so this becomes a rev-B conversation whenever the parts pile gets
+> annoying. Two consequences of skipping it, so they are not a surprise later:
+> star grounding and ribbon discipline happen in wire at wiring time, and
+> there is no series termination on the chains, so 3-chain glitching gets
+> fixed with shorter or better ribbons rather than a respin.
+> Keep `HUB75_MAP` at its `ADA_3HAT` default. `HZELLER` is the flag for this
+> board only.
+
+
 Replaces: Triple Bonnet + riser, 2 bus bars, 9-10 fuse holders, panel screw-
 terminal spaghetti, VEML7700 breakout, and (jumpered) the Pi's separate USB-C
 supply. Does NOT replace: Pi, panels, the two Mean Well PSUs, SD, tools,
@@ -27,7 +39,7 @@ JP1 (default OPEN): VP1 ──5 A polyfuse + SMBJ5.0A TVS──▶ Pi 5 V header
   E=15. Chain1 R1/G1/B1 R2/G2/B2 = 11/27/7 8/9/10. Chain2 = 12/5/6 19/13/20.
   Chain3 = 14/2/3 26/16/21. Uses ALL of BCM 2-27 (I2C1 included — hence:)
 - **Sensors ride I2C0 on GPIO0/1** (HAT-EEPROM pins; free because this IS the
-  hat). `dtoverlay=i2c0` on the Pi; VEML7700 @0x10, StemmaQT for anything else.
+  hat). `dtoverlay=i2c0` on the Pi; VEML7700 breakout tethers via StemmaQT to the frame edge (a sensor behind the wall reads darkness); second port = spare/calibration.
 - 74AHCT245 (HCT input threshold ≈2.0 V, so the Pi's 3.3 V drives it; outputs
   are clean 5 V for the panels). One chip per chain's 6 data lines, one chip
   for the 8 shared lines. Unused inputs strapped to GND.
@@ -50,7 +62,7 @@ JP1 (default OPEN): VP1 ──5 A polyfuse + SMBJ5.0A TVS──▶ Pi 5 V header
   rev A with it OPEN, close it after the wall proves stable.
 
 ## Fab + economics (honest)
-JLCPCB 2-layer 2 oz, SMD-assembled (buffers, arrays, MLCCs, TVS, VEML7700),
+JLCPCB 2-layer 2 oz, SMD-assembled (buffers, arrays, MLCCs, TVS),
 through-hole (IDC shrouds, terminals, fuse clips, electrolytics, 2×20) hand-
 soldered — an evening with the Pinecil. Estimate: 5 bare boards ~$30 + 2×
 assembly ~$70 + THT parts ~$25 ≈ **$100-140 for two working backplanes**, vs
@@ -62,5 +74,20 @@ a product, not to save money — and the spare board is real insurance.
   netlist), `bom.csv`, and a connectivity report. Run after edits.
 - `sims/run_sims.py` — ngspice: (1) termination value on the ribbon,
   (2) IR drop source→panel at full blast, (3) NTC inrush. Emits PNGs.
-- Layout: KiCad 9 project (next session) — import `backplane.net`, place per
+- Layout: DONE — see Rev A status below.
   this doc, 2 oz pours, DRC vs JLC rules, export gerbers + CPL.
+
+## Rev A status — 2026-08-19: FAB-READY
+Routed (freerouting 2.3 + scripted repair passes), DRC clean: **zero
+electrical violations, every pad connected**. Remaining DRC notes are
+silkscreen cosmetics, embedded-footprint lib notes, and 7 pad-less pour
+slivers — all documented-acceptable for rev A.
+- `fab/backplane-revA-gerbers.zip` — upload this to JLCPCB (2-layer, **2 oz
+  outer copper**, 1.6 mm, HASL or ENIG; min drill on board is 0.2 mm — within
+  JLC standard capability)
+- `fab/backplane-top-pos.csv` + `bom.csv` — for SMD assembly quoting
+- Build firmware with `HUB75_MAP=HZELLER ./deploy.sh --bootstrap` when this
+  board replaces the Adafruit bonnet
+- Known rev-A quirks: one 0.4/0.2 via-in-pad on U4 pin 10 (JLC-standard, may
+  wick a little solder at assembly — harmless); GND stitching vias sit in-pad
+  on the CM/LED parts by design.

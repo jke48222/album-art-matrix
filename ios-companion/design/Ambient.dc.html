@@ -1,0 +1,159 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0812; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #ffd9a0; } a:hover { color: #ffe6bd; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0a0812">
+  <div style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; background: linear-gradient(160deg, #4060ff 0%, #ff2080 100%); filter: blur(70px) brightness(0.5) saturate(1.1)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(180deg, rgba(10,8,18,0.3) 0%, rgba(10,8,18,0.5) 55%, rgba(10,8,18,0.82) 100%)"></div>
+
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; display: flex; flex-direction: column; gap: 16px; padding: 62px 26px 40px 26px">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="position: relative; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.22)">
+        <div style="width: 44px; height: 44px; background: linear-gradient(160deg, #4060ff, #ff2080)"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 44px; height: 44px; background-image: linear-gradient(to right, rgba(0,0,0,0.45) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.45) 1px, transparent 1px); background-size: 4px 4px"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95)">On the wall</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.6)">Live · ambient light</div>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round">
+        <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.2"></circle>
+        <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.2"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.2"></circle>
+      </svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 14px">
+      <div style="position: relative; width: 300px; height: 300px; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 60px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.14)">
+        <div style="width: 300px; height: 300px; background: linear-gradient(160deg, #4060ff 0%, #8f48c8 50%, #ff2080 100%)"></div>
+      </div>
+      <div style="font-size: 20px; font-weight: 700; color: #ffffff">Gradient <span style="font-weight: 400; color: rgba(255,255,255,0.65)">— two colors drifting</span></div>
+    </div>
+
+    <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; gap: 9px">
+        <sc-for list="{{ effects }}" as="item" hint-placeholder-count="4">
+          <div style="{{ item.cardStyle }}" onClick="{{ item.pick }}">
+            <div style="{{ item.dotStyle }}"></div>
+            <div style="font-size: 11px; font-weight: 600; color: rgba(255,255,255,0.9)">{{ item.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(20px)">
+      <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85)">Colors</div>
+      <div style="display: flex; align-items: center; gap: 10px">
+        <div style="position: relative; width: 44px; height: 44px; border-radius: 50%; background: #4060ff; border: 2px solid rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center">
+          <div style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.95)">A</div>
+        </div>
+        <div style="position: relative; width: 44px; height: 44px; border-radius: 50%; background: #ff2080; border: 2px solid rgba(255,255,255,0.4); display: flex; align-items: center; justify-content: center">
+          <div style="font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.95)">B</div>
+        </div>
+        <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.18)"></div>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #ffb000"></div>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #57d97a"></div>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #ffffff"></div>
+        <div style="width: 32px; height: 32px; border-radius: 50%; background: #9b5cff"></div>
+        <div style="flex-grow: 1"></div>
+        <div style="width: 34px; height: 34px; border-radius: 50%; background: conic-gradient(#ff5050, #ffb000, #57d97a, #40a0ff, #9b5cff, #ff50b0, #ff5050); border: 1px solid rgba(255,255,255,0.3)"></div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); border-radius: 16px; padding: 14px 16px; backdrop-filter: blur(20px)">
+      <div style="display: flex; align-items: baseline">
+        <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.85)">Motion</div>
+        <div style="flex-grow: 1"></div>
+        <div style="font-size: 13px; font-weight: 600; color: #ffffff">1.0×</div>
+      </div>
+      <div style="position: relative; height: 28px">
+        <div style="position: absolute; top: 11px; left: 0; width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.25)"></div>
+        <div style="position: absolute; top: 11px; left: 0; width: 31%; height: 6px; border-radius: 999px; background: #ffffff"></div>
+        <div style="position: absolute; top: 0; left: calc(31% - 14px); width: 28px; height: 28px; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4)"></div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; gap: 3px; background: rgba(120,120,128,0.28); border-radius: 12px; padding: 3px; backdrop-filter: blur(20px)">
+        <sc-for list="{{ modes }}" as="item" hint-placeholder-count="4">
+          <div style="{{ item.segStyle }}" onClick="{{ item.pick }}">{{ item.label }}</div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <div style="display: flex; align-items: center; gap: 14px; padding: 0 4px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.65)" stroke-width="2" stroke-linecap="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8 M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5 5l1.4 1.4 M17.6 17.6 19 19 M19 5l-1.4 1.4 M6.4 17.6 5 19"></path></svg>
+      <div style="position: relative; flex-grow: 1; height: 28px">
+        <div style="position: absolute; top: 11px; left: 0; width: 100%; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.28)"></div>
+        <div style="position: absolute; top: 11px; left: 0; width: 82%; height: 6px; border-radius: 999px; background: #ffffff"></div>
+        <div style="position: absolute; top: 0; left: calc(82% - 14px); width: 28px; height: 28px; border-radius: 50%; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.4)"></div>
+      </div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="2" stroke-linecap="round"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 1 0 0-8 M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5 5l1.4 1.4 M17.6 17.6 19 19 M19 5l-1.4 1.4 M6.4 17.6 5 19"></path></svg>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'ambient', effect: 'gradient' };
+  }
+  renderVals() {
+    const segBase = 'flex: 1; display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 9px; cursor: pointer; font-size: 13px; font-weight: 600; ';
+    const modes = [
+      { id: 'art', label: 'Art' }, { id: 'cd', label: 'Spin' },
+      { id: 'ambient', label: 'Ambient' }, { id: 'off', label: 'Off' }
+    ].map((m) => {
+      const sel = m.id === this.state.mode;
+      return {
+        ...m,
+        pick: () => this.setState({ mode: m.id }),
+        segStyle: segBase + (sel
+          ? 'background: rgba(255,255,255,0.93); color: #15151a; box-shadow: 0 1px 5px rgba(0,0,0,0.3);'
+          : 'color: rgba(255,255,255,0.85);')
+      };
+    });
+    const cardBase = 'flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 72px; border-radius: 14px; cursor: pointer; backdrop-filter: blur(20px); ';
+    const dots = {
+      solid: 'width: 24px; height: 24px; border-radius: 50%; background: #4060ff;',
+      breathe: 'width: 24px; height: 24px; border-radius: 50%; background: #4060ff; box-shadow: 0 0 14px 4px rgba(64,96,255,0.8);',
+      rainbow: 'width: 24px; height: 24px; border-radius: 50%; background: conic-gradient(#ff5050, #ffb000, #57d97a, #40a0ff, #9b5cff, #ff50b0, #ff5050);',
+      gradient: 'width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(140deg, #4060ff, #ff2080);'
+    };
+    const effects = [
+      { id: 'solid', label: 'Solid' }, { id: 'breathe', label: 'Breathe' },
+      { id: 'rainbow', label: 'Rainbow' }, { id: 'gradient', label: 'Gradient' }
+    ].map((e) => {
+      const sel = e.id === this.state.effect;
+      return {
+        ...e,
+        pick: () => this.setState({ effect: e.id }),
+        dotStyle: dots[e.id],
+        cardStyle: cardBase + (sel
+          ? 'background: rgba(255,255,255,0.2); border: 2px solid rgba(255,255,255,0.9);'
+          : 'background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12);')
+      };
+    });
+    return { modes, effects };
+  }
+}
+</script>
+</body>
+</html>

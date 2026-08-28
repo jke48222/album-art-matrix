@@ -1,0 +1,2835 @@
+{
+    "$schema": "https://schemas.kicad.org/drc.v1.json",
+    "coordinate_units": "mm",
+    "date": "2026-08-19T13:24:29",
+    "ignored_checks": [
+        {
+            "description": "Footprint has no courtyard defined",
+            "key": "missing_courtyard"
+        },
+        {
+            "description": "Track endpoint not centered on via",
+            "key": "track_not_centered_on_via"
+        },
+        {
+            "description": "Tuning profile track geometries",
+            "key": "tuning_profile_track_geometries"
+        },
+        {
+            "description": "Footprint doesn't match symbol's footprint filters",
+            "key": "footprint_filters_mismatch"
+        },
+        {
+            "description": "Footprint component type doesn't match footprint pads",
+            "key": "footprint_type_mismatch"
+        }
+    ],
+    "included_severities": [
+        "error",
+        "warning"
+    ],
+    "kicad_version": "10.0.5",
+    "schematic_parity": [],
+    "source": "backplane.kicad_pcb",
+    "unconnected_items": [
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 6 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 17.08
+                    },
+                    "uuid": "8cf669a3-b28b-476d-8ac5-a474e93e949c"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 14 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 27.24
+                    },
+                    "uuid": "a95d343a-be62-4934-a328-fe44b90c8d49"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 14 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 27.24
+                    },
+                    "uuid": "a95d343a-be62-4934-a328-fe44b90c8d49"
+                },
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 30 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 47.56
+                    },
+                    "uuid": "ccf397f7-7e7c-4c59-9fdb-472287606c65"
+                },
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 34 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 52.64
+                    },
+                    "uuid": "6ec0df31-9bdb-42c9-9a28-5095a1ad2782"
+                },
+                {
+                    "description": "PTH pad 39 [GND] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 60.26
+                    },
+                    "uuid": "98e8c0f1-a4d5-402b-935c-41ea3c53d789"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 25 [GND] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 42.48
+                    },
+                    "uuid": "f0f4e0e4-9570-4909-aa2a-d56ae4b7032a"
+                },
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 8 [GND] of U1 on F.Cu",
+                    "pos": {
+                        "x": 23.1375,
+                        "y": 35.625
+                    },
+                    "uuid": "4632decf-6e6e-469c-b396-34846f00112a"
+                },
+                {
+                    "description": "Pad 19 [GND] of U1 on F.Cu",
+                    "pos": {
+                        "x": 28.8625,
+                        "y": 31.725
+                    },
+                    "uuid": "c7e3363b-262a-40cc-8528-6f9e7f5d45fd"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 19 [GND] of U2 on F.Cu",
+                    "pos": {
+                        "x": 28.8625,
+                        "y": 57.725
+                    },
+                    "uuid": "83cf139b-958b-46e9-8eb5-83f8360c4d9b"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 19 [GND] of U3 on F.Cu",
+                    "pos": {
+                        "x": 28.8625,
+                        "y": 83.725
+                    },
+                    "uuid": "ab27b3e1-dec6-42ce-a43a-1ef6bd0b7dd4"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 10 [GND] of U4 on F.Cu",
+                    "pos": {
+                        "x": 41.1375,
+                        "y": 62.925
+                    },
+                    "uuid": "b2db3a72-b26f-4312-80d2-61849b4ae79f"
+                },
+                {
+                    "description": "Pad 19 [GND] of U4 on F.Cu",
+                    "pos": {
+                        "x": 46.8625,
+                        "y": 57.725
+                    },
+                    "uuid": "2b99e5c5-5e40-4a12-897a-f49a7053db22"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "Pad 10 [GND] of U4 on F.Cu",
+                    "pos": {
+                        "x": 41.1375,
+                        "y": 62.925
+                    },
+                    "uuid": "b2db3a72-b26f-4312-80d2-61849b4ae79f"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 2 [GND] of J_PNL1",
+                    "pos": {
+                        "x": 102.0,
+                        "y": 13.0
+                    },
+                    "uuid": "e0f63646-735d-4443-9bc8-76c41fc3cbd3"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 2 [GND] of J_PNL1",
+                    "pos": {
+                        "x": 102.0,
+                        "y": 13.0
+                    },
+                    "uuid": "e0f63646-735d-4443-9bc8-76c41fc3cbd3"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Pad 1 [GND] of J_QT2 on F.Cu",
+                    "pos": {
+                        "x": 126.5,
+                        "y": 5.0
+                    },
+                    "uuid": "ad37569b-ab97-4806-9447-5c371b98f1ca"
+                },
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "PTH pad 17 [3V3] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 32.32
+                    },
+                    "uuid": "b6db8682-ac4f-4412-a6d1-0f527bb4996f"
+                },
+                {
+                    "description": "Track [3V3] on F.Cu, length 12.8432 mm",
+                    "pos": {
+                        "x": 9.4934,
+                        "y": 25.1349
+                    },
+                    "uuid": "02fd01cc-d473-470d-8fb8-a3c68606d24c"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        },
+        {
+            "description": "Missing connection between items",
+            "items": [
+                {
+                    "description": "Track [GPIO23] on F.Cu, length 1.2362 mm",
+                    "pos": {
+                        "x": 40.0479,
+                        "y": 58.0123
+                    },
+                    "uuid": "7e8a0795-a69c-4282-8546-2b62d626411f"
+                },
+                {
+                    "description": "PTH pad 16 [GPIO23] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 29.78
+                    },
+                    "uuid": "4da709f8-c1a4-4c95-97a7-1a5e0fceec1d"
+                }
+            ],
+            "severity": "error",
+            "type": "unconnected_items"
+        }
+    ],
+    "violations": [
+        {
+            "description": "Thermal relief connection to zone incomplete (layer B.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                },
+                {
+                    "description": "PTH pad 6 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 17.08
+                    },
+                    "uuid": "8cf669a3-b28b-476d-8ac5-a474e93e949c"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 14 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 27.24
+                    },
+                    "uuid": "a95d343a-be62-4934-a328-fe44b90c8d49"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer B.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                },
+                {
+                    "description": "PTH pad 9 [GND] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 22.16
+                    },
+                    "uuid": "feee26ba-ca72-4453-9270-3c594511813b"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 25 [GND] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 42.48
+                    },
+                    "uuid": "f0f4e0e4-9570-4909-aa2a-d56ae4b7032a"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer B.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                },
+                {
+                    "description": "PTH pad 20 [GND] of J_PI",
+                    "pos": {
+                        "x": 5.46,
+                        "y": 34.86
+                    },
+                    "uuid": "2b3e5dd2-94cc-4e6a-b575-f488409ccaf4"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 39 [GND] of J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 60.26
+                    },
+                    "uuid": "98e8c0f1-a4d5-402b-935c-41ea3c53d789"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer B.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on B.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "8b61c9de-8a82-45e5-9e7c-e0461d0fde78"
+                },
+                {
+                    "description": "PTH pad 16 [GND] of J_HUB3",
+                    "pos": {
+                        "x": 74.54,
+                        "y": 105.78
+                    },
+                    "uuid": "571f85ef-406b-4c81-8ae0-6e525d754750"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "PTH pad 16 [GND] of J_HUB2",
+                    "pos": {
+                        "x": 74.54,
+                        "y": 74.78
+                    },
+                    "uuid": "a011f61f-65b1-42af-999d-f00dc20fce5a"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "Pad 10 [GND] of U2 on F.Cu",
+                    "pos": {
+                        "x": 23.1375,
+                        "y": 62.925
+                    },
+                    "uuid": "7ad7304d-2c99-4b8e-b95a-94341994587e"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Thermal relief connection to zone incomplete (layer F.Cu; zone min spoke count 2; actual 1)",
+            "items": [
+                {
+                    "description": "Zone [GND] on F.Cu, priority 0",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "b8d99827-a8e5-40c2-aeb3-3d9d8747fd35"
+                },
+                {
+                    "description": "Pad 10 [GND] of U1 on F.Cu",
+                    "pos": {
+                        "x": 23.1375,
+                        "y": 36.925
+                    },
+                    "uuid": "cadb9f7b-916e-4b67-98d2-73285e3629bf"
+                }
+            ],
+            "severity": "error",
+            "type": "starved_thermal"
+        },
+        {
+            "description": "Track has unconnected end",
+            "items": [
+                {
+                    "description": "Track [3V3] on F.Cu, length 12.8432 mm",
+                    "pos": {
+                        "x": 9.4934,
+                        "y": 25.1349
+                    },
+                    "uuid": "02fd01cc-d473-470d-8fb8-a3c68606d24c"
+                }
+            ],
+            "severity": "warning",
+            "type": "track_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [3V3] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 139.7839,
+                        "y": 6.6278
+                    },
+                    "uuid": "b3d1ee68-34e1-405e-b5ec-e1fb938f6e55"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Track has unconnected end",
+            "items": [
+                {
+                    "description": "Track [GPIO23] on F.Cu, length 0.6241 mm",
+                    "pos": {
+                        "x": 40.681,
+                        "y": 56.143
+                    },
+                    "uuid": "c39d48de-6b2a-4783-9ac6-2cf9080986be"
+                }
+            ],
+            "severity": "warning",
+            "type": "track_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [SCL0] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 141.735,
+                        "y": 4.3668
+                    },
+                    "uuid": "d063b6e0-54d7-416e-88c6-17bc08c74e30"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [GPIO20] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 10.397,
+                        "y": 60.9564
+                    },
+                    "uuid": "7b0c34a2-6540-4e98-8b1c-e22c485d5f0e"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H3_E4] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 76.513,
+                        "y": 90.7404
+                    },
+                    "uuid": "f89a98ed-f860-4176-ae88-aabb291503bf"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [LEDA2] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 162.637,
+                        "y": 57.978
+                    },
+                    "uuid": "5380fab4-adfc-4a5b-8587-82d0f823ef34"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [LEDA1] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 162.637,
+                        "y": 25.2156
+                    },
+                    "uuid": "d850f658-243a-4278-85ec-0ca576bb6721"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_R1_D] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 55.141,
+                        "y": 28.4458
+                    },
+                    "uuid": "d8914009-de90-42f6-941f-2ee69b7f815f"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_R2_D] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 34.2442,
+                        "y": 34.1524
+                    },
+                    "uuid": "6b851bb7-d68e-4b4e-8b01-023f73b9875f"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_R1] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 67.085,
+                        "y": 28.194
+                    },
+                    "uuid": "7ad38383-ed10-402a-81f0-fb91702392f5"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H2_E8] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 76.5158,
+                        "y": 63.936
+                    },
+                    "uuid": "39e25d76-0d52-481b-bd78-b9a7c8eef22d"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H2_R2_D] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 33.6635,
+                        "y": 60.1194
+                    },
+                    "uuid": "bf61fc4c-71f1-44f1-98a3-74f92b1d9893"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H2_B1_D] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 52.155,
+                        "y": 54.8064
+                    },
+                    "uuid": "2230486c-9543-42b3-91b1-7480d0a0b216"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [LEDA3] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 162.637,
+                        "y": 90.7404
+                    },
+                    "uuid": "dc4e4d18-8006-443e-9ea5-327e5ccffd48"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_G2] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 67.085,
+                        "y": 34.1508
+                    },
+                    "uuid": "2aaf50a1-fa90-4572-84cb-aa2cf3417c14"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_E4] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 76.513,
+                        "y": 28.194
+                    },
+                    "uuid": "298bd77d-9836-4001-948c-be4cc92dd816"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Via is not connected or connected on only one layer",
+            "items": [
+                {
+                    "description": "Via [H1_E8] on F.Cu - B.Cu",
+                    "pos": {
+                        "x": 76.513,
+                        "y": 34.1508
+                    },
+                    "uuid": "68f6764e-75ca-44e1-8864-fa2ddcceb2ff"
+                }
+            ],
+            "severity": "warning",
+            "type": "via_dangling"
+        },
+        {
+            "description": "Silkscreen clipped by board edge",
+            "items": [
+                {
+                    "description": "Rectangle on Edge.Cuts",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "4206a655-73f2-4ecb-a071-8b131587860d"
+                },
+                {
+                    "description": "Segment of J_HUB3 on F.Silkscreen",
+                    "pos": {
+                        "x": 68.71,
+                        "y": 110.99
+                    },
+                    "uuid": "7dc047cc-623e-4894-a846-1b13e03cafbb"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_edge_clearance"
+        },
+        {
+            "description": "Silkscreen clipped by board edge",
+            "items": [
+                {
+                    "description": "Rectangle on Edge.Cuts",
+                    "pos": {
+                        "x": 0.0,
+                        "y": 0.0
+                    },
+                    "uuid": "4206a655-73f2-4ecb-a071-8b131587860d"
+                },
+                {
+                    "description": "Segment of J_HUB3 on F.Silkscreen",
+                    "pos": {
+                        "x": 77.83,
+                        "y": 82.79
+                    },
+                    "uuid": "eb82ff6e-7534-4c23-9f6b-e10672c43788"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_edge_clearance"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F5",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 57.0
+                    },
+                    "uuid": "01e81ae2-4027-4347-8b70-8f9579134627"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM34",
+                    "pos": {
+                        "x": 156.0,
+                        "y": 102.0
+                    },
+                    "uuid": "03f65a9b-4512-40bb-a6d1-336233921bd5"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL5",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 57.0
+                    },
+                    "uuid": "076af38f-1f8a-4aaa-a920-eb0eb8090cbb"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_PinSocket_2.54mm'",
+            "items": [
+                {
+                    "description": "Footprint J_PI",
+                    "pos": {
+                        "x": 8.0,
+                        "y": 12.0
+                    },
+                    "uuid": "0ab18f8d-9245-4b24-bedd-151220af2ecf"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM14",
+                    "pos": {
+                        "x": 156.0,
+                        "y": 36.0
+                    },
+                    "uuid": "0b79be6a-b22b-451b-84f4-922236b745ce"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_IDC'",
+            "items": [
+                {
+                    "description": "Footprint J_HUB3",
+                    "pos": {
+                        "x": 72.0,
+                        "y": 88.0
+                    },
+                    "uuid": "0cc4a257-c094-4805-9716-0376c53c2223"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB12",
+                    "pos": {
+                        "x": 148.0,
+                        "y": 28.0
+                    },
+                    "uuid": "0e7a9908-478f-4354-b835-1405d3735223"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RL2",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 60.0
+                    },
+                    "uuid": "1013101f-87d3-47ba-b8b8-079eeeabc744"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'LED_SMD'",
+            "items": [
+                {
+                    "description": "Footprint LED1",
+                    "pos": {
+                        "x": 164.0,
+                        "y": 27.0
+                    },
+                    "uuid": "11158605-2e41-4fdb-b907-8acbafc35be9"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN1",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 30.0
+                    },
+                    "uuid": "127f66d2-62e6-4e2e-bfd6-168f297c4d18"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F2",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 24.0
+                    },
+                    "uuid": "130e0e5d-288b-4c4b-be6f-b419671112a7"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F8",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 90.0
+                    },
+                    "uuid": "139aa51c-9f16-4525-ad11-aa9ac813f46a"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL9",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 101.0
+                    },
+                    "uuid": "1a21937c-09a1-4050-8ddd-3cd036d69d1a"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL4",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 46.0
+                    },
+                    "uuid": "1bad05f4-c1dd-49d7-90ca-753799ddc4df"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Package_SO'",
+            "items": [
+                {
+                    "description": "Footprint U4",
+                    "pos": {
+                        "x": 44.0,
+                        "y": 60.0
+                    },
+                    "uuid": "23d133f9-b961-4fb3-92fc-a08cf46f7d7a"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint C3",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 94.0
+                    },
+                    "uuid": "2c2917df-fbab-43b4-a109-326f8418fec1"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN4",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 64.0
+                    },
+                    "uuid": "2dac5cc8-91ed-44a4-adf9-e1fb26242467"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_IDC'",
+            "items": [
+                {
+                    "description": "Footprint J_HUB2",
+                    "pos": {
+                        "x": 72.0,
+                        "y": 57.0
+                    },
+                    "uuid": "2f7a8a9d-4f26-4eb7-b4e5-b7c09bed963a"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Package_SO'",
+            "items": [
+                {
+                    "description": "Footprint U2",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 60.0
+                    },
+                    "uuid": "31201624-0854-48db-8217-3e4c429510fa"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'MountingHole'",
+            "items": [
+                {
+                    "description": "Footprint H1",
+                    "pos": {
+                        "x": 5.0,
+                        "y": 5.0
+                    },
+                    "uuid": "33cfd267-e576-41b4-a228-4dcd1d578767"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F7",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 79.0
+                    },
+                    "uuid": "355a48cf-878e-4188-8dd0-b458256c198f"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN6",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 90.0
+                    },
+                    "uuid": "35f61313-ddaa-4533-9798-cc882dea2389"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RL3",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 93.0
+                    },
+                    "uuid": "416cf18f-3aad-4cb8-911b-5cc8c98497c6"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM33",
+                    "pos": {
+                        "x": 149.0,
+                        "y": 102.0
+                    },
+                    "uuid": "494cabdd-9097-4be2-a610-0d418527273c"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM22",
+                    "pos": {
+                        "x": 142.0,
+                        "y": 69.0
+                    },
+                    "uuid": "4edd908f-6e7a-457a-a85b-24a947b89ee6"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL3",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 35.0
+                    },
+                    "uuid": "52efd8a7-0164-46dd-8376-a3275e7448cf"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'MountingHole'",
+            "items": [
+                {
+                    "description": "Footprint H2",
+                    "pos": {
+                        "x": 165.0,
+                        "y": 5.0
+                    },
+                    "uuid": "556d3fa1-2160-412f-9061-74727976499a"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB22",
+                    "pos": {
+                        "x": 148.0,
+                        "y": 61.0
+                    },
+                    "uuid": "56a9fd03-426d-47f7-832c-d1d3f0df4f80"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM21",
+                    "pos": {
+                        "x": 135.0,
+                        "y": 69.0
+                    },
+                    "uuid": "58b8572c-4586-44b4-92a2-1c4253e76fa0"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RP2",
+                    "pos": {
+                        "x": 144.0,
+                        "y": 7.0
+                    },
+                    "uuid": "59b14239-c10a-4cbf-bdbb-790a9d0facf9"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB11",
+                    "pos": {
+                        "x": 138.0,
+                        "y": 16.0
+                    },
+                    "uuid": "60d4b842-e8f1-43e3-8083-bdf8b50f5fed"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint C2",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 68.0
+                    },
+                    "uuid": "691aed79-ab4f-4f08-957f-e14adacd9672"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_JST'",
+            "items": [
+                {
+                    "description": "Footprint J_QT1",
+                    "pos": {
+                        "x": 114.0,
+                        "y": 7.0
+                    },
+                    "uuid": "6af74cd9-a6b4-4df2-aee4-d021063b5f30"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB21",
+                    "pos": {
+                        "x": 138.0,
+                        "y": 49.0
+                    },
+                    "uuid": "6b8f8359-d9d8-49fb-9fdc-ff3ca017a025"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL6",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 68.0
+                    },
+                    "uuid": "6bf94a0e-e8cd-47a5-9d01-41675da80b5b"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM23",
+                    "pos": {
+                        "x": 149.0,
+                        "y": 69.0
+                    },
+                    "uuid": "7029271f-2a3f-4ab4-bcf9-f854fd317657"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_JST'",
+            "items": [
+                {
+                    "description": "Footprint J_QT2",
+                    "pos": {
+                        "x": 128.0,
+                        "y": 7.0
+                    },
+                    "uuid": "73c08719-553e-4d15-ae3b-96919ebfbb8c"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB31",
+                    "pos": {
+                        "x": 138.0,
+                        "y": 82.0
+                    },
+                    "uuid": "76095cfb-57cd-46d6-a675-164dc84eba12"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM12",
+                    "pos": {
+                        "x": 142.0,
+                        "y": 36.0
+                    },
+                    "uuid": "7c58d3b4-23e6-437f-92ed-9a53ceee2c15"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'LED_SMD'",
+            "items": [
+                {
+                    "description": "Footprint LED3",
+                    "pos": {
+                        "x": 164.0,
+                        "y": 93.0
+                    },
+                    "uuid": "7d113193-a77b-4236-9e95-7d775dded23b"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL8",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 90.0
+                    },
+                    "uuid": "827f8425-f391-433e-af27-9c9dcb2917f1"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN5",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 82.0
+                    },
+                    "uuid": "8409155b-9dc0-4120-b002-d7593c3977c4"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM32",
+                    "pos": {
+                        "x": 142.0,
+                        "y": 102.0
+                    },
+                    "uuid": "8b21eba4-e667-4d05-b3a7-9617ad7f18c3"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Jumper'",
+            "items": [
+                {
+                    "description": "Footprint JP_E3",
+                    "pos": {
+                        "x": 90.0,
+                        "y": 96.0
+                    },
+                    "uuid": "8ba3789e-9a62-4bba-b3ee-85d896d98cb3"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint TB1",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 16.0
+                    },
+                    "uuid": "8bcd8103-c316-4b8f-8bc4-efa08033f40b"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN2",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 38.0
+                    },
+                    "uuid": "8d4e0147-5a36-433c-a127-198362da4ce1"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_THT'",
+            "items": [
+                {
+                    "description": "Footprint CB32",
+                    "pos": {
+                        "x": 148.0,
+                        "y": 94.0
+                    },
+                    "uuid": "94c28fe4-5e59-43fa-8dee-982c85de2f88"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN3",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 56.0
+                    },
+                    "uuid": "94fa0e94-572c-48ff-8fbf-0a44d3228225"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Package_SO'",
+            "items": [
+                {
+                    "description": "Footprint U3",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 86.0
+                    },
+                    "uuid": "9713a6e5-5970-47c0-ad4e-f6996cb6162f"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint TB3",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 82.0
+                    },
+                    "uuid": "9c33068e-3c88-4fec-b0d5-0231871a94f4"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RP1",
+                    "pos": {
+                        "x": 138.0,
+                        "y": 7.0
+                    },
+                    "uuid": "9dea06e2-154f-457b-b4e2-beba9e6f2f76"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Connector_IDC'",
+            "items": [
+                {
+                    "description": "Footprint J_HUB1",
+                    "pos": {
+                        "x": 72.0,
+                        "y": 26.0
+                    },
+                    "uuid": "a2a5fd4a-87c0-42ef-99b5-df61fab82d44"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL1",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 13.0
+                    },
+                    "uuid": "abca541d-e7a2-4f72-a260-78ebc3bfd7fa"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'MountingHole'",
+            "items": [
+                {
+                    "description": "Footprint H3",
+                    "pos": {
+                        "x": 5.0,
+                        "y": 105.0
+                    },
+                    "uuid": "b03bd5f1-9070-48c9-933c-c374c5079f81"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F6",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 68.0
+                    },
+                    "uuid": "b4096c4b-a547-420e-90b7-697d461103da"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint C1",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 42.0
+                    },
+                    "uuid": "b46a60f4-ed1c-4651-b497-2def94941817"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint C4",
+                    "pos": {
+                        "x": 44.0,
+                        "y": 68.0
+                    },
+                    "uuid": "b47db52b-4a95-456e-91af-ddfd479ac5cf"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Jumper'",
+            "items": [
+                {
+                    "description": "Footprint JP1",
+                    "pos": {
+                        "x": 66.0,
+                        "y": 10.0
+                    },
+                    "uuid": "b822e21f-badd-48d9-bd6e-67a9065ec416"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F9",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 101.0
+                    },
+                    "uuid": "bb051a25-3323-4a20-bc43-85d418bb5095"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RL1",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 27.0
+                    },
+                    "uuid": "c38a9e0d-92c1-4e66-8a25-4acb7d584604"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint PF1",
+                    "pos": {
+                        "x": 76.0,
+                        "y": 12.0
+                    },
+                    "uuid": "c9478465-e5dc-47b0-bfe6-644331658cc2"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint TB2",
+                    "pos": {
+                        "x": 158.0,
+                        "y": 49.0
+                    },
+                    "uuid": "cc1ba529-b562-41e4-af2e-a0f51214753f"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Resistor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint RN7",
+                    "pos": {
+                        "x": 58.0,
+                        "y": 98.0
+                    },
+                    "uuid": "d4ce369d-2c6b-4761-a6fe-d611e45bbb39"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Diode_SMD'",
+            "items": [
+                {
+                    "description": "Footprint D1",
+                    "pos": {
+                        "x": 88.0,
+                        "y": 10.0
+                    },
+                    "uuid": "d5543ef0-9c9b-46b2-9bf0-4e9b36a6259c"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM13",
+                    "pos": {
+                        "x": 149.0,
+                        "y": 36.0
+                    },
+                    "uuid": "d6019c4f-9d0b-4180-80e0-8c1003c0ff1f"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM24",
+                    "pos": {
+                        "x": 156.0,
+                        "y": 69.0
+                    },
+                    "uuid": "d7fb4ca7-9a46-4c9e-a960-055a47a72c18"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F3",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 35.0
+                    },
+                    "uuid": "e0aada71-05f5-4a8d-8b9c-a953708aadd0"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM31",
+                    "pos": {
+                        "x": 135.0,
+                        "y": 102.0
+                    },
+                    "uuid": "e126c900-8fa7-4ddd-8e34-8e10d164d404"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'MountingHole'",
+            "items": [
+                {
+                    "description": "Footprint H4",
+                    "pos": {
+                        "x": 165.0,
+                        "y": 105.0
+                    },
+                    "uuid": "e3823bf9-5751-41d7-850e-77a47607d1d9"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL7",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 79.0
+                    },
+                    "uuid": "ebb1902e-40d1-4dcb-8b8b-2d1b6073b7c3"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'LED_SMD'",
+            "items": [
+                {
+                    "description": "Footprint LED2",
+                    "pos": {
+                        "x": 164.0,
+                        "y": 60.0
+                    },
+                    "uuid": "ec8b24c4-63ba-4813-97c7-ebf2be4279ee"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Package_SO'",
+            "items": [
+                {
+                    "description": "Footprint U1",
+                    "pos": {
+                        "x": 26.0,
+                        "y": 34.0
+                    },
+                    "uuid": "ed01284a-ddd6-43e8-996b-0a8f1461e337"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Jumper'",
+            "items": [
+                {
+                    "description": "Footprint JP_E1",
+                    "pos": {
+                        "x": 90.0,
+                        "y": 34.0
+                    },
+                    "uuid": "f15505d9-38cc-42aa-9e1d-075c544153b1"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Jumper'",
+            "items": [
+                {
+                    "description": "Footprint JP_E2",
+                    "pos": {
+                        "x": 90.0,
+                        "y": 65.0
+                    },
+                    "uuid": "f16d14b7-5d5f-48b4-a8f6-f6c25367f1ef"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F1",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 13.0
+                    },
+                    "uuid": "f2f489e9-6d09-4f77-a64a-df06cb1a2e70"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'TerminalBlock_Phoenix'",
+            "items": [
+                {
+                    "description": "Footprint J_PNL2",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 24.0
+                    },
+                    "uuid": "f92fbd6e-657d-4c4e-8cfb-81186477f518"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Capacitor_SMD'",
+            "items": [
+                {
+                    "description": "Footprint CM11",
+                    "pos": {
+                        "x": 135.0,
+                        "y": 36.0
+                    },
+                    "uuid": "ff58787a-88a2-4deb-99bc-f46a13bcb68f"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "The current configuration does not include the footprint library 'Fuse'",
+            "items": [
+                {
+                    "description": "Footprint F4",
+                    "pos": {
+                        "x": 112.0,
+                        "y": 46.0
+                    },
+                    "uuid": "fff982ef-d257-43d0-810a-2cdde4d2baa7"
+                }
+            ],
+            "severity": "warning",
+            "type": "lib_footprint_issues"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL4 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 50.1
+                    },
+                    "uuid": "143b9c4b-4555-4724-be0b-19ea7bed380c"
+                },
+                {
+                    "description": "Reference field of J_PNL5",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 50.68
+                    },
+                    "uuid": "cac9a3a2-020e-4cb8-a0ae-511142dfe94c"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL5",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 50.68
+                    },
+                    "uuid": "cac9a3a2-020e-4cb8-a0ae-511142dfe94c"
+                },
+                {
+                    "description": "Segment of J_PNL4 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 50.72
+                    },
+                    "uuid": "d628ff90-65b3-474f-8754-998032b915f8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL6",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 61.68
+                    },
+                    "uuid": "61d5afd7-90a2-48c8-83b3-594eec3a2d3e"
+                },
+                {
+                    "description": "Segment of J_PNL5 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 61.1
+                    },
+                    "uuid": "7eac7f50-e3b2-4128-83d8-e6bd96d2de50"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL6",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 61.68
+                    },
+                    "uuid": "61d5afd7-90a2-48c8-83b3-594eec3a2d3e"
+                },
+                {
+                    "description": "Segment of J_PNL5 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 61.72
+                    },
+                    "uuid": "7e09fa35-449f-4d08-98bb-1fb164c56db5"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Polygon of J_PNL4 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 50.72
+                    },
+                    "uuid": "72130b4c-660b-4a68-823a-38336c52cc46"
+                },
+                {
+                    "description": "Reference field of J_PNL5",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 50.68
+                    },
+                    "uuid": "cac9a3a2-020e-4cb8-a0ae-511142dfe94c"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_QT1 on F.Silkscreen",
+                    "pos": {
+                        "x": 112.06,
+                        "y": 9.685
+                    },
+                    "uuid": "555e285e-9a4e-4a69-a72a-6278ef8f38c5"
+                },
+                {
+                    "description": "Reference field of F4",
+                    "pos": {
+                        "x": 116.57,
+                        "y": 43.22
+                    },
+                    "uuid": "7b0b2958-3fb0-473f-8918-771dfa7d7314"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL6",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 61.68
+                    },
+                    "uuid": "61d5afd7-90a2-48c8-83b3-594eec3a2d3e"
+                },
+                {
+                    "description": "Polygon of J_PNL5 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 61.72
+                    },
+                    "uuid": "b78be59e-dc68-48fd-b459-928a71cf89ac"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_HUB3 on F.Silkscreen",
+                    "pos": {
+                        "x": 68.71,
+                        "y": 110.99
+                    },
+                    "uuid": "7dc047cc-623e-4894-a846-1b13e03cafbb"
+                },
+                {
+                    "description": "PCB text 'album-art-matrix backplane rev A' on F.Silkscreen",
+                    "pos": {
+                        "x": 40.0,
+                        "y": 105.0
+                    },
+                    "uuid": "d61ccd1a-d2a8-4fa5-bb94-992c9e96631e"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL1 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 17.1
+                    },
+                    "uuid": "46fead63-4ecd-4303-969e-dcb125d17c6b"
+                },
+                {
+                    "description": "Reference field of J_PNL2",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 17.68
+                    },
+                    "uuid": "cff0ef71-19f9-40be-9b08-9b06bef84724"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Polygon of J_PNL1 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 17.72
+                    },
+                    "uuid": "75ea2fab-846b-4e8d-bb9f-9932b4d853d4"
+                },
+                {
+                    "description": "Reference field of J_PNL2",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 17.68
+                    },
+                    "uuid": "cff0ef71-19f9-40be-9b08-9b06bef84724"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL1 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 17.72
+                    },
+                    "uuid": "6dada8fa-172d-4624-84c6-877130e84a48"
+                },
+                {
+                    "description": "Reference field of J_PNL2",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 17.68
+                    },
+                    "uuid": "cff0ef71-19f9-40be-9b08-9b06bef84724"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL8",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 83.68
+                    },
+                    "uuid": "10bae4bd-bd32-4f82-8025-fdbaf107f4a8"
+                },
+                {
+                    "description": "Segment of J_PNL7 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 83.1
+                    },
+                    "uuid": "19c43c20-ce74-4895-8872-6da362ad9567"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL7",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 72.68
+                    },
+                    "uuid": "ad814e36-00a4-46f3-8d82-ea948e2fcc28"
+                },
+                {
+                    "description": "Segment of J_PNL6 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 72.1
+                    },
+                    "uuid": "d007ef0f-c86b-4b84-8c94-5d3b9bd19467"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL6 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 72.72
+                    },
+                    "uuid": "4194193e-0c04-4a0a-8780-f7aa80293535"
+                },
+                {
+                    "description": "Reference field of J_PNL7",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 72.68
+                    },
+                    "uuid": "ad814e36-00a4-46f3-8d82-ea948e2fcc28"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Polygon of J_PNL6 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 72.72
+                    },
+                    "uuid": "0dba0f99-1bf8-4d97-8835-c003f701dc89"
+                },
+                {
+                    "description": "Reference field of J_PNL7",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 72.68
+                    },
+                    "uuid": "ad814e36-00a4-46f3-8d82-ea948e2fcc28"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL9",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 94.68
+                    },
+                    "uuid": "48c87f96-9ba3-40c7-9da3-074a8ec879c5"
+                },
+                {
+                    "description": "Segment of J_PNL8 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 94.72
+                    },
+                    "uuid": "505f5227-63a7-416a-9de7-b61e5cca0f24"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL9",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 94.68
+                    },
+                    "uuid": "48c87f96-9ba3-40c7-9da3-074a8ec879c5"
+                },
+                {
+                    "description": "Segment of J_PNL8 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 94.1
+                    },
+                    "uuid": "c418e594-443d-4835-836a-a44d9e770b60"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL9",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 94.68
+                    },
+                    "uuid": "48c87f96-9ba3-40c7-9da3-074a8ec879c5"
+                },
+                {
+                    "description": "Polygon of J_PNL8 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 94.72
+                    },
+                    "uuid": "7a2a65f9-ad47-4afe-9883-15f18d1bc6fa"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL7 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 83.72
+                    },
+                    "uuid": "0f5a9d18-904b-44ff-bceb-f81979cd3ffd"
+                },
+                {
+                    "description": "Reference field of J_PNL8",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 83.68
+                    },
+                    "uuid": "10bae4bd-bd32-4f82-8025-fdbaf107f4a8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL8",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 83.68
+                    },
+                    "uuid": "10bae4bd-bd32-4f82-8025-fdbaf107f4a8"
+                },
+                {
+                    "description": "Polygon of J_PNL7 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 83.72
+                    },
+                    "uuid": "f67f5140-e72b-4c04-8a61-4474d8ce7435"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL2 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 28.1
+                    },
+                    "uuid": "58c3f708-8bc3-4d87-8b07-239fa24f2188"
+                },
+                {
+                    "description": "Reference field of J_PNL3",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 28.68
+                    },
+                    "uuid": "bc0a1075-81f2-4296-9ea7-d7384571dce8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL2 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 28.72
+                    },
+                    "uuid": "5e784b65-416a-4a49-9558-1118e3cdcc35"
+                },
+                {
+                    "description": "Reference field of J_PNL3",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 28.68
+                    },
+                    "uuid": "bc0a1075-81f2-4296-9ea7-d7384571dce8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Segment of J_PNL3 on F.Silkscreen",
+                    "pos": {
+                        "x": 94.38,
+                        "y": 39.1
+                    },
+                    "uuid": "06b64867-bed2-4df7-8514-f6ca7de4fbc0"
+                },
+                {
+                    "description": "Reference field of J_PNL4",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 39.68
+                    },
+                    "uuid": "be85b14a-354a-4799-9592-de4a6d2e019a"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Reference field of J_PNL4",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 39.68
+                    },
+                    "uuid": "be85b14a-354a-4799-9592-de4a6d2e019a"
+                },
+                {
+                    "description": "Segment of J_PNL3 on F.Silkscreen",
+                    "pos": {
+                        "x": 104.62,
+                        "y": 39.72
+                    },
+                    "uuid": "ce998d5f-bd77-4721-91e0-0e2bb3196a3d"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Polygon of J_PNL3 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 39.72
+                    },
+                    "uuid": "b51c7ce4-791c-4238-af97-be037976b6b4"
+                },
+                {
+                    "description": "Reference field of J_PNL4",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 39.68
+                    },
+                    "uuid": "be85b14a-354a-4799-9592-de4a6d2e019a"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clearance",
+            "items": [
+                {
+                    "description": "Polygon of J_PNL2 on F.Silkscreen",
+                    "pos": {
+                        "x": 97.0,
+                        "y": 28.72
+                    },
+                    "uuid": "2048cc06-bfa8-4cbd-80a4-54b525d6a0f9"
+                },
+                {
+                    "description": "Reference field of J_PNL3",
+                    "pos": {
+                        "x": 99.5,
+                        "y": 28.68
+                    },
+                    "uuid": "bc0a1075-81f2-4296-9ea7-d7384571dce8"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_overlap"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "Reference field of F4",
+                    "pos": {
+                        "x": 116.57,
+                        "y": 43.22
+                    },
+                    "uuid": "7b0b2958-3fb0-473f-8918-771dfa7d7314"
+                },
+                {
+                    "description": "Pad MP [<no net>] of J_QT1 on F.Cu",
+                    "pos": {
+                        "x": 116.8,
+                        "y": 8.875
+                    },
+                    "uuid": "0d9b5dec-590b-4348-8701-668db2470dd0"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "PCB text 'album-art-matrix backplane rev A' on F.Silkscreen",
+                    "pos": {
+                        "x": 40.0,
+                        "y": 105.0
+                    },
+                    "uuid": "d61ccd1a-d2a8-4fa5-bb94-992c9e96631e"
+                },
+                {
+                    "description": "PTH pad 15 [SH_OE] of J_HUB3",
+                    "pos": {
+                        "x": 72.0,
+                        "y": 105.78
+                    },
+                    "uuid": "8c5173e7-4315-49ed-bbca-a64d64d1c007"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        },
+        {
+            "description": "Silkscreen clipped by solder mask",
+            "items": [
+                {
+                    "description": "PCB text 'album-art-matrix backplane rev A' on F.Silkscreen",
+                    "pos": {
+                        "x": 40.0,
+                        "y": 105.0
+                    },
+                    "uuid": "d61ccd1a-d2a8-4fa5-bb94-992c9e96631e"
+                },
+                {
+                    "description": "PTH pad 13 [SH_CLK] of J_HUB3",
+                    "pos": {
+                        "x": 72.0,
+                        "y": 103.24
+                    },
+                    "uuid": "c01f0485-8d6c-4988-816b-8641cb751da0"
+                }
+            ],
+            "severity": "warning",
+            "type": "silk_over_copper"
+        }
+    ]
+}

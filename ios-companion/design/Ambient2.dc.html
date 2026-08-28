@@ -1,0 +1,185 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0B0910; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #FFA24D; } a:hover { color: #FFB878; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0B0910">
+
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(168deg, #4060FF 0%, #8F3FBE 46%, #FF2080 100%)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(180deg, rgba(11,9,16,0.18) 0%, rgba(11,9,16,0) 22%, rgba(11,9,16,0.42) 58%, rgba(11,9,16,0.88) 100%)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background-image: url(./grain.png); opacity: 0.55"></div>
+
+  <div style="position: absolute; top: 62px; left: 26px; width: 378px; display: flex; align-items: center; gap: 8px">
+    <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 14px; letter-spacing: 3px; color: rgba(244,241,236,0.95)">ALBUMWALL</div>
+    <div style="width: 5px; height: 5px; border-radius: 50%; background: #FFA24D; box-shadow: 0 0 8px 1px rgba(255,162,77,0.7)"></div>
+    <div style="flex-grow: 1"></div>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(244,241,236,0.85)" stroke-width="1.6" stroke-linecap="round">
+      <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.1"></circle>
+      <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.1"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+      <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.1"></circle>
+    </svg>
+  </div>
+
+  <div style="position: absolute; top: 122px; left: 26px; width: 378px; display: flex; align-items: flex-start">
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <div style="font-family: 'Instrument Serif', serif; font-size: 46px; line-height: 1; color: #FFFFFF; text-shadow: 0 2px 30px rgba(11,9,16,0.35)">Gradient</div>
+      <div style="font-family: 'Instrument Serif', serif; font-style: italic; font-size: 20px; color: rgba(255,255,255,0.78)">two colours, drifting</div>
+    </div>
+    <div style="flex-grow: 1"></div>
+    <div style="display: flex; align-items: center; gap: 9px; background: rgba(11,9,16,0.45); border: 1px solid rgba(255,255,255,0.16); border-radius: 12px; padding: 6px 11px 6px 6px; backdrop-filter: blur(16px)">
+      <div style="position: relative; width: 34px; height: 34px; border-radius: 8px; overflow: hidden">
+        <div style="width: 34px; height: 34px; background: linear-gradient(160deg, #4060FF, #FF2080)"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 34px; height: 34px; background-image: linear-gradient(to right, rgba(0,0,0,0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.4) 1px, transparent 1px); background-size: 3.4px 3.4px"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 9px; letter-spacing: 2px; color: rgba(244,241,236,0.55)">ON WALL</div>
+        <div style="display: flex; align-items: center; gap: 5px">
+          <div style="width: 4px; height: 4px; border-radius: 50%; background: #63DE8A"></div>
+          <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; letter-spacing: 1px; color: rgba(244,241,236,0.9)">LIVE</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; top: 258px; left: 26px; width: 378px; display: flex; gap: 10px">
+      <sc-for list="{{ effects }}" as="item" hint-placeholder-count="4">
+        <div style="{{ item.cardStyle }}" onClick="{{ item.pick }}">
+          <div style="{{ item.dotStyle }}"></div>
+          <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 1.5px; color: rgba(244,241,236,0.9)">{{ item.label }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </sc-if>
+
+  <div style="position: absolute; top: 372px; left: 26px; width: 378px; display: flex; flex-direction: column; gap: 12px; background: rgba(11,9,16,0.45); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 16px 18px; backdrop-filter: blur(20px)">
+    <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.45)">COLOURS</div>
+    <div style="display: flex; align-items: center; gap: 11px">
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: #4060FF; border: 2px solid rgba(255,255,255,0.95); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(64,96,255,0.5)">
+        <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 13px; color: #FFFFFF">A</div>
+      </div>
+      <div style="width: 52px; height: 52px; border-radius: 50%; background: #FF2080; border: 2px solid rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(255,32,128,0.4)">
+        <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 13px; color: #FFFFFF">B</div>
+      </div>
+      <div style="width: 1px; height: 30px; background: rgba(255,255,255,0.2)"></div>
+      <div style="width: 34px; height: 34px; border-radius: 50%; background: #FFA24D"></div>
+      <div style="width: 34px; height: 34px; border-radius: 50%; background: #63DE8A"></div>
+      <div style="width: 34px; height: 34px; border-radius: 50%; background: #F4F1EC"></div>
+      <div style="flex-grow: 1"></div>
+      <div style="width: 38px; height: 38px; border-radius: 50%; background: conic-gradient(#FF5050, #FFB000, #57D97A, #40A0FF, #9B5CFF, #FF50B0, #FF5050); border: 2px solid rgba(255,255,255,0.4)"></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 498px; left: 26px; width: 378px; display: flex; flex-direction: column; gap: 10px; background: rgba(11,9,16,0.45); border: 1px solid rgba(255,255,255,0.12); border-radius: 18px; padding: 16px 18px; backdrop-filter: blur(20px)">
+    <div style="display: flex; align-items: baseline">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.45)">MOTION</div>
+      <div style="flex-grow: 1"></div>
+      <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 17px; color: #FFA24D">1.0</div>
+    </div>
+    <div style="position: relative; height: 24px">
+      <div style="position: absolute; top: 7px; left: 0; width: 100%; height: 10px; background-image: repeating-linear-gradient(to right, rgba(255,255,255,0.16) 0px, rgba(255,255,255,0.16) 1px, transparent 1px, transparent 34.2px)"></div>
+      <div style="position: absolute; top: 11px; left: 0; width: 100%; height: 2px; background: rgba(255,255,255,0.15)"></div>
+      <div style="position: absolute; top: 11px; left: 0; width: 31%; height: 2px; background: #FFA24D"></div>
+      <div style="position: absolute; top: 1px; left: calc(31% - 2px); width: 4px; height: 22px; border-radius: 2px; background: #FFA24D; box-shadow: 0 0 10px rgba(255,162,77,0.7)"></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 430px; display: flex; flex-direction: column; gap: 18px; background: rgba(13,11,18,0.82); backdrop-filter: blur(30px); border-top: 1px solid rgba(255,255,255,0.07); border-radius: 24px 24px 0 0; padding: 20px 26px 30px 26px">
+    <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex">
+        <sc-for list="{{ modes }}" as="item" hint-placeholder-count="4">
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; padding: 2px 0" onClick="{{ item.pick }}">
+            <div style="{{ item.dotStyle }}"></div>
+            <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2.5px; color: {{ item.labelColor }}">{{ item.label }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <div style="display: flex; flex-direction: column; gap: 9px">
+      <div style="display: flex; align-items: baseline">
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.38)">BRIGHT</div>
+        <div style="flex-grow: 1"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 18px; color: #FFA24D">82</div>
+      </div>
+      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; gap: 3px">
+          <sc-for list="{{ segs }}" as="item" hint-placeholder-count="24">
+            <div style="{{ item.style }}"></div>
+          </sc-for>
+        </div>
+      </sc-if>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 7px">
+      <div style="width: 5px; height: 5px; border-radius: 50%; background: #63DE8A"></div>
+      <div style="font-size: 12px; color: rgba(244,241,236,0.55)">This iPhone → Wall</div>
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; color: rgba(244,241,236,0.35)">0:02</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { mode: 'ambient', effect: 'gradient' };
+  }
+  renderVals() {
+    const modes = [
+      { id: 'art', label: 'ART' }, { id: 'cd', label: 'SPIN' },
+      { id: 'ambient', label: 'AMBIENT' }, { id: 'off', label: 'OFF' }
+    ].map((m) => {
+      const sel = m.id === this.state.mode;
+      return {
+        ...m,
+        pick: () => this.setState({ mode: m.id }),
+        dotStyle: 'width: 7px; height: 7px; border-radius: 50%; ' + (sel
+          ? 'background: #FFA24D; box-shadow: 0 0 10px 2px rgba(255,162,77,0.55);'
+          : 'background: rgba(255,255,255,0.14);'),
+        labelColor: sel ? '#FFA24D' : 'rgba(244,241,236,0.38)'
+      };
+    });
+    const cardBase = 'flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; height: 82px; border-radius: 16px; cursor: pointer; backdrop-filter: blur(18px); ';
+    const dots = {
+      solid: 'width: 26px; height: 26px; border-radius: 50%; background: #4060FF;',
+      breathe: 'width: 26px; height: 26px; border-radius: 50%; background: #4060FF; box-shadow: 0 0 16px 5px rgba(64,96,255,0.85);',
+      rainbow: 'width: 26px; height: 26px; border-radius: 50%; background: conic-gradient(#FF5050, #FFB000, #57D97A, #40A0FF, #9B5CFF, #FF50B0, #FF5050);',
+      gradient: 'width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(140deg, #4060FF, #FF2080);'
+    };
+    const effects = [
+      { id: 'solid', label: 'SOLID' }, { id: 'breathe', label: 'BREATHE' },
+      { id: 'rainbow', label: 'RAINBOW' }, { id: 'gradient', label: 'GRADIENT' }
+    ].map((e) => {
+      const sel = e.id === this.state.effect;
+      return {
+        ...e,
+        pick: () => this.setState({ effect: e.id }),
+        dotStyle: dots[e.id],
+        cardStyle: cardBase + (sel
+          ? 'background: rgba(11,9,16,0.55); border: 2px solid rgba(255,255,255,0.9);'
+          : 'background: rgba(11,9,16,0.32); border: 1px solid rgba(255,255,255,0.16);')
+      };
+    });
+    const lit = 20;
+    const segs = Array.from({ length: 24 }, (_, i) => ({
+      style: 'flex: 1; height: 16px; border-radius: 2px; ' + (i < lit
+        ? 'background: linear-gradient(180deg, #FFC46B, #FF7A3D);' + (i === lit - 1 ? ' box-shadow: 0 0 9px rgba(255,162,77,0.65);' : '')
+        : 'background: rgba(255,255,255,0.07);')
+    }));
+    return { modes, effects, segs };
+  }
+}
+</script>
+</body>
+</html>

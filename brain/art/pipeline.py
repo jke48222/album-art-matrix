@@ -43,3 +43,38 @@ def process(img: Image.Image, size: int, gains,
     pre = prepare(img, size, unsharp_radius, unsharp_percent)
     balanced = white_balance(pre, gains)
     return pre, balanced.tobytes()
+
+
+def apply_finish(img: Image.Image, finish: str) -> Image.Image:
+    """Optional rendering finish on the prepared sleeve (control "finish").
+
+    clean  — the pipeline as-is
+    dither — 16-color Floyd-Steinberg; deliberate retro grain at 64px
+    poster — 3 bits/channel posterization; flat print-like fields
+    """
+    if finish == "dither":
+        return img.quantize(colors=16,
+                            dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
+    if finish == "poster":
+        from PIL import ImageOps
+        return ImageOps.posterize(img, 3)
+    return img
+
+
+def dominant_colors(img: Image.Image, n: int = 2) -> list[str]:
+    """The sleeve's n most-common colors as "#rrggbb", most common first.
+    Feeds ambient match_art. Tiny resize first so it costs nothing."""
+    small = img.convert("RGB").resize((24, 24), Image.LANCZOS)
+    pal = small.quantize(colors=max(4, n * 2))
+    counts = sorted(pal.getcolors(), reverse=True)
+    palette = pal.getpalette()
+    out = []
+    for _, idx in counts:
+        r, g, b = palette[idx * 3: idx * 3 + 3]
+        # skip near-black/near-white fills; they make dull light
+        if max(r, g, b) < 28 or min(r, g, b) > 232:
+            continue
+        out.append(f"#{r:02x}{g:02x}{b:02x}")
+        if len(out) == n:
+            break
+    return out or ["#4060ff", "#ff2080"][:n]

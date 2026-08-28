@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0812; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #ffd9a0; } a:hover { color: #ffe6bd; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0a0812">
+  <div style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; background: linear-gradient(200deg, #4060ff 0%, #ff2080 100%); filter: blur(90px) brightness(0.3)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(180deg, rgba(10,8,18,0.35) 0%, rgba(10,8,18,0.55) 55%, rgba(10,8,18,0.8) 100%)"></div>
+
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; display: flex; flex-direction: column; gap: 20px; padding: 62px 26px 48px 26px">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="position: relative; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.14); background: #16161e">
+        <div style="position: absolute; top: 0; left: 0; width: 44px; height: 44px; background-image: linear-gradient(to right, rgba(255,255,255,0.04) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.04) 1px, transparent 1px); background-size: 4px 4px"></div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95)">On the wall</div>
+        <div style="font-size: 11px; color: rgba(255,255,255,0.6)">Waiting for your music</div>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round">
+        <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.2"></circle>
+        <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.2"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.2"></circle>
+      </svg>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 24px">
+      <div style="display: flex; align-items: center; justify-content: center; width: 92px; height: 92px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); backdrop-filter: blur(16px); box-shadow: 0 20px 50px rgba(0,0,0,0.4)">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M9 17.5V5.5l10-2.2v11.9"></path>
+          <circle cx="6.5" cy="17.5" r="2.5" fill="rgba(255,255,255,0.95)" stroke="none"></circle>
+          <circle cx="16.5" cy="15.2" r="2.5" fill="rgba(255,255,255,0.95)" stroke="none"></circle>
+        </svg>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+        <div style="font-size: 25px; font-weight: 700; color: #ffffff; text-align: center; max-width: 330px; letter-spacing: -0.3px">Let AlbumWall see your music</div>
+        <div style="font-size: 15px; color: rgba(255,255,255,0.65); text-align: center; max-width: 330px; line-height: 1.45">Whatever plays in Apple Music shows up on the LED wall. iOS will ask for media library access — everything stays on your own network.</div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 16px">
+      <div style="display: flex; align-items: center; justify-content: center; width: 100%; height: 52px; border-radius: 999px; background: rgba(255,255,255,0.93); cursor: pointer">
+        <div style="font-size: 17px; font-weight: 600; color: #15151a">Allow access</div>
+      </div>
+      <div style="font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); cursor: pointer">Set up hosts first</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

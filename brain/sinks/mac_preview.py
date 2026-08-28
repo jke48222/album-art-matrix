@@ -31,4 +31,4 @@ class MacPreviewSink(FrameSink):
         out = os.path.join(self.out_dir, "panel.png")
         big.save(tmp)
         os.replace(tmp, out)
-        print(f"[sink] preview -> {out}")
+

@@ -40,3 +40,11 @@ redirect_port = 8888
 type = "preview"                 # "preview" on the Mac, "pi" on the Pi
 fifo = "/tmp/album-frame.fifo"   # must match pi/run_renderer.sh
 preview_dir = "preview_out"
+
+[animation]
+mode = "static"   # "cd" = spinning sleeve (S5 preview); BPM beat-lock lands at S4
+rpm = 7.5         # one revolution per four bars at 120 BPM
+fps = 20
+
+[control]
+port = 8788     # wall control API (iOS companion posts here)

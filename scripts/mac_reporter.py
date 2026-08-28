@@ -15,25 +15,70 @@ Autostart:  scripts/com.albumartmatrix.reporter.plist (optional; see notes)
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from brain.nowplaying import NowPlaying
 from brain.nowplaying.applemusic import AppleMusicSource
 
 SOURCE = AppleMusicSource(endpoint="")
 
+# Pushed state from the iOS companion (ios-companion/). Outranks everything —
+# it's the only source that knows the iPhone in real time. Expires so a dead
+# phone can't pin the wall: the app heartbeats every ~15s while music plays.
+PUSH_TTL = 40.0
+_push = {"at": 0.0, "data": None}
+
+
+def _pushed_now():
+    if _push["data"] is None or time.monotonic() - _push["at"] > PUSH_TTL:
+        return None
+    d = _push["data"]
+    if not d.get("playing") or not d.get("track"):
+        return None
+    art = d.get("art") or SOURCE._art_url(d["track"], d.get("artist", "?"),
+                                          d.get("album", "?"))
+    return NowPlaying(
+        track_id="applemusic:" + (d.get("id")
+                                  or f"{d.get('artist')}|{d.get('track')}"),
+        title=d["track"], artist=d.get("artist", "?"),
+        album=d.get("album", "?"), art_url=art,
+        progress_ms=d.get("progress_ms"), duration_ms=d.get("duration_ms"),
+        is_playing=True,
+    )
+
 
 class Handler(BaseHTTPRequestHandler):
+    def do_POST(self):
+        if not self.path.startswith("/push"):
+            self.send_response(404)
+            self.end_headers()
+            return
+        try:
+            n = int(self.headers.get("Content-Length", 0))
+            data = json.loads(self.rfile.read(n) or b"{}")
+        except (ValueError, json.JSONDecodeError):
+            self.send_response(400)
+            self.end_headers()
+            return
+        _push["at"], _push["data"] = time.monotonic(), data
+        if data.get("track"):
+            print(f"[reporter] push: {data.get('artist')} — {data['track']}"
+                  f" ({'playing' if data.get('playing') else 'paused'})")
+        self.send_response(204)
+        self.end_headers()
+
     def do_GET(self):
         if not self.path.startswith("/nowplaying"):
             self.send_response(404)
             self.end_headers()
             return
         try:
-            now = SOURCE.get_current()
+            now = _pushed_now() or SOURCE.get_current()
         except Exception as exc:
             print(f"[reporter] {exc}")
             self.send_response(500)

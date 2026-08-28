@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Doto:wght@700;900&family=Instrument+Serif:ital@0;1&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0A090E; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #FFA24D; } a:hover { color: #FFB878; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0A090E">
+
+  <img src="static64.png" alt="" style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; image-rendering: pixelated; object-fit: cover; opacity: 0.14; filter: grayscale(0.4)">
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: radial-gradient(circle at 50% 40%, transparent 0%, rgba(10,9,14,0.72) 100%)"></div>
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background-image: url(./grain.png); opacity: 0.5"></div>
+
+  <div style="position: absolute; top: 62px; left: 26px; width: 378px; display: flex; align-items: center; gap: 8px">
+    <div style="font-family: 'Doto', monospace; font-weight: 900; font-size: 14px; letter-spacing: 3px; color: rgba(244,241,236,0.85)">ALBUMWALL</div>
+    <div style="width: 5px; height: 5px; border-radius: 50%; background: #FF6257; box-shadow: 0 0 8px 1px rgba(255,98,87,0.7)"></div>
+    <div style="flex-grow: 1"></div>
+    <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="rgba(244,241,236,0.75)" stroke-width="1.6" stroke-linecap="round">
+      <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.1"></circle>
+      <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.1"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+      <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.1"></circle>
+    </svg>
+  </div>
+
+  <div style="position: absolute; top: 118px; right: 26px; display: flex; align-items: center; gap: 9px; background: rgba(11,9,16,0.6); border: 1px solid rgba(255,98,87,0.35); border-radius: 12px; padding: 6px 11px 6px 6px; backdrop-filter: blur(16px)">
+    <div style="position: relative; width: 34px; height: 34px; border-radius: 8px; overflow: hidden">
+      <img src="static64.png" alt="no signal" style="width: 34px; height: 34px; image-rendering: pixelated; display: block">
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 9px; letter-spacing: 2px; color: rgba(244,241,236,0.5)">ON WALL</div>
+      <div style="display: flex; align-items: center; gap: 5px">
+        <div style="width: 4px; height: 4px; border-radius: 50%; background: #FF6257"></div>
+        <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; letter-spacing: 1px; color: #FF6257">NO LINK</div>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 340px; left: 28px; width: 374px; display: flex; flex-direction: column; gap: 18px">
+    <div style="font-family: 'Instrument Serif', serif; font-size: 46px; line-height: 1.02; color: #F4F1EC">Lost the wall.</div>
+    <div style="font-size: 16px; line-height: 1.55; color: rgba(244,241,236,0.52); max-width: 330px">album-matrix.local:8788 isn't answering. Your music keeps playing here — the art comes back the moment the link does.</div>
+    <div style="display: flex; align-items: center; gap: 16px; padding-top: 8px">
+      <div style="display: flex; align-items: center; justify-content: center; height: 48px; padding: 0 32px; border-radius: 999px; background: #FFA24D; cursor: pointer; box-shadow: 0 8px 30px rgba(255,162,77,0.25)">
+        <div style="font-size: 15px; font-weight: 650; color: #1A120B">Retry</div>
+      </div>
+      <div style="font-size: 15px; font-weight: 600; color: rgba(244,241,236,0.65); cursor: pointer">Check hosts</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 430px; display: flex; flex-direction: column; gap: 18px; background: rgba(12,10,15,0.86); backdrop-filter: blur(30px); border-top: 1px solid rgba(255,255,255,0.06); border-radius: 24px 24px 0 0; padding: 20px 26px 30px 26px">
+    <div style="display: flex">
+      <sc-if value="{{ true }}" hint-placeholder-val="{{ true }}">
+        <sc-for list="{{ modes }}" as="item" hint-placeholder-count="4">
+          <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 2px 0; opacity: 0.5">
+            <div style="width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.1)"></div>
+            <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 12px; letter-spacing: 2.5px; color: rgba(244,241,236,0.25)">{{ item.label }}</div>
+          </div>
+        </sc-for>
+      </sc-if>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; height: 43px">
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 10px; letter-spacing: 3px; color: rgba(244,241,236,0.28)">SEARCHING — CONTROLS PAUSED</div>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: center; gap: 7px">
+      <div style="width: 5px; height: 5px; border-radius: 50%; background: #FFA24D"></div>
+      <div style="font-size: 12px; color: rgba(244,241,236,0.55)">Still pushing · queued</div>
+      <div style="font-family: 'Doto', monospace; font-weight: 700; font-size: 11px; color: rgba(244,241,236,0.35)">0:41</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      modes: [
+        { label: 'ART' }, { label: 'SPIN' }, { label: 'AMBIENT' }, { label: 'OFF' }
+      ]
+    };
+  }
+}
+</script>
+</body>
+</html>

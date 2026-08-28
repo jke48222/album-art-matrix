@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #F4F1EA; font-family: 'Archivo', -apple-system, sans-serif; }
+    a { color: #E03E1A; } a:hover { color: #B33115; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #F4F1EA; color: #16130F">
+
+  <div style="position: absolute; top: 58px; left: 28px; width: 374px; display: flex; align-items: center">
+    <div style="font-weight: 800; font-size: 15px; letter-spacing: 1.5px; font-stretch: 115%">ALBUMWALL</div>
+  </div>
+
+  <div style="position: absolute; top: 118px; left: 48px; display: flex; flex-direction: column; gap: 10px">
+    <div style="width: 334px; border: 1px solid rgba(22,19,15,0.22); padding: 6px; background: #F4F1EA">
+      <div style="position: relative; width: 320px; height: 320px; background: #0A0A0A">
+        <div style="position: absolute; top: 100px; left: 155px; width: 5px; height: 5px; background: #F4F1EA"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 320px; height: 320px; background-image: linear-gradient(to right, rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.025) 1px, transparent 1px); background-size: 5px 5px"></div>
+      </div>
+    </div>
+    <div style="width: 334px; display: flex; align-items: center">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: rgba(22,19,15,0.45)">ON THE WALL</div>
+      <div style="flex-grow: 1"></div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1px; color: rgba(22,19,15,0.45)">WAITING FOR MUSIC</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 530px; left: 28px; width: 374px; display: flex; flex-direction: column; gap: 12px">
+    <div style="font-weight: 800; font-size: 30px; letter-spacing: -0.4px; line-height: 1.1">Your music,<br>on the wall.</div>
+    <div style="font-size: 15px; line-height: 1.55; color: rgba(22,19,15,0.55); max-width: 340px">Whatever plays in Apple Music lights up 4,096 LEDs across the room. iOS will ask to read your library — nothing ever leaves your network.</div>
+  </div>
+
+  <div style="position: absolute; left: 28px; bottom: 116px; width: 374px; display: flex; align-items: center; justify-content: center; height: 52px; border-radius: 8px; background: #E03E1A; cursor: pointer">
+    <div style="font-weight: 700; font-size: 16px; color: #F4F1EA">Allow access</div>
+  </div>
+  <div style="position: absolute; left: 28px; bottom: 74px; width: 374px; display: flex; justify-content: center">
+    <div style="font-weight: 600; font-size: 14px; color: rgba(22,19,15,0.6); cursor: pointer; border-bottom: 1.5px solid rgba(22,19,15,0.3); padding-bottom: 2px">Set up hosts first</div>
+  </div>
+  <div style="position: absolute; left: 28px; bottom: 36px; width: 374px; display: flex; justify-content: center">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 1.5px; color: rgba(22,19,15,0.32)">P2.5 · 4096 LEDS · YOUR ROOM</div>
+  </div>
+
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0a10; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #ffd9a0; } a:hover { color: #ffe6bd; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0a0a10">
+  <img src="cover512.png" alt="" style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; object-fit: cover; filter: blur(80px) brightness(0.25) grayscale(0.85)">
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: linear-gradient(180deg, rgba(10,10,16,0.4) 0%, rgba(10,10,16,0.65) 55%, rgba(10,10,16,0.88) 100%)"></div>
+
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; display: flex; flex-direction: column; gap: 20px; padding: 62px 26px 40px 26px">
+
+    <div style="display: flex; align-items: center; gap: 12px">
+      <div style="position: relative; width: 44px; height: 44px; border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.16)">
+        <img src="static64.png" alt="no signal" style="width: 44px; height: 44px; image-rendering: pixelated; display: block">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <div style="font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95)">On the wall</div>
+        <div style="display: flex; align-items: center; gap: 5px">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: #ff6b6b"></div>
+          <div style="font-size: 11px; color: rgba(255,255,255,0.6)">Not reachable</div>
+        </div>
+      </div>
+      <div style="flex-grow: 1"></div>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round">
+        <line x1="4" y1="6.5" x2="12" y2="6.5"></line><circle cx="16" cy="6.5" r="2.2"></circle>
+        <line x1="4" y1="12" x2="6" y2="12"></line><circle cx="9.6" cy="12" r="2.2"></circle><line x1="13.2" y1="12" x2="20" y2="12"></line>
+        <line x1="4" y1="17.5" x2="12" y2="17.5"></line><circle cx="16" cy="17.5" r="2.2"></circle>
+      </svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 22px; margin-top: 8px">
+      <div style="position: relative; width: 342px; height: 342px; border-radius: 16px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 34px 70px rgba(0,0,0,0.55)">
+        <img src="static64.png" alt="static" style="width: 342px; height: 342px; image-rendering: pixelated; display: block; opacity: 0.85">
+        <div style="position: absolute; top: 0; left: 0; width: 342px; height: 342px; background-image: linear-gradient(to right, rgba(0,0,0,0.4) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.4) 1px, transparent 1px); background-size: 5.34px 5.34px"></div>
+        <div style="position: absolute; top: 0; left: 0; width: 342px; height: 342px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 100%)">
+          <div style="display: flex; align-items: center; justify-content: center; width: 72px; height: 72px; border-radius: 50%; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.18); backdrop-filter: blur(12px)">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linecap="round">
+              <path d="M5 12.5a10 10 0 0 1 4.2-2.9 M2 9a14 14 0 0 1 3.4-2.4 M8.5 16a5.5 5.5 0 0 1 3.5-1.5 M12 19.5h0.01"></path>
+              <line x1="3.5" y1="3.5" x2="20.5" y2="20.5"></line>
+              <path d="M13.8 10a10 10 0 0 1 5.2 2.5 M11.3 6.2A14 14 0 0 1 22 9"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; flex-direction: column; align-items: center; gap: 6px">
+        <div style="font-size: 24px; font-weight: 700; color: #ffffff">Can't find the wall</div>
+        <div style="font-size: 15px; color: rgba(255,255,255,0.6); text-align: center; max-width: 310px; line-height: 1.4">Looking for album-matrix.local:8788 on your network. Controls will come back when it answers.</div>
+      </div>
+      <div style="display: flex; gap: 12px">
+        <div style="display: flex; align-items: center; justify-content: center; height: 46px; padding: 0 28px; border-radius: 999px; background: rgba(255,255,255,0.93); cursor: pointer">
+          <div style="font-size: 15px; font-weight: 600; color: #15151a">Retry</div>
+        </div>
+        <div style="display: flex; align-items: center; justify-content: center; height: 46px; padding: 0 24px; border-radius: 999px; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.16); backdrop-filter: blur(20px); cursor: pointer">
+          <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.9)">Check hosts</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex-grow: 1"></div>
+
+    <div style="display: flex; align-items: center; gap: 8px; align-self: center; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.1); border-radius: 999px; padding: 7px 14px; backdrop-filter: blur(20px)">
+      <div style="width: 7px; height: 7px; border-radius: 50%; background: #57d97a"></div>
+      <div style="font-size: 12px; font-weight: 500; color: rgba(255,255,255,0.8)">Your iPhone keeps pushing — the wall catches up when it's back</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

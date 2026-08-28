@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0a0812; font-family: -apple-system, system-ui, sans-serif; }
+    a { color: #ffd9a0; } a:hover { color: #ffe6bd; }
+  </style>
+</helmet>
+<div style="position: relative; width: 430px; height: 932px; overflow: hidden; background: #0a0812">
+  <img src="cover512.png" alt="" style="position: absolute; top: -60px; left: -60px; width: 550px; height: 1052px; object-fit: cover; filter: blur(70px) brightness(0.3) saturate(1.1)">
+  <div style="position: absolute; top: 0; left: 0; width: 430px; height: 932px; background: rgba(7,6,12,0.55)"></div>
+
+  <div style="position: absolute; left: 0; bottom: 0; width: 430px; height: 712px; display: flex; flex-direction: column; gap: 18px; background: rgba(24,22,32,0.96); border-top: 1px solid rgba(255,255,255,0.12); border-radius: 22px 22px 0 0; padding: 12px 22px 40px 22px">
+
+    <div style="display: flex; flex-direction: column; align-items: center; gap: 14px">
+      <div style="width: 36px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.28)"></div>
+      <div style="display: flex; align-items: center; width: 100%">
+        <div style="font-size: 20px; font-weight: 700; color: #ffffff">Settings</div>
+        <div style="flex-grow: 1"></div>
+        <div style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.9); cursor: pointer">Done</div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: rgba(255,255,255,0.5); padding-left: 4px">WALL</div>
+      <div style="display: flex; flex-direction: column; background: rgba(255,255,255,0.07); border-radius: 14px">
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Pi host</div>
+          <div style="flex-grow: 1"></div>
+          <div style="font-size: 13px; color: rgba(255,255,255,0.55)">album-matrix.local:8788</div>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.08); margin-left: 16px"></div>
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Status</div>
+          <div style="flex-grow: 1"></div>
+          <div style="width: 7px; height: 7px; border-radius: 50%; background: #57d97a"></div>
+          <div style="font-size: 13px; color: rgba(255,255,255,0.55)">Connected</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: rgba(255,255,255,0.5); padding-left: 4px">MAC REPORTER</div>
+      <div style="display: flex; flex-direction: column; background: rgba(255,255,255,0.07); border-radius: 14px">
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Mac host</div>
+          <div style="flex-grow: 1"></div>
+          <div style="font-size: 12px; color: rgba(255,255,255,0.55)">Jalens-MacBook-Pro.local:8787</div>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.08); margin-left: 16px"></div>
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Status</div>
+          <div style="flex-grow: 1"></div>
+          <div style="width: 7px; height: 7px; border-radius: 50%; background: #57d97a"></div>
+          <div style="font-size: 13px; color: rgba(255,255,255,0.55)">Connected</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: rgba(255,255,255,0.5); padding-left: 4px">PUSHING</div>
+      <div style="display: flex; flex-direction: column; background: rgba(255,255,255,0.07); border-radius: 14px">
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Push in background</div>
+          <div style="flex-grow: 1"></div>
+          <div style="position: relative; width: 46px; height: 28px; border-radius: 999px; background: #2f9e57">
+            <div style="position: absolute; top: 2px; left: 20px; width: 24px; height: 24px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgba(0,0,0,0.3)"></div>
+          </div>
+        </div>
+        <div style="height: 1px; background: rgba(255,255,255,0.08); margin-left: 16px"></div>
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Last push</div>
+          <div style="flex-grow: 1"></div>
+          <div style="font-size: 13px; color: rgba(255,255,255,0.55)">2 seconds ago</div>
+        </div>
+      </div>
+      <div style="font-size: 12px; color: rgba(255,255,255,0.45); padding: 0 4px; line-height: 1.4">A silent audio session keeps pushes flowing while your phone is locked.</div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="font-size: 11px; font-weight: 600; letter-spacing: 0.8px; color: rgba(255,255,255,0.5); padding-left: 4px">PRIVACY</div>
+      <div style="display: flex; flex-direction: column; background: rgba(255,255,255,0.07); border-radius: 14px">
+        <div style="display: flex; align-items: center; height: 50px; padding: 0 16px; gap: 10px">
+          <div style="font-size: 15px; color: #ffffff">Apple Music access</div>
+          <div style="flex-grow: 1"></div>
+          <div style="font-size: 13px; color: #57d97a">Granted</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview": {"width": 430, "height": 932}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

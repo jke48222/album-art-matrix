@@ -1,0 +1,103 @@
+<svg width="680" height="918" viewBox="0 0 680 918" role="img" xmlns="http://www.w3.org/2000/svg">
+<title>Album-Art Matrix wiring map</title>
+<desc>How every part connects: S1 first-light with one panel and the bonnet, the bench white-balance rig, and the nine-panel wall on the custom backplane.</desc>
+<style>
+  .t  { font: 600 12.5px -apple-system, 'Helvetica Neue', Arial, sans-serif; fill: #2C2C2A; }
+  .ts { font: 400 10.5px -apple-system, 'Helvetica Neue', Arial, sans-serif; fill: #5F5E5A; }
+  .th { font: 700 13.5px -apple-system, 'Helvetica Neue', Arial, sans-serif; fill: #2C2C2A; letter-spacing: 0.4px; }
+  .box { fill: #F1EFE8; stroke: #B4B2A9; stroke-width: 1; }
+</style>
+<rect x="0" y="0" width="680" height="918" fill="#FBFAF6"/>
+<defs>
+<marker id="am" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#D85A30" stroke-width="1.6"/></marker>
+<marker id="ap" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#7F77DD" stroke-width="1.6"/></marker>
+<marker id="at" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#1D9E75" stroke-width="1.6"/></marker>
+<marker id="ag" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1,1 L7,4 L1,7" fill="none" stroke="#888780" stroke-width="1.6"/></marker>
+</defs>
+
+<line x1="40" y1="46" x2="70" y2="46" stroke="#D85A30" stroke-width="2.5"/><text x="76" y="50" class="ts">mains AC</text>
+<line x1="150" y1="46" x2="180" y2="46" stroke="#7F77DD" stroke-width="2.5"/><text x="186" y="50" class="ts">5 V power</text>
+<line x1="262" y1="46" x2="292" y2="46" stroke="#1D9E75" stroke-width="2.5"/><text x="298" y="50" class="ts">data / I2C / USB</text>
+<line x1="404" y1="46" x2="434" y2="46" stroke="#888780" stroke-width="2" stroke-dasharray="5 4"/><text x="440" y="50" class="ts">Wi-Fi / mount</text>
+
+<text x="40" y="86" class="th">S1 — FIRST LIGHT · one panel + bonnet</text>
+
+<rect class="box" x="40" y="120" width="92" height="40" rx="8"/><text x="86" y="138" text-anchor="middle" class="t">Wall outlet</text><text x="86" y="152" text-anchor="middle" class="ts">120 V</text>
+<rect class="box" x="176" y="100" width="112" height="40" rx="8"/><text x="232" y="118" text-anchor="middle" class="t">27 W USB-C PSU</text><text x="232" y="132" text-anchor="middle" class="ts">or owned charger</text>
+<rect class="box" x="176" y="164" width="112" height="44" rx="8"/><text x="232" y="182" text-anchor="middle" class="t">LRS-50-5</text><text x="232" y="197" text-anchor="middle" class="ts">5 V / 10 A</text>
+<rect class="box" x="336" y="96" width="130" height="56" rx="8"/><text x="401" y="118" text-anchor="middle" class="t">Raspberry Pi 5</text><text x="401" y="134" text-anchor="middle" class="ts">microSD · Active Cooler</text>
+<rect class="box" x="336" y="184" width="130" height="40" rx="8"/><text x="401" y="202" text-anchor="middle" class="t">Triple Bonnet</text><text x="401" y="216" text-anchor="middle" class="ts">on riser header</text>
+<rect class="box" x="524" y="140" width="116" height="56" rx="8"/><text x="582" y="162" text-anchor="middle" class="t">64×64 panel</text><text x="582" y="178" text-anchor="middle" class="ts">P2.5 · 160 mm</text>
+<rect class="box" x="524" y="60" width="116" height="40" rx="8"/><text x="582" y="78" text-anchor="middle" class="t">Your Mac</text><text x="582" y="92" text-anchor="middle" class="ts">reporter :8787</text>
+
+<path d="M132 130 L176 120" fill="none" stroke="#D85A30" stroke-width="2.5" marker-end="url(#am)"/>
+<text x="128" y="112" class="ts">IEC cord</text>
+<path d="M132 150 L176 182" fill="none" stroke="#D85A30" stroke-width="2.5" marker-end="url(#am)"/>
+<text x="106" y="178" class="ts">pigtail L/N/⏚</text>
+<path d="M288 120 L336 120" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<text x="294" y="112" class="ts">USB-C</text>
+<path d="M288 186 L524 172" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<text x="294" y="166" class="ts">4-pin power harness</text>
+<path d="M401 152 L401 184" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="410" y="172" class="ts">GPIO ×26</text>
+<path d="M466 204 L524 186" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="452" y="226" class="ts">16-pin IDC → panel INPUT</text>
+<path d="M524 84 Q470 92 430 96" fill="none" stroke="#888780" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+<text x="440" y="80" class="ts">Wi-Fi · now-playing</text>
+
+<text x="40" y="286" class="th">BENCH — WHITE-BALANCE RIG</text>
+<rect class="box" x="40" y="304" width="104" height="40" rx="8"/><text x="92" y="322" text-anchor="middle" class="t">Mac</text><text x="92" y="336" text-anchor="middle" class="ts">mpremote REPL</text>
+<rect class="box" x="210" y="304" width="104" height="40" rx="8"/><text x="262" y="322" text-anchor="middle" class="t">Pico 2 W</text><text x="262" y="336" text-anchor="middle" class="ts">spare, MicroPython</text>
+<rect class="box" x="380" y="304" width="110" height="40" rx="8"/><text x="435" y="322" text-anchor="middle" class="t">TCS34725</text><text x="435" y="336" text-anchor="middle" class="ts">solder header first</text>
+<rect class="box" x="556" y="304" width="84" height="40" rx="8"/><text x="598" y="322" text-anchor="middle" class="t">Panel</text><text x="598" y="336" text-anchor="middle" class="ts">full white</text>
+<path d="M144 324 L210 324" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="152" y="316" class="ts">micro-USB</text>
+<path d="M314 324 L380 324" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="316" y="316" class="ts">4 jumpers I2C</text>
+<path d="M490 324 L556 324" fill="none" stroke="#888780" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+<text x="492" y="316" class="ts">held against</text>
+
+<text x="40" y="404" class="th">S2–S6 — THE 9-PANEL WALL · backplane rev A</text>
+
+<rect class="box" x="40" y="428" width="92" height="40" rx="8"/><text x="86" y="446" text-anchor="middle" class="t">Wall outlet</text><text x="86" y="460" text-anchor="middle" class="ts">120 V</text>
+<rect class="box" x="176" y="428" width="138" height="44" rx="8"/><text x="245" y="446" text-anchor="middle" class="t">Fused C14 inlet</text><text x="245" y="461" text-anchor="middle" class="ts">switch · fuse · SL22 NTC</text>
+<rect class="box" x="360" y="428" width="116" height="44" rx="8"/><text x="418" y="446" text-anchor="middle" class="t">LRS-350-5</text><text x="418" y="461" text-anchor="middle" class="ts">5 V / 60 A</text>
+<path d="M132 448 L176 448" fill="none" stroke="#D85A30" stroke-width="2.5" marker-end="url(#am)"/>
+<path d="M314 448 L360 448" fill="none" stroke="#D85A30" stroke-width="2.5" marker-end="url(#am)"/>
+
+<rect class="box" x="176" y="524" width="300" height="96" rx="8"/><text x="326" y="548" text-anchor="middle" class="t">Backplane rev A (your PCB)</text><text x="326" y="566" text-anchor="middle" class="ts">Pi 5 socketed on 2×20</text><text x="326" y="582" text-anchor="middle" class="ts">9× ATO-fused 5 V drops · buffers</text><text x="326" y="600" text-anchor="middle" class="ts">alt: bus bars + 10 fuse holders</text>
+<path d="M418 472 Q418 500 400 524" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<path d="M410 472 Q404 500 386 524" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<path d="M426 472 Q432 500 414 524" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<text x="446" y="502" class="ts">3× 14 AWG trunks</text>
+
+<rect class="box" x="536" y="524" width="32" height="32" rx="4"/><rect class="box" x="574" y="524" width="32" height="32" rx="4"/><rect class="box" x="612" y="524" width="32" height="32" rx="4"/>
+<rect class="box" x="536" y="562" width="32" height="32" rx="4"/><rect class="box" x="574" y="562" width="32" height="32" rx="4"/><rect class="box" x="612" y="562" width="32" height="32" rx="4"/>
+<rect class="box" x="536" y="600" width="32" height="32" rx="4"/><rect class="box" x="574" y="600" width="32" height="32" rx="4"/><rect class="box" x="612" y="600" width="32" height="32" rx="4"/>
+<text x="590" y="650" text-anchor="middle" class="ts">9× P2.5 panels (+1 spare)</text>
+<path d="M476 552 L536 540" fill="none" stroke="#7F77DD" stroke-width="2.5" marker-end="url(#ap)"/>
+<text x="478" y="534" class="ts">9 fused drops</text>
+<path d="M476 590 L536 596" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="480" y="614" class="ts">3× IDC, daisy-chained</text>
+
+<rect class="box" x="40" y="524" width="104" height="44" rx="8"/><text x="92" y="542" text-anchor="middle" class="t">VEML7700</text><text x="92" y="557" text-anchor="middle" class="ts">at frame edge</text>
+<path d="M144 546 L176 552" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="106" y="582" class="ts">StemmaQT (I2C0)</text>
+
+<rect class="box" x="40" y="654" width="104" height="44" rx="8"/><text x="92" y="672" text-anchor="middle" class="t">UCA202</text><text x="92" y="687" text-anchor="middle" class="ts">line-in from amp</text>
+<path d="M144 668 Q200 660 250 620" fill="none" stroke="#1D9E75" stroke-width="2.5" marker-end="url(#at)"/>
+<text x="176" y="648" class="ts">USB → Pi (S3 ears · mini mic alt)</text>
+
+<rect class="box" x="530" y="688" width="120" height="44" rx="8"/><text x="590" y="706" text-anchor="middle" class="t">Diffuser + ND</text><text x="590" y="721" text-anchor="middle" class="ts">opal + grey acrylic</text>
+<path d="M590 688 L590 654" fill="none" stroke="#888780" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+<text x="600" y="676" class="ts">front layer</text>
+<rect class="box" x="530" y="756" width="120" height="40" rx="8"/><text x="590" y="774" text-anchor="middle" class="t">French cleat</text><text x="590" y="788" text-anchor="middle" class="ts">behind, on wall</text>
+<path d="M590 756 L590 732" fill="none" stroke="#888780" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#ag)"/>
+
+<text x="40" y="742" class="ts">JP1 on the backplane can power the Pi from the wall supply</text>
+<text x="40" y="760" class="ts">(deletes the USB-C PSU). Star ground lives on the board.</text>
+
+<text x="40" y="836" class="th">NO WIRING — BENCH TOOLS</text>
+<text x="40" y="858" class="ts">Soldering iron + solder (TCS header, THT board parts) · multimeter (verify 5 V before</text>
+<text x="40" y="874" class="ts">first power-on) · crimper + terminals (trunk lugs) · strippers · drivers · heat-shrink · M3 kit</text>
+</svg>

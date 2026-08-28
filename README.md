@@ -5,8 +5,8 @@ spinning disc. Nine square LED panels tiled three by three, 480 mm on a side, dr
 Pi 5.
 
 **No hardware has been driven yet.** Not nine panels, not one. This repository is the design, the
-circuit simulation, and the software that will run on it, all written and tested before the parts
-were ordered. The section below is exact about what exists.
+circuit simulation, and the software that will run on it. Some of the first light parts have since
+been ordered; no panel has arrived. The section below is exact about what exists.
 
 ## Status
 
@@ -14,18 +14,23 @@ were ordered. The section below is exact about what exists.
 | --- | --- |
 | Circuit simulation (`pcb/sims/`) | Done and reproducible. Eight ngspice decks, verified to regenerate their committed outputs bit for bit. |
 | Backplane circuit (`pcb/circuit.py`) | Done as a netlist and BOM. 76 components, 105 nets, 345 pin connections. |
-| PCB layout | **Not started.** No KiCad project, no board file, no gerbers, no design rule check. |
+| PCB layout (`pcb/backplane.kicad_pcb`) | Laid out and mostly routed. 20 design rule check runs are committed as `pcb/drc1.json` through `drc20.json`; the last one is **0 errors, 7 unconnected items**, so the board is not finished. Of its 107 warnings, 26 are silkscreen clearance and the rest are KiCad reporting that the vendored `pcb/footprints/` are not installed as a system library. |
+| Fab outputs (`pcb/fab/`) | Gerbers, drill, pick and place, and board views are exported, but they were exported over those 7 missing connections. **Do not order this board yet.** |
 | Art pipeline (`brain/art/`) | Built, runs on a laptop, has an offline test. |
+| Wall control API (`brain/control.py`) | Built, 305 lines. Serves mode, brightness, spin rate, and ambient settings on port 8788. Exercised only against the laptop preview sink. |
+| Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, ambient light effects, clock and ticker over a hand made pixel font. All verified as PNGs, none on an LED. |
+| iOS companion (`ios-companion/`) | Built, 4,330 lines of Swift. Reads the on device now playing state and pushes it to the reporter, and remote controls the wall. Runs on device. **The simulator cannot exercise it**, because MediaPlayer is stubbed there, so it stops at the first run screen. |
+| Panel intake QA (`scripts/panel_qa.py`) | Test pattern generator and procedure written, 271 reference frames rendered in `qa_preview/`. `qa/QA-SHEET.md` is an **empty template**. No panel has been through it. |
 | Now playing, Apple Music (`brain/nowplaying/applemusic.py`) | Built, 216 lines. |
 | Now playing, Spotify (`brain/nowplaying/spotify.py`) | Built, 223 lines, dormant behind a config flag. |
 | Now playing, Last.fm / AcoustID / local player | **Stubs.** Each is a class whose `get_current()` returns `None`. |
 | Renderer (`renderer/art_display.c`) | 92 lines of C, written. **Never compiled**, because it links a library that only builds on a Pi. |
 | Pi provisioning (`pi/`) | Scripts written. Never executed. `pi/PI-SETUP.md` step 3 begins with "Pi arrives". |
-| Parts | **Not purchased.** `PARTS.md` is a shopping list with live links and prices checked 2026-08-19, covering the Pi, the panels, the power supplies, and a soldering iron. |
+| Parts | **Partly purchased.** `PARTS-TRACKER.xlsx` carries actual prices paid for the first light path: Pi 5, card, cooler, matrix bonnet, colour sensor, cabling. The panels themselves and the Mean Well supplies are still open. `PARTS.md` remains the shopping list. |
 | White balance gains | Placeholders. `config.example.toml` labels the current values "a GUESS" pending measurement. |
 
-One commit. The whole thing was designed in a single sitting, which is why the honest framing
-matters: none of it has met a panel.
+Everything above is design, simulation, and software. Nothing in this repository has met a panel,
+and that is the only claim that matters until it changes.
 
 ## What problem this solves
 
@@ -377,9 +382,12 @@ displayed anything.
 ## Project layout
 
 ```
-brain/                  790 lines of Python: the now playing control plane
+brain/                  1,679 lines of Python: the now playing control plane
 ├── main.py             Poll loop. Tracks state in one variable, last_track.
 │                       There is no database and no history of what has played.
+├── control.py          HTTP state API on 8788. Mode, brightness, spin rate,
+│                       ambient effect and colours. A write sets a dirty event
+│                       that wakes the poll loop instead of waiting out its 5s.
 ├── nowplaying/
 │   ├── applemusic.py   Built (216 lines). Tiered: a state file, then osascript
 │   │                   against Music.app, then a MusicKit account query.
@@ -387,21 +395,43 @@ brain/                  790 lines of Python: the now playing control plane
 │   ├── lastfm.py       Stub. get_current() returns None.
 │   ├── acoustid.py     Stub. get_current() returns None.
 │   └── localplayer.py  Stub. get_current() returns None.
-├── art/                fetch.py (URL to cached image), pipeline.py (the colour work)
+├── art/
+│   ├── fetch.py        Cover URL to cached image
+│   ├── pipeline.py     The colour work
+│   ├── disc.py         Sleeve as a spinning disc, supersampled, fixed sheen
+│   ├── effects.py      Ambient generators for when nothing is playing
+│   ├── pixelfont.py    A 64px-panel font, drawn by hand
+│   └── text_modes.py   Clock and scrolling ticker over that font
 └── sinks/              mac_preview.py (PNG, for development), pi_renderer.py (FIFO)
+
+ios-companion/          AlbumWall, 4,330 lines of Swift
+├── AlbumWall/          The app: on device now playing push, wall remote,
+│                       photo and video push, App Intents, Live Activity
+├── AlbumWallWidgets/   Home screen widgets and the Live Activity surface
+└── design/             Screen designs the app was built from
 
 pcb/
 ├── DESIGN.md           The backplane's rationale, signal design, power design, costs
 ├── circuit.py          The circuit as data. Emits the two files below.
 ├── backplane.net       Generated KiCad netlist, 76 parts, 105 nets
 ├── bom.csv             Generated bill of materials
+├── layout.py           Placement, driving the KiCad board file
+├── backplane.kicad_pcb The board. Mostly routed, 7 connections still missing.
+├── drc*.json           20 design rule check runs, in order. The trend is the story.
+├── footprints/         Vendored .kicad_mod files, so the board opens anywhere
+├── fab/                Gerbers, drill, pick and place, board views. Premature.
 └── sims/               ngspice decks, numeric outputs, three figures, run_sims.py
 
 renderer/               art_display.c (92 lines) and its Makefile. Never compiled.
-pi/                     PI-SETUP.md runbook, bootstrap.sh, run_renderer.sh, systemd unit
-scripts/                mac_reporter.py (Mac HTTP endpoint the Pi polls), smoke_test.py,
-                        show_white.py, pico_colorimeter.py, WB-PROCEDURE.md
-PARTS.md                Shopping list. Prices checked 2026-08-19. Nothing ordered.
+pi/                     PI-SETUP.md runbook, wiring.svg, bootstrap.sh, run_renderer.sh,
+                        systemd units
+scripts/                mac_reporter.py (Mac HTTP endpoint the Pi polls), panel_qa.py +
+                        PANEL-INTAKE.md (per panel intake), spin_demo.py, gen_tracker.py,
+                        smoke_test.py, show_white.py, pico_colorimeter.py, WB-PROCEDURE.md
+qa_preview/             271 rendered QA patterns
+qa/QA-SHEET.md          Per panel results. Empty; no panel has been tested.
+PARTS.md                Shopping list. Prices checked 2026-08-19.
+PARTS-TRACKER.xlsx      What was actually ordered, and what it cost
 config.example.toml     Copy to config.toml
 deploy.sh               rsync to the Pi, with --bootstrap for the first run
 ```
@@ -410,9 +440,15 @@ deploy.sh               rsync to the Pi, with --bootstrap for the first run
 
 Stated plainly, because the value of everything above depends on this list being complete.
 
-- **No hardware.** No Pi, no panels, no power supplies. `PARTS.md` is a shopping list.
-- **No PCB.** There is a netlist and a BOM. There is no board layout, no gerbers, and no design rule
-  check, and `pcb/DESIGN.md` lists that work as the next session.
+- **No hardware has been driven.** Some first light parts are ordered; no panel has arrived, and
+  nothing in this repository has lit an LED.
+- **The PCB is not finished.** It is laid out and mostly routed, and the last design rule check is
+  clean of errors, but 7 connections are still missing. Gerbers exist and should not be sent to a
+  fab in that state. The board is also still parked: the build uses the bonnet and bus bar path.
+- **The iOS app has never been verified end to end.** It builds and runs on device, but the
+  simulator stubs MediaPlayer, so its now playing path has only been reasoned about, not watched.
+- **No panel has been through intake QA.** The patterns and the procedure exist; the results sheet
+  is an empty table.
 - **The renderer has never been compiled**, because the library it links only builds on a Pi.
 - **Three of the five now playing adapters are stubs** that return `None`.
 - **No measured performance of any kind.** Not refresh rate, not frame time, not CPU usage, not
@@ -420,7 +456,8 @@ Stated plainly, because the value of everything above depends on this list being
   third party library's specification and a target for this design, not a result.
 - **No persistence.** The brain holds the current track in one in memory variable. Nothing is
   recorded, so there is no history of what has played and nothing to replay.
-- **No remote control app.** There is no phone client, in any language.
+- **The remote control app is unproven against a wall.** It talks to `brain/control.py`, and that
+  API has only ever driven a PNG on a laptop.
 - **The white balance gains are unmeasured**, and labelled as such in the config.
 - **No automated tests.** `scripts/smoke_test.py` is a visual check that writes PNGs for a human to
   look at, plus one assertion on frame size. There is no test runner and no CI.

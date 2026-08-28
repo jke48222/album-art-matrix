@@ -3,7 +3,6 @@ C1,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
 C2,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
 C3,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
 C4,100nF,X7R 16V,Capacitor_SMD:C_0603_1608Metric,
-C5,100nF,,Capacitor_SMD:C_0603_1608Metric,
 CB11,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
 CB12,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
 CB21,1000uF_10V,Panasonic FR 10V,Capacitor_THT:CP_Radial_D10.0mm_P5.00mm,
@@ -23,15 +22,15 @@ CM32,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
 CM33,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
 CM34,22uF_10V,X5R,Capacitor_SMD:C_1206_3216Metric,
 D1,SMBJ5.0A,SMBJ5.0A,Diode_SMD:D_SMB,
-F1,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 1
-F2,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 2
-F3,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 3
-F4,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 4
-F5,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 5
-F6,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 6
-F7,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 7
-F8,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 8
-F9,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2,panel 9
+F1,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 1
+F2,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 2
+F3,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 3
+F4,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 4
+F5,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 5
+F6,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 6
+F7,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 7
+F8,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 8
+F9,ATO_FUSE_10A,Keystone 3557 clips x2,Fuse:Fuseholder_Blade_ATO_Littelfuse_Pudenz_2_Pin,panel 9
 JP1,PI_PWR_EN,,Jumper:SolderJumper-2_P1.3mm_Open_RoundedPad1.0x1.5mm,close = Pi from VP1
 JP_E1,E_PIN8_or_PIN4,,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm,E-line select
 JP_E2,E_PIN8_or_PIN4,,Jumper:SolderJumper-3_P1.3mm_Open_RoundedPad1.0x1.5mm,E-line select
@@ -54,7 +53,7 @@ J_QT2,STEMMAQT_I2C0,SM04B-SRSS-TB,Connector_JST:JST_SH_SM04B-SRSS-TB_1x04-1MP_P1
 LED1,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
 LED2,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
 LED3,PWR_GREEN,,LED_SMD:LED_0805_2012Metric,
-PF1,POLYFUSE_5A,MF-R500,Fuse:Fuse_Bourns_MF-R400,
+PF1,POLYFUSE_5A,MF-R500,Fuse:Fuse_Bourns_MF-RG500,
 RL1,1k,,Resistor_SMD:R_0805_2012Metric,
 RL2,1k,,Resistor_SMD:R_0805_2012Metric,
 RL3,1k,,Resistor_SMD:R_0805_2012Metric,
@@ -74,4 +73,3 @@ U1,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
 U2,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
 U3,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
 U4,74AHCT245PW,SN74AHCT245PWR,Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm,
-U5,VEML7700,VEML7700-TT,OptoDevice:Vishay_VEML7700,ambient light
