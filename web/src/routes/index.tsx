@@ -67,6 +67,7 @@ function WallPage() {
   const [override, setOverride] = useState<NowPlaying | null>(null);
   const lastLogged = useRef<string | null>(null);
   const lastGood = useRef<PipelineResult | null>(null);
+  const resultFor = useRef<string | null>(null); // which trackId the current result renders
 
   useEffect(() => {
     const raw = sessionStorage.getItem("aam.rerender");
@@ -115,10 +116,13 @@ function WallPage() {
       return;
     }
     let cancelled = false;
+    const forTrack = track?.trackId ?? null;
     setArtError(null);
     loadArt(url)
       .then(async (img) => {
-        if (!cancelled) await process(img);
+        if (cancelled) return;
+        await process(img);
+        resultFor.current = forTrack;
       })
       .catch((e: unknown) => {
         if (cancelled) return;
@@ -152,9 +156,11 @@ function WallPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track, pattern, settings.idleBehaviour, settings.wallSize]);
 
-  // Log to history once per track, after it has actually been rendered.
+  // Log to history once per track, after ITS frame has actually been rendered
+  // (result lags a track change by one pipeline run; resultFor closes the race).
   useEffect(() => {
     if (!track || !result || pattern) return;
+    if (resultFor.current !== track.trackId) return;
     if (lastLogged.current === track.trackId) return;
     lastLogged.current = track.trackId;
     addHistory({
