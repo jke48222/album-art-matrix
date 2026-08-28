@@ -1,108 +1,145 @@
-// The Wall. One glance answers: what is the wall doing right now.
-// Hero preview, placard, mode strip, contextual row, light row.
-// Chrome retreats when the wall is off.
+// The Wall.
+//
+// The panel owns the screen and the primary parameter lives on the panel:
+// drag it to dim, and the picture dissolves into its tiles. There is no
+// brightness row, because the object is the control. Everything else on
+// screen is lit by what the panel is showing.
 
 import SwiftUI
 
 struct WallScreen: View {
     @Environment(WallSession.self) private var wall
 
-    // debounced brightness: local while dragging, sent on release
-    @State private var light: Double = 1.0
-    @State private var syncingLight = false
+    /// Non-nil only while a finger is on the panel adjusting the light.
+    @State private var dragLight: Double? = nil
+    @State private var lastTrackKey: String = ""
 
-    private var reading: FrameReading { FrameReading.from(wall.frame) }
+    private var duty: Double { dragLight ?? wall.state.brightness }
+    private var isOff: Bool { wall.state.mode == "off" }
 
-    /// The frame's own colour drives the accent; the brain's art_colors win
-    /// when present (they were computed from the full-resolution art).
+    private var reading: FrameReading {
+        FrameRenderer.read(wall.frame, duty: isOff ? 0.05 : duty)
+    }
+
+    /// The room's colour: the brain's own dominant chroma when it has one,
+    /// otherwise the frame's.
     private var accent: Color {
         if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
         return reading.glow
     }
 
-    private var isOff: Bool { wall.state.mode == "off" }
+    /// How much light is actually in the room right now. Everything visual
+    /// is scaled by this, so the phone dims as the wall dims.
+    private var roomLight: Double { isOff ? 0 : reading.lit * duty }
+
+    private var litInk: Color { Ink.ink.lit(by: accent, 0.20 * roomLight) }
+    private var litDim: Color { Ink.dim.lit(by: accent, 0.16 * roomLight) }
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 20)
+
+                // The panel bleeds past the gutter: it is the object, not a card.
                 WallHero(
-                    reading: isOff ? .dark : reading,
-                    brightness: light,
+                    reading: reading,
+                    confirmed: isOff ? 0.05 : wall.state.brightness,
+                    dragging: $dragLight,
                     link: wall.link,
-                    trackKey: wall.state.title ?? wall.state.mode
-                ) {
-                    // Hold toggles: a dark wall wakes, a lit wall goes dark.
-                    wall.send(["mode": isOff ? "art" : "off"])
+                    onCommit: { wall.send(["brightness": $0]) },
+                    onHold: { wall.send(["mode": isOff ? "art" : "off"]) }
+                )
+                .padding(.horizontal, -4)
+                .padding(.bottom, 26)
+
+                Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 26)
+
+                modeRow
+                    .padding(.horizontal, 12)
+                    .padding(.bottom, isOff ? 8 : 24)
+
+                if !isOff {
+                    contextRow
+                        .padding(.horizontal, 20)
+                        .transition(.opacity)
                 }
-                Placard(state: wall.state, link: wall.link)
-                controls
-                Spacer(minLength: 8)
-                footer
+
+                Spacer(minLength: 40)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .padding(.top, 6)
+            .animation(Motion.settle, value: isOff)
         }
-        .background(Ink.ground.ignoresSafeArea())
+        .scrollIndicators(.hidden)
+        .background {
+            // The room. Lit only by the wall, and dark when the wall is dark.
+            ZStack(alignment: .top) {
+                Ink.ground
+                RadialGradient(
+                    colors: [accent.opacity(0.20 * roomLight), .clear],
+                    center: .init(x: 0.5, y: 0.26),
+                    startRadius: 0,
+                    endRadius: 520
+                )
+            }
+            .ignoresSafeArea()
+            .animation(.easeInOut(duration: 1.2), value: roomLight)
+            .animation(.easeInOut(duration: 1.2), value: reading.key)
+        }
         .preferredColorScheme(.dark)
-        .onAppear {
-            light = wall.state.brightness
-            wall.start()
-        }
-        .onChange(of: wall.state.brightness) { _, new in
-            if !syncingLight { light = new }
+        .onAppear { wall.start() }
+        .onChange(of: reading.key) { _, new in
+            // A new sleeve arriving on 4,096 LEDs is an event, not a fade.
+            guard !lastTrackKey.isEmpty, new != lastTrackKey, !isOff else {
+                lastTrackKey = new
+                return
+            }
+            lastTrackKey = new
+            Taps.landed()
         }
     }
 
+    // MARK: - Pieces
+
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center) {
             Text("TESSERA")
-                .font(.display(17))
-                .kerning(2.4)
-                .foregroundStyle(Ink.ink)
+                .font(.display(18))
+                .kerning(3.0)
+                .foregroundStyle(litInk)
             Spacer()
             LinkChip(link: wall.link)
         }
-        .padding(.top, 6)
+        .padding(.top, 4)
     }
 
-    @ViewBuilder private var controls: some View {
-        @Bindable var wallB = wall
-
-        VStack(spacing: 18) {
-            InkStrip(
-                options: [
-                    .init(id: "art", label: "Art"),
-                    .init(id: "cd", label: "Spin"),
-                    .init(id: "ambient", label: "Lamp"),
-                    .init(id: "off", label: "Off"),
-                ],
-                selection: Binding(
-                    get: { normalizedMode },
-                    set: { wall.send(["mode": $0]) }
-                )
-            )
-
-            if isOff {
-                // Chrome retreats. One line of type, nothing else.
-                Text("Hold the wall to wake it, or pick a mode.")
-                    .font(.ui(13))
-                    .foregroundStyle(Ink.faint)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            } else {
-                contextRow
-                LightRow(value: $light, accent: accent) { v in
-                    syncingLight = true
-                    wall.send(["brightness": v])
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { syncingLight = false }
-                }
-            }
+    private var modeRow: some View {
+        HStack(spacing: 0) {
+            glyph(.art, "art", mode: "art")
+            glyph(.spin, "spin", mode: "cd")
+            glyph(.lamp, "lamp", mode: "ambient")
+            glyph(.dark, "off", mode: "off")
         }
-        .animation(Motion.settle, value: isOff)
     }
 
-    /// The wall may be in a mode the strip does not offer (ticker, clip...).
-    /// Show it as Art rather than lying with an empty selection.
+    private func glyph(_ g: Glyph, _ label: String, mode: String) -> some View {
+        GlyphButton(
+            glyph: g,
+            label: label,
+            active: normalizedMode == mode,
+            accent: accent,
+            lit: roomLight
+        ) {
+            wall.send(["mode": mode])
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// The wall may be in a mode this row does not offer (ticker, clip, frame).
+    /// Show Art rather than lying with nothing selected.
     private var normalizedMode: String {
         ["art", "cd", "ambient", "off"].contains(wall.state.mode) ? wall.state.mode : "art"
     }
@@ -110,80 +147,40 @@ struct WallScreen: View {
     @ViewBuilder private var contextRow: some View {
         switch wall.state.mode {
         case "cd":
-            labeledRow("speed") {
-                InkStrip(
-                    options: [
-                        .init(id: 7.5, label: "7.5"),
-                        .init(id: 33.33, label: "33⅓"),
-                        .init(id: 45.0, label: "45"),
-                    ],
-                    selection: Binding(
-                        get: { nearestRpm },
-                        set: { wall.send(["rpm": $0]) }
-                    ),
-                    namespaceSeed: "rpm"
-                )
-            }
+            SpeedTicker(rpm: nearestRpm, accent: accent) { wall.send(["rpm": $0]) }
+
         case "ambient":
-            VStack(spacing: 12) {
-                labeledRow("effect") {
-                    InkStrip(
-                        options: [
-                            .init(id: "solid", label: "Solid"),
-                            .init(id: "breathe", label: "Breathe"),
-                            .init(id: "pulse", label: "Pulse"),
-                            .init(id: "rainbow", label: "Rainbow"),
-                            .init(id: "gradient", label: "Fade"),
-                        ],
-                        selection: Binding(
-                            get: { wall.state.effect },
-                            set: { wall.send(["effect": $0]) }
-                        ),
-                        namespaceSeed: "effect"
-                    )
-                }
+            VStack(alignment: .leading, spacing: 18) {
+                PillRow(
+                    label: "light",
+                    options: [("solid", "solid"), ("breathe", "breathe"), ("pulse", "pulse"),
+                              ("rainbow", "rainbow"), ("fade", "gradient")],
+                    selected: wall.state.effect,
+                    accent: accent
+                ) { wall.send(["effect": $0]) }
+
                 Toggle(isOn: Binding(
                     get: { wall.state.matchArt },
                     set: { wall.send(["match_art": $0]) }
                 )) {
-                    Text("match the album").microlabel(Ink.ink)
+                    Text("Take the album's colours")
+                        .font(.ui(15))
+                        .foregroundStyle(litInk)
                 }
                 .tint(accent)
             }
+
         default:
-            labeledRow("finish") {
-                InkStrip(
-                    options: [
-                        .init(id: "clean", label: "Clean"),
-                        .init(id: "dither", label: "Dither"),
-                        .init(id: "poster", label: "Poster"),
-                    ],
-                    selection: Binding(
-                        get: { wall.state.finish },
-                        set: { wall.send(["finish": $0]) }
-                    ),
-                    namespaceSeed: "finish"
-                )
-            }
+            FinishRow(
+                frame: wall.frame,
+                duty: duty,
+                selected: wall.state.finish,
+                accent: accent
+            ) { wall.send(["finish": $0]) }
         }
     }
 
     private var nearestRpm: Double {
-        let presets = [7.5, 33.33, 45.0]
-        return presets.min(by: { abs($0 - wall.state.rpm) < abs($1 - wall.state.rpm) }) ?? 7.5
-    }
-
-    private func labeledRow<Content: View>(_ label: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label).microlabel()
-            content()
-        }
-    }
-
-    private var footer: some View {
-        Text("Simulation of nothing: this preview is the wall's own frame.")
-            .microlabel(Ink.faint)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.bottom, 12)
+        [7.5, 33.33, 45.0].min(by: { abs($0 - wall.state.rpm) < abs($1 - wall.state.rpm) }) ?? 7.5
     }
 }

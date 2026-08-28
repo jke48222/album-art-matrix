@@ -65,16 +65,24 @@ def dominant_colors(img: Image.Image, n: int = 2) -> list[str]:
     """The sleeve's n most-common colors as "#rrggbb", most common first.
     Feeds ambient match_art. Tiny resize first so it costs nothing."""
     small = img.convert("RGB").resize((24, 24), Image.LANCZOS)
-    pal = small.quantize(colors=max(4, n * 2))
+    pal = small.quantize(colors=max(8, n * 4))
     counts = sorted(pal.getcolors(), reverse=True)
     palette = pal.getpalette()
-    out = []
-    for _, idx in counts:
+
+    # Rank by population WEIGHTED BY SATURATION. A photographic sleeve is
+    # mostly near-grey skin, paper and highlight; ranking on raw population
+    # picks one of those, and "match the album" then lights the wall grey.
+    scored = []
+    for count, idx in counts:
         r, g, b = palette[idx * 3: idx * 3 + 3]
-        # skip near-black/near-white fills; they make dull light
-        if max(r, g, b) < 28 or min(r, g, b) > 232:
+        mx, mn = max(r, g, b), min(r, g, b)
+        if mx < 70 or mn > 232:          # too dark to light a room, or a white fill
             continue
-        out.append(f"#{r:02x}{g:02x}{b:02x}")
-        if len(out) == n:
-            break
+        sat = (mx - mn) / mx if mx else 0
+        if sat < 0.20:                   # not a colour to light a room with
+            continue
+        scored.append((count * (0.2 + sat * 0.8), r, g, b))
+
+    scored.sort(reverse=True)
+    out = [f"#{r:02x}{g:02x}{b:02x}" for _, r, g, b in scored[:n]]
     return out or ["#4060ff", "#ff2080"][:n]

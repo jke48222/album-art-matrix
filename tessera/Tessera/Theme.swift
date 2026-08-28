@@ -2,7 +2,7 @@
 //
 // A dark room, one lit tile. The base palette is fixed and warm-dark; the live
 // accent is computed per frame from whatever the wall is showing (Ink.artTint).
-// Zodiak speaks for the art, Switzer for the interface, Martian Mono for
+// Technor speaks for the art, Switzer for the interface, Martian Mono for
 // anything measured. Signal red is for warnings and destructive only.
 
 import SwiftUI
@@ -48,9 +48,9 @@ extension Color {
 // Faces ship in Fonts/ and are registered at launch. Every size goes through
 // the caller's @ScaledMetric so custom faces track Dynamic Type.
 enum Face {
-    static let display       = "Zodiak-Bold"
-    static let displayBook   = "Zodiak-Regular"
-    static let displayItalic = "Zodiak-Italic"
+    static let display       = "Technor-Bold"
+    static let displayMid    = "Technor-Semibold"
+    static let displayBook   = "Technor-Medium"
     static let ui            = "Switzer-Regular"
     static let uiMedium      = "Switzer-Medium"
     static let uiSemibold    = "Switzer-Semibold"
@@ -66,7 +66,7 @@ enum Face {
             }
         }
         #if DEBUG
-        for fam in ["Zodiak", "Switzer", "Martian Mono"] {
+        for fam in ["Technor", "Switzer", "Martian Mono"] {
             print("[fonts] \(fam):", UIFont.fontNames(forFamilyName: fam))
         }
         #endif
@@ -76,7 +76,7 @@ enum Face {
 extension Font {
     /// Track titles, big states, the wordmark.
     static func display(_ size: CGFloat) -> Font { .custom(Face.display, size: size) }
-    static func displayItalic(_ size: CGFloat) -> Font { .custom(Face.displayItalic, size: size) }
+    static func displayMid(_ size: CGFloat) -> Font { .custom(Face.displayMid, size: size) }
     /// Interface text.
     static func ui(_ size: CGFloat, _ weight: UIWeight = .regular) -> Font {
         .custom(weight.face, size: size)
@@ -114,6 +114,13 @@ extension View {
     func microlabel(_ color: Color = Ink.dim) -> some View { modifier(Microlabel(color: color)) }
 }
 
+extension Color {
+    /// Everything on screen is lit by the wall, type included.
+    func lit(by accent: Color, _ amount: Double) -> Color {
+        mix(with: accent, by: max(0, min(1, amount)))
+    }
+}
+
 // MARK: - Motion
 
 // One family of springs; Reduce Motion swaps every move for a dissolve.
@@ -132,8 +139,11 @@ enum Taps {
     private static let rigid = UIImpactFeedbackGenerator(style: .rigid)
     private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
 
-    /// Brightness / rpm detent.
-    static func detent() { soft.impactOccurred(intensity: 0.5) }
+    /// A detent. Intensity scales with the value so the control gets quieter
+    /// as the room gets darker; never a uniform tick.
+    static func detent(intensity: Double = 0.5) {
+        soft.impactOccurred(intensity: max(0.15, min(1.0, intensity)))
+    }
     /// Mode committed locally; the wall's confirmation is separate.
     static func commit() { rigid.impactOccurred(intensity: 0.7) }
     /// The wall was found: the thud of a lamp switching on.

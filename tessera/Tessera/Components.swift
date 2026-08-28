@@ -1,152 +1,253 @@
 // Tessera's instruments. Standard bones, custom skin: system gestures and
-// accessibility underneath, the tile language on top.
+// accessibility underneath, the wall's language on top.
+//
+// Rule this file follows: a control's shape reports what kind of question it
+// asks. Modes are circular because they are states of one object. Speed is a
+// ticker because rpm is a physical rate. Finish is three thumbnails because
+// choosing a finish should be looking, not reading a word. Only the ambient
+// effect is a row of capsules, and it is the one that earns it.
 
 import SwiftUI
+import UIKit
 
-// MARK: - The strip
+// MARK: - Pills
 
-/// Sliding-ink segmented control. Hairline sunk strip; the active cell is
-/// inverted and the ink block slides between cells.
-struct InkStrip<T: Hashable>: View {
-    struct Option { let id: T; let label: String }
-    let options: [Option]
-    @Binding var selection: T
-    var namespaceSeed: String = "strip"
-
-    @Namespace private var ns
+struct PillRow<T: Hashable>: View {
+    let label: String
+    let options: [(String, T)]
+    let selected: T
+    let accent: Color
+    var onPick: (T) -> Void
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(options, id: \.id) { opt in
-                let active = opt.id == selection
-                Button {
-                    guard !active else { return }
-                    Taps.commit()
-                    withAnimation(Motion.settle) { selection = opt.id }
-                } label: {
-                    Text(opt.label)
-                        .font(.machine(10))
-                        .textCase(.uppercase)
-                        .kerning(0.8)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .foregroundStyle(active ? Ink.ground : Ink.dim)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background {
-                            if active {
-                                RoundedRectangle(cornerRadius: 5)
-                                    .fill(Ink.ink)
-                                    .matchedGeometryEffect(id: namespaceSeed, in: ns)
-                            }
-                        }
+        VStack(alignment: .leading, spacing: 10) {
+            Text(label)
+                .font(.ui(12, .medium))
+                .foregroundStyle(Ink.dim)
+            HStack(spacing: 7) {
+                ForEach(options, id: \.1) { (title, value) in
+                    let active = value == selected
+                    Button {
+                        guard !active else { return }
+                        Taps.detent()
+                        onPick(value)
+                    } label: {
+                        Text(title)
+                            .font(.ui(12, .medium))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .foregroundStyle(active ? Ink.ground : Ink.dim)
+                            .padding(.vertical, 9)
+                            .frame(maxWidth: .infinity)
+                            .background { Capsule().fill(active ? accent : Color.clear) }
+                            .overlay { Capsule().strokeBorder(active ? .clear : Ink.hairline, lineWidth: 1) }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(active ? .isSelected : [])
             }
+            .animation(Motion.settle, value: selected)
         }
-        .padding(2)
-        .background(Ink.sunk)
-        .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(Ink.hairline, lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 7))
     }
 }
 
-// MARK: - The light row
+// MARK: - Speed
 
-/// Brightness as a gesture, not a widget: drag anywhere on the row, detents
-/// every 5%, mono readout, immediate response. At accessibility type sizes it
-/// becomes a labeled slider with the same range.
-struct LightRow: View {
-    @Binding var value: Double        // 0.05...1.0
-    var accent: Color
-    var onCommit: (Double) -> Void
+/// rpm is a physical rate, so it reads as one: the value in machine type,
+/// the three real turntable speeds as detents on a rail.
+struct SpeedTicker: View {
+    let rpm: Double
+    let accent: Color
+    var onPick: (Double) -> Void
 
-    @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var dragStart: Double? = nil
-    @State private var lastDetent: Int = -1
+    private let speeds: [(String, Double)] = [("7.5", 7.5), ("33⅓", 33.33), ("45", 45.0)]
 
     var body: some View {
-        if typeSize.isAccessibilitySize {
-            VStack(alignment: .leading, spacing: 6) {
-                Text("light · \(Int(value * 100))%").microlabel()
-                Slider(value: $value, in: 0.05...1.0, step: 0.05) { editing in
-                    if !editing { onCommit(value) }
-                }
-                .tint(accent)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(label)
+                    .font(.machine(26))
+                    .foregroundStyle(accent)
+                    .contentTransition(.numericText())
+                Text("rpm")
+                    .font(.machine(10))
+                    .foregroundStyle(Ink.faint)
             }
-        } else {
-            VStack(spacing: 7) {
-                HStack {
-                    Text("light").microlabel()
-                    Spacer()
-                    Text("\(Int(value * 100))%")
-                        .font(.machine(11))
-                        .foregroundStyle(Ink.ink)
-                        .contentTransition(.numericText())
-                        .animation(Motion.blink, value: Int(value * 100))
-                }
-                GeometryReader { geo in
-                    ZStack(alignment: .leading) {
-                        Rectangle().fill(Ink.hairline).frame(height: 1)
-                        // ticks every 20%
-                        HStack(spacing: 0) {
-                            ForEach(0..<6) { i in
-                                Rectangle().fill(Ink.faint)
-                                    .frame(width: 1, height: 5)
-                                if i < 5 { Spacer() }
-                            }
+            HStack(spacing: 0) {
+                ForEach(speeds, id: \.1) { (title, value) in
+                    let active = abs(value - rpm) < 0.01
+                    Button {
+                        guard !active else { return }
+                        Taps.detent(intensity: 0.6)
+                        onPick(value)
+                    } label: {
+                        VStack(spacing: 7) {
+                            Rectangle()
+                                .fill(active ? accent : Ink.hairline)
+                                .frame(width: active ? 2 : 1, height: active ? 18 : 11)
+                            Text(title)
+                                .font(.machine(10))
+                                .foregroundStyle(active ? Ink.ink : Ink.faint)
                         }
-                        Rectangle()
-                            .fill(accent)
-                            .frame(width: max(0, geo.size.width * norm), height: 3)
-                        Rectangle()
-                            .fill(Ink.ink)
-                            .frame(width: 4, height: 16)
-                            .offset(x: max(0, geo.size.width * norm - 2))
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
                     }
-                    .frame(maxHeight: .infinity)
-                    .contentShape(Rectangle())
-                    .gesture(
-                        DragGesture(minimumDistance: 0)
-                            .onChanged { g in
-                                if dragStart == nil { dragStart = value }
-                                let v = 0.05 + (g.location.x / geo.size.width) * 0.95
-                                let stepped = (v / 0.05).rounded() * 0.05
-                                let clamped = min(1.0, max(0.05, stepped))
-                                if clamped != value {
-                                    value = clamped
-                                    let detent = Int(clamped * 20)
-                                    if detent != lastDetent {
-                                        Taps.detent()
-                                        lastDetent = detent
-                                    }
-                                }
-                            }
-                            .onEnded { _ in
-                                dragStart = nil
-                                onCommit(value)
-                            }
-                    )
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(title) rpm")
+                    .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
                 }
-                .frame(height: 28)
             }
-            .accessibilityElement()
-            .accessibilityLabel("Light")
-            .accessibilityValue("\(Int(value * 100)) percent")
-            .accessibilityAdjustableAction { direction in
-                let step = 0.05
-                switch direction {
-                case .increment: value = min(1.0, value + step)
-                case .decrement: value = max(0.05, value - step)
-                @unknown default: break
-                }
-                onCommit(value)
-            }
+            .animation(Motion.settle, value: rpm)
         }
     }
 
-    private var norm: Double { (value - 0.05) / 0.95 }
+    private var label: String {
+        rpm == 33.33 ? "33⅓" : (rpm == rpm.rounded() ? String(Int(rpm)) : String(format: "%.1f", rpm))
+    }
+}
+
+// MARK: - Finish
+
+/// Three thumbnails of the frame actually on the wall, each through one
+/// finish. Choosing is looking.
+///
+/// `poster` is the wall's own math exactly (3 bits per channel). `dither` is
+/// Floyd-Steinberg to a fixed 3-3-2 palette, which is the same algorithm as
+/// the wall's but not its adaptive 16-colour palette, so read this thumbnail
+/// as a preview of the character, not a pixel-exact proof.
+struct FinishRow: View {
+    let frame: Data?
+    let duty: Double
+    let selected: String
+    let accent: Color
+    var onPick: (String) -> Void
+
+    private let finishes = [("clean", "Clean"), ("dither", "Dither"), ("poster", "Poster")]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("finish")
+                .font(.ui(12, .medium))
+                .foregroundStyle(Ink.dim)
+            HStack(spacing: 10) {
+                ForEach(finishes, id: \.0) { (id, title) in
+                    let active = id == selected
+                    Button {
+                        guard !active else { return }
+                        Taps.detent(intensity: 0.6)
+                        onPick(id)
+                    } label: {
+                        VStack(spacing: 8) {
+                            FinishThumb(frame: frame, finish: id, duty: duty)
+                                .aspectRatio(1, contentMode: .fit)
+                                .overlay {
+                                    Rectangle().strokeBorder(active ? accent : Ink.hairline,
+                                                             lineWidth: active ? 1.5 : 1)
+                                }
+                            Text(title)
+                                .font(.ui(12, .medium))
+                                .foregroundStyle(active ? Ink.ink : Ink.faint)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(title)
+                    .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
+                }
+            }
+            .animation(Motion.settle, value: selected)
+        }
+    }
+}
+
+private struct FinishThumb: View {
+    let frame: Data?
+    let finish: String
+    let duty: Double
+
+    var body: some View {
+        if let img = Finishes.thumb(frame, finish: finish, duty: duty) {
+            Image(uiImage: img).interpolation(.high).resizable()
+        } else {
+            Rectangle().fill(Color.black)
+        }
+    }
+}
+
+enum Finishes {
+    private static var cache: [String: UIImage] = [:]
+
+    static func thumb(_ data: Data?, finish: String, duty: Double) -> UIImage? {
+        guard let data, data.count == 64 * 64 * 3 else { return nil }
+        let key = "\(data.hashValue):\(finish):\(Int(duty * 10))"
+        if let hit = cache[key] { return hit }
+        let processed = apply(data, finish: finish)
+        guard let img = raster(processed, duty: duty) else { return nil }
+        if cache.count > 24 { cache.removeAll() }
+        cache[key] = img
+        return img
+    }
+
+    private static func apply(_ data: Data, finish: String) -> [UInt8] {
+        var px = [UInt8](data)
+        switch finish {
+        case "poster":
+            // 3 bits per channel, the wall's own posterize.
+            for i in 0..<px.count { px[i] = px[i] & 0xE0 }
+        case "dither":
+            // Floyd-Steinberg onto a 3-3-2 palette.
+            var buf = px.map { Float($0) }
+            for y in 0..<64 {
+                for x in 0..<64 {
+                    let i = (y * 64 + x) * 3
+                    for c in 0..<3 {
+                        let old = buf[i + c]
+                        let levels: Float = c == 2 ? 3 : 7
+                        let quant = (old / 255 * levels).rounded() / levels * 255
+                        buf[i + c] = quant
+                        let err = old - quant
+                        func spread(_ dx: Int, _ dy: Int, _ f: Float) {
+                            let nx = x + dx, ny = y + dy
+                            guard nx >= 0, nx < 64, ny < 64 else { return }
+                            buf[(ny * 64 + nx) * 3 + c] += err * f
+                        }
+                        spread(1, 0, 7.0 / 16); spread(-1, 1, 3.0 / 16)
+                        spread(0, 1, 5.0 / 16); spread(1, 1, 1.0 / 16)
+                    }
+                }
+            }
+            for i in 0..<px.count { px[i] = UInt8(max(0, min(255, buf[i]))) }
+        default:
+            break
+        }
+        return px
+    }
+
+    /// Small emitter render, same language as the hero at thumbnail size.
+    private static func raster(_ px: [UInt8], duty: Double) -> UIImage? {
+        let cell: CGFloat = 3
+        let side: CGFloat = 64 * cell
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = 1
+        fmt.opaque = true
+        let d = CGFloat(max(0.05, min(1.0, duty)))
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { rctx in
+            let ctx = rctx.cgContext
+            ctx.setFillColor(UIColor.black.cgColor)
+            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            let r = cell * 0.36
+            for i in 0..<(64 * 64) {
+                let o = i * 3
+                guard px[o] > 6 || px[o + 1] > 6 || px[o + 2] > 6 else { continue }
+                let cx = CGFloat(i % 64) * cell + cell / 2
+                let cy = CGFloat(i / 64) * cell + cell / 2
+                ctx.setFillColor(UIColor(red: CGFloat(px[o]) / 255 * d,
+                                         green: CGFloat(px[o + 1]) / 255 * d,
+                                         blue: CGFloat(px[o + 2]) / 255 * d,
+                                         alpha: 1).cgColor)
+                ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+            }
+        }
+    }
 }
 
 // MARK: - Link chip
@@ -156,7 +257,10 @@ struct LinkChip: View {
     var body: some View {
         HStack(spacing: 6) {
             Circle().fill(dot).frame(width: 5, height: 5)
-            Text(label).microlabel(text)
+            Text(label)
+                .font(.machine(10))
+                .textCase(.uppercase)
+                .foregroundStyle(text)
         }
         .accessibilityElement(children: .combine)
     }
@@ -177,8 +281,8 @@ struct LinkChip: View {
     }
     private var label: String {
         switch link {
-        case .live: "live · lan"
-        case .searching: "finding the wall"
+        case .live: "live"
+        case .searching: "finding"
         case .offline: "offline"
         }
     }
@@ -186,60 +290,55 @@ struct LinkChip: View {
 
 // MARK: - Placard
 
-/// What the wall is wearing: display serif title, mono artist line. This is
-/// the wall's own truth (now_showing), so there is no progress bar here until
-/// the phone's push service owns that number honestly.
+/// What the wall is wearing. The title is the loudest thing on the screen
+/// after the panel, and it takes the panel's light like everything else.
 struct Placard: View {
     let state: WallState
     let link: LinkState
+    var litInk: Color = Ink.ink
+    var litDim: Color = Ink.dim
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(eyebrow).microlabel()
             if let title = state.title, !title.isEmpty {
                 Text(title)
-                    .font(.display(28))
-                    .foregroundStyle(Ink.ink)
+                    .font(.display(29))
+                    .foregroundStyle(litInk)
                     .lineLimit(2)
-                    .minimumScaleFactor(0.75)
+                    .minimumScaleFactor(0.7)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(artistLine)
-                    .font(.machine(10, medium: false))
-                    .foregroundStyle(Ink.dim)
-                    .lineLimit(1)
+                    .font(.ui(15, .medium))
+                    .foregroundStyle(litDim)
+                    .lineLimit(2)
             } else {
-                Text(silenceTitle)
-                    .font(.display(26))
-                    .foregroundStyle(Ink.ink)
-                Text(silenceNote)
-                    .font(.ui(13))
-                    .foregroundStyle(Ink.dim)
+                Text(silence)
+                    .font(.displayMid(19))
+                    .foregroundStyle(litInk)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let left = state.sleepRemaining, left > 0 {
+                Text("sleeping in \(left / 60)m \(left % 60)s")
+                    .font(.machine(10))
+                    .foregroundStyle(Ink.faint)
+                    .padding(.top, 2)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .animation(Motion.settle, value: state.title)
     }
 
-    private var eyebrow: String {
-        switch state.mode {
-        case "off": "the wall is off"
-        case "ambient": "lamp"
-        case "cd": "spinning"
-        default: "on the wall"
-        }
-    }
     private var artistLine: String {
         let a = state.artist ?? ""
         let al = state.album ?? ""
-        return al.isEmpty || al == a ? a : "\(a) — \(al)"
+        return al.isEmpty || al == a ? a : "\(a) · \(al)"
     }
-    private var silenceTitle: String {
-        link.isLive ? "Nothing is playing." : "The wall is away."
-    }
-    private var silenceNote: String {
+
+    private var silence: String {
         switch link {
-        case .live: "The wall is listening."
-        case .searching: "Looking for it on this network."
-        case .offline: "Showing the last thing it told us."
+        case .live: state.mode == "off" ? "Asleep." : "Nothing playing."
+        case .searching: "Looking for the wall."
+        case .offline: "The wall is not answering."
         }
     }
 }
