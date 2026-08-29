@@ -10,7 +10,8 @@
 // direction your finger commits to is the turn. No d-pad, because a d-pad on
 // glass is four buttons you cannot feel, and a swipe is a direction you can.
 //
-// Dying is not a modal. The snake unravels from the tail at speed, the score
+// The board wraps: edges are doors, and the only way to die is to meet
+// yourself. Dying is not a modal. The snake unravels from the tail at speed, the score
 // letters itself on the panel in the wall's own font, and a tap deals again.
 //
 // Left alone, it plays itself. The autopilot is a flood-fill greedy that
@@ -109,12 +110,14 @@ final class SnakeGame {
 
     private func step() {
         if let q = queued { dir = q; queued = nil }
-        let head = (body[0].0 + dir.0, body[0].1 + dir.1)
         let n = Self.grid
+        // The board is a torus: run off an edge and come back on the other
+        // side. On a panel hanging on a wall this is the honest topology,
+        // since the frame of the panel is a bezel, not a fence, and it turns
+        // the only death into the one that is always your own doing.
+        let head = ((body[0].0 + dir.0 + n) % n, (body[0].1 + dir.1 + n) % n)
 
-        // The walls are walls. A wrapping snake never has to commit.
-        if head.0 < 0 || head.0 >= n || head.1 < 0 || head.1 >= n
-            || body.dropLast(grow > 0 ? 0 : 1).contains(where: { $0 == head }) {
+        if body.dropLast(grow > 0 ? 0 : 1).contains(where: { $0 == head }) {
             phase = .unraveling
             if !auto { Taps.error() }
             return
@@ -159,9 +162,8 @@ final class SnakeGame {
         var occupied = Set(body.dropLast(grow > 0 ? 0 : 1).map { $0.1 * n + $0.0 })
         occupied.remove(head.1 * n + head.0)
 
-        func open(_ p: (Int, Int)) -> Bool {
-            p.0 >= 0 && p.0 < n && p.1 >= 0 && p.1 < n && !occupied.contains(p.1 * n + p.0)
-        }
+        func wrap(_ p: (Int, Int)) -> (Int, Int) { ((p.0 + n) % n, (p.1 + n) % n) }
+        func open(_ p: (Int, Int)) -> Bool { !occupied.contains(p.1 * n + p.0) }
         func room(_ start: (Int, Int)) -> Int {
             let want = body.count + 8
             var seen: Set<Int> = [start.1 * n + start.0]
@@ -169,23 +171,27 @@ final class SnakeGame {
             while i < queue.count, seen.count < want {
                 let c = queue[i]; i += 1
                 for d in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                    let q = (c.0 + d.0, c.1 + d.1)
+                    let q = wrap((c.0 + d.0, c.1 + d.1))
                     if open(q), seen.insert(q.1 * n + q.0).inserted { queue.append(q) }
                 }
             }
             return seen.count
         }
+        // Distance the way the board actually measures it: across the seam
+        // when the seam is shorter. Without this the pilot walks the long
+        // way round and looks like it has never seen its own edges.
+        func span(_ a: Int, _ b: Int) -> Int { let d = abs(a - b); return min(d, n - d) }
 
         let options = [(1, 0), (-1, 0), (0, 1), (0, -1)]
             .filter { $0 != (-dir.0, -dir.1) }
-            .map { (d: $0, p: (head.0 + $0.0, head.1 + $0.1)) }
+            .map { (d: $0, p: wrap((head.0 + $0.0, head.1 + $0.1))) }
             .filter { open($0.p) }
         guard !options.isEmpty else { return nil }     // cornered; so be it
 
         let scored = options.map { o in
             (d: o.d,
              space: room(o.p),
-             dist: abs(o.p.0 - food.0) + abs(o.p.1 - food.1),
+             dist: span(o.p.0, food.0) + span(o.p.1, food.1),
              straight: o.d == dir)
         }
         let need = min(body.count + 4, body.count + 8)
