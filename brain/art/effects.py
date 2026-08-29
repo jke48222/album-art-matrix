@@ -119,6 +119,151 @@ class Ambient:
         crossing = warp_i != weft_i
         return np.where(crossing[..., None], out * 0.55 + mixed * 0.45, out)
 
+    # ---- weave --------------------------------------------------------
+    #
+    # The geometric draft: a bordered field with a central medallion, the
+    # composition of a lot of woven and tiled ornament, Roman tesserae
+    # included. Plain geometry deliberately, not an imitation of any one
+    # culture's designs.
+
+    def _weave(self, t):
+        n = self.size
+        weave_in, draft_len, blend = 2.4, 24.0, 3.0
+        age = max(0.0, t - weave_in)
+        draft = int(age // draft_len)
+        into = age - draft * draft_len
+        mix = 0.0 if into < draft_len - blend else (into - (draft_len - blend)) / blend
+
+        cloth = self._weave_field(draft, t, n)
+        if mix > 0:
+            cloth = cloth * (1 - mix) + self._weave_field(draft + 1, t, n) * mix
+
+        if t < weave_in:                       # one pass of the loom
+            front = (t / weave_in) * n
+            rows = np.arange(n)[:, None, None]
+            cloth = cloth * np.clip((front - rows) / 3.0, 0.0, 1.0)
+            row = int(front) - 1
+            if 0 <= row < n:
+                cloth[row] = np.minimum(255.0, cloth[row] * 1.5 + 55.0)
+        return cloth
+
+    def _weave_field(self, draft, t, n):
+        rng = np.random.default_rng(draft * 7919)
+        pal = np.asarray(self._weave_palette(rng), dtype=np.float32)
+        y, x = np.mgrid[0:n, 0:n]
+        xm = np.minimum(x, n - 1 - x).astype(np.int32)
+        ym = np.minimum(y, n - 1 - y).astype(np.int32)
+
+        border, band = 2, 6
+        field0, field1 = border + band, n - border - band
+
+        motif = int(rng.integers(0, 4))
+        s1 = int(rng.integers(4, 8))
+        if motif == 0:
+            idx = ((xm + ym) // s1) % len(pal)
+        elif motif == 1:
+            idx = (np.maximum(xm, ym) // s1) % len(pal)
+        elif motif == 2:
+            idx = ((np.abs(xm - ym) // s1) + (np.minimum(xm, ym) // s1)) % len(pal)
+        else:
+            idx = ((np.minimum(xm, ym) // s1) * 2 + (xm + ym) // (s1 * 2)) % len(pal)
+
+        s2 = int(rng.integers(3, 6))
+        bmotif = int(rng.integers(0, 3))
+        if bmotif == 0:
+            bidx = (xm // s2) % 2
+        elif bmotif == 1:
+            bidx = ((xm + ym) // s2) % 2
+        else:
+            bidx = ((xm // s2) + (ym // s2)) % 2
+        ba, bb = int(rng.integers(0, len(pal))), int(rng.integers(0, len(pal)))
+        band_vals = np.where(bidx == 1, ba, bb)
+        idx[border:field0] = band_vals[border:field0]
+        idx[field1:n - border] = band_vals[field1:n - border]
+
+        deep = len(pal) - 1
+        idx[:border] = deep
+        idx[n - border:] = deep
+        idx[:, :border] = deep
+        idx[:, n - border:] = deep
+
+        return pal[(idx + int(t * 0.6)) % len(pal)]
+
+    # ---- deco ---------------------------------------------------------
+    #
+    # Mid-century modern geometric, the Girard/atomic-age vocabulary: flat
+    # bold shapes on a grid, circles and half-circles and fans and chevrons,
+    # a tight palette, no gradients. It animates like a split-flap board:
+    # one cell at a time swaps its motif, in a scattered order, so the field
+    # is always changing and never all changing.
+
+    _DECO_MOTIFS = 7
+
+    def _deco(self, t):
+        n = self.size
+        cells = 4                              # 4x4 of 16px, big and flat
+        c = n // cells
+        rng = np.random.default_rng(11)
+        pal = np.asarray(self._weave_palette(np.random.default_rng(3)), dtype=np.float32)
+
+        # A scattered order the flips follow, fixed for the session.
+        order = rng.permutation(cells * cells)
+        flips = int(t / 0.55)                   # one cell every 0.55s
+
+        out = np.zeros((n, n, 3), dtype=np.float32)
+        yy, xx = np.mgrid[0:c, 0:c].astype(np.float32)
+
+        for k in range(cells * cells):
+            cy, cx = divmod(k, cells)
+            # how many times this cell has flipped so far
+            seen = (flips - int(np.where(order == k)[0][0])) // (cells * cells) + 1
+            gen = np.random.default_rng(k * 131 + max(0, seen) * 17)
+            motif = int(gen.integers(0, self._DECO_MOTIFS))
+            fg = pal[int(gen.integers(0, len(pal) - 1))]
+            bg = pal[len(pal) - 1] if gen.random() < 0.55 else pal[int(gen.integers(0, len(pal) - 1))]
+
+            tile = self._deco_tile(motif, c, yy, xx, fg, bg)
+
+            # the flip itself: the cell squashes and comes back
+            since = t - (int(np.where(order == k)[0][0]) + max(0, seen - 1) * cells * cells) * 0.55
+            if 0 <= since < 0.35:
+                k2 = abs(since / 0.35 - 0.5) * 2      # 1 -> 0 -> 1
+                h = max(1, int(c * k2))
+                pad = (c - h) // 2
+                squashed = np.zeros_like(tile)
+                if h > 0:
+                    resized = tile[np.linspace(0, c - 1, h).astype(int)]
+                    squashed[pad:pad + h] = resized
+                tile = squashed
+
+            out[cy * c:(cy + 1) * c, cx * c:(cx + 1) * c] = tile
+
+        return out
+
+    def _deco_tile(self, motif, c, yy, xx, fg, bg):
+        r = c / 2.0
+        d = np.hypot(xx - r + 0.5, yy - r + 0.5)
+        tile = np.broadcast_to(bg, (c, c, 3)).copy()
+
+        if motif == 0:                          # circle
+            m = d < r * 0.72
+        elif motif == 1:                        # half circle
+            m = (d < r * 0.92) & (yy >= r)
+        elif motif == 2:                        # quarter fan
+            m = (np.hypot(xx, yy) < c * 0.85) & (np.hypot(xx, yy) > c * 0.45)
+        elif motif == 3:                        # triangle
+            m = (yy >= c - 1 - 2 * np.abs(xx - r + 0.5))
+        elif motif == 4:                        # cross
+            m = (np.abs(xx - r + 0.5) < c * 0.16) | (np.abs(yy - r + 0.5) < c * 0.16)
+        elif motif == 5:                        # starburst
+            ang = np.arctan2(yy - r + 0.5, xx - r + 0.5)
+            m = (np.cos(ang * 8) > 0.25) & (d < r * 0.95)
+        else:                                   # stacked chevrons
+            m = ((yy + np.abs(xx - r + 0.5)).astype(int) // max(1, c // 4)) % 2 == 0
+
+        tile[m] = fg
+        return tile
+
     def _sett(self, rng, ncolors, n):
         """A reflective sett: stripe widths mirrored, then tiled to the panel.
 

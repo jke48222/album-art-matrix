@@ -213,6 +213,9 @@ struct StudioScreen: View {
     @State private var canvas = Canvas64()
     @State private var kept = MadeStore()
     @State private var ink: (UInt8, UInt8, UInt8) = (255, 255, 255)
+    /// Whatever the picker last mixed, kept as a swatch of its own so a
+    /// custom colour survives switching away and back.
+    @State private var custom: Color = .white
     @State private var erasing = false
     @State private var thick = false
     @State private var last: (Int, Int)? = nil
@@ -356,47 +359,78 @@ struct StudioScreen: View {
     // MARK: Inks
 
     /// White, the tile amber, and whatever the album on the wall is making.
+    private var inkColor: Color {
+        Color(red: Double(ink.0) / 255, green: Double(ink.1) / 255, blue: Double(ink.2) / 255)
+    }
+
     private var swatches: [(UInt8, UInt8, UInt8)] {
         var out: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
-        for c in roomPalette.prefix(3) {
-            let ui = UIColor(c)
-            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-            ui.getRed(&r, green: &g, blue: &b, alpha: &a)
-            out.append((UInt8(r * 255), UInt8(g * 255), UInt8(b * 255)))
-        }
+        for c in roomPalette.prefix(3) { out.append(Self.rgb(of: c)) }
         return out
     }
 
     private var inks: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(roomPalette.isEmpty ? "ink" : "ink · from what is on the wall")
-                .font(.ui(12, .medium))
-                .foregroundStyle(Ink.dim)
-            HStack(spacing: 12) {
-                ForEach(Array(swatches.enumerated()), id: \.offset) { (_, rgb) in
-                    let on = !erasing && rgb == ink
-                    Button {
-                        Taps.detent(intensity: 0.5)
-                        ink = rgb
-                        erasing = false
-                    } label: {
-                        Circle()
-                            .fill(Color(red: Double(rgb.0) / 255,
-                                        green: Double(rgb.1) / 255,
-                                        blue: Double(rgb.2) / 255))
-                            .frame(width: 34, height: 34)
-                            .overlay {
-                                Circle().strokeBorder(on ? Ink.ink : .clear, lineWidth: 2)
-                                    .padding(-4)
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Ink")
-                    .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
-                }
-                Spacer()
+        HStack(spacing: 12) {
+            ForEach(Array(swatches.enumerated()), id: \.offset) { (_, rgb) in
+                swatch(rgb)
             }
+
+            // The mixer. Its ring shows what it holds, so it reads as another
+            // swatch rather than as a settings control.
+            ZStack {
+                Circle()
+                    .fill(custom)
+                    .frame(width: 34, height: 34)
+                Circle()
+                    .strokeBorder(
+                        AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
+                                        center: .center),
+                        lineWidth: 2
+                    )
+                    .frame(width: 40, height: 40)
+                ColorPicker("", selection: $custom, supportsOpacity: false)
+                    .labelsHidden()
+                    .opacity(0.02)          // the system control, made invisible
+                    .frame(width: 40, height: 40)
+            }
+            .onChange(of: custom) { _, c in
+                ink = Self.rgb(of: c)
+                erasing = false
+                Taps.detent(intensity: 0.5)
+            }
+            .accessibilityLabel("Mix a colour")
+
+            Spacer()
         }
+    }
+
+    private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
+        let on = !erasing && rgb == ink
+        return Button {
+            Taps.detent(intensity: 0.5)
+            ink = rgb
+            erasing = false
+        } label: {
+            Circle()
+                .fill(Color(red: Double(rgb.0) / 255,
+                            green: Double(rgb.1) / 255,
+                            blue: Double(rgb.2) / 255))
+                .frame(width: 34, height: 34)
+                .overlay {
+                    Circle().strokeBorder(on ? Ink.ink : .clear, lineWidth: 2).padding(-4)
+                }
+        }
+        .buttonStyle(PressStyle())
+        .accessibilityLabel("Ink")
+        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+    }
+
+    static func rgb(of c: Color) -> (UInt8, UInt8, UInt8) {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(c).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (UInt8(max(0, min(255, r * 255))),
+                UInt8(max(0, min(255, g * 255))),
+                UInt8(max(0, min(255, b * 255))))
     }
 
     // MARK: Tools
@@ -409,7 +443,7 @@ struct StudioScreen: View {
             }
             .frame(maxWidth: .infinity)
 
-            BrushButton(thick: thick, accent: accent) { thick.toggle() }
+            BrushButton(thick: thick, accent: erasing ? Ink.dim : inkColor) { thick.toggle() }
                 .frame(maxWidth: .infinity)
 
             GlyphButton(glyph: .letters, label: "words", active: writing,
@@ -452,7 +486,7 @@ struct StudioScreen: View {
             TextField("say something", text: $words)
                 .font(.machine(14))
                 .foregroundStyle(Ink.ink)
-                .textInputAutocapitalization(.characters)
+                .textInputAutocapitalization(.sentences)
                 .autocorrectionDisabled()
                 .focused($typing)
                 .submitLabel(.done)
