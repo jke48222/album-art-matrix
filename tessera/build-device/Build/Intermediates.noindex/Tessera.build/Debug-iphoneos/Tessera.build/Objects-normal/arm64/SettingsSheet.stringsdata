@@ -7,7 +7,7 @@
         "key": "",
         "location": {
           "startingColumn": 30,
-          "startingLine": 41
+          "startingLine": 42
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Done",
         "location": {
           "startingColumn": 28,
-          "startingLine": 44
+          "startingLine": 45
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "album-matrix.local:8788",
         "location": {
           "startingColumn": 23,
-          "startingLine": 62
+          "startingLine": 65
         }
       },
       {
@@ -39,7 +39,15 @@
         "key": "Use this address",
         "location": {
           "startingColumn": 24,
-          "startingLine": 75
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "Look again",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 82
         }
       },
       {
@@ -47,7 +55,7 @@
         "key": "min",
         "location": {
           "startingColumn": 26,
-          "startingLine": 94
+          "startingLine": 104
         }
       },
       {
@@ -55,7 +63,7 @@
         "key": "off",
         "location": {
           "startingColumn": 41,
-          "startingLine": 89
+          "startingLine": 99
         }
       },
       {
@@ -63,7 +71,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 49,
-          "startingLine": 89
+          "startingLine": 99
         }
       },
       {
@@ -71,7 +79,7 @@
         "key": "%lldm %llds left",
         "location": {
           "startingColumn": 26,
-          "startingLine": 112
+          "startingLine": 122
         }
       },
       {
@@ -79,7 +87,7 @@
         "key": "Start the fade",
         "location": {
           "startingColumn": 24,
-          "startingLine": 101
+          "startingLine": 111
         }
       },
       {
@@ -87,7 +95,7 @@
         "key": "%lld%%",
         "location": {
           "startingColumn": 22,
-          "startingLine": 124
+          "startingLine": 134
         }
       },
       {
@@ -95,7 +103,7 @@
         "key": "Back to the album",
         "location": {
           "startingColumn": 20,
-          "startingLine": 167
+          "startingLine": 177
         }
       },
       {
@@ -103,7 +111,15 @@
         "key": "Show full %@ on the wall",
         "location": {
           "startingColumn": 41,
-          "startingLine": 164
+          "startingLine": 174
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use my music",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 190
         }
       },
       {
@@ -111,7 +127,7 @@
         "key": "Tessera",
         "location": {
           "startingColumn": 22,
-          "startingLine": 181
+          "startingLine": 203
         }
       },
       {
@@ -119,7 +135,7 @@
         "key": "A remote for a wall of 4,096 emitters. Nothing leaves your network: the app talks to the wall directly and keeps no account.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 185
+          "startingLine": 207
         }
       }
     ]

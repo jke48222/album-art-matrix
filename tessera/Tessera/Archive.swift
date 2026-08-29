@@ -80,7 +80,7 @@ final class ArchiveStore {
             runs = Self.collapse(entries)
             failed = nil
         } catch {
-            failed = "The wall did not send its journal."
+            failed = "Nothing here yet."
         }
     }
 
@@ -285,7 +285,7 @@ struct ArchiveScreen: View {
                     .resizable()
                     .frame(width: 104, height: 104)
             }
-            Text(store.failed ?? "The wall has not worn anything yet.")
+            Text(store.failed ?? "Nothing here yet.")
                 .font(.displayMid(17))
                 .foregroundStyle(Ink.ink)
         }

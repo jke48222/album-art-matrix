@@ -28,6 +28,7 @@ struct SettingsSheet: View {
                     .padding(.bottom, -8)
 
                     theWall
+                    if wall.link.isStandIn { music }
                     sleep
                     light
                     panelCheck
@@ -58,7 +59,9 @@ struct SettingsSheet: View {
     // MARK: - Sections
 
     private var theWall: some View {
-        Section("the wall", note: "Where Tessera looks for it. The wall answers on port 8788.") {
+        Section("the wall", note: wall.link.isStandIn
+                ? "No wall is answering, so Tessera is running one on this phone. Everything works; nothing is lit in the room. Enter an address and look again when the wall is up."
+                : "Where Tessera looks for it. The wall answers on port 8788.") {
             TextField("album-matrix.local:8788", text: $host)
                 .font(.machine(13))
                 .foregroundStyle(Ink.ink)
@@ -71,11 +74,18 @@ struct SettingsSheet: View {
                 .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
                 .onSubmit { commitHost() }
 
-            HStack(spacing: 10) {
+            HStack(spacing: 16) {
                 Button("Use this address") { commitHost() }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressStyle(scale: 0.97))
                     .font(.ui(13, .medium))
                     .foregroundStyle(accent)
+                Button("Look again") {
+                    Taps.detent()
+                    wall.lookForWallAgain()
+                }
+                .buttonStyle(PressStyle(scale: 0.97))
+                .font(.ui(13, .medium))
+                .foregroundStyle(Ink.dim)
                 Spacer()
                 LinkChip(link: wall.link)
             }
@@ -172,6 +182,18 @@ struct SettingsSheet: View {
             .font(.ui(13, .medium))
             .foregroundStyle(accent)
             .padding(.top, 14)
+        }
+    }
+
+    private var music: some View {
+        Section("what is playing", note: "With no wall yet, Tessera shows whatever is playing on this phone so there is something real to look at. It reads the now-playing track only, and nothing leaves the device.") {
+            Button("Use my music") {
+                Taps.detent()
+                StandIn.requestMusicAccess()
+            }
+            .buttonStyle(PressStyle(scale: 0.97))
+            .font(.ui(13, .medium))
+            .foregroundStyle(accent)
         }
     }
 
