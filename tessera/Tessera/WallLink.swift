@@ -74,6 +74,32 @@ final class WallSession {
 
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     @ObservationIgnored private var wasLive = false
+    /// Keys written locally and not yet echoed back. A /state poll must not
+    /// clobber them: the brain persists asynchronously, so between the tap and
+    /// the next poll the wall can still be reporting the old value, and the
+    /// control would visibly snap back. This is what made the lamp buttons
+    /// look like they were fighting the finger.
+    @ObservationIgnored private var pending: [String: Date] = [:]
+
+    /// Hold a locally chosen value until the wall reports the same thing.
+    private func keep<T: Equatable>(_ key: String, _ incoming: inout T, _ local: T) {
+        guard holding(key) else { return }
+        if incoming == local { pending.removeValue(forKey: key) } else { incoming = local }
+    }
+
+    private func keepNear(_ key: String, _ incoming: inout Double, _ local: Double, _ eps: Double) {
+        guard holding(key) else { return }
+        if abs(incoming - local) < eps { pending.removeValue(forKey: key) } else { incoming = local }
+    }
+
+    private func holding(_ key: String) -> Bool {
+        guard let at = pending[key] else { return false }
+        if Date().timeIntervalSince(at) > 4 {        // give up; trust the wall
+            pending.removeValue(forKey: key)
+            return false
+        }
+        return true
+    }
     @ObservationIgnored private let http: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
         cfg.timeoutIntervalForRequest = 3
@@ -133,7 +159,19 @@ final class WallSession {
                 throw URLError(.cannotParseResponse)
             }
             let reconnected = !wasLive
-            state = WallState(json: json)
+            var fresh = WallState(json: json)
+
+            // Anything still in flight keeps the value the finger chose, and
+            // stops being held the moment the wall agrees.
+            let mine = state
+            keep("mode", &fresh.mode, mine.mode)
+            keep("effect", &fresh.effect, mine.effect)
+            keep("finish", &fresh.finish, mine.finish)
+            keep("match_art", &fresh.matchArt, mine.matchArt)
+            keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
+            keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
+
+            state = fresh
             lastSync = Date()
             if reconnected { Taps.found() }   // the lamp switched on
             wasLive = true
@@ -159,6 +197,29 @@ final class WallSession {
             // Only publish when the bytes actually changed. Two identical
             // frames must leave the screen perfectly still.
             if data != frame { frame = data }
+        }
+    }
+
+    /// Put a moving thing on the wall. The brain loops it until a mode
+    /// change; up to 240 frames at up to 24 fps is its whole appetite.
+    func pushClip(_ frames: [[UInt8]], fps: Double) {
+        let valid = frames.filter { $0.count == 64 * 64 * 3 }.prefix(240)
+        guard !valid.isEmpty,
+              let u = url("/clip"),
+              let body = try? JSONSerialization.data(withJSONObject: [
+                  "fps": min(24, max(1, fps)),
+                  "frames": valid.map { Data($0).base64EncodedString() },
+              ]) else { return }
+        var req = URLRequest(url: u)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        Task { [http] in
+            if (try? await http.data(for: req)) == nil {
+                await MainActor.run { Taps.error() }
+            } else {
+                await MainActor.run { Taps.landed() }
+            }
         }
     }
 
@@ -224,6 +285,7 @@ final class WallSession {
         if let f = merged["finish"] as? String { state.finish = f }
         if let ma = merged["match_art"] as? Bool { state.matchArt = ma }
         merged.removeValue(forKey: "_local")
+        for key in merged.keys { pending[key] = Date() }
 
         guard let u = url("/state"),
               let body = try? JSONSerialization.data(withJSONObject: merged) else { return }

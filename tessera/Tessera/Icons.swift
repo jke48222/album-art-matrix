@@ -150,7 +150,6 @@ struct GlyphButton: View {
     var action: () -> Void
 
     @Environment(\.dynamicTypeSize) private var typeSize
-    @State private var pressed = false
 
     var body: some View {
         Button {
@@ -172,8 +171,6 @@ struct GlyphButton: View {
                 // the active control catches the wall's light
                 .shadow(color: active ? accent.opacity(0.5 * lit) : .clear,
                         radius: 14 * lit, y: 2)
-                .scaleEffect(pressed ? 0.93 : 1)
-                .animation(Motion.settle, value: pressed)
                 .animation(Motion.settle, value: active)
 
                 Text(label)
@@ -185,14 +182,25 @@ struct GlyphButton: View {
                     .minimumScaleFactor(0.7)
             }
         }
-        .buttonStyle(.plain)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { _ in pressed = true }
-                .onEnded { _ in pressed = false }
-        )
+        // A ButtonStyle owns the press state. The previous version rode a
+        // simultaneous DragGesture alongside the Button, which fought it for
+        // the touch: the press animation fired inconsistently and could eat
+        // the tap outright.
+        .buttonStyle(PressStyle())
         .accessibilityLabel(label)
         .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
+    }
+}
+
+/// Press feedback done the way SwiftUI wants: the style is told when the
+/// button is pressed, so it never competes with the button's own gesture.
+struct PressStyle: ButtonStyle {
+    var scale: CGFloat = 0.92
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? scale : 1)
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .animation(Motion.blink, value: configuration.isPressed)
     }
 }
 

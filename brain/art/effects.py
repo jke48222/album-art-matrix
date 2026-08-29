@@ -36,102 +36,109 @@ class Ambient:
     def _solid(self, t):
         return np.broadcast_to(self.c1, (self.size, self.size, 3)).copy()
 
-    # ---- mosaic -------------------------------------------------------
+    # ---- plaid --------------------------------------------------------
     #
-    # The wall is a mosaic of 4,096 tesserae, so one ambient mode makes the
-    # wall behave like what it is: a geometric weave built out of its own
-    # tiles, in the colours of whatever is playing.
+    # Built the way tartan is actually built, because the structure is what
+    # makes it read as cloth rather than as a grid of squares:
     #
-    # The vocabulary here is plain geometry — mirrored quadrants, banded
-    # rows, diamonds, chevrons, stepped frets — which is the common ground of
-    # woven and tiled ornament in a lot of places, Roman tesserae included.
-    # It is deliberately not an imitation of any particular culture's designs.
+    #   a sett     one sequence of stripe widths and colours, mirrored, so
+    #              the pattern reflects rather than merely repeating
+    #   warp       the sett running down the columns
+    #   weft       the SAME sett running across the rows
+    #   twill      a 2/2 diagonal deciding which thread sits on top at each
+    #              crossing, which is where plaid gets its texture and its
+    #              half-tone blocks where two different colours cross
     #
-    # It animates as a loom: the pattern weaves in row by row, holds while the
-    # colours drift along the band, then unweaves and picks a new draft.
+    # It animates as weaving: the warp is laid down the panel, the weft is
+    # thrown across it, the twill then travels diagonally the way a real
+    # diagonal does under a moving eye, and a new sett is drafted.
 
-    def _mosaic(self, t):
+    def _plaid(self, t):
         n = self.size
-        weave, hold, unweave = 3.2, 6.0, 1.6
-        cycle = weave + hold + unweave
-        draft = int(t // cycle)
-        phase = t - draft * cycle
 
-        rng = np.random.default_rng(draft * 7919)
-        pal = self._mosaic_palette(rng)
+        # Ambient light should mostly sit still. The first version wove in,
+        # tore itself down to black and rewove every ten seconds, which reads
+        # as the wall glitching rather than as cloth. So: weave once on the
+        # way in, then stay woven. The only continuous motion is the twill
+        # travelling, and a new sett arrives by crossfade, never by blanking.
+        weave_in = 2.4
+        draft_len = 26.0
+        blend = 3.0
 
-        y, x = np.mgrid[0:n, 0:n]
-        # Mirror into quadrants. Symmetry is what separates ornament from noise.
-        xm = np.minimum(x, n - 1 - x).astype(np.int32)
-        ym = np.minimum(y, n - 1 - y).astype(np.int32)
+        # Which draft, and how far into the crossfade toward the next.
+        age = max(0.0, t - weave_in)
+        draft = int(age // draft_len)
+        into = age - draft * draft_len
+        mix = 0.0 if into < draft_len - blend else (into - (draft_len - blend)) / blend
 
-        idx = np.zeros((n, n), dtype=np.int32)
+        cloth = self._plaid_cloth(draft, t, n)
+        if mix > 0:
+            cloth = cloth * (1 - mix) + self._plaid_cloth(draft + 1, t, n) * mix
 
-        # A fixed architecture rather than stacked random strips: border, a
-        # narrow band, the field, and the band and border again by symmetry.
-        # Composition is why this reads as designed instead of generated.
-        border, band = 2, 6
-        field0, field1 = border + band, n - border - band
-
-        # --- the field ---------------------------------------------------
-        motif = int(rng.integers(0, 4))
-        s1 = int(rng.integers(4, 8))          # never below 4: tighter moires
-        if motif == 0:                        # concentric diamonds
-            idx = ((xm + ym) // s1) % len(pal)
-        elif motif == 1:                      # stepped medallion
-            idx = (np.maximum(xm, ym) // s1) % len(pal)
-        elif motif == 2:                      # lozenge lattice
-            idx = ((np.abs(xm - ym) // s1) + (np.minimum(xm, ym) // s1)) % len(pal)
-        else:                                 # nested squares
-            idx = ((np.minimum(xm, ym) // s1) * 2 + (xm + ym) // (s1 * 2)) % len(pal)
-
-        # --- the bands ---------------------------------------------------
-        s2 = int(rng.integers(3, 6))
-        bmotif = int(rng.integers(0, 3))
-        if bmotif == 0:
-            bidx = (xm // s2) % 2
-        elif bmotif == 1:
-            bidx = ((xm + ym) // s2) % 2
-        else:
-            bidx = ((xm // s2) + (ym // s2)) % 2
-        band_a, band_b = rng.integers(0, len(pal)), rng.integers(0, len(pal))
-        band_vals = np.where(bidx == 1, band_a, band_b)
-
-        idx[border:field0] = band_vals[border:field0]
-        idx[field1:n - border] = band_vals[field1:n - border]
-
-        # --- the border --------------------------------------------------
-        deep = len(pal) - 1                   # the dark tone, kept last
-        idx[:border] = deep
-        idx[n - border:] = deep
-        idx[:, :border] = deep
-        idx[:, n - border:] = deep
-
-        # Colours travel around the palette so a held draft still breathes.
-        shift = int(t * 0.9)
-        out = np.asarray(pal, dtype=np.float32)[(idx + shift) % len(pal)]
-
-        # --- the loom ----------------------------------------------------
-        if phase < weave:
-            front = (phase / weave) * n
-        elif phase < weave + hold:
-            front = float(n)
-        else:
-            front = (1.0 - (phase - weave - hold) / unweave) * n
-
-        rowsy = np.arange(n)[:, None, None]
-        out *= np.clip((front - rowsy) / 3.0, 0.0, 1.0).astype(np.float32)
-
-        # The shuttle: one bright pass riding the weave front.
-        if 0 < front < n:
+        # The one-time weave: warp down the panel, then weft across it.
+        if t < weave_in:
+            half = weave_in * 0.45
+            if t < half:                        # warp goes on
+                k = t / half
+                warp = self._plaid_warp(draft, n)
+                return np.where((np.arange(n)[None, :, None] < k * n), warp, 0.0)
+            k = (t - half) / (weave_in - half)  # weft crosses it
+            front = k * n
+            warp = self._plaid_warp(draft, n)
+            out = np.where(np.arange(n)[:, None, None] < front, cloth, warp)
             row = int(front) - 1
             if 0 <= row < n:
                 out[row] = np.minimum(255.0, out[row] * 1.5 + 55.0)
+            return out
 
-        return out
+        return cloth
 
-    def _mosaic_palette(self, rng):
-        """Colours for a draft: the album's two, plus tints between them.
+    def _plaid_draft(self, draft):
+        rng = np.random.default_rng(draft * 104729)
+        pal = np.asarray(self._weave_palette(rng), dtype=np.float32)
+        return pal, self._sett(rng, len(pal), self.size)
+
+    def _plaid_warp(self, draft, n):
+        pal, sett = self._plaid_draft(draft)
+        return pal[sett][None, :, :].repeat(n, axis=0)
+
+    def _plaid_cloth(self, draft, t, n):
+        pal, sett = self._plaid_draft(draft)
+        y, x = np.mgrid[0:n, 0:n]
+        warp_i, weft_i = sett[x], sett[y]
+
+        # The twill travels, slowly. This is the whole of the motion once the
+        # cloth is on: a diagonal moving under the eye, not a pattern change.
+        offset = int(t * 1.5)
+        over = ((x + y + offset) % 4) < 2
+        out = pal[np.where(over, warp_i, weft_i)]
+
+        # Where two different threads cross the eye reads a blend, which is
+        # where tartan gets its extra colours without extra thread.
+        mixed = (pal[warp_i] + pal[weft_i]) / 2
+        crossing = warp_i != weft_i
+        return np.where(crossing[..., None], out * 0.55 + mixed * 0.45, out)
+
+    def _sett(self, rng, ncolors, n):
+        """A reflective sett: stripe widths mirrored, then tiled to the panel.
+
+        Mirroring is the part that matters. A sett that merely repeats reads
+        as wallpaper; a sett that reflects reads as tartan.
+        """
+        widths = [1, 1, 2, 2, 3, 4, 6, 8]
+        half, total = [], 0
+        target = int(rng.integers(15, 23))
+        while total < target:
+            w = min(int(rng.choice(widths)), target - total)
+            half.append((int(rng.integers(0, ncolors)), w))
+            total += w
+        line = np.concatenate([np.repeat([c for c, _ in half], [w for _, w in half])])
+        full = np.concatenate([line, line[::-1]])
+        reps = int(np.ceil(n / len(full))) + 1
+        return np.tile(full, reps)[:n].astype(np.int32)
+
+    def _weave_palette(self, rng):
+        """Threads for a draft: the album's two, plus tints between them.
 
         match_art feeds c1/c2 from the sleeve, so the weave is made of what is
         playing. A dark third tone gives the pattern somewhere to breathe.

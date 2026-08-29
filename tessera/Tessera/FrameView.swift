@@ -227,6 +227,7 @@ struct WallHero: View {
     private enum ScanPhase { case idle, blanking, lighting }
 
     private var duty: Double { dragging ?? confirmed }
+    private func norm(_ v: Double) -> Double { (v - 0.05) / 0.95 }
 
     var body: some View {
         GeometryReader { geo in
@@ -247,13 +248,29 @@ struct WallHero: View {
                     }
                     .opacity(scanPhase == .blanking ? 0 : 1)
 
-                // The wall's last confirmed level, drawn on the object itself.
-                // Always present, never labelled. This is the reset.
+                // Two marks, and they say different things.
+                //
+                // The dim one is where the wall actually is: it stays put
+                // while you drag, so you can always find your way back, and
+                // dragging onto it is the whole of the reset affordance.
                 Rectangle()
-                    .fill(Ink.ink.opacity(dragging == nil ? 0.10 : 0.22))
+                    .fill(Ink.ink.opacity(0.10))
                     .frame(height: 1)
-                    .padding(.bottom, geo.size.height * ((confirmed - 0.05) / 0.95))
+                    .padding(.bottom, geo.size.height * norm(confirmed))
                     .allowsHitTesting(false)
+
+                // The bright one is the finger. It only exists mid-drag, and
+                // it tracks continuously, so the gesture has a position and
+                // not just a number.
+                if dragging != nil {
+                    Rectangle()
+                        .fill(Ink.ink)
+                        .frame(height: 2)
+                        .shadow(color: Ink.ink.opacity(0.5), radius: 4)
+                        .padding(.bottom, geo.size.height * norm(duty))
+                        .allowsHitTesting(false)
+                        .transition(.opacity)
+                }
 
                 if dragging != nil {
                     Text("\(Int(duty * 100))%")

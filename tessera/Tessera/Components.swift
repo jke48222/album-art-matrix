@@ -44,7 +44,7 @@ struct PillRow<T: Hashable>: View {
                             .background { Capsule().fill(active ? accent : Color.clear) }
                             .overlay { Capsule().strokeBorder(active ? .clear : Ink.hairline, lineWidth: 1) }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressStyle(scale: 0.95))
                     .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
                 }
             }

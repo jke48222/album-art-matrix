@@ -18,39 +18,80 @@ SUPER = 4  # supersample factor for rotation quality
 
 
 class DiscAnimator:
+    """A record, not a circular crop of a sleeve.
+
+    What makes vinyl read as vinyl at a glance is grooves catching a light,
+    so that is what this builds: concentric grooves across the play area, a
+    paper label with the art on it, a lead-in band, a rim, and a fixed
+    specular sweep that the grooves modulate as they pass under it. The art
+    stays large because the wall exists to show album art, so the label is
+    generous rather than accurate.
+
+    Everything rotationally symmetric is baked into the rotating image, since
+    rotating a concentric pattern changes nothing; only the sheen is held
+    still, and that is what sells the spin.
+    """
+
     def __init__(self, art: Image.Image, size: int, rpm: float = 7.5):
         self.size = size
         self.rpm = rpm
         big = size * SUPER
+        r = big / 2.0
         art = art.convert("RGB").resize((big, big), Image.LANCZOS)
+        arr = np.asarray(art, dtype=np.float32)
 
-        # circular disc mask with punched center hole
-        mask = Image.new("L", (big, big), 0)
-        d = ImageDraw.Draw(mask)
-        r = big // 2
-        d.ellipse([1, 1, big - 2, big - 2], fill=255)
-        hole = int(big * 0.055)
-        d.ellipse([r - hole, r - hole, r + hole, r + hole], fill=0)
-        self._mask = mask
-
-        # darken an inner "label ring" so the hole reads as a CD hub
-        hub = Image.new("L", (big, big), 0)
-        d = ImageDraw.Draw(hub)
-        ring = int(big * 0.16)
-        d.ellipse([r - ring, r - ring, r + ring, r + ring], fill=70)
-        d.ellipse([r - hole * 2, r - hole * 2, r + hole * 2, r + hole * 2], fill=110)
-        art = Image.composite(Image.new("RGB", (big, big), (12, 12, 14)), art,
-                              hub.point(lambda v: min(v, 90)))
-        self._art = art
-
-        # fixed specular sheen: two soft radial wedges (light stays put,
-        # the disc turns underneath — that's what makes it feel physical)
-        yy, xx = np.mgrid[0:big, 0:big]
+        yy, xx = np.mgrid[0:big, 0:big].astype(np.float32)
+        rad = np.hypot(xx - r, yy - r) / r          # 0 at centre, 1 at rim
         ang = np.arctan2(yy - r, xx - r)
-        sheen = (np.cos((ang - 0.7) * 2) ** 8 + 0.6 * np.cos((ang + 2.2) * 2) ** 8)
-        rad = np.hypot(xx - r, yy - r) / r
-        sheen *= np.clip((rad - 0.18) * 3, 0, 1) * np.clip((1.0 - rad) * 6, 0, 1)
-        self._sheen = (np.clip(sheen, 0, 1) * 70).astype(np.uint8)
+
+        LABEL, LEAD_IN, RIM = 0.34, 0.90, 0.985
+        hole = 0.055
+
+        # --- grooves ------------------------------------------------------
+        # Fine concentric rings across the play area only. The period is set
+        # in FINAL pixels, not supersampled ones, or they alias into moire.
+        period = 2.2 * SUPER
+        groove = np.sin(rad * r / period * 2 * math.pi) * 0.5 + 0.5
+        play = np.clip((rad - LABEL) * 14, 0, 1) * np.clip((LEAD_IN - rad) * 14, 0, 1)
+        arr *= (1.0 - 0.17 * groove * play)[:, :, None]
+
+        # A darker lead-in band between label and grooves, and a lead-out at
+        # the rim: real records have smooth land there and it frames the art.
+        band = np.clip(1 - np.abs(rad - LABEL) * 26, 0, 1)
+        band += np.clip(1 - np.abs(rad - LEAD_IN) * 22, 0, 1)
+        arr *= (1.0 - 0.26 * np.clip(band, 0, 1))[:, :, None]
+
+        # --- the label ----------------------------------------------------
+        # The art continues onto it, lifted and slightly desaturated, so it
+        # reads as printed paper rather than as more vinyl.
+        lbl = np.clip((LABEL - rad) * 18, 0, 1)[:, :, None]
+        grey = arr.mean(axis=2, keepdims=True)
+        paper = np.clip(arr * 0.72 + grey * 0.22 + 30.0, 0, 255)
+        arr = arr * (1 - lbl) + paper * lbl
+        # the ring where paper meets vinyl
+        edge = np.clip(1 - np.abs(rad - LABEL) * 40, 0, 1)
+        arr = np.clip(arr + (edge * 26)[:, :, None], 0, 255)
+
+        # --- the rim ------------------------------------------------------
+        rim = np.clip(1 - np.abs(rad - RIM) * 28, 0, 1)
+        arr = np.clip(arr + (rim * 40)[:, :, None], 0, 255)
+
+        self._art = Image.fromarray(arr.astype(np.uint8), "RGB")
+
+        # --- mask: the disc, with the spindle hole punched ----------------
+        mask = np.clip((1.0 - rad) * r * 3.0, 0, 255)
+        mask *= np.clip((rad - hole) * r * 1.2, 0, 1)
+        self._mask = Image.fromarray(mask.astype(np.uint8), "L")
+
+        # --- the light ----------------------------------------------------
+        # One broad sweep and a weaker opposite one, gated to the play area
+        # and modulated by the grooves, so the highlight breaks into fine
+        # arcs the way it does on a real record. This stays still; the record
+        # turns underneath it.
+        sweep = np.cos(ang - 0.9) ** 12 + 0.45 * np.cos(ang + 2.3) ** 12
+        sweep *= np.clip((rad - LABEL) * 5, 0, 1) * np.clip((1.0 - rad) * 8, 0, 1)
+        sweep *= 0.55 + 0.45 * groove
+        self._sheen = (np.clip(sweep, 0, 1) * 78).astype(np.uint8)
 
         self._bg = Image.new("RGB", (big, big), (0, 0, 0))
 

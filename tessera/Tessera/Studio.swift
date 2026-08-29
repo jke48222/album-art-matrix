@@ -13,6 +13,7 @@
 import SwiftUI
 import UIKit
 import PhotosUI
+import AVFoundation
 
 // MARK: - The canvas
 
@@ -215,7 +216,12 @@ struct StudioScreen: View {
     @State private var erasing = false
     @State private var thick = false
     @State private var last: (Int, Int)? = nil
-    @State private var photo: PhotosPickerItem? = nil
+    @State private var media: PhotosPickerItem? = nil
+    /// A clip loaded from a video: previewed by playing on the canvas, sent
+    /// whole. Empty for a still.
+    @State private var clip: [[UInt8]] = []
+    @State private var clipFrame = 0
+    @State private var loadingMedia = false
     @State private var sent = false
     @State private var words = ""
     @State private var writing = false
@@ -249,6 +255,7 @@ struct StudioScreen: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
                         Taps.detent()
+                        clip = []
                         canvas.clear()
                     }
                     .font(.ui(15, .medium))
@@ -260,15 +267,36 @@ struct StudioScreen: View {
         .preferredColorScheme(.dark)
         .presentationBackground(Ink.ground)
         .onAppear { kept.load() }
-        .onChange(of: photo) { _, item in
+        .onChange(of: media) { _, item in
             guard let item else { return }
+            loadingMedia = true
+            clip = []
             Task {
+                defer { loadingMedia = false }
+                // A movie first: if it transfers as one, it is one.
+                if let movie = try? await item.loadTransferable(type: Movie.self) {
+                    let frames = await Clip.frames(from: movie.url)
+                    try? FileManager.default.removeItem(at: movie.url)
+                    if !frames.isEmpty {
+                        clip = frames
+                        clipFrame = 0
+                        canvas.load(frames[0])
+                        Taps.commit()
+                        return
+                    }
+                }
                 if let data = try? await item.loadTransferable(type: Data.self),
                    let img = UIImage(data: data) {
                     canvas.load(image: img)
                     Taps.commit()
                 }
             }
+        }
+        // Play the clip on the canvas so the preview is the thing itself.
+        .onReceive(Timer.publish(every: 1 / Clip.fps, on: .main, in: .common).autoconnect()) { _ in
+            guard clip.count > 1, !writing else { return }
+            clipFrame = (clipFrame + 1) % clip.count
+            canvas.load(clip[clipFrame])
         }
     }
 
@@ -397,20 +425,21 @@ struct StudioScreen: View {
             }
             .frame(maxWidth: .infinity)
 
-            PhotosPicker(selection: $photo, matching: .images) {
+            PhotosPicker(selection: $media, matching: .any(of: [.images, .videos])) {
                 VStack(spacing: 8) {
                     ZStack {
                         Circle().fill(Ink.sunk)
-                        Circle().strokeBorder(Ink.hairline, lineWidth: 1)
+                        Circle().strokeBorder(clip.isEmpty ? Ink.hairline : accent,
+                                              lineWidth: clip.isEmpty ? 1 : 1.5)
                         GlyphShape(glyph: .photo, lineWidth: 1.6)
                             .frame(width: 54 * 0.42, height: 54 * 0.42)
-                            .foregroundStyle(Ink.dim)
+                            .foregroundStyle(clip.isEmpty ? Ink.dim : accent)
                     }
                     .frame(width: 54, height: 54)
-                    Text("photo")
+                    Text(loadingMedia ? "reading" : (clip.isEmpty ? "media" : "\(clip.count)f"))
                         .font(.machine(9))
                         .textCase(.uppercase)
-                        .foregroundStyle(Ink.faint)
+                        .foregroundStyle(clip.isEmpty ? Ink.faint : Ink.ink)
                 }
             }
             .frame(maxWidth: .infinity)
@@ -454,13 +483,18 @@ struct StudioScreen: View {
     private var send: some View {
         Button {
             guard !canvas.isEmpty else { return }
-            wall.pushFrame(canvas.px)
+            if clip.count > 1 {
+                wall.pushClip(clip, fps: Clip.fps)
+            } else {
+                wall.pushFrame(canvas.px)
+            }
             kept.keep(canvas.px)
             Taps.landed()
             sent = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { sent = false }
         } label: {
-            Text(sent ? "On the wall" : "Put it on the wall")
+            Text(sent ? "On the wall"
+                      : (clip.count > 1 ? "Play it on the wall" : "Put it on the wall"))
                 .font(.ui(16, .semibold))
                 .foregroundStyle(canvas.isEmpty ? Ink.faint : Ink.ground)
                 .padding(.vertical, 15)
@@ -547,7 +581,91 @@ private struct BrushButton: View {
                     .foregroundStyle(Ink.faint)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle())
         .accessibilityLabel(thick ? "Wide brush" : "Fine brush")
+    }
+}
+
+// MARK: - Media
+
+/// Video, reduced to what a wall of 4,096 tiles can actually show.
+///
+/// Not a video editor. AlbumWall grew a trim rail, a crop viewport and an
+/// fps picker, which is a lot of interface for a thing that ends as twelve
+/// thousand bytes a frame. Here a clip is a clip: the first few seconds,
+/// centre-cropped square, sampled to the panel's own resolution, previewed by
+/// playing it on the canvas, and sent whole.
+enum Clip {
+    static let fps: Double = 12
+    static let maxFrames = 120        // ten seconds; the brain's ceiling is 240
+
+    static func frames(from url: URL) async -> [[UInt8]] {
+        let asset = AVURLAsset(url: url)
+        guard let duration = try? await asset.load(.duration) else { return [] }
+        let seconds = min(CMTimeGetSeconds(duration), Double(maxFrames) / fps)
+        guard seconds > 0 else { return [] }
+
+        let gen = AVAssetImageGenerator(asset: asset)
+        gen.appliesPreferredTrackTransform = true      // portrait stays upright
+        gen.requestedTimeToleranceBefore = .zero
+        gen.requestedTimeToleranceAfter = CMTime(value: 1, timescale: 60)
+        gen.maximumSize = CGSize(width: 256, height: 256)
+
+        let count = max(1, Int(seconds * fps))
+        let times = (0..<count).map {
+            NSValue(time: CMTime(seconds: Double($0) / fps, preferredTimescale: 600))
+        }
+
+        var out: [[UInt8]] = []
+        for value in times {
+            guard let cg = try? await gen.image(at: value.timeValue).image else { continue }
+            if let px = square64(cg) { out.append(px) }
+        }
+        return out
+    }
+
+    /// The wall is square and a phone video is not, so the middle of the
+    /// frame is what survives.
+    static func square64(_ src: CGImage) -> [UInt8]? {
+        let count = 64 * 64 * 4
+        let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
+        raw.initialize(repeating: 0, count: count)
+        defer { raw.deallocate() }
+        guard let ctx = CGContext(
+            data: raw, width: 64, height: 64, bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+        ) else { return nil }
+        ctx.interpolationQuality = .high
+        let w = CGFloat(src.width), h = CGFloat(src.height)
+        let scale = 64 / min(w, h)
+        let dw = w * scale, dh = h * scale
+        ctx.draw(src, in: CGRect(x: (64 - dw) / 2, y: (64 - dh) / 2, width: dw, height: dh))
+
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        for i in 0..<(64 * 64) {
+            px[i * 3] = raw[i * 4]
+            px[i * 3 + 1] = raw[i * 4 + 1]
+            px[i * 3 + 2] = raw[i * 4 + 2]
+        }
+        return px
+    }
+}
+
+
+/// PhotosPicker hands a movie over as a file; this receives it into a
+/// temporary URL that AVAsset can open.
+struct Movie: Transferable {
+    let url: URL
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            let dest = FileManager.default.temporaryDirectory
+                .appendingPathComponent("tessera-\(UUID().uuidString).mov")
+            try? FileManager.default.removeItem(at: dest)
+            try FileManager.default.copyItem(at: received.file, to: dest)
+            return Movie(url: dest)
+        }
     }
 }
