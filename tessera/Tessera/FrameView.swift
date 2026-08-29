@@ -15,7 +15,8 @@ import SwiftUI
 import UIKit
 
 struct FrameReading {
-    let panel: UIImage?
+    /// The frame itself, so the panel can be drawn live at any duty.
+    let px: [UInt8]?
     /// Up to three hue-distinct colours the art actually contains, most
     /// present first. This is what lights the room.
     let palette: [Color]
@@ -26,19 +27,19 @@ struct FrameReading {
     /// A second light, for the far side of the room. Falls back to the first.
     var glow2: Color { palette.count > 1 ? palette[1] : glow }
 
-    static let dark = FrameReading(panel: nil, palette: [], lit: 0, key: "dark")
+    static let dark = FrameReading(px: nil, palette: [], lit: 0, key: "dark")
 }
 
 enum FrameRenderer {
     private static var cacheKey: String = ""
     private static var cached: FrameReading = .dark
 
-    /// `duty` is the wall's brightness, 0.05...1.0. It changes the render,
-    /// not the opacity of the render.
-    static func read(_ data: Data?, duty: Double) -> FrameReading {
+    /// Analysis only. The panel is drawn live (see PanelCanvas), so duty is a
+    /// continuous parameter rather than a cache key: rasterising per duty step
+    /// is what made the brightness drag move in visible jumps.
+    static func read(_ data: Data?) -> FrameReading {
         guard let data, data.count == 64 * 64 * 3 else { return .dark }
-        let bucket = Int((duty * 25).rounded())
-        let key = "\(data.hashValue):\(bucket)"
+        let key = "\(data.hashValue)"
         if key == cacheKey { return cached }
 
         var lum = [Float](repeating: 0, count: 64 * 64)
@@ -55,10 +56,10 @@ enum FrameRenderer {
         let lit = min(1.0, pow(Double(total) / Double(64 * 64) / 255.0 * 3.2, 0.8))
 
         let reading = FrameReading(
-            panel: render(data, lum: lum, duty: duty),
+            px: [UInt8](data),
             palette: palette(data, lum: lum),
             lit: lit,
-            key: "\(data.hashValue)"
+            key: key
         )
         cacheKey = key
         cached = reading
@@ -128,63 +129,64 @@ enum FrameRenderer {
         return d > 180 ? 360 - d : d
     }
 
-    private static let cell: CGFloat = 9
-    private static let side: CGFloat = 64 * 9
+}
 
-    private static func render(_ data: Data, lum: [Float], duty: Double) -> UIImage? {
-        let fmt = UIGraphicsImageRendererFormat.default()
-        fmt.scale = 1
-        fmt.opaque = true
-        let d = CGFloat(max(0.05, min(1.0, duty)))
-        // Dimming an LED goes warm, it does not go grey: pull green and blue
-        // down harder than red as duty falls, toward roughly 2000K.
-        let warm = 0.18 * (1 - d)
-        let gK = 1 - warm * 0.34
-        let bK = 1 - warm
+/// The wall, drawn live.
+///
+/// Brightness is a duty multiplied into every emitter, exactly as before, but
+/// now applied while drawing rather than baked into a cached raster. That is
+/// what lets the drag be continuous: there is no bucket to quantise to, so the
+/// picture dissolves into its tiles smoothly instead of in 4% steps.
+struct PanelCanvas: View {
+    let px: [UInt8]?
+    let duty: Double
 
-        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { rctx in
-            let ctx = rctx.cgContext
-            ctx.setFillColor(UIColor.black.cgColor)
-            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
+    var body: some View {
+        Canvas(rendersAsynchronously: false) { ctx, size in
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black))
+            guard let px, px.count == 64 * 64 * 3 else { return }
 
+            let cell = size.width / 64
             let r = cell * 0.34
-            // The unlit LED is still physically there, at every duty.
-            let unlit = UIColor(white: 0.055, alpha: 1).cgColor
+            let d = max(0.05, min(1.0, duty))
+            // Dimming an LED goes warm, not grey.
+            let warm = 0.18 * (1 - d)
+            let gK = 1 - warm * 0.34
+            let bK = 1 - warm
+            let unlit = Color(white: 0.055)
 
-            data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
-                let p = raw.bindMemory(to: UInt8.self)
+            for i in 0..<(64 * 64) {
+                let o = i * 3
+                let cx = CGFloat(i % 64) * cell + cell / 2
+                let cy = CGFloat(i / 64) * cell + cell / 2
+                let R = Double(px[o]), G = Double(px[o + 1]), B = Double(px[o + 2])
+                let lum = 0.2126 * R + 0.7152 * G + 0.0722 * B
 
-                ctx.setFillColor(unlit)
-                for i in 0..<(64 * 64) where lum[i] < 8 {
-                    let cx = CGFloat(i % 64) * cell + cell / 2
-                    let cy = CGFloat(i / 64) * cell + cell / 2
-                    ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+                if lum < 8 {
+                    ctx.fill(Path(ellipseIn: CGRect(x: cx - r, y: cy - r,
+                                                    width: r * 2, height: r * 2)),
+                             with: .color(unlit))
+                    continue
                 }
 
-                ctx.setBlendMode(.plusLighter)
-                for i in 0..<(64 * 64) where lum[i] >= 8 {
-                    let o = i * 3
-                    let cx = CGFloat(i % 64) * cell + cell / 2
-                    let cy = CGFloat(i / 64) * cell + cell / 2
-                    let n = CGFloat(lum[i] / 255)
-
-                    let color = UIColor(
-                        red: CGFloat(p[o]) / 255 * d,
-                        green: CGFloat(p[o + 1]) / 255 * d * gK,
-                        blue: CGFloat(p[o + 2]) / 255 * d * bK,
-                        alpha: 1
-                    )
-                    // The halo is what merges neighbours into a picture. Shrink
-                    // it with duty and the tiles separate.
-                    let hr = r + cell * 0.55 * n * d
-                    ctx.setFillColor(color.withAlphaComponent(0.20 * n * pow(d, 1.4)).cgColor)
-                    ctx.fillEllipse(in: CGRect(x: cx - hr, y: cy - hr, width: hr * 2, height: hr * 2))
-                    ctx.setFillColor(color.cgColor)
-                    ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
-                }
-                ctx.setBlendMode(.normal)
+                let colour = Color(red: R / 255 * d,
+                                   green: G / 255 * d * gK,
+                                   blue: B / 255 * d * bK)
+                // The halo is what merges neighbours into a picture. Shrink it
+                // with duty and the tiles separate.
+                let n = CGFloat(lum / 255)
+                let hr = r + cell * 0.55 * n * CGFloat(d)
+                ctx.fill(
+                    Path(ellipseIn: CGRect(x: cx - hr, y: cy - hr, width: hr * 2, height: hr * 2)),
+                    with: .color(colour.opacity(0.20 * Double(n) * pow(d, 1.4)))
+                )
+                ctx.fill(
+                    Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)),
+                    with: .color(colour)
+                )
             }
         }
+        .drawingGroup()
     }
 }
 
@@ -218,7 +220,7 @@ struct WallHero: View {
     // Arrival: a new sleeve does not cross-dissolve onto a wall of LEDs, it
     // repaints. The outgoing frame is extinguished column by column, then the
     // incoming one is lit in the same order.
-    @State private var outgoing: UIImage? = nil
+    @State private var outgoing: [UInt8]? = nil
     @State private var scan: Double = 1          // 1 = settled
     @State private var scanPhase: ScanPhase = .idle
 
@@ -233,23 +235,17 @@ struct WallHero: View {
 
                 // outgoing frame, being extinguished left to right
                 if scanPhase == .blanking, let old = outgoing {
-                    Image(uiImage: old)
-                        .interpolation(.high)
-                        .resizable()
-                        .mask(alignment: .trailing) {
-                            edge(reveal: 1 - scan, from: .trailing)
-                        }
+                    PanelCanvas(px: old, duty: duty)
+                        .mask(alignment: .trailing) { edge(reveal: 1 - scan, from: .trailing) }
                 }
 
-                if let panel = reading.panel {
-                    Image(uiImage: panel)
-                        .interpolation(.high)
-                        .resizable()
-                        .mask(alignment: .leading) {
-                            scanPhase == .lighting ? edge(reveal: scan, from: .leading) : edge(reveal: 1, from: .leading)
-                        }
-                        .opacity(scanPhase == .blanking ? 0 : 1)
-                }
+                PanelCanvas(px: reading.px, duty: duty)
+                    .mask(alignment: .leading) {
+                        scanPhase == .lighting
+                            ? edge(reveal: scan, from: .leading)
+                            : edge(reveal: 1, from: .leading)
+                    }
+                    .opacity(scanPhase == .blanking ? 0 : 1)
 
                 // The wall's last confirmed level, drawn on the object itself.
                 // Always present, never labelled. This is the reset.
@@ -282,11 +278,13 @@ struct WallHero: View {
                         guard moved, let start = startValue else { return }
                         // Relative to touch-down, so grabbing never jumps the wall.
                         let delta = -g.translation.height / max(1, geo.size.height)
-                        let stepped = ((start + delta * 0.95) / 0.04).rounded() * 0.04
+                        // 1% resolution so the picture dissolves smoothly; the
+                        // detent is a feeling every 5%, not the step size.
+                        let stepped = ((start + delta * 0.95) / 0.01).rounded() * 0.01
                         let v = min(1.0, max(0.05, stepped))
                         if v != dragging {
                             dragging = v
-                            let d = Int(v * 25)
+                            let d = Int(v * 20)
                             if d != lastDetent {
                                 // the control gets quieter as the room darkens
                                 Taps.detent(intensity: 0.25 + 0.45 * v)
@@ -307,7 +305,7 @@ struct WallHero: View {
             )
             .overlay(alignment: .topTrailing) { staleStamp }
             .onChange(of: arrivalKey) { _, _ in arrive() }
-            .onAppear { outgoing = reading.panel }
+            .onAppear { outgoing = reading.px }
             .accessibilityElement()
             .accessibilityLabel("The wall")
             .accessibilityValue("Brightness \(Int(duty * 100)) percent")
@@ -339,10 +337,10 @@ struct WallHero: View {
 
     private func arrive() {
         guard !Motion.reduced else {
-            outgoing = reading.panel
+            outgoing = reading.px
             return
         }
-        outgoing = outgoing ?? reading.panel
+        outgoing = outgoing ?? reading.px
         scanPhase = .blanking
         scan = 0
         withAnimation(.easeIn(duration: 0.18)) { scan = 1 }
@@ -352,7 +350,7 @@ struct WallHero: View {
             withAnimation(.easeOut(duration: 0.32)) { scan = 1 }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
                 scanPhase = .idle
-                outgoing = reading.panel
+                outgoing = reading.px
             }
         }
     }

@@ -24,7 +24,9 @@ struct PillRow<T: Hashable>: View {
             Text(label)
                 .font(.ui(12, .medium))
                 .foregroundStyle(Ink.dim)
-            HStack(spacing: 7) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 7),
+                                     count: options.count > 4 ? 3 : options.count),
+                      spacing: 7) {
                 ForEach(options, id: \.1) { (title, value) in
                     let active = value == selected
                     Button {

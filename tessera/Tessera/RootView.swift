@@ -36,7 +36,7 @@ struct RootView: View {
     private var isOff: Bool { wall.state.mode == "off" }
 
     private var lighting: Lighting {
-        let reading = FrameRenderer.read(wall.frame, duty: isOff ? 0.05 : duty)
+        let reading = FrameRenderer.read(wall.frame)
         let accent: Color = {
             if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
             return reading.glow

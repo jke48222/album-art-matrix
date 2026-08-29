@@ -141,8 +141,8 @@ struct WallScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 PillRow(
                     label: "light",
-                    options: [("solid", "solid"), ("breathe", "breathe"), ("pulse", "pulse"),
-                              ("rainbow", "rainbow"), ("fade", "gradient")],
+                    options: [("mosaic", "mosaic"), ("solid", "solid"), ("breathe", "breathe"),
+                              ("pulse", "pulse"), ("rainbow", "rainbow"), ("fade", "gradient")],
                     selected: wall.state.effect,
                     accent: accent
                 ) { wall.send(["effect": $0]) }
