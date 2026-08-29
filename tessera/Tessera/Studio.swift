@@ -334,6 +334,7 @@ struct StudioScreen: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
+                        if last == nil { Taps.warm() }
                         let cell = geo.size.width / 64
                         let x = min(63, max(0, Int(g.location.x / cell)))
                         let y = min(63, max(0, Int(g.location.y / cell)))

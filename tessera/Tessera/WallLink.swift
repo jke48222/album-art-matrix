@@ -18,6 +18,7 @@ struct WallState: Equatable {
     var finish: String = "clean"
     var matchArt: Bool = false
     var color: String = "#e8b04b"
+    var color2: String = "#e0491f"
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
@@ -34,6 +35,7 @@ struct WallState: Equatable {
         finish = json["finish"] as? String ?? "clean"
         matchArt = json["match_art"] as? Bool ?? false
         color = json["color"] as? String ?? "#e8b04b"
+        color2 = json["color2"] as? String ?? "#e0491f"
         if let now = json["now_showing"] as? [String: Any] {
             title = now["title"] as? String
             artist = now["artist"] as? String
@@ -182,6 +184,8 @@ final class WallSession {
             keep("effect", &fresh.effect, mine.effect)
             keep("finish", &fresh.finish, mine.finish)
             keep("match_art", &fresh.matchArt, mine.matchArt)
+            keep("color", &fresh.color, mine.color)
+            keep("color2", &fresh.color2, mine.color2)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
@@ -335,6 +339,8 @@ final class WallSession {
         if let e = merged["effect"] as? String { state.effect = e }
         if let f = merged["finish"] as? String { state.finish = f }
         if let ma = merged["match_art"] as? Bool { state.matchArt = ma }
+        if let c = merged["color"] as? String { state.color = c }
+        if let c = merged["color2"] as? String { state.color2 = c }
         merged.removeValue(forKey: "_local")
         for key in merged.keys { pending[key] = Date() }
 

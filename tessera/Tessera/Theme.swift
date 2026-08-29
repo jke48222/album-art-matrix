@@ -134,27 +134,68 @@ enum Motion {
 // MARK: - Haptics
 
 // Amplify real events only. Nothing here fires during idle animation or polls.
+//
+// Timing. An impact generator that has not been prepared warms the Taptic
+// Engine on first use, which lands the tap a beat after the thing it is
+// describing; that was most of the lateness. Every generator is prepared at
+// launch, re-prepared immediately after firing so the next one is instant,
+// and warmed again when a gesture begins. Detents are also rate limited: a
+// drag can cross steps faster than the engine can answer, and a backlog of
+// queued taps arrives after the finger has stopped, which reads as drift.
 enum Taps {
     private static let soft = UIImpactFeedbackGenerator(style: .soft)
     private static let rigid = UIImpactFeedbackGenerator(style: .rigid)
     private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
+    private static let notice = UINotificationFeedbackGenerator()
+    private static var lastDetent = CFAbsoluteTimeGetCurrent()
+
+    /// Call when a gesture begins, so the first tap of it is on time.
+    static func warm() {
+        soft.prepare()
+        rigid.prepare()
+    }
+
+    static func prepareAll() {
+        soft.prepare(); rigid.prepare(); heavy.prepare(); notice.prepare()
+    }
 
     /// A detent. Intensity scales with the value so the control gets quieter
     /// as the room gets darker; never a uniform tick.
     static func detent(intensity: Double = 0.5) {
+        let now = CFAbsoluteTimeGetCurrent()
+        // ~25/second is past what the engine resolves; more than that only
+        // builds a queue that plays out late.
+        guard now - lastDetent > 0.04 else { return }
+        lastDetent = now
         soft.impactOccurred(intensity: max(0.15, min(1.0, intensity)))
+        soft.prepare()
     }
+
     /// Mode committed locally; the wall's confirmation is separate.
-    static func commit() { rigid.impactOccurred(intensity: 0.7) }
+    static func commit() {
+        rigid.impactOccurred(intensity: 0.7)
+        rigid.prepare()
+    }
+
     /// The wall was found: the thud of a lamp switching on.
-    static func found() { heavy.impactOccurred(intensity: 1.0) }
+    static func found() {
+        heavy.impactOccurred(intensity: 1.0)
+        heavy.prepare()
+    }
+
     /// A frame landed on the wall.
     static func landed() {
         soft.impactOccurred(intensity: 0.8)
+        soft.prepare()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
             soft.impactOccurred(intensity: 0.6)
+            soft.prepare()
         }
     }
+
     /// One dull buzz, never repeated for the same failure.
-    static func error() { UINotificationFeedbackGenerator().notificationOccurred(.warning) }
+    static func error() {
+        notice.notificationOccurred(.warning)
+        notice.prepare()
+    }
 }

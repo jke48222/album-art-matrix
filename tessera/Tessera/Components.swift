@@ -346,3 +346,83 @@ struct Placard: View {
         }
     }
 }
+
+
+// MARK: - Lamp colours
+
+/// The two threads every lamp effect is built from. Solid uses the first,
+/// the patterns and fades use both, and rainbow ignores them and says so.
+/// While the album is lending its colours these show what it lent and are
+/// not editable, because editing them would do nothing.
+struct LampInks: View {
+    let color: String
+    let color2: String
+    let matchArt: Bool
+    let effect: String
+    let accent: Color
+    var onPick: (String, String) -> Void      // key, "#rrggbb"
+
+    @State private var a: Color = .orange
+    @State private var b: Color = .red
+
+    private var ignoresColour: Bool { effect == "rainbow" }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(label)
+                .font(.ui(12, .medium))
+                .foregroundStyle(Ink.dim)
+
+            HStack(spacing: 14) {
+                if matchArt || ignoresColour {
+                    // read-only: what the effect is actually using
+                    dot(Color(wallHex: color) ?? accent)
+                    dot(Color(wallHex: color2) ?? accent)
+                } else {
+                    picker($a) { onPick("color", Self.hex($0)) }
+                    picker($b) { onPick("color2", Self.hex($0)) }
+                }
+                Spacer()
+            }
+        }
+        .onAppear {
+            a = Color(wallHex: color) ?? .orange
+            b = Color(wallHex: color2) ?? .red
+        }
+        .onChange(of: color) { _, v in a = Color(wallHex: v) ?? a }
+        .onChange(of: color2) { _, v in b = Color(wallHex: v) ?? b }
+    }
+
+    private var label: String {
+        if ignoresColour { return "colour · rainbow makes its own" }
+        return matchArt ? "colour · from the album" : "colour"
+    }
+
+    private func dot(_ c: Color) -> some View {
+        Circle()
+            .fill(c)
+            .frame(width: 30, height: 30)
+            .overlay { Circle().strokeBorder(Ink.hairline, lineWidth: 1) }
+            .opacity(0.75)
+    }
+
+    private func picker(_ binding: Binding<Color>, _ commit: @escaping (Color) -> Void) -> some View {
+        ColorPicker(selection: binding, supportsOpacity: false) { EmptyView() }
+            .labelsHidden()
+            .scaleEffect(1.15)
+            .frame(width: 30, height: 30)
+            .onChange(of: binding.wrappedValue) { _, c in
+                Taps.detent(intensity: 0.5)
+                commit(c)
+            }
+    }
+
+    static func hex(_ c: Color) -> String {
+        var r: CGFloat = 0, g: CGFloat = 0, bl: CGFloat = 0, al: CGFloat = 0
+        UIColor(c).getRed(&r, green: &g, blue: &bl, alpha: &al)
+        return String(format: "#%02x%02x%02x",
+                      Int(max(0, min(255, r * 255))),
+                      Int(max(0, min(255, g * 255))),
+                      Int(max(0, min(255, bl * 255))))
+    }
+}
