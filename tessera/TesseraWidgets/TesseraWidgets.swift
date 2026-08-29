@@ -176,5 +176,6 @@ struct WallWidget: Widget {
 struct TesseraWidgetBundle: WidgetBundle {
     var body: some Widget {
         WallWidget()
+        WallLiveActivity()
     }
 }

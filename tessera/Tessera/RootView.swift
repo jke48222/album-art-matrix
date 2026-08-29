@@ -29,8 +29,15 @@ struct Lighting {
 struct RootView: View {
     @Environment(WallSession.self) private var wall
 
-    @State private var page = 0
+    @State private var page: Int? = 0
+    /// One list of what the wall has worn, shared: the Archive shows it as a
+    /// grid, and the panel scrubs through it. Two fetches of the same journal
+    /// would be two slightly different pasts.
+    @State private var worn = ArchiveStore()
     @State private var dragLight: Double? = nil
+    /// A finger is on the panel. The pager stops listening while that is
+    /// true, because a sideways pull on the wall is aimed at the wall.
+    @State private var onPanel = false
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
     @State private var showSetup = false
@@ -65,23 +72,38 @@ struct RootView: View {
                 surge: arrival
             )
 
-            TabView(selection: $page) {
-                WallScreen(
-                    light: light,
-                    dragLight: $dragLight,
-                    onSetup: { showSetup = true },
-                    onStudio: { showStudio = true }
-                )
-                .tag(0)
-                ArchiveScreen(accent: light.steadyAccent)
-                    .tag(1)
+            // A paging scroll view rather than TabView(.page): the panel has
+            // its own sideways gesture now, and this is the only pager that
+            // can be told to stand down while a finger is on it.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    WallScreen(
+                        light: light,
+                        dragLight: $dragLight,
+                        onPanel: $onPanel,
+                        onSetup: { showSetup = true },
+                        onStudio: { showStudio = true }
+                    )
+                    .containerRelativeFrame(.horizontal)
+                    .id(0)
+                    ArchiveScreen(accent: light.steadyAccent)
+                        .containerRelativeFrame(.horizontal)
+                        .id(1)
+                }
+                .scrollTargetLayout()
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $page)
+            .scrollIndicators(.hidden)
+            .scrollDisabled(onPanel)
+            .ignoresSafeArea(edges: .horizontal)
 
-            PageTesserae(page: page, accent: light.steadyAccent, lit: light.room)
+            PageTesserae(page: page ?? 0, accent: light.steadyAccent, lit: light.room)
                 .padding(.bottom, 8)
         }
+        .environment(worn)
         .preferredColorScheme(.dark)
+        .task { await worn.load(host: wall.host) }
         .sheet(isPresented: $showSetup) {
             SettingsSheet(accent: light.steadyAccent).environment(wall)
         }
@@ -93,6 +115,17 @@ struct RootView: View {
                 .environment(wall)
         }
         .onAppear { wall.start() }
+        // The lock screen's three keys land here. Only modes: anything that
+        // needs a choice made about it needs the app open to make it in.
+        .onOpenURL { url in
+            guard url.scheme == "tessera" else { return }
+            if url.host == "mode", let mode = url.pathComponents.last,
+               ["art", "cd", "ambient", "off", "ticker", "clock"].contains(mode) {
+                wall.send(["mode": mode])
+                Taps.commit()
+            }
+            page = 0
+        }
         .onChange(of: lighting.reading.key) { _, _ in
             guard Date().timeIntervalSince(paletteAt) > 1.2 else { return }
             paletteAt = Date()
@@ -107,6 +140,10 @@ struct RootView: View {
                 return
             }
             lastTitle = new
+            // A new sleeve is a new row in the Archive and a new step in the
+            // panel's backwards drag, so the list catches up here rather than
+            // only when someone pulls it down.
+            Task { await worn.load(host: wall.host) }
             Taps.landed()
             withAnimation(.easeOut(duration: 0.25)) { arrival = 0.30 }
             withAnimation(.easeInOut(duration: 0.9).delay(0.25)) { arrival = 0 }

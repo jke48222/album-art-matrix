@@ -33,6 +33,7 @@ JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip")
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco")
 FINISHES = ("clean", "dither", "poster")
+IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
 
 DEFAULTS = {
     "mode": "art",           # art | cd | ambient | off | frame
@@ -47,6 +48,7 @@ DEFAULTS = {
     "ticker_text": "HELLO",  # ticker mode message (<= 120 chars)
     "ticker_loop": True,     # loop, or scroll once then back to art
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
+    "idle": "black",         # silence: black | hold | dim | ambient
 }
 
 
@@ -64,6 +66,9 @@ class ControlState:
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
         self.now_showing = {}        # main loop writes {title, artist, album}
+        # Where the song is, so a client can run the same clock we do rather
+        # than being told a number that is already stale by the time it lands.
+        self.progress = {}           # {at, of, playing, stamped}
         self.art_colors = None       # main loop writes ("#rrggbb", "#rrggbb")
         self.frame_len = frame_len
         self.frame_override = None   # raw RGB bytes for mode "frame"
@@ -93,6 +98,8 @@ class ControlState:
                 elif k == "effect" and v in EFFECTS:
                     self._s[k] = v
                 elif k == "finish" and v in FINISHES:
+                    self._s[k] = v
+                elif k == "idle" and v in IDLES:
                     self._s[k] = v
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
                     self._s[k] = bool(v)
@@ -133,7 +140,8 @@ class ControlState:
 
     def public_state(self) -> dict:
         """What GET /state returns — settings plus live extras."""
-        out = {**self.get(), "now_showing": self.now_showing}
+        out = {**self.get(), "now_showing": self.now_showing,
+               "progress": self.progress}
         if self.art_colors:
             out["art_colors"] = list(self.art_colors)
         if self.sleep:

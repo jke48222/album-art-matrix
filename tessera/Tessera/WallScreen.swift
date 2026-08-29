@@ -9,11 +9,14 @@ import SwiftUI
 
 struct WallScreen: View {
     @Environment(WallSession.self) private var wall
+    @Environment(ArchiveStore.self) private var worn
 
     /// The room's light, computed once by RootView and shared with Archive.
     let light: Lighting
     /// Non-nil only while a finger is on the panel adjusting the light.
     @Binding var dragLight: Double?
+    /// Passed up so the pager can step aside; see RootView.
+    @Binding var onPanel: Bool
     var onSetup: () -> Void
     var onStudio: () -> Void
 
@@ -39,8 +42,12 @@ struct WallScreen: View {
                     dragging: $dragLight,
                     link: wall.link,
                     arrivalKey: wall.state.title ?? wall.state.mode,
+                    history: worn.runs,
+                    tile: { worn.tile($0) },
+                    touching: $onPanel,
                     onCommit: { wall.send(["brightness": $0]) },
-                    onHold: { wall.send(["mode": isOff ? "art" : "off"]) }
+                    onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
+                    onWear: { wall.replay(ts: $0.ts) }
                 )
                 .padding(.horizontal, -4)
                 .padding(.bottom, 26)
@@ -59,7 +66,7 @@ struct WallScreen: View {
                         .transition(.opacity)
                 }
 
-                Spacer(minLength: 40)
+                Spacer(minLength: 56)
             }
             .padding(.top, 6)
             .animation(Motion.settle, value: isOff)
@@ -105,11 +112,17 @@ struct WallScreen: View {
     }
 
     private var modeRow: some View {
-        HStack(spacing: 0) {
-            glyph(.art, "art", mode: "art")
-            glyph(.spin, "spin", mode: "cd")
-            glyph(.lamp, "lamp", mode: "ambient")
-            glyph(.dark, "off", mode: "off")
+        VStack(spacing: 16) {
+            HStack(spacing: 0) {
+                glyph(.art, "art", mode: "art")
+                glyph(.spin, "spin", mode: "cd")
+                glyph(.lamp, "lamp", mode: "ambient")
+            }
+            HStack(spacing: 0) {
+                glyph(.letters, "words", mode: "ticker")
+                glyph(.clock, "clock", mode: "clock")
+                glyph(.dark, "off", mode: "off")
+            }
         }
     }
 
@@ -129,7 +142,8 @@ struct WallScreen: View {
     /// The wall may be in a mode this row does not offer (ticker, clip, frame).
     /// Show Art rather than lying with nothing selected.
     private var normalizedMode: String {
-        ["art", "cd", "ambient", "off"].contains(wall.state.mode) ? wall.state.mode : "art"
+        ["art", "cd", "ambient", "off", "ticker", "clock"].contains(wall.state.mode)
+            ? wall.state.mode : "art"
     }
 
     @ViewBuilder private var contextRow: some View {
@@ -168,6 +182,21 @@ struct WallScreen: View {
                 }
                 .tint(accent)
             }
+
+        case "ticker":
+            TickerRow(
+                text: wall.state.tickerText,
+                loop: wall.state.tickerLoop,
+                accent: accent
+            ) { key, value in wall.send([key: value]) }
+
+        case "clock":
+            PillRow(
+                label: "clock",
+                options: [("24 hour", true), ("12 hour", false)],
+                selected: wall.state.clock24h,
+                accent: accent
+            ) { wall.send(["clock_24h": $0]) }
 
         default:
             FinishRow(

@@ -132,6 +132,10 @@ def main():
     blacked, need_show = False, False
     fin_key, fin_img, frame_shown = None, None, None
     hold_until = 0.0                 # replays pin the wall for a while
+    quiet_since = None               # when the music stopped, for idle
+    # Where the song is, and when we last heard that. The record turns from
+    # this rather than from the wall clock, so a seek seeks the record.
+    prog = None                      # (seconds_in, monotonic_at, playing, total)
     ticker, ticker_key, ticker_t0 = None, None, 0.0
     clock, clock_key = None, None
     clip_i, clip_next = 0, 0.0
@@ -163,6 +167,24 @@ def main():
 
         # ---- poll now-playing; rebuild art state on track change --------
         now = source.get_current()
+
+        # Silence is a state worth having an opinion about. A wall left on a
+        # frozen sleeve all night is a different object from one that quietly
+        # goes dark, so this is the owner's call, not ours.
+        if now is not None and now.is_playing:
+            quiet_since = None
+        elif quiet_since is None:
+            quiet_since = time.monotonic()
+
+        if now is not None and now.progress_ms is not None:
+            prog = (now.progress_ms / 1000.0, time.monotonic(),
+                    now.is_playing, (now.duration_ms or 0) / 1000.0)
+            ctrl.progress = {"at": now.progress_ms, "of": now.duration_ms,
+                             "playing": now.is_playing, "stamped": time.time()}
+        elif now is None:
+            prog = None
+            ctrl.progress = {}
+
         if now and now.track_id != last_track \
                 and time.monotonic() >= hold_until:
             if now.art_url:
@@ -218,6 +240,19 @@ def main():
                         fade = 1.0 - el_min / ctrl.sleep["minutes"]
                 eff = tuple(g * s["brightness"] * fade for g in gains)
                 mode = s["mode"]
+
+                # A minute of silence, and only for the modes that are about a
+                # track. Choosing a lamp or a clock is a decision the music
+                # stopping does not get to overrule.
+                if quiet_since is not None and mode in ("art", "cd") \
+                        and time.monotonic() - quiet_since > 60:
+                    idle = s.get("idle", "black")
+                    if idle == "black":
+                        mode = "off"
+                    elif idle == "dim":
+                        eff = tuple(g * 0.3 for g in eff)
+                    elif idle == "ambient":
+                        mode = "ambient"
 
                 if mode == "off":
                     if not blacked:
@@ -318,9 +353,16 @@ def main():
 
                 if mode == "cd" and animator is not None:
                     if animator.rpm != s["rpm"]:
-                        animator.rpm = s["rpm"]  # angle jumps; S4 owns this
+                        animator.rpm = s["rpm"]
                     tick = time.monotonic()
-                    f = animator.frame_at(tick - t0)
+                    # Between polls the phone is not going to tell us again,
+                    # so run the clock forward from the last thing it said.
+                    at, frac = None, None
+                    if prog is not None:
+                        at = prog[0] + (tick - prog[1] if prog[2] else 0.0)
+                        if prog[3] > 0:
+                            frac = min(1.0, at / prog[3])
+                    f = animator.frame_at(tick - t0, progress_s=at, fraction=frac)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     fps_count += 1
                     if tick - fps_since >= 5.0:

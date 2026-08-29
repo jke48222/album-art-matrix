@@ -72,6 +72,11 @@ final class StandIn {
             art = px
             artColors = Self.chroma(px)
             state.artColors = artColors
+            // With no wall there is no journal, so the app keeps one. This is
+            // what makes the Archive, the counts and the panel's backwards
+            // drag all work before anything is built.
+            LocalJournal.append(title: state.title, artist: state.artist,
+                                album: state.album, frame: px)
         } else {
             makeFallbackArt()
         }
