@@ -12,6 +12,13 @@
 //
 // Dying is not a modal. The snake unravels from the tail at speed, the score
 // letters itself on the panel in the wall's own font, and a tap deals again.
+//
+// Left alone, it plays itself. The autopilot is a flood-fill greedy that
+// chases the meal without boxing itself in, and the first swipe hands you
+// the wheel mid-run: the snake you take over is the one that was already
+// moving. Walk away and, after a death, it takes the wheel back. That makes
+// the game double as a thing the wall does when nobody is playing, and it
+// never touches your best score or your Taptic Engine while it drives.
 
 import SwiftUI
 
@@ -25,6 +32,9 @@ final class SnakeGame {
 
     private(set) var phase: Phase = .ready
     private(set) var score = 0
+    /// True while the snake is driving itself. Autoplay earns no best score
+    /// and makes no haptics: the phone in your pocket is not playing.
+    private(set) var auto = false
     private(set) var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
     @ObservationIgnored @AppStorage("snake.best") var best = 0
 
@@ -34,6 +44,8 @@ final class SnakeGame {
     @ObservationIgnored private var food = (24, 16)
     @ObservationIgnored private var grow = 0
     @ObservationIgnored private var rng = SystemRandomNumberGenerator()
+    @ObservationIgnored private var readyAt = Date()
+    @ObservationIgnored private var overAt = Date()
 
     var accent: (Double, Double, Double) = (0.91, 0.69, 0.29)
 
@@ -51,12 +63,14 @@ final class SnakeGame {
         grow = 0
         score = 0
         phase = .ready
+        readyAt = Date()
         dropFood()
         render()
     }
 
-    func deal() {
+    func deal(auto driven: Bool = false) {
         prepare()
+        auto = driven
         phase = .alive
     }
 
@@ -66,15 +80,30 @@ final class SnakeGame {
     func steer(_ d: (Int, Int)) {
         if phase == .ready { phase = .alive }          // the first swipe deals
         guard phase == .alive else { return }
+        auto = false                                   // your wheel now
         guard d != (-dir.0, -dir.1) else { return }   // no folding in half
         queued = d
     }
 
     func tick() {
         switch phase {
-        case .alive: step()
-        case .unraveling: unravel()
-        case .ready, .over: break
+        case .alive:
+            if auto, queued == nil { queued = autopilot() }
+            step()
+        case .unraveling:
+            unravel()
+        case .ready:
+            // Nobody moved: it starts without you.
+            if Date().timeIntervalSince(readyAt) > 1.4 {
+                auto = true
+                phase = .alive
+            }
+        case .over:
+            // A player gets time to read the score; an empty room does not
+            // need it. Either way the wall goes back to having a snake.
+            if Date().timeIntervalSince(overAt) > (auto ? 1.8 : 7.0) {
+                deal(auto: true)
+            }
         }
     }
 
@@ -87,7 +116,7 @@ final class SnakeGame {
         if head.0 < 0 || head.0 >= n || head.1 < 0 || head.1 >= n
             || body.dropLast(grow > 0 ? 0 : 1).contains(where: { $0 == head }) {
             phase = .unraveling
-            Taps.error()
+            if !auto { Taps.error() }
             return
         }
 
@@ -95,7 +124,7 @@ final class SnakeGame {
         if head == food {
             score += 1
             grow += 2
-            Taps.detent(intensity: min(1.0, 0.35 + Double(score) * 0.02))
+            if !auto { Taps.detent(intensity: min(1.0, 0.35 + Double(score) * 0.02)) }
             dropFood()
         }
         if grow > 0 { grow -= 1 } else { body.removeLast() }
@@ -109,10 +138,63 @@ final class SnakeGame {
             body.removeAll()
         } else {
             phase = .over
-            if score > best { best = score }
-            Taps.landed()
+            overAt = Date()
+            if !auto {
+                if score > best { best = score }
+                Taps.landed()
+            }
         }
         render()
+    }
+
+    // MARK: the autopilot
+
+    /// Greedy toward the meal, but never into a pocket smaller than itself.
+    /// Flood-filling from each candidate square is what separates a snake
+    /// that plays from one that walls itself in by minute two; at 32x32 the
+    /// fill is a thousand cells at worst and runs in nothing.
+    private func autopilot() -> (Int, Int)? {
+        let n = Self.grid
+        let head = body[0]
+        var occupied = Set(body.dropLast(grow > 0 ? 0 : 1).map { $0.1 * n + $0.0 })
+        occupied.remove(head.1 * n + head.0)
+
+        func open(_ p: (Int, Int)) -> Bool {
+            p.0 >= 0 && p.0 < n && p.1 >= 0 && p.1 < n && !occupied.contains(p.1 * n + p.0)
+        }
+        func room(_ start: (Int, Int)) -> Int {
+            let want = body.count + 8
+            var seen: Set<Int> = [start.1 * n + start.0]
+            var queue = [start], i = 0
+            while i < queue.count, seen.count < want {
+                let c = queue[i]; i += 1
+                for d in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                    let q = (c.0 + d.0, c.1 + d.1)
+                    if open(q), seen.insert(q.1 * n + q.0).inserted { queue.append(q) }
+                }
+            }
+            return seen.count
+        }
+
+        let options = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+            .filter { $0 != (-dir.0, -dir.1) }
+            .map { (d: $0, p: (head.0 + $0.0, head.1 + $0.1)) }
+            .filter { open($0.p) }
+        guard !options.isEmpty else { return nil }     // cornered; so be it
+
+        let scored = options.map { o in
+            (d: o.d,
+             space: room(o.p),
+             dist: abs(o.p.0 - food.0) + abs(o.p.1 - food.1),
+             straight: o.d == dir)
+        }
+        let need = min(body.count + 4, body.count + 8)
+        let roomy = scored.filter { $0.space >= need }
+        let pool = roomy.isEmpty ? scored : roomy
+        // closest to the meal; ties go straight on, so it does not wiggle
+        return pool.min {
+            ($0.dist, $0.straight ? 0 : 1) < ($1.dist, $1.straight ? 0 : 1)
+        }?.d
     }
 
     private func dropFood() {
@@ -196,7 +278,7 @@ struct SnakeScreen: View {
                 Spacer()
                 Text("\(game.score)")
                     .font(.machine(22))
-                    .foregroundStyle(game.phase == .alive ? accent : Ink.dim)
+                    .foregroundStyle(game.phase == .alive && !game.auto ? accent : Ink.dim)
                     .contentTransition(.numericText())
                     .animation(.linear(duration: 0.15), value: game.score)
                 Text("best \(game.best)")
@@ -214,8 +296,7 @@ struct SnakeScreen: View {
                 .gesture(steering)
                 .onTapGesture {
                     switch game.phase {
-                    case .ready: Taps.commit(); game.deal()
-                    case .over: Taps.commit(); game.deal()
+                    case .ready, .over: Taps.commit(); game.deal()
                     default: break
                     }
                 }
@@ -229,7 +310,6 @@ struct SnakeScreen: View {
             Spacer(minLength: 0)
 
             Button("Done") {
-                Taps.detent(intensity: 0.3)
                 dismiss()
             }
             .buttonStyle(PressStyle(scale: 0.96))
@@ -267,10 +347,11 @@ struct SnakeScreen: View {
 
     private var caption: String {
         switch game.phase {
-        case .ready: "swipe to start, swipe to steer"
-        case .alive: game.score == 0 ? "swipe to steer" : " "
+        case .ready: "swipe to steer, or let it play"
+        case .alive: game.auto ? "playing itself. swipe to take over"
+                     : (game.score == 0 ? "swipe to steer" : " ")
         case .unraveling: " "
-        case .over: "tap to deal again"
+        case .over: game.auto ? " " : "tap to deal again"
         }
     }
 

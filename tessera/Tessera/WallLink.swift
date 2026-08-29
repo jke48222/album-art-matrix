@@ -30,6 +30,10 @@ struct WallState: Equatable {
     var wbR: Double = 1.0
     var wbG: Double = 1.0
     var wbB: Double = 1.0
+    var sun: String = "off"
+    var sunNight: Double = 0.25
+    var lat: Double = 999
+    var lon: Double = 999
     var timerRemaining: Int? = nil
     var timerTotal: Int? = nil
     var title: String? = nil
@@ -85,6 +89,10 @@ struct WallState: Equatable {
         wbR = json["wb_r"] as? Double ?? 1.0
         wbG = json["wb_g"] as? Double ?? 1.0
         wbB = json["wb_b"] as? Double ?? 1.0
+        sun = json["sun"] as? String ?? "off"
+        sunNight = json["sun_night"] as? Double ?? 0.25
+        lat = json["lat"] as? Double ?? 999
+        lon = json["lon"] as? Double ?? 999
         timerRemaining = json["timer_remaining_s"] as? Int
         timerTotal = json["timer_total_s"] as? Int
         if let now = json["now_showing"] as? [String: Any] {
@@ -277,6 +285,10 @@ final class WallSession {
             keepNear("wb_r", &fresh.wbR, mine.wbR, 0.005)
             keepNear("wb_g", &fresh.wbG, mine.wbG, 0.005)
             keepNear("wb_b", &fresh.wbB, mine.wbB, 0.005)
+            keep("sun", &fresh.sun, mine.sun)
+            keepNear("sun_night", &fresh.sunNight, mine.sunNight, 0.005)
+            keepNear("lat", &fresh.lat, mine.lat, 0.001)
+            keepNear("lon", &fresh.lon, mine.lon, 0.001)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
@@ -442,7 +454,9 @@ final class WallSession {
         }
         Task { [weak self] in
             guard let self else { return }
-            if !(await self.postJSON("/frame", ["px": Data(px).base64EncodedString()])) {
+            if await self.postJSON("/frame", ["px": Data(px).base64EncodedString()]) {
+                Taps.landed()
+            } else {
                 self.outbox.add(frame: px)
                 Taps.error()
             }
@@ -490,6 +504,10 @@ final class WallSession {
         if let v = merged["wb_r"] as? Double { state.wbR = v }
         if let v = merged["wb_g"] as? Double { state.wbG = v }
         if let v = merged["wb_b"] as? Double { state.wbB = v }
+        if let v = merged["sun"] as? String { state.sun = v }
+        if let v = merged["sun_night"] as? Double { state.sunNight = v }
+        if let v = merged["lat"] as? Double { state.lat = v }
+        if let v = merged["lon"] as? Double { state.lon = v }
         merged.removeValue(forKey: "_local")
         for key in merged.keys { pending[key] = Date() }
 

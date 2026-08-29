@@ -88,7 +88,6 @@ struct WallScreen: View {
                             label: "Make something for the wall") { onStudio() }
 
             Button {
-                Taps.detent()
                 onSetup()
             } label: {
                 LinkChip(link: wall.link)

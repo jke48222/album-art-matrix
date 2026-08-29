@@ -42,6 +42,24 @@ final class Canvas64 {
 
     /// A fast drag delivers points far apart; without interpolation the
     /// stroke comes out as dots.
+
+    /// A stroke segment between two FLOAT cell positions, stamped every 0.4
+    /// cells along the way. Bresenham between quantised endpoints put every
+    /// stamp on whole cells, which reads as chatter on a slow diagonal; this
+    /// follows the finger's actual line and quantises per stamp.
+    func sweep(from a: (Double, Double), to b: (Double, Double),
+               rgb: (UInt8, UInt8, UInt8), radius: Int) {
+        let d = (b.0 - a.0, b.1 - a.1)
+        let len = (d.0 * d.0 + d.1 * d.1).squareRoot()
+        let steps = max(1, Int(len / 0.4))
+        for i in 0...steps {
+            let t = Double(i) / Double(steps)
+            light(x: Int((a.0 + d.0 * t).rounded()),
+                  y: Int((a.1 + d.1 * t).rounded()),
+                  rgb: rgb, radius: radius)
+        }
+    }
+
     func stroke(from a: (Int, Int), to b: (Int, Int), rgb: (UInt8, UInt8, UInt8), radius: Int) {
         let steps = max(abs(b.0 - a.0), abs(b.1 - a.1))
         guard steps > 0 else {
@@ -188,7 +206,11 @@ struct StudioScreen: View {
     @State private var custom: Color = .white
     @State private var erasing = false
     @State private var thick = false
-    @State private var last: (Int, Int)? = nil
+    /// The stroke's position in CELLS, kept as floats. Quantising each touch
+    /// sample to a cell before joining them is what made lines wobble: a
+    /// finger riding a cell boundary flickers between neighbours. The float
+    /// path is joined first and quantised last, per stamp.
+    @State private var lastF: (Double, Double)? = nil
     @State private var media: PhotosPickerItem? = nil
     // Held in @State so it survives body re-evaluation: built inline in
     // onReceive, every drag stroke replaced the publisher and restarted its
@@ -235,7 +257,6 @@ struct StudioScreen: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
-                        Taps.detent()
                         clip = []
                         canvas.clear()
                     }
@@ -268,7 +289,6 @@ struct StudioScreen: View {
                     clip = []
                     canvas.load(one)
                 }
-                Taps.commit()
             }
         }
         .onChange(of: media) { _, item in
@@ -333,21 +353,25 @@ struct StudioScreen: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
-                        if last == nil { Taps.warm() }
+                        if lastF == nil { Taps.warm() }
                         let cell = geo.size.width / 64
-                        let x = min(63, max(0, Int(g.location.x / cell)))
-                        let y = min(63, max(0, Int(g.location.y / cell)))
+                        let fx = min(63.49, max(0.0, g.location.x / cell - 0.5))
+                        let fy = min(63.49, max(0.0, g.location.y / cell - 0.5))
                         let rgb: (UInt8, UInt8, UInt8) = erasing ? (0, 0, 0) : ink
                         let radius = thick ? 1 : 0
-                        if let l = last {
-                            canvas.stroke(from: l, to: (x, y), rgb: rgb, radius: radius)
+                        if let l = lastF {
+                            // A resting finger jitters by a third of a cell;
+                            // ignoring that is what keeps a held point still.
+                            guard hypot(fx - l.0, fy - l.1) > 0.3 else { return }
+                            canvas.sweep(from: l, to: (fx, fy), rgb: rgb, radius: radius)
                         } else {
-                            canvas.light(x: x, y: y, rgb: rgb, radius: radius)
+                            canvas.light(x: Int(fx.rounded()), y: Int(fy.rounded()),
+                                         rgb: rgb, radius: radius)
                         }
-                        last = (x, y)
+                        lastF = (fx, fy)
                     }
                     .onEnded { _ in
-                        last = nil
+                        lastF = nil
                         Taps.detent(intensity: 0.3)
                     }
             )
@@ -411,7 +435,6 @@ struct StudioScreen: View {
     private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
         let on = !erasing && rgb == ink
         return Button {
-            Taps.detent(intensity: 0.5)
             ink = rgb
             erasing = false
         } label: {
@@ -507,7 +530,6 @@ struct StudioScreen: View {
                 .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
 
             Button {
-                Taps.detent()
                 words = ""
                 canvas.load(beneath)
             } label: {
@@ -534,7 +556,6 @@ struct StudioScreen: View {
                 wall.pushFrame(canvas.px)
             }
             kept.keep(canvas.px)
-            Taps.landed()
             sent = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { sent = false }
         } label: {
@@ -595,7 +616,6 @@ private struct BrushButton: View {
 
     var body: some View {
         Button {
-            Taps.detent(intensity: 0.5)
             action()
         } label: {
             VStack(spacing: 8) {
