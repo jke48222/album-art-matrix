@@ -26,7 +26,7 @@ from .art.disc import DiscAnimator
 from .art.effects import Ambient
 from .art.fetch import fetch_art
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
-from .art.text_modes import Clock, Countdown, Ticker
+from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .sun import sun_factor
@@ -403,11 +403,19 @@ def main():
                        if s["match_art"] and ctrl.art_colors else s["color"])
 
                 if mode == "ticker":
-                    key = (s["ticker_text"], ink, s["speed"], s["ticker_loop"])
+                    style = s.get("ticker_style", "across")
+                    key = (s["ticker_text"], ink, s["speed"],
+                           s["ticker_loop"], style)
                     if ticker is None or key != ticker_key:
-                        ticker = Ticker(size, s["ticker_text"], color=ink,
-                                        speed=s["speed"],
-                                        loop=s["ticker_loop"])
+                        if style == "across":
+                            ticker = Ticker(size, s["ticker_text"], color=ink,
+                                            speed=s["speed"],
+                                            loop=s["ticker_loop"])
+                        else:
+                            ticker = Crawl(size, s["ticker_text"], color=ink,
+                                           speed=s["speed"],
+                                           loop=s["ticker_loop"],
+                                           tilt=(style == "tilt"))
                         ticker_key, ticker_t0 = key, time.monotonic()
                     tick = time.monotonic()
                     if ticker.done(tick - ticker_t0):
