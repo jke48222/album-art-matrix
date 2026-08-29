@@ -14,6 +14,10 @@ struct SettingsSheet: View {
     @State private var sleepMinutes: Double = 30
     @State private var brightness: Double = 1
     @State private var reporter: String = ""
+    @State private var wakeAt: Date = Calendar.current.date(
+        bySettingHour: 7, minute: 0, second: 0, of: Date()) ?? Date()
+    @State private var showCalibrate = false
+    @State private var vitals: Vitals? = nil
 
     var body: some View {
         NavigationStack {
@@ -32,10 +36,14 @@ struct SettingsSheet: View {
                     telling
                     if wall.link.isStandIn { music }
                     whenItStops
+                    whenImGone
+                    waking
                     lockScreen
                     sleep
                     light
+                    trueColour
                     panelCheck
+                    if wall.link.isLive { health }
                     about
                 }
                 .padding(20)
@@ -58,6 +66,17 @@ struct SettingsSheet: View {
             host = wall.host
             reporter = wall.push.host
             brightness = wall.state.brightness
+            let bits = wall.state.wakeTime.split(separator: ":")
+            if bits.count == 2, let h = Int(bits[0]), let m = Int(bits[1]) {
+                wakeAt = Calendar.current.date(
+                    bySettingHour: h, minute: m, second: 0, of: Date()) ?? wakeAt
+            }
+        }
+        .fullScreenCover(isPresented: $showCalibrate) {
+            CalibrateScreen(accent: accent).environment(wall)
+        }
+        .task {
+            if wall.link.isLive { vitals = await Vitals.read(host: wall.host) }
         }
     }
 
@@ -141,6 +160,122 @@ struct SettingsSheet: View {
             }
             .tint(accent)
             .padding(.top, 6)
+        }
+    }
+
+    /// Whether an empty house keeps a lit wall.
+    private var whenImGone: some View {
+        Section("when my phone leaves",
+                note: "Your phone talking to the reporter, or this app talking to the wall, is how it knows someone is home. Both quiet for fifteen minutes with nothing playing, and the wall can put itself out. It comes back on its own when your phone does.") {
+            PillRow(
+                label: "",
+                options: [("leave it on", "stay"), ("turn it off", "off")],
+                selected: wall.state.away,
+                accent: accent
+            ) { wall.send(["away": $0]) }
+        }
+    }
+
+    /// The mirror of the sleep fade: mornings.
+    private var waking: some View {
+        Section("waking up",
+                note: "At the set time the wall comes up from black, warm first, like a sky. It only lifts a wall that is off.") {
+            Toggle(isOn: Binding(
+                get: { wall.state.wakeEnabled },
+                set: { wall.send(["wake_enabled": $0]); Taps.detent(intensity: 0.4) }
+            )) {
+                Text("Fade the wall up in the morning")
+                    .font(.ui(15)).foregroundStyle(Ink.ink)
+            }
+            .tint(accent)
+
+            if wall.state.wakeEnabled {
+                HStack(spacing: 14) {
+                    DatePicker("", selection: $wakeAt, displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                        .tint(accent)
+                        .onChange(of: wakeAt) { _, d in
+                            let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+                            wall.send(["wake_time": String(format: "%02d:%02d",
+                                                           c.hour ?? 7, c.minute ?? 0)])
+                        }
+                    Spacer()
+                }
+                .padding(.top, 10)
+
+                PillRow(
+                    label: "over",
+                    options: [("10 min", 10.0), ("20 min", 20.0),
+                              ("30 min", 30.0), ("45 min", 45.0)],
+                    selected: wall.state.wakeFade,
+                    accent: accent
+                ) { wall.send(["wake_fade_min": $0]) }
+                .padding(.top, 12)
+            }
+        }
+    }
+
+    /// The camera teaching the panel what white is.
+    private var trueColour: some View {
+        Section("true colour",
+                note: "LED panels ship green-heavy. Point your camera at the wall and Tessera reads the cast and writes the correction. Run it twice if the first pass leaves a tint; each pass refines the last.") {
+            HStack {
+                Button("Calibrate with the camera") {
+                    Taps.commit()
+                    showCalibrate = true
+                }
+                .buttonStyle(PressStyle(scale: 0.97))
+                .font(.ui(15, .medium))
+                .foregroundStyle(accent)
+                Spacer()
+                if wall.state.wbR < 0.995 || wall.state.wbG < 0.995 || wall.state.wbB < 0.995 {
+                    Text(String(format: "%.2f/%.2f/%.2f",
+                                wall.state.wbR, wall.state.wbG, wall.state.wbB))
+                        .font(.machine(10))
+                        .foregroundStyle(Ink.moss)
+                }
+            }
+        }
+    }
+
+    /// The Pi lives sealed behind panels; this is its pulse.
+    private var health: some View {
+        Section("how the wall is doing", note: nil) {
+            if let v = vitals {
+                VStack(alignment: .leading, spacing: 9) {
+                    vitalRow("holding", v.fps > 0 ? String(format: "%.0f fps", v.fps) : "idle")
+                    if let t = v.tempC {
+                        vitalRow("running at", String(format: "%.0f°C", t),
+                                 warn: t >= 70)
+                    }
+                    if let th = v.throttled {
+                        vitalRow("thermals", th.now ? "throttling now"
+                                 : th.ever ? "throttled since boot" : "never throttled",
+                                 warn: th.now)
+                    }
+                    vitalRow("awake for", v.uptime)
+                }
+            } else {
+                Text("Asking the wall.")
+                    .font(.ui(13)).foregroundStyle(Ink.faint)
+            }
+            Button("Check again") {
+                Taps.detent(intensity: 0.3)
+                Task { vitals = await Vitals.read(host: wall.host) }
+            }
+            .buttonStyle(PressStyle(scale: 0.97))
+            .font(.ui(13))
+            .foregroundStyle(accent)
+            .padding(.top, 10)
+        }
+    }
+
+    private func vitalRow(_ name: String, _ value: String, warn: Bool = false) -> some View {
+        HStack {
+            Text(name).font(.ui(13)).foregroundStyle(Ink.dim)
+            Spacer()
+            Text(value).font(.machine(12))
+                .foregroundStyle(warn ? Ink.signal : Ink.ink)
         }
     }
 
@@ -343,5 +478,41 @@ private struct Section<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+
+// MARK: - Vitals
+
+/// One reading of /health. Absent numbers stay absent: a Mac-hosted brain has
+/// no thermometer and the row simply does not appear.
+struct Vitals {
+    let fps: Double
+    let tempC: Double?
+    let throttled: (now: Bool, ever: Bool)?
+    let uptime: String
+
+    static func read(host: String) async -> Vitals? {
+        guard let url = URL(string: "http://\(host)/health") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 4
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+
+        var th: (Bool, Bool)? = nil
+        if let t = json["throttled"] as? [String: Any] {
+            th = (t["now"] as? Bool ?? false, t["ever"] as? Bool ?? false)
+        }
+        let up = json["uptime_s"] as? Double ?? 0
+        let text: String = up >= 86400
+            ? String(format: "%.0fd %.0fh", up / 86400, up.truncatingRemainder(dividingBy: 86400) / 3600)
+            : up >= 3600 ? String(format: "%.0fh %.0fm", up / 3600, up.truncatingRemainder(dividingBy: 3600) / 60)
+            : String(format: "%.0f min", up / 60)
+        return Vitals(fps: json["fps"] as? Double ?? 0,
+                      tempC: json["temp_c"] as? Double,
+                      throttled: th,
+                      uptime: text)
     }
 }

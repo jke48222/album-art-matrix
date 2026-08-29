@@ -10,6 +10,7 @@
 // the record's needle moves with it.
 
 import ActivityKit
+import AppIntents
 import SwiftUI
 import WidgetKit
 
@@ -146,16 +147,21 @@ struct WallLiveActivity: Widget {
                 DynamicIslandExpandedRegion(.bottom) {
                     // Two things worth reaching for without unlocking, and
                     // nothing else. A remote control belongs in the app.
+                    // Intent keys, not links: they set the wall without
+                    // yanking the phone into the app first.
                     HStack(spacing: 10) {
-                        Link(destination: URL(string: "tessera://mode/art")!) {
+                        Button(intent: SetWallModeIntent(mode: .art)) {
                             IslandKey(label: "Art", on: context.state.mode == "art")
                         }
-                        Link(destination: URL(string: "tessera://mode/ambient")!) {
+                        .buttonStyle(.plain)
+                        Button(intent: SetWallModeIntent(mode: .lamp)) {
                             IslandKey(label: "Lamp", on: context.state.mode == "ambient")
                         }
-                        Link(destination: URL(string: "tessera://mode/off")!) {
+                        .buttonStyle(.plain)
+                        Button(intent: SetWallModeIntent(mode: .off)) {
                             IslandKey(label: "Off", on: context.state.mode == "off")
                         }
+                        .buttonStyle(.plain)
                     }
                     .padding(.top, 4)
                 }

@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Tessera</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Photographs the wall so Tessera can read its colour cast and correct it.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Shows what you are playing, so there is something real on the wall.</string>
 	<key>NSLocalNetworkUsageDescription</key>

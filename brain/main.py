@@ -26,7 +26,7 @@ from .art.disc import DiscAnimator
 from .art.effects import Ambient
 from .art.fetch import fetch_art
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
-from .art.text_modes import Clock, Ticker
+from .art.text_modes import Clock, Countdown, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .nowplaying.applemusic import AppleMusicSource
@@ -138,6 +138,9 @@ def main():
     # this rather than from the wall clock, so a seek seeks the record.
     prog = None                      # (seconds_in, monotonic_at, playing, total)
     ticker, ticker_key, ticker_t0 = None, None, 0.0
+    countdown, countdown_key = None, None
+    woke_on = None                   # date the wake fade last fired
+    away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
     clip_i, clip_next = 0, 0.0
     black = bytes(size * size * 3)
@@ -170,6 +173,7 @@ def main():
         fps_count += 1
         if tick - fps_since >= 5.0:
             fps_last = fps_count / (tick - fps_since)
+            ctrl.fps_last = fps_last
             print(f"[main] {fps_last:.0f} fps sustained "
                   f"(target {anim_fps:.0f})")
             fps_count, fps_since = 0, tick
@@ -204,6 +208,36 @@ def main():
             quiet_since = None
         elif quiet_since is None:
             quiet_since = time.monotonic()
+
+        # ---- nobody home ------------------------------------------------
+        # Presence is the phone talking to the reporter, or the app talking
+        # to us. Both quiet for 15 minutes with nothing playing reads as an
+        # empty house, and a lamp burning for an empty house is the owner's
+        # choice to make, not a default.
+        if ctrl.get().get("away") == "off":
+            ages = []
+            phone_age = next((sc.phone_age for sc in source.sources
+                              if getattr(sc, "phone_age", None) is not None), None)
+            if phone_age is not None:
+                ages.append(phone_age)
+            if ctrl.last_client is not None:
+                ages.append(time.monotonic() - ctrl.last_client)
+            present_age = min(ages) if ages else None
+            mode_now = ctrl.get()["mode"]
+            if away_forced and mode_now != "off":
+                away_forced = None           # someone chose something; defer
+            if present_age is not None:
+                playing = bool(now and now.is_playing)
+                if present_age > 900 and not playing and mode_now != "off":
+                    away_forced = mode_now
+                    ctrl.apply({"mode": "off"})
+                    print("[main] nobody around for a while; wall off")
+                elif away_forced and present_age < 60 and mode_now == "off":
+                    print("[main] someone is back; wall on")
+                    ctrl.apply({"mode": away_forced})
+                    away_forced = None
+        else:
+            away_forced = None
 
         if now is not None and now.progress_ms is not None:
             prog = (now.progress_ms / 1000.0, time.monotonic(),
@@ -266,8 +300,42 @@ def main():
                         s = ctrl.get()
                     else:
                         fade = max(0.0, min(1.0, 1.0 - el_min / sl["minutes"]))
-                eff = tuple(g * s["brightness"] * fade for g in gains)
+                # Calibration multipliers ride on top of the config gains;
+                # identity until a camera has measured the wall.
+                wbc = (s["wb_r"], s["wb_g"], s["wb_b"])
+                eff = tuple(g * w * s["brightness"] * fade
+                            for g, w in zip(gains, wbc))
                 mode = s["mode"]
+
+                # ---- waking up ---------------------------------------------
+                # The mirror of the sleep fade: at the set time the wall comes
+                # up from black over the fade, warm first, the way a sky does.
+                # It only lifts a wall that is off; a wall already showing
+                # something needs no sunrise.
+                if s["wake_enabled"]:
+                    lt = time.localtime()
+                    try:
+                        wh, wm = int(s["wake_time"][:2]), int(s["wake_time"][3:])
+                    except ValueError:
+                        wh, wm = 7, 0
+                    into = (lt.tm_hour * 60 + lt.tm_min) - (wh * 60 + wm) \
+                        + lt.tm_sec / 60.0
+                    span = max(1.0, s["wake_fade_min"])
+                    today = (lt.tm_year, lt.tm_yday)
+                    if 0 <= into < span:
+                        if woke_on != today and mode == "off":
+                            print(f"[main] waking the wall over {span:.0f} min")
+                            ctrl.apply({"mode": "art"})
+                            s = ctrl.get()
+                            mode = "art"
+                            woke_on = today
+                        if woke_on == today:
+                            k = max(0.02, min(1.0, into / span))
+                            # red leads, blue arrives last: warm to neutral
+                            eff = (eff[0] * k,
+                                   eff[1] * k * (0.55 + 0.45 * k),
+                                   eff[2] * k * (0.30 + 0.70 * k))
+                            need_show = True
 
                 # A minute of silence, and only for the modes that are about a
                 # track. Choosing a lamp or a clock is a decision the music
@@ -335,6 +403,31 @@ def main():
                     f = ticker.frame_at(tick - ticker_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     pace(tick)
+                    continue
+
+                if mode == "timer":
+                    tm = ctrl.timer
+                    if tm is None:
+                        ctrl.apply({"mode": "clock"})
+                        continue
+                    key = (ink, s["color2"])
+                    if countdown is None or key != countdown_key:
+                        countdown = Countdown(size, color=ink,
+                                              accent=s["color2"])
+                        countdown_key = key
+                    left = tm["end"] - time.monotonic()
+                    if left <= -60:
+                        # a minute of light is the whole alarm; then put back
+                        # whatever the wall was doing before the timer took it
+                        ctrl.timer = None
+                        ctrl.apply({"mode": tm["ret"]})
+                        continue
+                    f = countdown.frame_at(left, tm["total"])
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    # the ring moves a pixel every few seconds; the pulse
+                    # needs to breathe. Wait shorter only when pulsing.
+                    if ctrl.dirty.wait(0.15 if left <= 0 else 0.5):
+                        ctrl.dirty.clear()
                     continue
 
                 if mode == "clock":

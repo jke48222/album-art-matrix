@@ -23,6 +23,15 @@ struct WallState: Equatable {
     var tickerLoop: Bool = true
     var clock24h: Bool = true
     var idle: String = "black"
+    var away: String = "stay"
+    var wakeEnabled: Bool = false
+    var wakeTime: String = "07:00"
+    var wakeFade: Double = 20
+    var wbR: Double = 1.0
+    var wbG: Double = 1.0
+    var wbB: Double = 1.0
+    var timerRemaining: Int? = nil
+    var timerTotal: Int? = nil
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
@@ -69,6 +78,15 @@ struct WallState: Equatable {
         tickerLoop = json["ticker_loop"] as? Bool ?? true
         clock24h = json["clock_24h"] as? Bool ?? true
         idle = json["idle"] as? String ?? "black"
+        away = json["away"] as? String ?? "stay"
+        wakeEnabled = json["wake_enabled"] as? Bool ?? false
+        wakeTime = json["wake_time"] as? String ?? "07:00"
+        wakeFade = json["wake_fade_min"] as? Double ?? 20
+        wbR = json["wb_r"] as? Double ?? 1.0
+        wbG = json["wb_g"] as? Double ?? 1.0
+        wbB = json["wb_b"] as? Double ?? 1.0
+        timerRemaining = json["timer_remaining_s"] as? Int
+        timerTotal = json["timer_total_s"] as? Int
         if let now = json["now_showing"] as? [String: Any] {
             title = now["title"] as? String
             artist = now["artist"] as? String
@@ -128,7 +146,13 @@ final class WallSession {
     #if targetEnvironment(simulator)
     @ObservationIgnored @AppStorage("wall.host") var host = "localhost:8788"
     #else
-    @ObservationIgnored @AppStorage("wall.host") var host = "album-matrix.local:8788"
+    @ObservationIgnored @AppStorage("wall.host") var host = "album-matrix.local:8788" {
+        didSet {
+            // The widget's keys dial the wall themselves; they read the
+            // address from the shared group, so it has to live there too.
+            UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
+        }
+    }
     #endif
 
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
@@ -175,6 +199,7 @@ final class WallSession {
     /// 8 fps is enough for a spinning disc to read as spinning, and a static
     /// sleeve does not need even that.
     func start() {
+        UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
         push.start()
         // A cold launch away from the wall should show the last wall we saw,
         // stamped, rather than a dark rectangle pretending to be the truth.
@@ -245,6 +270,13 @@ final class WallSession {
             keep("ticker_loop", &fresh.tickerLoop, mine.tickerLoop)
             keep("clock_24h", &fresh.clock24h, mine.clock24h)
             keep("idle", &fresh.idle, mine.idle)
+            keep("away", &fresh.away, mine.away)
+            keep("wake_enabled", &fresh.wakeEnabled, mine.wakeEnabled)
+            keep("wake_time", &fresh.wakeTime, mine.wakeTime)
+            keep("wake_fade_min", &fresh.wakeFade, mine.wakeFade)
+            keepNear("wb_r", &fresh.wbR, mine.wbR, 0.005)
+            keepNear("wb_g", &fresh.wbG, mine.wbG, 0.005)
+            keepNear("wb_b", &fresh.wbB, mine.wbB, 0.005)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
@@ -417,6 +449,23 @@ final class WallSession {
         }
     }
 
+    /// A frame that is one tick of a stream, not a kept thing: no outbox, no
+    /// haptic, no retry. A game pushes eight of these a second, and treating
+    /// a missed one like a lost drawing would queue garbage and buzz the
+    /// whole time the wall was slow.
+    func beam(_ px: [UInt8]) {
+        guard px.count == 64 * 64 * 3 else { return }
+        if link.isStandIn {
+            standIn.push(frame: px)
+            state = standIn.state
+            frame = standIn.frame()
+            return
+        }
+        Task { [weak self] in
+            _ = await self?.postJSON("/frame", ["px": Data(px).base64EncodedString()])
+        }
+    }
+
     /// POST a partial state patch. Optimistic locally, honest on failure:
     /// the next poll re-syncs whatever the wall actually accepted.
     func send(_ patch: [String: Any]) {
@@ -434,6 +483,13 @@ final class WallSession {
         if let v = merged["ticker_loop"] as? Bool { state.tickerLoop = v }
         if let v = merged["clock_24h"] as? Bool { state.clock24h = v }
         if let v = merged["idle"] as? String { state.idle = v }
+        if let v = merged["away"] as? String { state.away = v }
+        if let v = merged["wake_enabled"] as? Bool { state.wakeEnabled = v }
+        if let v = merged["wake_time"] as? String { state.wakeTime = v }
+        if let v = merged["wake_fade_min"] as? Double { state.wakeFade = v }
+        if let v = merged["wb_r"] as? Double { state.wbR = v }
+        if let v = merged["wb_g"] as? Double { state.wbG = v }
+        if let v = merged["wb_b"] as? Double { state.wbB = v }
         merged.removeValue(forKey: "_local")
         for key in merged.keys { pending[key] = Date() }
 

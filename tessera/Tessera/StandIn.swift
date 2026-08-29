@@ -23,6 +23,7 @@ import MediaPlayer
 final class StandIn {
     private(set) var state = WallState()
     private var started = Date()
+    private var timer: (end: Date, total: Double, ret: String)? = nil
     private var art: [UInt8]?          // 64x64x3 of whatever is playing
     private var artColors: [String] = []
     private var lastArtKey = ""
@@ -42,6 +43,21 @@ final class StandIn {
     /// Every key send() can carry. Dropping one here made the control snap
     /// back after its success haptic, which is worse than not having it.
     func apply(_ patch: [String: Any]) {
+        if let v = patch["timer_min"] as? Double {
+            if v > 0 {
+                let ret = timer?.ret
+                    ?? (["timer", "frame", "clip"].contains(state.mode) ? "clock" : state.mode)
+                timer = (Date().addingTimeInterval(v * 60), v * 60, ret)
+                state.mode = "timer"
+                state.timerTotal = Int(v * 60)
+            } else {
+                let ret = timer?.ret ?? "clock"
+                timer = nil
+                state.timerRemaining = nil
+                state.timerTotal = nil
+                if state.mode == "timer" { state.mode = ret }
+            }
+        }
         if let v = patch["mode"] as? String { state.mode = v }
         if let v = patch["brightness"] as? Double { state.brightness = v }
         if let v = patch["rpm"] as? Double { state.rpm = v }
@@ -158,6 +174,7 @@ final class StandIn {
         case "off":    px = [UInt8](repeating: 0, count: 64 * 64 * 3)
         case "cd":     px = disc(t)
         case "ambient": px = ambient(t)
+        case "timer":   px = countdownFrame()
         case "frame":  px = pushed ?? art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         case "clip":
             if let c = clip, !c.frames.isEmpty {
@@ -260,6 +277,35 @@ final class StandIn {
             stamp(suffix, into: &px, x: (64 - sw) / 2, y: y + 19, rgb: ink, scale: 1)
         }
         return px
+    }
+
+    private func countdownFrame() -> [UInt8] {
+        guard let tm = timer else {
+            state.mode = "clock"
+            return [UInt8](repeating: 0, count: 64 * 64 * 3)
+        }
+        let left = tm.end.timeIntervalSinceNow
+        if left <= -60 {
+            timer = nil
+            state.timerRemaining = nil
+            state.timerTotal = nil
+            state.mode = tm.ret
+            return frameForMode(t: Date().timeIntervalSince(started))
+        }
+        state.timerRemaining = max(0, Int(left))
+        let a = rgb(state.color2) ?? (0.91, 0.69, 0.29)
+        return PixelDraw.countdown(remaining: left, total: tm.total,
+                                   ink: (234, 228, 216), accent: a)
+    }
+
+    /// One frame of whatever the mode says, for handing back mid-transition.
+    private func frameForMode(t: Double) -> [UInt8] {
+        switch state.mode {
+        case "off": return [UInt8](repeating: 0, count: 64 * 64 * 3)
+        case "cd": return disc(t)
+        case "ambient": return ambient(t)
+        default: return art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
+        }
     }
 
     /// The sleeve as a record: circular crop, spindle hole, grooves catching a
