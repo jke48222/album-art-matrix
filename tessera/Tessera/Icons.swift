@@ -31,21 +31,40 @@ struct GlyphShape: View {
 
             switch glyph {
             case .snake:
-                // three bends of a snake, and the meal it is heading for
+                // A serpentine chasing its meal: the body is three arcs of a
+                // wave, the head is the fat end, the food sits where it is
+                // headed. Round everywhere, because the game draws in round
+                // emitters and the glyph should come from the same animal.
+                let y0 = box.midY + box.height * 0.14
+                let r = box.width / 5.6
                 var path = Path()
-                let y0 = box.minY + box.height * 0.22
-                let y1 = box.minY + box.height * 0.78
-                path.move(to: CGPoint(x: box.minX, y: y1))
-                path.addLine(to: CGPoint(x: box.minX + box.width * 0.30, y: y1))
-                path.addLine(to: CGPoint(x: box.minX + box.width * 0.30, y: y0))
-                path.addLine(to: CGPoint(x: box.minX + box.width * 0.62, y: y0))
-                path.addLine(to: CGPoint(x: box.minX + box.width * 0.62, y: y1))
-                path.addLine(to: CGPoint(x: box.maxX - box.width * 0.02, y: y1))
+                path.move(to: CGPoint(x: box.minX + 0.2 * u, y: y0))
+                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + r, y: y0),
+                            radius: r, startAngle: .degrees(180), endAngle: .degrees(0),
+                            clockwise: false)
+                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + 3 * r, y: y0),
+                            radius: r, startAngle: .degrees(180), endAngle: .degrees(0),
+                            clockwise: true)
+                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + 5 * r, y: y0),
+                            radius: r, startAngle: .degrees(180), endAngle: .degrees(305),
+                            clockwise: false)
                 ctx.stroke(path, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
-                let d = 2.6 * u
-                ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - d, y: y0 - d / 2,
-                                                width: d, height: d)),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                // the head, a filled tile at the raised end of the last arc
+                let end = CGPoint(
+                    x: box.minX + 0.2 * u + 5 * r + r * cos(.pi * 305 / 180),
+                    y: y0 + r * sin(.pi * 305 / 180)
+                )
+                let hd = 3.0 * u
+                ctx.fill(Path(roundedRect: CGRect(x: end.x - hd / 2, y: end.y - hd / 2,
+                                                  width: hd, height: hd),
+                              cornerRadius: hd * 0.32),
+                         with: .color(.white))
+                // the meal, small and square like the game draws it
+                let fd = 1.7 * u
+                ctx.fill(Path(roundedRect: CGRect(x: box.maxX - fd, y: box.minY + 0.6 * u,
+                                                  width: fd, height: fd),
+                              cornerRadius: fd * 0.3),
                          with: .color(.white))
 
             case .art:
@@ -184,7 +203,6 @@ struct GlyphButton: View {
     var body: some View {
         Button {
             guard !active else { return }
-            Taps.commit()
             action()
         } label: {
             VStack(spacing: 8) {
@@ -231,6 +249,12 @@ struct PressStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? scale : 1)
             .opacity(configuration.isPressed ? 0.85 : 1)
             .animation(Motion.blink, value: configuration.isPressed)
+            // The click, at finger-DOWN. Every button wearing this style is
+            // felt the moment it is touched, so their actions must not add a
+            // second buzz of their own.
+            .onChange(of: configuration.isPressed) { _, down in
+                if down { Taps.press() }
+            }
     }
 }
 
@@ -242,7 +266,6 @@ struct MiniGlyphButton: View {
 
     var body: some View {
         Button {
-            Taps.detent()
             action()
         } label: {
             ZStack {
@@ -253,7 +276,7 @@ struct MiniGlyphButton: View {
             }
             .frame(width: 36, height: 36)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressStyle(scale: 0.9))
         .accessibilityLabel(label)
     }
 }

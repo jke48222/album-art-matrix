@@ -7,7 +7,7 @@
         "key": "The wall",
         "location": {
           "startingColumn": 33,
-          "startingLine": 328
+          "startingLine": 440
         }
       },
       {
@@ -15,15 +15,15 @@
         "key": "Brightness %lld percent",
         "location": {
           "startingColumn": 33,
-          "startingLine": 329
+          "startingLine": 441
         }
       },
       {
         "comment": "",
-        "key": "Adjust to dim the wall. Press and hold to put it to sleep.",
+        "key": "Adjust to dim the wall. Press and hold to put it to sleep. Swipe left to go back through what it has worn.",
         "location": {
           "startingColumn": 32,
-          "startingLine": 330
+          "startingLine": 442
         }
       },
       {
@@ -31,7 +31,15 @@
         "key": "%lld%%",
         "location": {
           "startingColumn": 26,
-          "startingLine": 276
+          "startingLine": 355
+        }
+      },
+      {
+        "comment": "",
+        "key": "+%lld",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 322
         }
       }
     ]

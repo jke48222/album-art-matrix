@@ -7,15 +7,7 @@
         "key": "TESSERA",
         "location": {
           "startingColumn": 18,
-          "startingLine": 75
-        }
-      },
-      {
-        "comment": "",
-        "key": "Make something for the wall",
-        "location": {
-          "startingColumn": 33,
-          "startingLine": 93
+          "startingLine": 82
         }
       },
       {
@@ -23,7 +15,7 @@
         "key": "Setup. Link is %@.",
         "location": {
           "startingColumn": 33,
-          "startingLine": 102
+          "startingLine": 96
         }
       },
       {
@@ -31,7 +23,7 @@
         "key": "Take the album's colours",
         "location": {
           "startingColumn": 26,
-          "startingLine": 165
+          "startingLine": 168
         }
       }
     ]

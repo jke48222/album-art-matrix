@@ -22,7 +22,7 @@
 		</data>
 		<key>Info.plist</key>
 		<data>
-		BUrafoXkVvrcdakcqJft1JPNctk=
+		DGdRFgyX9wVivvml8JZVy6XVsMo=
 		</data>
 		<key>MartianMono-Medium.ttf</key>
 		<data>
@@ -32,6 +32,26 @@
 		<data>
 		ztz1JEe/k1+qzaEgIWXpvbzzRcE=
 		</data>
+		<key>Metadata.appintents/extract.actionsdata</key>
+		<data>
+		vhoeThTeH3QkBJmqwqrH9kBL94Q=
+		</data>
+		<key>Metadata.appintents/nlu/b598676ddf66a3373c7e8fbc9e85caa7.version</key>
+		<data>
+		W6k8nbDP+T9StSHXQg5D9u2ieE8=
+		</data>
+		<key>Metadata.appintents/nlu/nlu.lzfse</key>
+		<data>
+		5+JMBqaA4hyPMOCrZ282Lc5bguc=
+		</data>
+		<key>Metadata.appintents/root.ssu.yaml</key>
+		<data>
+		+26mo+gS07cPua06Y+/tK9b1nas=
+		</data>
+		<key>Metadata.appintents/version.json</key>
+		<data>
+		WRQ9adUVTl2K80ColwuDkBJ7EDg=
+		</data>
 		<key>PkgInfo</key>
 		<data>
 		n57qDP4tZfLD1rCS43W0B4LQjzE=
@@ -40,21 +60,29 @@
 		<data>
 		9pKrRveoUz6AEIufq/GnOD8qDpQ=
 		</data>
+		<key>PlugIns/TesseraWidgets.appex/Metadata.appintents/extract.actionsdata</key>
+		<data>
+		6ztuh+cz9z9EgTD7K7mMyTzYTUc=
+		</data>
+		<key>PlugIns/TesseraWidgets.appex/Metadata.appintents/version.json</key>
+		<data>
+		WRQ9adUVTl2K80ColwuDkBJ7EDg=
+		</data>
 		<key>PlugIns/TesseraWidgets.appex/TesseraWidgets</key>
 		<data>
-		HHXZMk905ZGCTZ2CH0P5abH9A/U=
+		+RENlAm6S5r5pnSmHxdyT+eHLzA=
 		</data>
 		<key>PlugIns/TesseraWidgets.appex/TesseraWidgets.debug.dylib</key>
 		<data>
-		dD6gLFaZrUFc85cLOtOlAe8VeTI=
+		5GLYqVJgfGoRPjQlR1b49CuVhFc=
 		</data>
 		<key>PlugIns/TesseraWidgets.appex/_CodeSignature/CodeResources</key>
 		<data>
-		3JoE1of5qfY3uXIDlmLozMwmuHk=
+		PNZl+QztUcUIF7W5CzlACd5bG+A=
 		</data>
 		<key>PlugIns/TesseraWidgets.appex/__preview.dylib</key>
 		<data>
-		ZDeeWNkdDAxjd7ojDoEqSucn7gs=
+		F4sKVULUCZUQoCFgVg4i+lWOEr4=
 		</data>
 		<key>PlugIns/TesseraWidgets.appex/embedded.mobileprovision</key>
 		<data>
@@ -86,11 +114,11 @@
 		</data>
 		<key>Tessera.debug.dylib</key>
 		<data>
-		TAonJ1aVUVoCnkPqYIAbMiqEhog=
+		7hA3p8YZC+ve9BQA/doH/zHD/2w=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		YIVQ3auosGMNmOujKWDbrGKKIEk=
+		cwVOim0u9nhcjD563CjHy33DoAI=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -141,6 +169,41 @@
 			/hx1/rZH2YJcK+4A3H3tse6fCKC8NHiCH0Dt2MsvG70=
 			</data>
 		</dict>
+		<key>Metadata.appintents/extract.actionsdata</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bEXBE8QQSFK2eJHDEiZwr5hKMHLM65EulyyD8uV97w4=
+			</data>
+		</dict>
+		<key>Metadata.appintents/nlu/b598676ddf66a3373c7e8fbc9e85caa7.version</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			bjQLnP+zepicpUTmu3gKLHiQHT+zNzh2hRGjBhevoB0=
+			</data>
+		</dict>
+		<key>Metadata.appintents/nlu/nlu.lzfse</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			YX1XMGy07IfJa1Iyodh9TYpBjcffCtIEUaEagZvfl1A=
+			</data>
+		</dict>
+		<key>Metadata.appintents/root.ssu.yaml</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			G7sKHTuwhtj6hdgTazTXWTnIWIQnewTWa6GxRxiJoE0=
+			</data>
+		</dict>
+		<key>Metadata.appintents/version.json</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NYYL61YXEULrdQrNDr89+jC+Mp3ISsmrdCX4CHjBp2s=
+			</data>
+		</dict>
 		<key>PlugIns/TesseraWidgets.appex/Info.plist</key>
 		<dict>
 			<key>hash2</key>
@@ -148,32 +211,46 @@
 			lJv5Snz5tMhLlkR4v+W7nLYOTGcSVaERUj27DRx1hp4=
 			</data>
 		</dict>
+		<key>PlugIns/TesseraWidgets.appex/Metadata.appintents/extract.actionsdata</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			U2Z3fPRIIlERpuSVO/1e2cvcxWd5h96UpTRGW5asLSI=
+			</data>
+		</dict>
+		<key>PlugIns/TesseraWidgets.appex/Metadata.appintents/version.json</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NYYL61YXEULrdQrNDr89+jC+Mp3ISsmrdCX4CHjBp2s=
+			</data>
+		</dict>
 		<key>PlugIns/TesseraWidgets.appex/TesseraWidgets</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			Z4t/V1DMpHf3xGKjVjLRKiYHU0BpTdZfFqScXVHGreM=
+			BZR7JKa8FUYVctHVVkzdsMlJeewvMtuLi8w5amC86uY=
 			</data>
 		</dict>
 		<key>PlugIns/TesseraWidgets.appex/TesseraWidgets.debug.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WnE42fl8zxCseyYN/JMiFziGtDdFyB4j/UcrPv07LuM=
+			BDWj/NCnZuA+wsURiJLDXk6/C25mih2fgyojaazYW6E=
 			</data>
 		</dict>
 		<key>PlugIns/TesseraWidgets.appex/_CodeSignature/CodeResources</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			7BVhxjOS/d46y6smBNnrytZvVKNAN5hQsujokpyao9o=
+			i0UyfcEJ1dbXaHryOTGvTmYcuCqx2qog/ql7EP0ybJ0=
 			</data>
 		</dict>
 		<key>PlugIns/TesseraWidgets.appex/__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			tdumnt6VoLs1uzIPxRvR6JfuU0ClguEIZC5kFOkktbg=
+			SH5YlrBLYKLNuqm7OjGAEtajxyGuUjaoc6nHDCjTLZg=
 			</data>
 		</dict>
 		<key>PlugIns/TesseraWidgets.appex/embedded.mobileprovision</key>
@@ -229,14 +306,14 @@
 		<dict>
 			<key>hash2</key>
 			<data>
-			3xQVjvvFz4f23K/stI6/jx7T/YoSiXc8RrIgZWFoMZo=
+			34n+LdVAz1TAImtKrVo/rZxtvExh5WExZD38WqNUw/Y=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			JGypGIWqCgG6pStTM9QKQLWBoMJaZv6I2fLGCer7jrU=
+			H+WX6Gefa7KKMh8cRJ8dY+Fmb7ofS/WmJEvCcfBuK4w=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>

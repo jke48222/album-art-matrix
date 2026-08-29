@@ -31,7 +31,6 @@ struct PillRow<T: Hashable>: View {
                     let active = value == selected
                     Button {
                         guard !active else { return }
-                        Taps.detent()
                         onPick(value)
                     } label: {
                         Text(title)
@@ -62,7 +61,14 @@ struct SpeedTicker: View {
     let accent: Color
     var onPick: (Double) -> Void
 
-    private let speeds: [(String, Double)] = [("7.5", 7.5), ("33⅓", 33.33), ("45", 45.0)]
+    /// The finger's value while it is down; nil otherwise. The label reads
+    /// this first so the number moves with the touch, not with the network.
+    @State private var dragging: Double? = nil
+    @State private var lastSent = Date.distantPast
+    @State private var lastMagnet: Double? = nil
+
+    private let magnets: [(String, Double)] = [("7.5", 7.5), ("33⅓", 33.33), ("45", 45.0)]
+    private let lo = 0.5, hi = 45.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -74,39 +80,105 @@ struct SpeedTicker: View {
                 Text("rpm")
                     .font(.machine(10))
                     .foregroundStyle(Ink.faint)
-            }
-            HStack(spacing: 0) {
-                ForEach(speeds, id: \.1) { (title, value) in
-                    let active = abs(value - rpm) < 0.01
-                    Button {
-                        guard !active else { return }
-                        Taps.detent(intensity: 0.6)
-                        onPick(value)
-                    } label: {
-                        VStack(spacing: 7) {
-                            Rectangle()
-                                .fill(active ? accent : Ink.hairline)
-                                .frame(width: active ? 2 : 1, height: active ? 18 : 11)
-                            Text(title)
-                                .font(.machine(10))
-                                .foregroundStyle(active ? Ink.ink : Ink.faint)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(title) rpm")
-                    .accessibilityAddTraits(active ? [.isButton, .isSelected] : .isButton)
+                Spacer()
+                if dragging == nil, !magnets.contains(where: { abs($0.1 - rpm) < 0.01 }) {
+                    Text("free")
+                        .font(.machine(9))
+                        .foregroundStyle(Ink.faint)
                 }
             }
-            .animation(Motion.settle, value: rpm)
+
+            // The rail is the control: touch anywhere, drag anywhere, and the
+            // record turns at whatever you land on. The three real turntable
+            // speeds are magnets on it, not the only choices.
+            GeometryReader { geo in
+                let w = geo.size.width
+                let value = dragging ?? rpm
+                let f = fraction(value)
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Ink.hairline)
+                        .frame(height: 1)
+                        .frame(maxHeight: .infinity, alignment: .center)
+
+                    ForEach(magnets, id: \.1) { (title, v) in
+                        VStack(spacing: 6) {
+                            Rectangle()
+                                .fill(abs(v - value) < 0.06 ? accent : Ink.faint.opacity(0.7))
+                                .frame(width: 1.5, height: 12)
+                            Text(title)
+                                .font(.machine(9))
+                                .foregroundStyle(abs(v - value) < 0.06 ? Ink.ink : Ink.faint)
+                                .fixedSize()
+                        }
+                        .position(x: w * fraction(v), y: geo.size.height / 2 + 4)
+                    }
+
+                    // where the record is
+                    Rectangle()
+                        .fill(accent)
+                        .frame(width: 2, height: 20)
+                        .shadow(color: accent.opacity(0.6), radius: 4)
+                        .position(x: w * f, y: geo.size.height / 2 - 4)
+                        .allowsHitTesting(false)
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { g in
+                            if dragging == nil { Taps.warm() }
+                            var v = lo + (hi - lo) * pow(min(1, max(0, g.location.x / w)), 1.6)
+                            // the magnets pull within one rpm
+                            var snapped: Double? = nil
+                            for (_, m) in magnets where abs(v - m) < 1.0 {
+                                v = m; snapped = m
+                            }
+                            v = (v * 10).rounded() / 10
+                            if snapped != lastMagnet, snapped != nil {
+                                Taps.detent(intensity: 0.6)   // clicking into a groove
+                            } else if v != dragging {
+                                Taps.detent(intensity: 0.25)
+                            }
+                            lastMagnet = snapped
+                            dragging = v
+                            // live, but not a request per pixel
+                            if Date().timeIntervalSince(lastSent) > 0.15 {
+                                lastSent = Date()
+                                onPick(v)
+                            }
+                        }
+                        .onEnded { _ in
+                            if let v = dragging { onPick(v) }
+                            Taps.commit()
+                            dragging = nil
+                            lastMagnet = nil
+                        }
+                )
+            }
+            .frame(height: 40)
+        }
+        .accessibilityElement()
+        .accessibilityLabel("Record speed")
+        .accessibilityValue("\(label) rpm")
+        .accessibilityAdjustableAction { dir in
+            let v = min(hi, max(lo, rpm + (dir == .increment ? 1 : -1)))
+            onPick(v)
         }
     }
 
+    /// Slow speeds get most of the rail: the difference between 2 and 8 rpm
+    /// is the whole character of the thing, and 33 to 45 is a nudge.
+    private func fraction(_ v: Double) -> Double {
+        pow((v - lo) / (hi - lo), 1.0 / 1.6)
+    }
+
     private var label: String {
-        rpm == 33.33 ? "33⅓" : (rpm == rpm.rounded() ? String(Int(rpm)) : String(format: "%.1f", rpm))
+        let v = dragging ?? rpm
+        if abs(v - 33.33) < 0.05 { return "33⅓" }
+        return v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v)
     }
 }
+
 
 // MARK: - Finish
 
@@ -136,7 +208,6 @@ struct FinishRow: View {
                     let active = id == selected
                     Button {
                         guard !active else { return }
-                        Taps.detent(intensity: 0.6)
                         onPick(id)
                     } label: {
                         VStack(spacing: 8) {
@@ -429,7 +500,7 @@ struct TickerRow: View {
                     .padding(.vertical, 12).padding(.horizontal, 14)
                     .background(Ink.sunk)
                     .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
-                    .onSubmit { send() }
+                    .onSubmit { Taps.commit(); send() }
 
                 Button("Send") { send() }
                     .buttonStyle(PressStyle(scale: 0.96))
@@ -450,7 +521,6 @@ struct TickerRow: View {
 
     private func send() {
         guard !draft.isEmpty else { return }
-        Taps.commit()
         typing = false
         onSet("ticker_text", draft)
     }
@@ -482,7 +552,6 @@ struct WallTimerRow: View {
                 }
                 Spacer()
                 Button(remaining == 0 ? "Done" : "Cancel") {
-                    Taps.commit()
                     onSet(0)
                 }
                 .buttonStyle(PressStyle(scale: 0.96))
@@ -497,7 +566,6 @@ struct WallTimerRow: View {
                 HStack(spacing: 8) {
                     ForEach([1.0, 5, 10, 25], id: \.self) { m in
                         Button {
-                            Taps.commit()
                             onSet(m)
                         } label: {
                             Text("\(Int(m))m")

@@ -147,9 +147,19 @@ enum Taps {
     private static let rigid = UIImpactFeedbackGenerator(style: .rigid)
     private static let heavy = UIImpactFeedbackGenerator(style: .heavy)
     private static let notice = UINotificationFeedbackGenerator()
-    private static var lastDetent = CFAbsoluteTimeGetCurrent()
+    private static var stamps: [String: CFAbsoluteTime] = [:]
 
-    /// Call when a gesture begins, so the first tap of it is on time.
+    /// One gate per channel. Haptics the engine cannot resolve do not vanish,
+    /// they QUEUE, and a queued tap plays late, which is worse than none:
+    /// late is what "off time" feels like.
+    private static func clear(_ ch: String, _ minGap: CFAbsoluteTime) -> Bool {
+        let now = CFAbsoluteTimeGetCurrent()
+        if let last = stamps[ch], now - last < minGap { return false }
+        stamps[ch] = now
+        return true
+    }
+
+    /// Call when a gesture begins, so the first detent of it lands on time.
     static func warm() {
         soft.prepare()
         rigid.prepare()
@@ -159,32 +169,41 @@ enum Taps {
         soft.prepare(); rigid.prepare(); heavy.prepare(); notice.prepare()
     }
 
+    /// The press itself. Fired by PressStyle on finger-DOWN, which is where a
+    /// physical control clicks; an action-time haptic arrives on finger-UP,
+    /// a whole press-length late, and that lateness was most of what felt
+    /// wrong. Buttons get this for free and must not also buzz their action.
+    static func press() {
+        guard clear("press", 0.05) else { return }
+        rigid.impactOccurred(intensity: 0.5)
+        rigid.prepare()
+    }
+
     /// A detent. Intensity scales with the value so the control gets quieter
     /// as the room gets darker; never a uniform tick.
     static func detent(intensity: Double = 0.5) {
-        let now = CFAbsoluteTimeGetCurrent()
-        // ~25/second is past what the engine resolves; more than that only
-        // builds a queue that plays out late.
-        guard now - lastDetent > 0.04 else { return }
-        lastDetent = now
+        guard clear("detent", 0.04) else { return }
         soft.impactOccurred(intensity: max(0.15, min(1.0, intensity)))
         soft.prepare()
     }
 
-    /// Mode committed locally; the wall's confirmation is separate.
+    /// Something was committed: an address, a send, a gesture's final value.
     static func commit() {
+        guard clear("commit", 0.09) else { return }
         rigid.impactOccurred(intensity: 0.7)
         rigid.prepare()
     }
 
     /// The wall was found: the thud of a lamp switching on.
     static func found() {
+        guard clear("found", 0.4) else { return }
         heavy.impactOccurred(intensity: 1.0)
         heavy.prepare()
     }
 
     /// A frame landed on the wall.
     static func landed() {
+        guard clear("landed", 0.25) else { return }
         soft.impactOccurred(intensity: 0.8)
         soft.prepare()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
@@ -195,7 +214,9 @@ enum Taps {
 
     /// One dull buzz, never repeated for the same failure.
     static func error() {
+        guard clear("error", 0.8) else { return }
         notice.notificationOccurred(.warning)
         notice.prepare()
     }
 }
+

@@ -153,7 +153,7 @@ struct Framing: View {
 
     private var foot: some View {
         HStack(spacing: 18) {
-            Button("Back") { Taps.detent(intensity: 0.3); onCancel() }
+            Button("Back") { onCancel() }
                 .buttonStyle(PressStyle(scale: 0.96))
                 .font(.ui(15))
                 .foregroundStyle(Ink.dim)
@@ -165,7 +165,6 @@ struct Framing: View {
                 .foregroundStyle(Ink.faint)
 
             Button(working ? "Working" : "Use it") {
-                Taps.commit()
                 commit()
             }
             .buttonStyle(PressStyle(scale: 0.96))

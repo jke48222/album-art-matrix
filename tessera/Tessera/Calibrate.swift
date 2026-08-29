@@ -164,7 +164,6 @@ struct CalibrateScreen: View {
             VStack(spacing: 14) {
                 bigKey("Keep it") { restoreAndClose(keep: true) }
                 Button("Run it again") {
-                    Taps.detent(intensity: 0.3)
                     // the new gains stay on: the next pass measures them
                     if let c = computed {
                         prior?.r = c.r; prior?.g = c.g; prior?.b = c.b
@@ -237,7 +236,6 @@ struct CalibrateScreen: View {
     }
 
     private func restoreAndClose(keep: Bool) {
-        Taps.detent(intensity: 0.4)
         if let p = prior {
             var patch: [String: Any] = ["mode": p.mode == "frame" ? "art" : p.mode,
                                         "brightness": p.brightness]
@@ -265,7 +263,6 @@ struct CalibrateScreen: View {
 
     private func bigKey(_ label: String, _ action: @escaping () -> Void) -> some View {
         Button {
-            Taps.commit()
             action()
         } label: {
             Text(label)

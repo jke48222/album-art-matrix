@@ -8,13 +8,21 @@
 		<data>
 		9pKrRveoUz6AEIufq/GnOD8qDpQ=
 		</data>
+		<key>Metadata.appintents/extract.actionsdata</key>
+		<data>
+		6ztuh+cz9z9EgTD7K7mMyTzYTUc=
+		</data>
+		<key>Metadata.appintents/version.json</key>
+		<data>
+		WRQ9adUVTl2K80ColwuDkBJ7EDg=
+		</data>
 		<key>TesseraWidgets.debug.dylib</key>
 		<data>
-		dD6gLFaZrUFc85cLOtOlAe8VeTI=
+		5GLYqVJgfGoRPjQlR1b49CuVhFc=
 		</data>
 		<key>__preview.dylib</key>
 		<data>
-		ZDeeWNkdDAxjd7ojDoEqSucn7gs=
+		F4sKVULUCZUQoCFgVg4i+lWOEr4=
 		</data>
 		<key>embedded.mobileprovision</key>
 		<data>
@@ -23,18 +31,32 @@
 	</dict>
 	<key>files2</key>
 	<dict>
+		<key>Metadata.appintents/extract.actionsdata</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			U2Z3fPRIIlERpuSVO/1e2cvcxWd5h96UpTRGW5asLSI=
+			</data>
+		</dict>
+		<key>Metadata.appintents/version.json</key>
+		<dict>
+			<key>hash2</key>
+			<data>
+			NYYL61YXEULrdQrNDr89+jC+Mp3ISsmrdCX4CHjBp2s=
+			</data>
+		</dict>
 		<key>TesseraWidgets.debug.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			WnE42fl8zxCseyYN/JMiFziGtDdFyB4j/UcrPv07LuM=
+			BDWj/NCnZuA+wsURiJLDXk6/C25mih2fgyojaazYW6E=
 			</data>
 		</dict>
 		<key>__preview.dylib</key>
 		<dict>
 			<key>hash2</key>
 			<data>
-			tdumnt6VoLs1uzIPxRvR6JfuU0ClguEIZC5kFOkktbg=
+			SH5YlrBLYKLNuqm7OjGAEtajxyGuUjaoc6nHDCjTLZg=
 			</data>
 		</dict>
 		<key>embedded.mobileprovision</key>

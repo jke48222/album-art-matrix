@@ -6,6 +6,26 @@
     "pch" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Tessera-primary-Bridging-header.pch",
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Tessera-primary.swiftdeps"
   },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallActivity.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallActivity~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallIntents.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallIntents~partial.swiftmodule"
+  },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Archive.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Archive.swiftconstvalues",
     "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Archive.d",
@@ -15,6 +35,16 @@
     "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Archive.o",
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Archive.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Archive~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Calibrate.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Calibrate~partial.swiftmodule"
   },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Components.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Components.swiftconstvalues",
@@ -36,6 +66,26 @@
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/FrameView.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/FrameView~partial.swiftmodule"
   },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Framing.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Framing~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Guests.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Guests~partial.swiftmodule"
+  },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Icons.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Icons.swiftconstvalues",
     "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Icons.d",
@@ -45,6 +95,46 @@
     "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Icons.o",
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Icons.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Icons~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Intents.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Intents~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/LiveWall.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LiveWall~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/LocalJournal.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/NowPlaying.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying~partial.swiftmodule"
   },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Outbox.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Outbox.swiftconstvalues",
@@ -105,6 +195,16 @@
     "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/SettingsSheet.o",
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/SettingsSheet.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/SettingsSheet~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Snake.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Snake~partial.swiftmodule"
   },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/StandIn.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/StandIn.swiftconstvalues",
@@ -175,6 +275,16 @@
     "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallSnapshot.o",
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallSnapshot.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WallSnapshot~partial.swiftmodule"
+  },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/WornStats.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/WornStats~partial.swiftmodule"
   },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/DerivedSources/GeneratedAssetSymbols.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",

@@ -4,18 +4,34 @@
     "Localizable": [
       {
         "comment": "",
-        "key": "rpm",
+        "key": "Record speed",
         "location": {
-          "startingColumn": 22,
-          "startingLine": 74
+          "startingColumn": 29,
+          "startingLine": 161
         }
       },
       {
         "comment": "",
         "key": "%@ rpm",
         "location": {
-          "startingColumn": 41,
-          "startingLine": 98
+          "startingColumn": 29,
+          "startingLine": 162
+        }
+      },
+      {
+        "comment": "",
+        "key": "rpm",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 80
+        }
+      },
+      {
+        "comment": "",
+        "key": "free",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 85
         }
       },
       {
@@ -23,7 +39,7 @@
         "key": "finish",
         "location": {
           "startingColumn": 18,
-          "startingLine": 131
+          "startingLine": 203
         }
       },
       {
@@ -31,7 +47,55 @@
         "key": "sleeping in %lldm %llds",
         "location": {
           "startingColumn": 22,
-          "startingLine": 324
+          "startingLine": 370
+        }
+      },
+      {
+        "comment": "",
+        "key": "say something",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 494
+        }
+      },
+      {
+        "comment": "",
+        "key": "Send",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 505
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 554
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cancel",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 554
+        }
+      },
+      {
+        "comment": "",
+        "key": "count something down",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 563
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldm",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 571
         }
       }
     ]

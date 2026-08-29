@@ -57,6 +57,10 @@ DEFAULTS = {
     # Calibration multipliers on top of the config gains. Identity until a
     # camera has measured the wall; see the app's calibrate flow.
     "wb_r": 1.0, "wb_g": 1.0, "wb_b": 1.0,
+    "sun": "off",            # evenings: follow the sun (needs lat/lon)
+    "sun_night": 0.25,       # how much light after dark, share of full
+    "lat": 999.0,            # 999 = never told; the app sets these once
+    "lon": 999.0,
 }
 
 
@@ -131,6 +135,14 @@ class ControlState:
                     self._s[k] = _clamp(v, 1, 90)
                 elif k in ("wb_r", "wb_g", "wb_b"):
                     self._s[k] = _clamp(v, 0.3, 1.0)
+                elif k == "sun" and v in ("off", "on"):
+                    self._s[k] = v
+                elif k == "sun_night":
+                    self._s[k] = _clamp(v, 0.05, 1.0)
+                elif k == "lat":
+                    self._s[k] = _clamp(v, -90.0, 90.0)
+                elif k == "lon":
+                    self._s[k] = _clamp(v, -180.0, 180.0)
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
                     self._s[k] = bool(v)
                 elif k == "ticker_text" and isinstance(v, str):

@@ -7,7 +7,7 @@
         "key": "",
         "location": {
           "startingColumn": 30,
-          "startingLine": 42
+          "startingLine": 57
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "SETUP",
         "location": {
           "startingColumn": 30,
-          "startingLine": 23
+          "startingLine": 29
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "Done",
         "location": {
           "startingColumn": 28,
-          "startingLine": 45
+          "startingLine": 60
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "album-matrix.local:8788",
         "location": {
           "startingColumn": 23,
-          "startingLine": 65
+          "startingLine": 92
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Use this address",
         "location": {
           "startingColumn": 24,
-          "startingLine": 78
+          "startingLine": 105
         }
       },
       {
@@ -47,7 +47,135 @@
         "key": "Look again",
         "location": {
           "startingColumn": 24,
-          "startingLine": 82
+          "startingLine": 109
+        }
+      },
+      {
+        "comment": "",
+        "key": "your-mac.local:8787",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 127
+        }
+      },
+      {
+        "comment": "",
+        "key": "sent %@",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 145
+        }
+      },
+      {
+        "comment": "",
+        "key": "Start telling it",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 139
+        }
+      },
+      {
+        "comment": "",
+        "key": "Keep telling it in my pocket",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 157
+        }
+      },
+      {
+        "comment": "",
+        "key": "Holds a silent audio session so iOS does not suspend the app. Costs a little battery and never interrupts Music.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 158
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fade the wall up in the morning",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 189
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 196
+        }
+      },
+      {
+        "comment": "",
+        "key": "Follow the sun",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 228
+        }
+      },
+      {
+        "comment": "",
+        "key": "no spot yet",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "Finding you",
+        "location": {
+          "startingColumn": 42,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Use this spot",
+        "location": {
+          "startingColumn": 58,
+          "startingLine": 242
+        }
+      },
+      {
+        "comment": "",
+        "key": "Calibrate with the camera",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 274
+        }
+      },
+      {
+        "comment": "",
+        "key": "Asking the wall.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 309
+        }
+      },
+      {
+        "comment": "",
+        "key": "Check again",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 312
+        }
+      },
+      {
+        "comment": "",
+        "key": "Show the wall while it is on",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "A twelve by twelve version of what it is showing, on the lock screen and in the Dynamic Island. It ends itself when the wall goes dark.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 340
         }
       },
       {
@@ -55,7 +183,7 @@
         "key": "min",
         "location": {
           "startingColumn": 26,
-          "startingLine": 104
+          "startingLine": 370
         }
       },
       {
@@ -63,7 +191,7 @@
         "key": "off",
         "location": {
           "startingColumn": 41,
-          "startingLine": 99
+          "startingLine": 365
         }
       },
       {
@@ -71,7 +199,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 49,
-          "startingLine": 99
+          "startingLine": 365
         }
       },
       {
@@ -79,7 +207,7 @@
         "key": "%lldm %llds left",
         "location": {
           "startingColumn": 26,
-          "startingLine": 122
+          "startingLine": 387
         }
       },
       {
@@ -87,7 +215,7 @@
         "key": "Start the fade",
         "location": {
           "startingColumn": 24,
-          "startingLine": 111
+          "startingLine": 377
         }
       },
       {
@@ -95,7 +223,7 @@
         "key": "%lld%%",
         "location": {
           "startingColumn": 22,
-          "startingLine": 134
+          "startingLine": 399
         }
       },
       {
@@ -103,7 +231,7 @@
         "key": "Back to the album",
         "location": {
           "startingColumn": 20,
-          "startingLine": 177
+          "startingLine": 441
         }
       },
       {
@@ -111,7 +239,7 @@
         "key": "Show full %@ on the wall",
         "location": {
           "startingColumn": 41,
-          "startingLine": 174
+          "startingLine": 438
         }
       },
       {
@@ -119,7 +247,7 @@
         "key": "Use my music",
         "location": {
           "startingColumn": 20,
-          "startingLine": 190
+          "startingLine": 453
         }
       },
       {
@@ -127,7 +255,7 @@
         "key": "Tessera",
         "location": {
           "startingColumn": 22,
-          "startingLine": 203
+          "startingLine": 465
         }
       },
       {
@@ -135,7 +263,7 @@
         "key": "A remote for a wall of 4,096 emitters. Nothing leaves your network: the app talks to the wall directly and keeps no account.",
         "location": {
           "startingColumn": 22,
-          "startingLine": 207
+          "startingLine": 469
         }
       }
     ]

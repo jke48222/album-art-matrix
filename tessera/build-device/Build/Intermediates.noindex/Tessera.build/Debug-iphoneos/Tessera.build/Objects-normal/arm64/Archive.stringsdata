@@ -7,7 +7,7 @@
         "key": "WORN",
         "location": {
           "startingColumn": 18,
-          "startingLine": 230
+          "startingLine": 250
         }
       },
       {
@@ -15,15 +15,15 @@
         "key": " ",
         "location": {
           "startingColumn": 39,
-          "startingLine": 234
+          "startingLine": 254
         }
       },
       {
         "comment": "",
-        "key": "%lld sleeves the wall has carried",
+        "key": "everything the wall has carried",
         "location": {
           "startingColumn": 45,
-          "startingLine": 234
+          "startingLine": 254
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "%@ by %@%@",
         "location": {
           "startingColumn": 29,
-          "startingLine": 339
+          "startingLine": 374
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "%lld",
         "location": {
           "startingColumn": 22,
-          "startingLine": 329
+          "startingLine": 364
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "Wear it again",
         "location": {
           "startingColumn": 30,
-          "startingLine": 386
+          "startingLine": 421
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "Close",
         "location": {
           "startingColumn": 30,
-          "startingLine": 396
+          "startingLine": 431
         }
       }
     ]

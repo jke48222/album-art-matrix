@@ -344,6 +344,11 @@ extern "C" {
 #if __has_warning("-Watimport-in-framework-header")
 #pragma clang diagnostic ignored "-Watimport-in-framework-header"
 #endif
+@import AVFoundation;
+@import CoreLocation;
+@import Foundation;
+@import ObjectiveC;
+@import UIKit;
 #endif
 
 #endif // defined(__OBJC__)
@@ -366,6 +371,31 @@ extern "C" {
 #endif
 
 #if defined(__OBJC__)
+
+@class AVCapturePhotoOutput;
+@class AVCapturePhoto;
+@class NSString;
+@class NSBundle;
+@class NSCoder;
+SWIFT_CLASS("_TtC7Tessera20CameraShotController")
+@interface CameraShotController : UIViewController <AVCapturePhotoCaptureDelegate>
+- (void)viewDidLoad;
+- (void)viewDidLayoutSubviews;
+- (void)viewWillDisappear:(BOOL)animated;
+- (void)captureOutput:(AVCapturePhotoOutput * _Nonnull)output didFinishProcessingPhoto:(AVCapturePhoto * _Nonnull)photo error:(NSError * _Nullable)error;
+- (nonnull instancetype)initWithNibName:(NSString * _Nullable)nibNameOrNil bundle:(NSBundle * _Nullable)nibBundleOrNil OBJC_DESIGNATED_INITIALIZER;
+- (nullable instancetype)initWithCoder:(NSCoder * _Nonnull)coder OBJC_DESIGNATED_INITIALIZER;
+@end
+
+@class CLLocationManager;
+@class CLLocation;
+SWIFT_CLASS("_TtC7Tessera11OneShotSpot")
+@interface OneShotSpot : NSObject <CLLocationManagerDelegate>
+- (void)locationManagerDidChangeAuthorization:(CLLocationManager * _Nonnull)manager;
+- (void)locationManager:(CLLocationManager * _Nonnull)manager didUpdateLocations:(NSArray<CLLocation *> * _Nonnull)locations;
+- (void)locationManager:(CLLocationManager * _Nonnull)manager didFailWithError:(NSError * _Nonnull)error;
+- (nonnull instancetype)init OBJC_DESIGNATED_INITIALIZER;
+@end
 
 #endif // defined(__OBJC__)
 #if __has_attribute(external_source_symbol)

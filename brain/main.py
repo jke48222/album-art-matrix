@@ -29,6 +29,7 @@ from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
+from .sun import sun_factor
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.spotify import SpotifySource
 from .sinks.mac_preview import MacPreviewSink
@@ -140,6 +141,7 @@ def main():
     ticker, ticker_key, ticker_t0 = None, None, 0.0
     countdown, countdown_key = None, None
     woke_on = None                   # date the wake fade last fired
+    sun_f, sun_at = 1.0, 0.0         # evening factor, refreshed each poll
     away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
     clip_i, clip_next = 0, 0.0
@@ -239,6 +241,17 @@ def main():
         else:
             away_forced = None
 
+        # ---- evenings ---------------------------------------------------
+        # Recomputed once a minute at most: the sun does not hurry.
+        s_out = ctrl.get()
+        if s_out["sun"] == "on" and abs(s_out["lat"]) <= 90:
+            if time.monotonic() - sun_at > 60:
+                sun_at = time.monotonic()
+                sun_f = sun_factor(s_out["lat"], s_out["lon"], s_out["sun_night"])
+                ctrl.dirty.set()     # a static sleeve must re-show dimmer
+        else:
+            sun_f = 1.0
+
         if now is not None and now.progress_ms is not None:
             prog = (now.progress_ms / 1000.0, time.monotonic(),
                     now.is_playing, (now.duration_ms or 0) / 1000.0)
@@ -303,7 +316,7 @@ def main():
                 # Calibration multipliers ride on top of the config gains;
                 # identity until a camera has measured the wall.
                 wbc = (s["wb_r"], s["wb_g"], s["wb_b"])
-                eff = tuple(g * w * s["brightness"] * fade
+                eff = tuple(g * w * s["brightness"] * fade * sun_f
                             for g, w in zip(gains, wbc))
                 mode = s["mode"]
 

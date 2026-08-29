@@ -1,7 +1,99 @@
 {
-  "source" : "ExtractedAppShortcutsMetadata",
+  "source" : "\/Users\/jalenedusei\/fun-project\/album-art-matrix\/tessera\/Tessera\/Intents.swift",
   "tables" : {
+    "AppShortcuts" : [
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "SetWallModeIntent",
+            "index" : 0,
+            "parameterDisplayRepresentations" : {
+              "WallMode" : [
+                "Album art",
+                "Spinning record",
+                "Lamp",
+                "Off"
+              ]
+            },
+            "parameterTypes" : {
+              "mode" : "WallMode"
+            },
+            "title" : "Set the wall"
+          }
+        ],
+        "key" : "Set the wall in ${applicationName}",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 8
+        },
+        "values" : [
+          "Set the wall in ${applicationName}",
+          "${applicationName} the wall"
+        ]
+      },
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "SleepWallIntent",
+            "index" : 1,
+            "parameterDisplayRepresentations" : {
 
+            },
+            "parameterTypes" : {
+
+            },
+            "title" : "Fade the wall out"
+          }
+        ],
+        "key" : "Fade the wall out in ${applicationName}",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 8
+        },
+        "values" : [
+          "Fade the wall out in ${applicationName}",
+          "Goodnight ${applicationName}"
+        ]
+      },
+      {
+        "appShortcutMetadata" : [
+          {
+            "actionIdentifier" : "StartWallTimerIntent",
+            "index" : 2,
+            "parameterDisplayRepresentations" : {
+
+            },
+            "parameterTypes" : {
+
+            },
+            "title" : "Start a wall timer"
+          }
+        ],
+        "key" : "Start a wall timer in ${applicationName}",
+        "location" : {
+          "startingColumn" : 0,
+          "startingLine" : 8
+        },
+        "values" : [
+          "Start a wall timer in ${applicationName}",
+          "${applicationName} timer"
+        ]
+      }
+    ],
+    "Localizable" : [
+      {
+        "key" : "Count down ${minutes} minutes on the wall"
+      },
+      {
+        "key" : "Fade the wall out over ${minutes} minutes"
+      },
+      {
+        "key" : "Set the wall to ${mode}"
+      },
+      {
+        "key" : "Set the wall to ${percent} percent"
+      }
+    ]
   },
   "version" : 2
 }

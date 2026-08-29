@@ -18,6 +18,7 @@ struct SettingsSheet: View {
         bySettingHour: 7, minute: 0, second: 0, of: Date()) ?? Date()
     @State private var showCalibrate = false
     @State private var vitals: Vitals? = nil
+    @State private var where0 = OneShotSpot()
 
     var body: some View {
         NavigationStack {
@@ -38,10 +39,12 @@ struct SettingsSheet: View {
                     whenItStops
                     whenImGone
                     waking
+                    evenings
                     lockScreen
                     sleep
                     light
                     trueColour
+                    GuestsSection(accent: accent)
                     panelCheck
                     if wall.link.isLive { health }
                     about
@@ -104,7 +107,6 @@ struct SettingsSheet: View {
                     .font(.ui(13, .medium))
                     .foregroundStyle(accent)
                 Button("Look again") {
-                    Taps.detent()
                     wall.lookForWallAgain()
                 }
                 .buttonStyle(PressStyle(scale: 0.97))
@@ -215,13 +217,61 @@ struct SettingsSheet: View {
         }
     }
 
+    /// The wall following the sun down.
+    private var evenings: some View {
+        Section("evenings",
+                note: "The wall dims itself as the sun goes down and comes back with it, on a forty minute ramp. Computed from where you are, offline; your location goes to the wall once and nowhere else.") {
+            Toggle(isOn: Binding(
+                get: { wall.state.sun == "on" },
+                set: { wall.send(["sun": $0 ? "on" : "off"]); Taps.detent(intensity: 0.4) }
+            )) {
+                Text("Follow the sun").font(.ui(15)).foregroundStyle(Ink.ink)
+            }
+            .tint(accent)
+
+            if wall.state.sun == "on" {
+                PillRow(
+                    label: "after dark",
+                    options: [("10%", 0.10), ("25%", 0.25), ("50%", 0.50)],
+                    selected: wall.state.sunNight,
+                    accent: accent
+                ) { wall.send(["sun_night": $0]) }
+                .padding(.top, 12)
+
+                HStack(spacing: 12) {
+                    Button(where0.busy ? "Finding you" : "Use this spot") {
+                        where0.fetch { lat, lon in
+                            wall.send(["lat": lat, "lon": lon])
+                        }
+                    }
+                    .buttonStyle(PressStyle(scale: 0.97))
+                    .font(.ui(13, .medium))
+                    .foregroundStyle(accent)
+                    .disabled(where0.busy)
+
+                    Spacer()
+
+                    if abs(wall.state.lat) <= 90 {
+                        Text(String(format: "%.2f, %.2f", wall.state.lat, wall.state.lon))
+                            .font(.machine(10))
+                            .foregroundStyle(Ink.moss)
+                    } else {
+                        Text("no spot yet")
+                            .font(.machine(10))
+                            .foregroundStyle(Ink.faint)
+                    }
+                }
+                .padding(.top, 10)
+            }
+        }
+    }
+
     /// The camera teaching the panel what white is.
     private var trueColour: some View {
         Section("true colour",
                 note: "LED panels ship green-heavy. Point your camera at the wall and Tessera reads the cast and writes the correction. Run it twice if the first pass leaves a tint; each pass refines the last.") {
             HStack {
                 Button("Calibrate with the camera") {
-                    Taps.commit()
                     showCalibrate = true
                 }
                 .buttonStyle(PressStyle(scale: 0.97))
@@ -260,7 +310,6 @@ struct SettingsSheet: View {
                     .font(.ui(13)).foregroundStyle(Ink.faint)
             }
             Button("Check again") {
-                Taps.detent(intensity: 0.3)
                 Task { vitals = await Vitals.read(host: wall.host) }
             }
             .buttonStyle(PressStyle(scale: 0.97))
@@ -326,10 +375,9 @@ struct SettingsSheet: View {
                 .padding(.top, 4)
             HStack(spacing: 10) {
                 Button("Start the fade") {
-                    Taps.commit()
                     wall.send(["sleep_fade_min": sleepMinutes])
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressStyle(scale: 0.97))
                 .font(.ui(13, .medium))
                 .foregroundStyle(sleepMinutes < 1 ? Ink.faint : accent)
                 .disabled(sleepMinutes < 1)
@@ -371,7 +419,6 @@ struct SettingsSheet: View {
             HStack(spacing: 10) {
                 ForEach(patterns, id: \.0) { (name, rgb) in
                     Button {
-                        Taps.commit()
                         wall.pushFlat(r: rgb.0, g: rgb.1, b: rgb.2)
                     } label: {
                         VStack(spacing: 8) {
@@ -392,10 +439,9 @@ struct SettingsSheet: View {
                 }
             }
             Button("Back to the album") {
-                Taps.commit()
                 wall.send(["mode": "art"])
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressStyle(scale: 0.97))
             .font(.ui(13, .medium))
             .foregroundStyle(accent)
             .padding(.top, 14)
@@ -405,7 +451,6 @@ struct SettingsSheet: View {
     private var music: some View {
         Section("what is playing", note: "With no wall yet, Tessera shows whatever is playing on this phone so there is something real to look at. It reads the now-playing track only, and nothing leaves the device.") {
             Button("Use my music") {
-                Taps.detent()
                 StandIn.requestMusicAccess()
             }
             .buttonStyle(PressStyle(scale: 0.97))
@@ -450,7 +495,7 @@ struct SettingsSheet: View {
 
 /// A settings block: label, controls, and one honest sentence about what the
 /// thing does. Not a card, not a grouped list row.
-private struct Section<Content: View>: View {
+struct Section<Content: View>: View {
     let label: String
     let note: String?
     @ViewBuilder let content: Content
@@ -514,5 +559,65 @@ struct Vitals {
                       tempC: json["temp_c"] as? Double,
                       throttled: th,
                       uptime: text)
+    }
+}
+
+
+// MARK: - One location, once
+
+/// Asks for the phone's position exactly once, hands back two numbers, and
+/// holds nothing. The wall needs a latitude the way a sundial does; it does
+/// not need to know where you had lunch.
+import CoreLocation
+
+@MainActor
+@Observable
+final class OneShotSpot: NSObject, CLLocationManagerDelegate {
+    private(set) var busy = false
+    @ObservationIgnored private var manager: CLLocationManager? = nil
+    @ObservationIgnored private var handler: ((Double, Double) -> Void)? = nil
+
+    func fetch(_ done: @escaping (Double, Double) -> Void) {
+        handler = done
+        busy = true
+        let m = CLLocationManager()
+        m.delegate = self
+        m.desiredAccuracy = kCLLocationAccuracyKilometer   // a sundial, not a courier
+        manager = m
+        if m.authorizationStatus == .notDetermined {
+            m.requestWhenInUseAuthorization()
+        } else {
+            m.requestLocation()
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        Task { @MainActor in
+            guard self.busy else { return }
+            switch status {
+            case .authorizedWhenInUse, .authorizedAlways: self.manager?.requestLocation()
+            case .denied, .restricted: self.finish(nil)
+            default: break
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager,
+                                     didUpdateLocations locations: [CLLocation]) {
+        let c = locations.first?.coordinate
+        Task { @MainActor in self.finish(c.map { ($0.latitude, $0.longitude) }) }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager,
+                                     didFailWithError error: Error) {
+        Task { @MainActor in self.finish(nil) }
+    }
+
+    private func finish(_ spot: (Double, Double)?) {
+        busy = false
+        if let spot { handler?(spot.0, spot.1); Taps.commit() }
+        handler = nil
+        manager = nil
     }
 }
