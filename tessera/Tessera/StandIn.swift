@@ -41,6 +41,8 @@ final class StandIn {
         if let v = patch["effect"] as? String { state.effect = v }
         if let v = patch["finish"] as? String { state.finish = v }
         if let v = patch["match_art"] as? Bool { state.matchArt = v }
+        if let v = patch["color"] as? String { state.color = v }
+        if let v = patch["color2"] as? String { state.color2 = v }
     }
 
     // MARK: - Now playing, from this phone
@@ -169,7 +171,10 @@ final class StandIn {
            let a = rgb(artColors[0]), let b = rgb(artColors[artColors.count - 1]) {
             return (a, b)
         }
-        return ((0.25, 0.38, 1.0), (1.0, 0.13, 0.5))
+        // Chosen colours, when not taking the album's.
+        let a = rgb(state.color) ?? (0.91, 0.69, 0.29)
+        let b = rgb(state.color2) ?? (0.88, 0.29, 0.12)
+        return (a, b)
     }
 
     private func rgb(_ hex: String) -> (Double, Double, Double)? {

@@ -148,6 +148,16 @@ struct WallScreen: View {
                     accent: accent
                 ) { wall.send(["effect": $0]) }
 
+                LampInks(
+                    color: wall.state.color,
+                    color2: wall.state.color2,
+                    matchArt: wall.state.matchArt,
+                    effect: wall.state.effect,
+                    accent: accent
+                ) { key, hex in
+                    wall.send([key: hex])
+                }
+
                 Toggle(isOn: Binding(
                     get: { wall.state.matchArt },
                     set: { wall.send(["match_art": $0]) }

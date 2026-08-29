@@ -23,7 +23,7 @@
         "key": "Canvas, 64 by 64 tiles. Draw with one finger.",
         "location": {
           "startingColumn": 33,
-          "startingLine": 354
+          "startingLine": 355
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Mix a colour",
         "location": {
           "startingColumn": 33,
-          "startingLine": 405
+          "startingLine": 406
         }
       },
       {
@@ -39,7 +39,7 @@
         "key": "Ink",
         "location": {
           "startingColumn": 29,
-          "startingLine": 428
+          "startingLine": 429
         }
       },
       {
@@ -47,7 +47,7 @@
         "key": "reading",
         "location": {
           "startingColumn": 41,
-          "startingLine": 477
+          "startingLine": 478
         }
       },
       {
@@ -55,7 +55,7 @@
         "key": "media",
         "location": {
           "startingColumn": 69,
-          "startingLine": 477
+          "startingLine": 478
         }
       },
       {
@@ -63,7 +63,7 @@
         "key": "%lldf",
         "location": {
           "startingColumn": 79,
-          "startingLine": 477
+          "startingLine": 478
         }
       },
       {
@@ -71,7 +71,7 @@
         "key": "say something",
         "location": {
           "startingColumn": 23,
-          "startingLine": 490
+          "startingLine": 491
         }
       },
       {
@@ -79,7 +79,7 @@
         "key": "undo",
         "location": {
           "startingColumn": 22,
-          "startingLine": 507
+          "startingLine": 508
         }
       },
       {
@@ -87,7 +87,7 @@
         "key": "On the wall",
         "location": {
           "startingColumn": 25,
-          "startingLine": 534
+          "startingLine": 535
         }
       },
       {
@@ -95,7 +95,7 @@
         "key": "Play it on the wall",
         "location": {
           "startingColumn": 43,
-          "startingLine": 535
+          "startingLine": 536
         }
       },
       {
@@ -103,7 +103,7 @@
         "key": "Put it on the wall",
         "location": {
           "startingColumn": 67,
-          "startingLine": 535
+          "startingLine": 536
         }
       },
       {
@@ -111,7 +111,7 @@
         "key": "made",
         "location": {
           "startingColumn": 18,
-          "startingLine": 552
+          "startingLine": 553
         }
       },
       {
@@ -119,7 +119,7 @@
         "key": "Something you made. Tap to load it back.",
         "location": {
           "startingColumn": 45,
-          "startingLine": 573
+          "startingLine": 574
         }
       },
       {
@@ -127,7 +127,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 36,
-          "startingLine": 571
+          "startingLine": 572
         }
       },
       {
@@ -135,7 +135,7 @@
         "key": "Wide brush",
         "location": {
           "startingColumn": 37,
-          "startingLine": 623
+          "startingLine": 624
         }
       },
       {
@@ -143,7 +143,7 @@
         "key": "Fine brush",
         "location": {
           "startingColumn": 52,
-          "startingLine": 623
+          "startingLine": 624
         }
       },
       {
@@ -151,7 +151,7 @@
         "key": "wide",
         "location": {
           "startingColumn": 30,
-          "startingLine": 616
+          "startingLine": 617
         }
       },
       {
@@ -159,7 +159,7 @@
         "key": "fine",
         "location": {
           "startingColumn": 39,
-          "startingLine": 616
+          "startingLine": 617
         }
       }
     ]

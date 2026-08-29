@@ -287,6 +287,7 @@ struct WallHero: View {
                         if startValue == nil {
                             startValue = confirmed
                             moved = false
+                            Taps.warm()          // first detent lands on time
                             scheduleHold()
                         }
                         if abs(g.translation.height) > 6 {

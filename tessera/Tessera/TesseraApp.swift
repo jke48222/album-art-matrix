@@ -8,6 +8,7 @@ struct TesseraApp: App {
 
     init() {
         Face.registerAll()
+        Taps.prepareAll()
     }
 
     var body: some Scene {
