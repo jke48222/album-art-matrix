@@ -30,10 +30,11 @@ STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
-MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip")
+MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer")
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco")
 FINISHES = ("clean", "dither", "poster")
 IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
+AWAYS = ("stay", "off")                       # what it does when nobody is home
 
 DEFAULTS = {
     "mode": "art",           # art | cd | ambient | off | frame
@@ -49,7 +50,17 @@ DEFAULTS = {
     "ticker_loop": True,     # loop, or scroll once then back to art
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
     "idle": "black",         # silence: black | hold | dim | ambient
+    "away": "stay",          # phone gone >15 min: stay | off
+    "wake_enabled": False,   # morning fade-up
+    "wake_time": "07:00",    # local HH:MM
+    "wake_fade_min": 20.0,   # how long the fade-up takes
+    # Calibration multipliers on top of the config gains. Identity until a
+    # camera has measured the wall; see the app's calibrate flow.
+    "wb_r": 1.0, "wb_g": 1.0, "wb_b": 1.0,
 }
+
+
+_T0 = time.monotonic()               # process start, for /health uptime
 
 
 def _clamp(v, lo, hi):
@@ -76,6 +87,9 @@ class ControlState:
         self.last_frame = None       # pre-WB RGB of whatever was last shown
         self.replay = None           # journal entry the main loop should re-show
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
+        self.timer = None            # {"end": monotonic, "total": s, "ret": mode}
+        self.fps_last = 0.0          # main loop's sustained rate, for /health
+        self.last_client = None      # monotonic of the app's last request
         # Bumps whenever new content lands (track change, replay, pushed frame
         # or clip) — never on a settings change. Clients key their arrival
         # animations on this instead of guessing from title strings.
@@ -105,6 +119,18 @@ class ControlState:
                     self._s[k] = v
                 elif k == "idle" and v in IDLES:
                     self._s[k] = v
+                elif k == "away" and v in AWAYS:
+                    self._s[k] = v
+                elif k == "wake_enabled":
+                    self._s[k] = bool(v)
+                elif k == "wake_time" and isinstance(v, str) and len(v) == 5 \
+                        and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
+                        and int(v[:2]) < 24 and int(v[3:]) < 60:
+                    self._s[k] = v
+                elif k == "wake_fade_min":
+                    self._s[k] = _clamp(v, 1, 90)
+                elif k in ("wb_r", "wb_g", "wb_b"):
+                    self._s[k] = _clamp(v, 0.3, 1.0)
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
                     self._s[k] = bool(v)
                 elif k == "ticker_text" and isinstance(v, str):
@@ -141,6 +167,22 @@ class ControlState:
             # snap the fade to the end (or stall it) mid-way
             self.sleep = ({"t0": time.monotonic(), "minutes": minutes}
                           if minutes > 0 else None)
+        # A countdown is a command too: it starts now, remembers what the
+        # wall was doing, and puts that back when it is done.
+        if "timer_min" in patch:
+            minutes = _clamp(patch.pop("timer_min"), 0, 180)
+            if minutes > 0:
+                here = self.get()["mode"]
+                ret = self.timer["ret"] if self.timer else \
+                    (here if here not in ("timer", "frame", "clip") else "clock")
+                self.timer = {"end": time.monotonic() + minutes * 60,
+                              "total": minutes * 60, "ret": ret}
+                patch["mode"] = "timer"
+            else:
+                ret = self.timer["ret"] if self.timer else "clock"
+                self.timer = None
+                if self.get()["mode"] == "timer":
+                    patch["mode"] = ret
         rejected = self._merge(patch)
         self.dirty.set()
         return rejected
@@ -155,7 +197,38 @@ class ControlState:
         if sl:
             left = sl["minutes"] * 60 - (time.monotonic() - sl["t0"])
             out["sleep_remaining_s"] = max(0, int(left))
+        tm = self.timer
+        if tm:
+            out["timer_remaining_s"] = max(0, int(tm["end"] - time.monotonic()))
+            out["timer_total_s"] = int(tm["total"])
         return out
+
+    # ---- health ---------------------------------------------------------
+    def health(self) -> dict:
+        """The Pi lives sealed behind panels; this is how you find out it is
+        cooking before it matters. Every reading that does not exist on this
+        machine is None rather than a guess."""
+        temp = None
+        try:
+            with open("/sys/class/thermal/thermal_zone0/temp") as fh:
+                temp = round(int(fh.read().strip()) / 1000.0, 1)
+        except (OSError, ValueError):
+            pass
+        throttled = None
+        try:
+            import subprocess
+            raw = subprocess.run(["vcgencmd", "get_throttled"],
+                                 capture_output=True, text=True,
+                                 timeout=2).stdout
+            bits = int(raw.strip().split("=")[1], 16)
+            throttled = {"now": bool(bits & 0x7),        # under-volt/capped/hot
+                         "ever": bool(bits & 0x70000)}   # since boot
+        except Exception:
+            pass
+        return {"fps": round(self.fps_last, 1), "temp_c": temp,
+                "throttled": throttled,
+                "uptime_s": int(time.monotonic() - _T0),
+                "mode": self.get()["mode"]}
 
     # ---- journal --------------------------------------------------------
     def journal_append(self, entry: dict):
@@ -245,7 +318,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     limit = 50
                 self._json(200, {"entries": ctrl.journal_read(limit)})
                 return
+            if u.path.startswith("/health"):
+                self._json(200, ctrl.health())
+                return
             if u.path.startswith("/state"):
+                ctrl.last_client = time.monotonic()
                 self._json(200, ctrl.public_state())
                 return
             self._json(404, {"error": "not found"})
@@ -313,6 +390,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
 
             if self.path.startswith("/state"):
+                ctrl.last_client = time.monotonic()
                 patch = self._body()
                 if patch is None:
                     return

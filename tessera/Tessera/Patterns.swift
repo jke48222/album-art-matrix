@@ -197,3 +197,82 @@ enum Patterns {
         (a.0 * (1 - k) + b.0 * k, a.1 * (1 - k) + b.1 * k, a.2 * (1 - k) + b.2 * k)
     }
 }
+
+
+/// Drawing the wall's own letters into a raw frame, phone-side. The bit
+/// layout mirrors brain/art/pixelfont.py exactly; gen_pixelfont.py keeps the
+/// glyphs from drifting, this keeps the drawing from drifting.
+enum PixelDraw {
+    static func text(_ px: inout [UInt8], _ text: String, x: Int, y: Int,
+                     rgb: (UInt8, UInt8, UInt8), scale: Int = 1) {
+        var cx = x
+        for ch in text {
+            let rows = PixelFont.glyph(ch)
+            for (ry, mask) in rows.enumerated() {
+                for rx in 0..<PixelFont.width where mask & (1 << (4 - rx)) != 0 {
+                    for sy in 0..<scale {
+                        for sx in 0..<scale {
+                            let xx = cx + rx * scale + sx
+                            let yy = y + ry * scale + sy
+                            guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
+                            let o = (yy * 64 + xx) * 3
+                            px[o] = rgb.0; px[o + 1] = rgb.1; px[o + 2] = rgb.2
+                        }
+                    }
+                }
+            }
+            cx += PixelFont.advance * scale
+        }
+    }
+
+    /// The countdown face, matching the brain's Countdown: digits centered,
+    /// the border draining clockwise from 12 o'clock, a breathing pulse at
+    /// zero. Same idea at phone cost, for the wall that does not exist yet.
+    static func countdown(remaining: Double, total: Double,
+                          ink: (UInt8, UInt8, UInt8),
+                          accent: (Double, Double, Double)) -> [UInt8] {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+
+        if remaining <= 0 {
+            let k = 0.35 + 0.65 * (0.5 + 0.5 * sin(Date().timeIntervalSince1970 * 5))
+            for i in stride(from: 0, to: px.count, by: 3) {
+                px[i] = UInt8(min(255, accent.0 * 255 * k * 0.55))
+                px[i + 1] = UInt8(min(255, accent.1 * 255 * k * 0.55))
+                px[i + 2] = UInt8(min(255, accent.2 * 255 * k * 0.55))
+            }
+            digits(&px, 0, ink)
+            return px
+        }
+
+        let ring = ringPath()
+        let lit = Int(Double(ring.count) * max(0, min(1, remaining / max(1, total))))
+        for (i, p) in ring.enumerated() {
+            let o = (p.1 * 64 + p.0) * 3
+            let k = i < lit ? 1.0 : 0.25
+            px[o] = UInt8(min(255, accent.0 * 255 * k))
+            px[o + 1] = UInt8(min(255, accent.1 * 255 * k))
+            px[o + 2] = UInt8(min(255, accent.2 * 255 * k))
+        }
+        digits(&px, Int(remaining), ink)
+        return px
+    }
+
+    private static func digits(_ px: inout [UInt8], _ seconds: Int,
+                               _ ink: (UInt8, UInt8, UInt8)) {
+        let m = seconds / 60, s = seconds % 60
+        let text = String(format: "%02d:%02d", m, s)
+        let w = PixelFont.textWidth(text, scale: 2)
+        PixelDraw.text(&px, text, x: (64 - w) / 2, y: (64 - 14) / 2, rgb: ink, scale: 2)
+    }
+
+    /// Clockwise from the top middle, one lap of the border.
+    private static func ringPath() -> [(Int, Int)] {
+        var p: [(Int, Int)] = []
+        for x in 32..<64 { p.append((x, 0)) }
+        for y in 1..<64 { p.append((63, y)) }
+        for x in stride(from: 62, through: 0, by: -1) { p.append((x, 63)) }
+        for y in stride(from: 62, through: 1, by: -1) { p.append((0, y)) }
+        for x in 1..<32 { p.append((x, 0)) }
+        return p
+    }
+}

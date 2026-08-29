@@ -14,7 +14,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
-    case make, erase, photo, letters, clock
+    case make, erase, photo, letters, clock, snake
 }
 
 struct GlyphShape: View {
@@ -30,6 +30,24 @@ struct GlyphShape: View {
             let lw = lineWidth * max(1, u)
 
             switch glyph {
+            case .snake:
+                // three bends of a snake, and the meal it is heading for
+                var path = Path()
+                let y0 = box.minY + box.height * 0.22
+                let y1 = box.minY + box.height * 0.78
+                path.move(to: CGPoint(x: box.minX, y: y1))
+                path.addLine(to: CGPoint(x: box.minX + box.width * 0.30, y: y1))
+                path.addLine(to: CGPoint(x: box.minX + box.width * 0.30, y: y0))
+                path.addLine(to: CGPoint(x: box.minX + box.width * 0.62, y: y0))
+                path.addLine(to: CGPoint(x: box.minX + box.width * 0.62, y: y1))
+                path.addLine(to: CGPoint(x: box.maxX - box.width * 0.02, y: y1))
+                ctx.stroke(path, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
+                let d = 2.6 * u
+                ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - d, y: y0 - d / 2,
+                                                width: d, height: d)),
+                         with: .color(.white))
+
             case .art:
                 // four tiles, two lit
                 let gap = 1.6 * u

@@ -124,6 +124,8 @@ def _itunes_art(term, entity):
 class AppleMusicSource(NowPlayingSource):
     name = "applemusic"
 
+    phone_age = None                 # seconds since the phone's last push
+
     def __init__(self, endpoint: str = ""):
         self.endpoint = (endpoint or "").rstrip("/")
         self._art_key = None
@@ -210,6 +212,7 @@ class AppleMusicSource(NowPlayingSource):
         try:
             resp = requests.get(self.endpoint + "/nowplaying", timeout=8)
         except requests.RequestException as exc:
+            self.phone_age = None
             if not self._warned:
                 print(f"[applemusic] reporter unreachable at {self.endpoint} "
                       f"({exc.__class__.__name__}) — start "
@@ -217,6 +220,10 @@ class AppleMusicSource(NowPlayingSource):
                 self._warned = True
             return None
         self._warned = False
+        # How long since the owner's phone last spoke to the reporter.
+        # Presence, not music: the away behaviour reads this.
+        age = resp.headers.get("X-Phone-Age")
+        self.phone_age = float(age) if age is not None else None
         if resp.status_code != 200:
             return None
         try:

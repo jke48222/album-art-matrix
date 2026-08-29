@@ -11,6 +11,7 @@
 // not the error path, and anything older than ten minutes says when it is
 // from rather than pretending to be current.
 
+import AppIntents
 import WidgetKit
 import SwiftUI
 
@@ -135,9 +136,38 @@ private struct MediumWall: View {
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.35))
                 }
+
+                // The three things worth doing from the home screen. These
+                // run in the app's process (see Shared/WallIntents.swift),
+                // which is the only process allowed to dial the wall.
+                HStack(spacing: 6) {
+                    WidgetKey(label: "Art", mode: .art, on: entry.mode == "art")
+                    WidgetKey(label: "Lamp", mode: .lamp, on: entry.mode == "ambient")
+                    WidgetKey(label: "Off", mode: .off, on: entry.mode == "off")
+                }
+                .padding(.top, 6)
             }
             Spacer(minLength: 0)
         }
+    }
+}
+
+private struct WidgetKey: View {
+    let label: String
+    let mode: WallMode
+    let on: Bool
+
+    var body: some View {
+        Button(intent: SetWallModeIntent(mode: mode)) {
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(on ? .black : .white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 5)
+                .background(on ? Color.white : Color.white.opacity(0.14),
+                            in: RoundedRectangle(cornerRadius: 6))
+        }
+        .buttonStyle(.plain)
     }
 }
 

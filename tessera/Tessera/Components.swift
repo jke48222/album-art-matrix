@@ -455,3 +455,87 @@ struct TickerRow: View {
         onSet("ticker_text", draft)
     }
 }
+
+
+// MARK: - Timer
+
+/// The kitchen timer, from the clock's context row. Four durations cover
+/// nearly every real use; anything fussier belongs to Siri, which takes any
+/// number of minutes by voice.
+struct WallTimerRow: View {
+    let remaining: Int?
+    let total: Int?
+    let accent: Color
+    var onSet: (Double) -> Void
+
+    var body: some View {
+        if let remaining {
+            HStack(spacing: 14) {
+                // The wall is the display; this is just the handle.
+                Text(clock(remaining))
+                    .font(.machine(22))
+                    .foregroundStyle(remaining == 0 ? accent : Ink.ink)
+                    .contentTransition(.numericText(countsDown: true))
+                    .animation(.linear(duration: 0.3), value: remaining)
+                if let total, total > 0, remaining > 0 {
+                    DrainRule(fraction: Double(remaining) / Double(total), accent: accent)
+                }
+                Spacer()
+                Button(remaining == 0 ? "Done" : "Cancel") {
+                    Taps.commit()
+                    onSet(0)
+                }
+                .buttonStyle(PressStyle(scale: 0.96))
+                .font(.ui(14, .medium))
+                .foregroundStyle(accent)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("count something down")
+                    .font(.ui(12, .medium))
+                    .foregroundStyle(Ink.dim)
+                HStack(spacing: 8) {
+                    ForEach([1.0, 5, 10, 25], id: \.self) { m in
+                        Button {
+                            Taps.commit()
+                            onSet(m)
+                        } label: {
+                            Text("\(Int(m))m")
+                                .font(.machine(13))
+                                .foregroundStyle(Ink.ink)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Ink.sunk)
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .strokeBorder(Ink.hairline, lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(PressStyle(scale: 0.95))
+                    }
+                }
+            }
+        }
+    }
+
+    private func clock(_ s: Int) -> String {
+        String(format: "%02d:%02d", s / 60, s % 60)
+    }
+}
+
+/// The same draining border the wall draws, flattened to a line.
+private struct DrainRule: View {
+    let fraction: Double
+    let accent: Color
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(accent.opacity(0.18))
+                Capsule().fill(accent)
+                    .frame(width: max(2, geo.size.width * fraction))
+            }
+        }
+        .frame(width: 64, height: 3)
+    }
+}

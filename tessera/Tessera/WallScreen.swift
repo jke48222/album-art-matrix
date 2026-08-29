@@ -130,8 +130,10 @@ struct WallScreen: View {
     /// The wall may be in a mode this row does not offer (ticker, clip, frame).
     /// Show Art rather than lying with nothing selected.
     private var normalizedMode: String {
-        ["art", "cd", "ambient", "off", "ticker", "clock"].contains(wall.state.mode)
-            ? wall.state.mode : "art"
+        let m = wall.state.mode
+        if m == "timer" { return "clock" }   // a countdown is the clock, busy
+        return ["art", "cd", "ambient", "off", "ticker", "clock"].contains(m)
+            ? m : "art"
     }
 
     @ViewBuilder private var contextRow: some View {
@@ -179,12 +181,21 @@ struct WallScreen: View {
             ) { key, value in wall.send([key: value]) }
 
         case "clock":
-            PillRow(
-                label: "clock",
-                options: [("24 hour", true), ("12 hour", false)],
-                selected: wall.state.clock24h,
-                accent: accent
-            ) { wall.send(["clock_24h": $0]) }
+            VStack(alignment: .leading, spacing: 18) {
+                WallTimerRow(
+                    remaining: wall.state.mode == "timer" ? (wall.state.timerRemaining ?? 0) : nil,
+                    total: wall.state.timerTotal,
+                    accent: accent
+                ) { wall.send(["timer_min": $0]) }
+                if wall.state.mode != "timer" {
+                    PillRow(
+                        label: "clock",
+                        options: [("24 hour", true), ("12 hour", false)],
+                        selected: wall.state.clock24h,
+                        accent: accent
+                    ) { wall.send(["clock_24h": $0]) }
+                }
+            }
 
         default:
             FinishRow(

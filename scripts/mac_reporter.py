@@ -95,6 +95,14 @@ class Handler(BaseHTTPRequestHandler):
         self._cors()
         self.end_headers()
 
+    def _phone_age(self):
+        """Seconds since the phone last pushed, or None if it never has.
+        Carried as a header so it survives a 204 with no body: this is how
+        the wall knows whether anyone is home."""
+        if _push["data"] is None:
+            return None
+        return time.monotonic() - _push["at"]
+
     def do_GET(self):
         if not self.path.startswith("/nowplaying"):
             self.send_response(404)
@@ -110,9 +118,12 @@ class Handler(BaseHTTPRequestHandler):
             self._cors()
             self.end_headers()
             return
+        age = self._phone_age()
         if now is None:
             self.send_response(204)
             self._cors()
+            if age is not None:
+                self.send_header("X-Phone-Age", f"{age:.0f}")
             self.end_headers()
             return
         payload = asdict(now)
@@ -120,6 +131,8 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps(payload).encode()
         self.send_response(200)
         self._cors()
+        if age is not None:
+            self.send_header("X-Phone-Age", f"{age:.0f}")
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
