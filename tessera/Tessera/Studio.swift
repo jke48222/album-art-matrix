@@ -375,29 +375,33 @@ struct StudioScreen: View {
                 swatch(rgb)
             }
 
-            // The mixer. Its ring shows what it holds, so it reads as another
-            // swatch rather than as a settings control.
-            ZStack {
-                Circle()
-                    .fill(custom)
-                    .frame(width: 34, height: 34)
-                Circle()
-                    .strokeBorder(
-                        AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
-                                        center: .center),
-                        lineWidth: 2
-                    )
-                    .frame(width: 40, height: 40)
-                ColorPicker("", selection: $custom, supportsOpacity: false)
-                    .labelsHidden()
-                    .opacity(0.02)          // the system control, made invisible
-                    .frame(width: 40, height: 40)
-            }
-            .onChange(of: custom) { _, c in
-                ink = Self.rgb(of: c)
-                erasing = false
-                Taps.detent(intensity: 0.5)
-            }
+            // The mixer.
+            //
+            // This was a ColorPicker hidden at 2% opacity under a drawn
+            // circle, which looked right and did not reliably take a tap on
+            // device: an all-but-invisible system control is not something to
+            // rely on for hit testing. The system swatch IS the control now,
+            // sized to match its neighbours and ringed so it reads as one
+            // more ink rather than as a settings widget.
+            ColorPicker(selection: $custom, supportsOpacity: false) { EmptyView() }
+                .labelsHidden()
+                .scaleEffect(1.25)
+                .frame(width: 34, height: 34)
+                .overlay {
+                    Circle()
+                        .strokeBorder(
+                            AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
+                                            center: .center),
+                            lineWidth: 2
+                        )
+                        .padding(-4)
+                        .allowsHitTesting(false)
+                }
+                .onChange(of: custom) { _, c in
+                    ink = Self.rgb(of: c)
+                    erasing = false
+                    Taps.detent(intensity: 0.5)
+                }
             .accessibilityLabel("Mix a colour")
 
             Spacer()
