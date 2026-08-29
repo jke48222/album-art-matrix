@@ -31,7 +31,7 @@ JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip")
-EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid")
+EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco")
 FINISHES = ("clean", "dither", "poster")
 
 DEFAULTS = {

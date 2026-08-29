@@ -1,0 +1,64 @@
+{
+  "source": "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Archive.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "WORN",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 230
+        }
+      },
+      {
+        "comment": "",
+        "key": " ",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld sleeves the wall has carried",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ by %@%@",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "Wear it again",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 386
+        }
+      },
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 396
+        }
+      }
+    ]
+  },
+  "version": 1
+}

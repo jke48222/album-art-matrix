@@ -1,0 +1,176 @@
+{
+  "source": "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Studio.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Close",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 254
+        }
+      },
+      {
+        "comment": "",
+        "key": "Clear",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 259
+        }
+      },
+      {
+        "comment": "",
+        "key": "Canvas, 64 by 64 tiles. Draw with one finger.",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 354
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mix a colour",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 401
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ink",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 424
+        }
+      },
+      {
+        "comment": "",
+        "key": "",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 391
+        }
+      },
+      {
+        "comment": "",
+        "key": "reading",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 473
+        }
+      },
+      {
+        "comment": "",
+        "key": "media",
+        "location": {
+          "startingColumn": 69,
+          "startingLine": 473
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lldf",
+        "location": {
+          "startingColumn": 79,
+          "startingLine": 473
+        }
+      },
+      {
+        "comment": "",
+        "key": "say something",
+        "location": {
+          "startingColumn": 23,
+          "startingLine": 486
+        }
+      },
+      {
+        "comment": "",
+        "key": "undo",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 503
+        }
+      },
+      {
+        "comment": "",
+        "key": "On the wall",
+        "location": {
+          "startingColumn": 25,
+          "startingLine": 530
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play it on the wall",
+        "location": {
+          "startingColumn": 43,
+          "startingLine": 531
+        }
+      },
+      {
+        "comment": "",
+        "key": "Put it on the wall",
+        "location": {
+          "startingColumn": 67,
+          "startingLine": 531
+        }
+      },
+      {
+        "comment": "",
+        "key": "made",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 548
+        }
+      },
+      {
+        "comment": "",
+        "key": "Something you made. Tap to load it back.",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 569
+        }
+      },
+      {
+        "comment": "",
+        "key": "Delete",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 567
+        }
+      },
+      {
+        "comment": "",
+        "key": "Wide brush",
+        "location": {
+          "startingColumn": 37,
+          "startingLine": 619
+        }
+      },
+      {
+        "comment": "",
+        "key": "Fine brush",
+        "location": {
+          "startingColumn": 52,
+          "startingLine": 619
+        }
+      },
+      {
+        "comment": "",
+        "key": "wide",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 612
+        }
+      },
+      {
+        "comment": "",
+        "key": "fine",
+        "location": {
+          "startingColumn": 39,
+          "startingLine": 612
+        }
+      }
+    ]
+  },
+  "version": 1
+}

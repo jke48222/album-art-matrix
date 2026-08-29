@@ -1,0 +1,40 @@
+{
+  "source": "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/FrameView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "The wall",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 327
+        }
+      },
+      {
+        "comment": "",
+        "key": "Brightness %lld percent",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 328
+        }
+      },
+      {
+        "comment": "",
+        "key": "Adjust to dim the wall. Press and hold to put it to sleep.",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 329
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld%%",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 276
+        }
+      }
+    ]
+  },
+  "version": 1
+}

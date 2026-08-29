@@ -14,10 +14,14 @@ struct Lighting {
     let accent: Color
     let duty: Double
     let isOff: Bool
+    /// Held steady rather than read per frame; see RootView.
+    let palette: [Color]
 
     /// How much light is actually in the room. Everything visual scales by
     /// this, so the phone dims as the wall dims and goes dark when it does.
     var room: Double { isOff ? 0 : reading.lit * duty }
+    /// The accent, also held steady, so nothing tinted by it can strobe.
+    var steadyAccent: Color { palette.first ?? accent }
     var litInk: Color { Ink.ink.lit(by: accent, 0.20 * room) }
     var litDim: Color { Ink.dim.lit(by: accent, 0.16 * room) }
 }
@@ -31,6 +35,12 @@ struct RootView: View {
     @State private var lastTitle = ""
     @State private var showSetup = false
     @State private var showStudio = false
+    /// The room's colours, held steady. Reading them straight from the frame
+    /// meant rainbow and the pattern modes strobed the whole interface: the
+    /// swatches, the glyph rings and the background all chased the hue. The
+    /// room updates its colour a few times a minute, like a room.
+    @State private var stablePalette: [Color] = []
+    @State private var paletteAt: Date = .distantPast
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
@@ -41,7 +51,8 @@ struct RootView: View {
             if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
             return reading.glow
         }()
-        return Lighting(reading: reading, accent: accent, duty: duty, isOff: isOff)
+        return Lighting(reading: reading, accent: accent, duty: duty, isOff: isOff,
+                        palette: stablePalette.isEmpty ? reading.palette : stablePalette)
     }
 
     var body: some View {
@@ -49,7 +60,7 @@ struct RootView: View {
 
         ZStack(alignment: .bottom) {
             Room(
-                palette: light.isOff ? [] : light.reading.palette,
+                palette: light.isOff ? [] : light.palette,
                 light: light.room,
                 surge: arrival
             )
@@ -62,26 +73,33 @@ struct RootView: View {
                     onStudio: { showStudio = true }
                 )
                 .tag(0)
-                ArchiveScreen(accent: light.accent)
+                ArchiveScreen(accent: light.steadyAccent)
                     .tag(1)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
-            PageTesserae(page: page, accent: light.accent, lit: light.room)
+            PageTesserae(page: page, accent: light.steadyAccent, lit: light.room)
                 .padding(.bottom, 8)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showSetup) {
-            SettingsSheet(accent: light.accent).environment(wall)
+            SettingsSheet(accent: light.steadyAccent).environment(wall)
         }
         // The studio is a place you go into and come back from, not a third
         // page: drawing needs the whole surface, and a horizontal stroke must
         // not turn into a page swipe.
         .fullScreenCover(isPresented: $showStudio) {
-            StudioScreen(roomPalette: light.reading.palette, accent: light.accent)
+            StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
                 .environment(wall)
         }
         .onAppear { wall.start() }
+        .onChange(of: lighting.reading.key) { _, _ in
+            guard Date().timeIntervalSince(paletteAt) > 1.2 else { return }
+            paletteAt = Date()
+            withAnimation(.easeInOut(duration: 1.0)) {
+                stablePalette = lighting.reading.palette
+            }
+        }
         .onChange(of: wall.state.title ?? "") { _, new in
             // A new sleeve landing on 4,096 LEDs is an event, not a fade.
             guard !lastTitle.isEmpty, new != lastTitle, !isOff, !new.isEmpty else {

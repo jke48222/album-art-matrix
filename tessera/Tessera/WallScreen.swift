@@ -20,7 +20,7 @@ struct WallScreen: View {
     private var duty: Double { light.duty }
     private var isOff: Bool { light.isOff }
     private var reading: FrameReading { light.reading }
-    private var accent: Color { light.accent }
+    private var accent: Color { light.steadyAccent }
     private var roomLight: Double { light.room }
     private var litInk: Color { light.litInk }
     private var litDim: Color { light.litDim }
@@ -141,8 +141,9 @@ struct WallScreen: View {
             VStack(alignment: .leading, spacing: 18) {
                 PillRow(
                     label: "light",
-                    options: [("mosaic", "mosaic"), ("solid", "solid"), ("breathe", "breathe"),
-                              ("pulse", "pulse"), ("rainbow", "rainbow"), ("fade", "gradient")],
+                    options: [("plaid", "plaid"), ("weave", "weave"), ("deco", "deco"),
+                              ("solid", "solid"), ("breathe", "breathe"), ("pulse", "pulse"),
+                              ("rainbow", "rainbow"), ("fade", "gradient")],
                     selected: wall.state.effect,
                     accent: accent
                 ) { wall.send(["effect": $0]) }

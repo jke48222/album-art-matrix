@@ -1,0 +1,40 @@
+{
+  "source": "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/WallScreen.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TESSERA",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 75
+        }
+      },
+      {
+        "comment": "",
+        "key": "Make something for the wall",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 93
+        }
+      },
+      {
+        "comment": "",
+        "key": "Setup. Link is %@.",
+        "location": {
+          "startingColumn": 33,
+          "startingLine": 102
+        }
+      },
+      {
+        "comment": "",
+        "key": "Take the album's colours",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 155
+        }
+      }
+    ]
+  },
+  "version": 1
+}

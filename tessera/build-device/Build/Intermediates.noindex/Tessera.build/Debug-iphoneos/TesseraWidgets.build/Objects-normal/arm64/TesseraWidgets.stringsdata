@@ -1,0 +1,40 @@
+{
+  "source": "/Users/jalenedusei/fun-project/album-art-matrix/tessera/TesseraWidgets/TesseraWidgets.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Asleep",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "Nothing playing",
+        "location": {
+          "startingColumn": 59,
+          "startingLine": 126
+        }
+      },
+      {
+        "comment": "",
+        "key": "The wall",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 167
+        }
+      },
+      {
+        "comment": "",
+        "key": "What the wall is showing.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 168
+        }
+      }
+    ]
+  },
+  "version": 1
+}
