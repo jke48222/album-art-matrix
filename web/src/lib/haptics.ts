@@ -5,6 +5,6 @@ export function tap(pattern: number | number[] = 8) {
   try {
     nav.vibrate?.(pattern);
   } catch {
-    /* blocked by the browser — ignore */
+    /* blocked by the browser - ignore */
   }
 }

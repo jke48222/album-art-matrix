@@ -12,13 +12,13 @@ import type { HistoryEntry, SourceId } from "@/lib/types";
 export const Route = createFileRoute("/history")({
   head: () => ({
     meta: [
-      { title: "Play history — Album Art Matrix" },
+      { title: "Play history - Album Art Matrix" },
       {
         name: "description",
         content:
           "Every track the wall has shown: searchable, grouped by day, with the source that answered and the settings it was rendered with.",
       },
-      { property: "og:title", content: "Play history — Album Art Matrix" },
+      { property: "og:title", content: "Play history - Album Art Matrix" },
       {
         property: "og:description",
         content: "Browse, filter, re-render and export everything the LED wall has displayed.",
@@ -140,7 +140,7 @@ function HistoryPage() {
     };
     return {
       artists: count(history.map((h) => h.artist)).slice(0, 6),
-      albums: count(history.map((h) => h.album || "–")).slice(0, 6),
+      albums: count(history.map((h) => h.album || "-")).slice(0, 6),
       sources: count(history.map((h) => h.source)),
     };
   }, [history]);
@@ -213,7 +213,7 @@ function HistoryPage() {
 
       {history.length === 0 ? (
         <HonestNote>
-          Nothing recorded yet. Every track that reaches the wall gets logged here — title, artist, album, art, the
+          Nothing recorded yet. Every track that reaches the wall gets logged here - title, artist, album, art, the
           source and tier that answered, and the settings active when it was rendered.
         </HonestNote>
       ) : (
@@ -243,11 +243,11 @@ function HistoryPage() {
                         <p className="display-mid truncate text-sm text-foreground">{e.title}</p>
                         <p className="num truncate text-[11px] text-muted-foreground">
                           {e.artist}
-                          {e.album ? ` — ${e.album}` : ""}
+                          {e.album ? ` - ${e.album}` : ""}
                         </p>
                         <p className="num mt-0.5 truncate text-[9px] uppercase tracking-[0.08em] text-muted-foreground/70">
-                          {new Date(e.playedAt).toLocaleTimeString()} · {e.source}
-                          {e.sourceTier ? ` · ${e.sourceTier}` : ""} · {e.settingsSnapshot.wallSize}px · r
+                          {new Date(e.playedAt).toLocaleTimeString()} / {e.source}
+                          {e.sourceTier ? ` / ${e.sourceTier}` : ""} / {e.settingsSnapshot.wallSize}px / r
                           {e.settingsSnapshot.gainR.toFixed(2)} g{e.settingsSnapshot.gainG.toFixed(2)} b
                           {e.settingsSnapshot.gainB.toFixed(2)}
                         </p>

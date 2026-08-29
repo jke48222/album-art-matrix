@@ -35,7 +35,7 @@ enum LiveActivityManager {
         Task {
             if let a = activity {
                 await a.update(content)
-            } else if playing, title != "—" {
+            } else if playing, title != "-" {
                 _ = try? Activity.request(
                     attributes: WallActivityAttributes(), content: content)
             }

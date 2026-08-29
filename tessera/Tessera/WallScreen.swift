@@ -41,7 +41,7 @@ struct WallScreen: View {
                     confirmed: isOff ? 0.05 : wall.state.brightness,
                     dragging: $dragLight,
                     link: wall.link,
-                    arrivalKey: wall.state.title ?? wall.state.mode,
+                    arrivalKey: wall.arrivalKey,
                     history: worn.runs,
                     tile: { worn.tile($0) },
                     touching: $onPanel,
@@ -84,20 +84,8 @@ struct WallScreen: View {
                 .kerning(3.0)
                 .foregroundStyle(litInk)
             Spacer()
-            Button {
-                Taps.detent()
-                onStudio()
-            } label: {
-                ZStack {
-                    Circle().strokeBorder(Ink.hairline, lineWidth: 1)
-                    GlyphShape(glyph: .make, lineWidth: 1.5)
-                        .frame(width: 15, height: 15)
-                        .foregroundStyle(Ink.dim)
-                }
-                .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Make something for the wall")
+            MiniGlyphButton(glyph: .make,
+                            label: "Make something for the wall") { onStudio() }
 
             Button {
                 Taps.detent()

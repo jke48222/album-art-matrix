@@ -15,8 +15,14 @@
 // times a second and became visible black flashing at 120, because the window
 // is a fixed cost and raising the rate raises how much of the time you are
 // inside one. Until the library exposes a real double buffer with an atomic
-// swap, the honest fix is to map no more often than MAX_MAP_HZ and drop the
-// frames in between: a dropped frame is invisible, a torn one is not.
+// swap, the honest fix is to map no more often than MAX_MAP_HZ and let newer
+// frames replace the ones in between: a skipped frame is invisible, a torn
+// one is not.
+//
+// A rate-limited frame is PARKED, not discarded: the last frame of a burst is
+// usually a transition (black for "off", a pushed doodle, the static sleeve)
+// that the brain will never send again, so it must be mapped once the slot
+// opens even if no further frame ever arrives.
 //
 // If the library grows an explicit swap API, delete the limiter and use it —
 // check example.c in the library repo when it updates.
@@ -27,6 +33,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <poll.h>
 #include <pthread.h>
 #include <time.h>
 #include <sys/stat.h>
@@ -63,9 +70,11 @@ static void *frame_reader(void *arg) {
     scene_info *scene = (scene_info *)arg;
     const size_t frame_bytes = (size_t)scene->width * scene->height * 3;
     const size_t stage_bytes = (size_t)scene->width * scene->height * scene->stride;
-    uint8_t *rgb    = calloc(1, frame_bytes);
-    uint8_t *staged = calloc(1, stage_bytes);
-    if (!rgb || !staged) { perror("calloc"); exit(1); }
+    uint8_t *rgb     = calloc(1, frame_bytes);
+    uint8_t *staged  = calloc(1, stage_bytes);
+    uint8_t *pending = calloc(1, frame_bytes);
+    if (!rgb || !staged || !pending) { perror("calloc"); exit(1); }
+    int have_pending = 0;
 
     const char *path = fifo_path();
     mkfifo(path, 0666); // no-op if it already exists
@@ -83,6 +92,27 @@ static void *frame_reader(void *arg) {
         // a syscall pair per frame and lost every frame written while we were
         // between opens.
         for (;;) {
+            // A parked frame maps the moment its slot opens; until then we
+            // wait on the pipe so a newer frame can replace it instead.
+            if (have_pending) {
+                double wait = (last_map + min_gap) - now_seconds();
+                if (wait <= 0) {
+                    map_frame(scene, pending, staged, frame_bytes);
+                    last_map = now_seconds();
+                    mapped++;
+                    have_pending = 0;
+                } else {
+                    struct pollfd p = { .fd = fd, .events = POLLIN };
+                    int r = poll(&p, 1, (int)(wait * 1000) + 1);
+                    if (r == 0) continue;              // slot opened; map above
+                    if (r < 0) {
+                        if (errno == EINTR) continue;
+                        break;
+                    }
+                    // data waiting: fall through and read the newer frame
+                }
+            }
+
             size_t got = 0;
             int eof = 0;
             while (got < frame_bytes) {
@@ -93,14 +123,29 @@ static void *frame_reader(void *arg) {
                 eof = 1;
                 break;
             }
-            if (eof) break;
-            if (got != frame_bytes) break;             // partial — resync
+            if (eof || got != frame_bytes) {
+                // The writer is gone. If its last frame is still parked it is
+                // a transition nothing will resend — wait out the gap and
+                // show it before going back to waiting for a writer.
+                if (have_pending) {
+                    double wait = (last_map + min_gap) - now_seconds();
+                    if (wait > 0) usleep((useconds_t)(wait * 1e6));
+                    map_frame(scene, pending, staged, frame_bytes);
+                    last_map = now_seconds();
+                    mapped++;
+                    have_pending = 0;
+                }
+                break;
+            }
 
             double t = now_seconds();
             if (t - last_map < min_gap) {              // too soon to map safely
-                dropped++;
+                if (have_pending) dropped++;           // replaced, never shown
+                memcpy(pending, rgb, frame_bytes);
+                have_pending = 1;
                 continue;
             }
+            have_pending = 0;                          // superseded by this one
             last_map = t;
             mapped++;
 

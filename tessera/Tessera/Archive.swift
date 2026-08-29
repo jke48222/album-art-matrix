@@ -162,46 +162,25 @@ final class ArchiveStore {
         // once is not fetched again
         guard let (data, _) = try? await session.data(from: url),
               let src = UIImage(data: data)?.cgImage else { return nil }
-        guard let px = downscale64(src) else { return nil }
+        // Clip.square64 is the app's one image-to-64px path; the local copy
+        // this replaced STRETCHED non-square art where everything else crops.
+        guard let px = Clip.square64(src) else { return nil }
         return EmitterTile.render(px, cell: 4)
-    }
-
-    /// The wall sees 64x64. So does the archive.
-    private static func downscale64(_ src: CGImage) -> [UInt8]? {
-        // The context must own memory that outlives this call, so allocate it
-        // rather than handing CGContext a pointer to a Swift array.
-        let count = 64 * 64 * 4
-        let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
-        raw.initialize(repeating: 0, count: count)
-        defer { raw.deallocate() }
-
-        guard let ctx = CGContext(
-            data: raw, width: 64, height: 64,
-            bitsPerComponent: 8, bytesPerRow: 64 * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        ) else { return nil }
-        ctx.interpolationQuality = .high
-        ctx.draw(src, in: CGRect(x: 0, y: 0, width: 64, height: 64))
-
-        var rgb = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
-            rgb[i * 3] = raw[i * 4]
-            rgb[i * 3 + 1] = raw[i * 4 + 1]
-            rgb[i * 3 + 2] = raw[i * 4 + 2]
-        }
-        return rgb
     }
 }
 
 /// Small shared emitter rasteriser, so a tile anywhere in the app is drawn
 /// with the same rules as the wall.
 enum EmitterTile {
-    static func render(_ px: [UInt8], cell: CGFloat) -> UIImage? {
+    /// duty dims the lit emitters the way the wall's brightness would; the
+    /// unlit lattice stays put. One rasteriser, so the finish thumbnails and
+    /// the archive tiles cannot drift apart again.
+    static func render(_ px: [UInt8], cell: CGFloat, duty: Double = 1) -> UIImage? {
         let side = 64 * cell
         let fmt = UIGraphicsImageRendererFormat.default()
         fmt.scale = 1
         fmt.opaque = true
+        let d = CGFloat(max(0.05, min(1.0, duty)))
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { rctx in
             let ctx = rctx.cgContext
             ctx.setFillColor(UIColor.black.cgColor)
@@ -216,9 +195,9 @@ enum EmitterTile {
                 if px[o] < 8 && px[o + 1] < 8 && px[o + 2] < 8 {
                     ctx.setFillColor(unlit)
                 } else {
-                    ctx.setFillColor(UIColor(red: CGFloat(px[o]) / 255,
-                                             green: CGFloat(px[o + 1]) / 255,
-                                             blue: CGFloat(px[o + 2]) / 255,
+                    ctx.setFillColor(UIColor(red: CGFloat(px[o]) / 255 * d,
+                                             green: CGFloat(px[o + 1]) / 255 * d,
+                                             blue: CGFloat(px[o + 2]) / 255 * d,
                                              alpha: 1).cgColor)
                 }
                 ctx.fillEllipse(in: box)

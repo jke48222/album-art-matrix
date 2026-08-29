@@ -21,8 +21,10 @@ struct WallAttributes: ActivityAttributes {
         var title: String
         var artist: String
         var mode: String
-        /// Where the song is, and when that was true, so the bar can run on
-        /// its own between updates instead of stepping once a minute.
+        /// Where the song is, and when that was true. Every render computes
+        /// the position as of NOW from these; between renders ActivityKit
+        /// self-advances only its timer text (songInterval feeds that), so
+        /// the mark bar steps per update while the clock runs continuously.
         var songAt: Double?
         var songOf: Double?
         var playing: Bool
@@ -32,6 +34,14 @@ struct WallAttributes: ActivityAttributes {
             guard let at = songAt, let of = songOf, of > 1 else { return nil }
             let run = playing ? at + Date().timeIntervalSince(stamped) : at
             return min(1, max(0, run / of))
+        }
+
+        /// The song as a date interval (start when position zero was, end at
+        /// its length), for Text(timerInterval:), which keeps itself moving.
+        var songInterval: ClosedRange<Date>? {
+            guard let at = songAt, let of = songOf, of > 1 else { return nil }
+            let start = stamped.addingTimeInterval(-at)
+            return start...start.addingTimeInterval(of)
         }
 
         /// The colour of a tile, or nil past the end of a short payload.

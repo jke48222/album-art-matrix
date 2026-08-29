@@ -54,7 +54,13 @@ class PiRendererSink(FrameSink):
         if not self._connect():
             return
         try:
-            os.write(self._fd, rgb888)
+            # A frame exceeds PIPE_BUF, so a signal landing mid-write can
+            # return a short count; anything short would shift every later
+            # frame boundary (the protocol has no resync marker) — write all.
+            view = memoryview(rgb888)
+            sent = 0
+            while sent < len(view):
+                sent += os.write(self._fd, view[sent:])
         except (BrokenPipeError, OSError):
             # The renderer restarted. Reconnect on the next frame.
             self._drop()

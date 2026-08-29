@@ -4,7 +4,7 @@
  * From the frame the wall is actually showing, derive:
  *   --amb-1 / --amb-2  two spill colours (bright quarter, and the rest)
  *   --art              the dominant colour, lifted to a usable UI accent
- *   --wall-lit         0..1 — how much light the wall emits at all, so a
+ *   --wall-lit         0..1 - how much light the wall emits at all, so a
  *                      black wall leaves the room genuinely dark
  *
  * Pure functions + one DOM applier. No React.

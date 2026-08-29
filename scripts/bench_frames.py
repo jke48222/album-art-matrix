@@ -30,6 +30,7 @@ from PIL import Image
 from brain.art.disc import DiscAnimator
 from brain.art.effects import Ambient
 from brain.art.pipeline import white_balance
+from brain.control import EFFECTS
 
 GAINS = (1.0, 0.75, 0.55)
 
@@ -65,7 +66,9 @@ def main():
         "cd (spinning disc)",
         lambda: white_balance(disc.frame_at(time.monotonic()), GAINS).tobytes(),
     )
-    for effect in ("rainbow", "gradient", "breathe", "pulse", "solid"):
+    # every effect the control API offers, so the recommendation can never
+    # quietly exclude the slowest one
+    for effect in EFFECTS:
         amb = Ambient(size, effect, "#4060ff", "#ff2080", 1.0)
         rates[effect] = bench(
             f"ambient {effect}",

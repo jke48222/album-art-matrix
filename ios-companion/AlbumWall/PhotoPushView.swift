@@ -40,8 +40,8 @@ struct PhotoPushView: View {
             }
             .padding(.top, 8)
 
-            WallPanel(captionLeft: image == nil ? "PREVIEW" : "PINCH · DRAG TO FRAME",
-                      captionRight: image == nil ? "PICK SOMETHING" : "64×64 LIVE") {
+            WallPanel(captionLeft: image == nil ? "PREVIEW" : "PINCH AND DRAG TO FRAME",
+                      captionRight: image == nil ? "PICK SOMETHING" : "64x64 LIVE") {
                 GeometryReader { geo in
                     let side = geo.size.width
                     ZStack {

@@ -121,36 +121,6 @@ final class Canvas64 {
         load(out)
     }
 
-    /// A photo becomes 4,096 tiles immediately, on this same canvas, so it can
-    /// be drawn on afterwards.
-    func load(image: UIImage) {
-        guard let cg = image.cgImage else { return }
-        let count = 64 * 64 * 4
-        let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
-        raw.initialize(repeating: 0, count: count)
-        defer { raw.deallocate() }
-        guard let ctx = CGContext(
-            data: raw, width: 64, height: 64, bitsPerComponent: 8, bytesPerRow: 64 * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        ) else { return }
-        ctx.interpolationQuality = .high
-
-        // fill the square, centre-cropped: the wall is square and the photo is not
-        let w = CGFloat(cg.width), h = CGFloat(cg.height)
-        let side = min(w, h)
-        let scale = 64 / side
-        let dw = w * scale, dh = h * scale
-        ctx.draw(cg, in: CGRect(x: (64 - dw) / 2, y: (64 - dh) / 2, width: dw, height: dh))
-
-        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
-            out[i * 3] = raw[i * 4]
-            out[i * 3 + 1] = raw[i * 4 + 1]
-            out[i * 3 + 2] = raw[i * 4 + 2]
-        }
-        load(out)
-    }
 }
 
 // MARK: - Kept work
@@ -220,6 +190,11 @@ struct StudioScreen: View {
     @State private var thick = false
     @State private var last: (Int, Int)? = nil
     @State private var media: PhotosPickerItem? = nil
+    // Held in @State so it survives body re-evaluation: built inline in
+    // onReceive, every drag stroke replaced the publisher and restarted its
+    // interval, so the clip preview froze for as long as a finger moved.
+    @State private var clipTimer = Timer.publish(
+        every: 1 / Clip.fps, on: .main, in: .common).autoconnect()
     /// A clip loaded from a video: previewed by playing on the canvas, sent
     /// whole. Empty for a still.
     @State private var clip: [[UInt8]] = []
@@ -316,7 +291,7 @@ struct StudioScreen: View {
             }
         }
         // Play the clip on the canvas so the preview is the thing itself.
-        .onReceive(Timer.publish(every: 1 / Clip.fps, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(clipTimer) { _ in
             guard clip.count > 1, !writing else { return }
             clipFrame = (clipFrame + 1) % clip.count
             canvas.load(clip[clipFrame])

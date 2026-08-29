@@ -26,6 +26,15 @@ class Ambient:
         self.c2 = np.array(_hex_rgb(color2), dtype=np.float32)
         yy, xx = np.mgrid[0:size, 0:size].astype(np.float32) / (size - 1)
         self._xx, self._yy = xx, yy
+        # Per-draft caches: a plaid/weave draft is fixed for ~25 s, so its
+        # palette, sett, and index grids are built once, not per frame.
+        self._plaid_cache = {}
+        self._cloth_cache = {}
+        self._weave_cache = {}
+        # 256-entry hue table; constant, so never rebuilt in the frame loop
+        self._rainbow_lut = np.array(
+            [colorsys.hsv_to_rgb(h, 0.9, 1.0) for h in np.linspace(0, 1, 256)],
+            dtype=np.float32) * 255.0
 
     def frame_at(self, t: float) -> Image.Image:
         t *= self.speed
@@ -94,30 +103,41 @@ class Ambient:
         return cloth
 
     def _plaid_draft(self, draft):
-        rng = np.random.default_rng(draft * 104729)
-        pal = np.asarray(self._weave_palette(rng), dtype=np.float32)
-        return pal, self._sett(rng, len(pal), self.size)
+        got = self._plaid_cache.get(draft)
+        if got is None:
+            rng = np.random.default_rng(draft * 104729)
+            pal = np.asarray(self._weave_palette(rng), dtype=np.float32)
+            got = (pal, self._sett(rng, len(pal), self.size))
+            self._plaid_cache[draft] = got
+            while len(self._plaid_cache) > 4:
+                self._plaid_cache.pop(min(self._plaid_cache))
+        return got
 
     def _plaid_warp(self, draft, n):
         pal, sett = self._plaid_draft(draft)
         return pal[sett][None, :, :].repeat(n, axis=0)
 
     def _plaid_cloth(self, draft, t, n):
-        pal, sett = self._plaid_draft(draft)
-        y, x = np.mgrid[0:n, 0:n]
-        warp_i, weft_i = sett[x], sett[y]
+        got = self._cloth_cache.get(draft)
+        if got is None:
+            pal, sett = self._plaid_draft(draft)
+            y, x = np.mgrid[0:n, 0:n]
+            warp_i, weft_i = sett[x], sett[y]
+            # Where two different threads cross the eye reads a blend, which
+            # is where tartan gets its extra colours without extra thread.
+            mixed = (pal[warp_i] + pal[weft_i]) / 2
+            crossing = (warp_i != weft_i)[..., None]
+            got = (x + y, pal[warp_i], pal[weft_i], mixed, crossing)
+            self._cloth_cache[draft] = got
+            while len(self._cloth_cache) > 4:
+                self._cloth_cache.pop(min(self._cloth_cache))
+        xy, warp_c, weft_c, mixed, crossing = got
 
         # The twill travels, slowly. This is the whole of the motion once the
         # cloth is on: a diagonal moving under the eye, not a pattern change.
-        offset = int(t * 1.5)
-        over = ((x + y + offset) % 4) < 2
-        out = pal[np.where(over, warp_i, weft_i)]
-
-        # Where two different threads cross the eye reads a blend, which is
-        # where tartan gets its extra colours without extra thread.
-        mixed = (pal[warp_i] + pal[weft_i]) / 2
-        crossing = warp_i != weft_i
-        return np.where(crossing[..., None], out * 0.55 + mixed * 0.45, out)
+        over = (((xy + int(t * 1.5)) % 4) < 2)[..., None]
+        out = np.where(over, warp_c, weft_c)
+        return np.where(crossing, out * 0.55 + mixed * 0.45, out)
 
     # ---- weave --------------------------------------------------------
     #
@@ -148,6 +168,10 @@ class Ambient:
         return cloth
 
     def _weave_field(self, draft, t, n):
+        got = self._weave_cache.get(draft)
+        if got is not None:
+            pal, idx = got
+            return pal[(idx + int(t * 0.6)) % len(pal)]
         rng = np.random.default_rng(draft * 7919)
         pal = np.asarray(self._weave_palette(rng), dtype=np.float32)
         y, x = np.mgrid[0:n, 0:n]
@@ -187,6 +211,9 @@ class Ambient:
         idx[:, :border] = deep
         idx[:, n - border:] = deep
 
+        self._weave_cache[draft] = (pal, idx)
+        while len(self._weave_cache) > 4:
+            self._weave_cache.pop(min(self._weave_cache))
         return pal[(idx + int(t * 0.6)) % len(pal)]
 
     # ---- deco ---------------------------------------------------------
@@ -301,22 +328,22 @@ class Ambient:
     def _breathe(self, t):
         # sine between 25% and 100% over ~5s — calm, not a strobe
         k = 0.625 + 0.375 * np.sin(t * 2 * np.pi / 5.0)
-        return self.c1[None, None, :] * k
+        return np.broadcast_to(self.c1 * k,
+                               (self.size, self.size, 3)).copy()
 
     def _pulse(self, t):
         # sharp attack, exponential decay — one beat per second at speed 1.0
         # (real beat-grid sync lands with S4; until then speed IS the tempo)
         phase = t % 1.0
         k = 0.2 + 0.8 * np.exp(-4.0 * phase)
-        return self.c1[None, None, :] * k
+        return np.broadcast_to(self.c1 * k,
+                               (self.size, self.size, 3)).copy()
 
     def _rainbow(self, t):
         # horizontal hue sweep drifting right, full cycle ~12s
         hue = (self._xx + t / 12.0) % 1.0
         flat = hue.ravel()
-        rgb = np.array([colorsys.hsv_to_rgb(h, 0.9, 1.0) for h in
-                        np.linspace(0, 1, 256)], dtype=np.float32) * 255.0
-        return rgb[(flat * 255).astype(np.uint8)].reshape(
+        return self._rainbow_lut[(flat * 255).astype(np.uint8)].reshape(
             self.size, self.size, 3)
 
     def _gradient(self, t):

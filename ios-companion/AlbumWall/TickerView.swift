@@ -37,7 +37,7 @@ struct TickerView: View {
 
                 // live preview — the honest 64px scroll
                 WallPanel(captionLeft: "PREVIEW",
-                          captionRight: display.isEmpty ? "TYPE SOMETHING" : "64×64 LIVE") {
+                          captionRight: display.isEmpty ? "TYPE SOMETHING" : "64x64 LIVE") {
                     if display.isEmpty {
                         Color.clear
                     } else {
@@ -86,7 +86,7 @@ struct TickerView: View {
                 }
 
                 SliderRow(label: "SPEED",
-                          valueText: String(format: "%.1f×", speed),
+                          valueText: String(format: "%.1fx", speed),
                           value: $speed, range: 0.3...3.0) { _ in }
 
                 HStack {
@@ -127,10 +127,5 @@ struct TickerView: View {
 
     private var display: String { PixelFont.normalize(text) }
 
-    private var rgbTuple: (UInt8, UInt8, UInt8) {
-        let c = UIColor(color)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        c.getRed(&r, green: &g, blue: &b, alpha: &a)
-        return (UInt8(r * 255), UInt8(g * 255), UInt8(b * 255))
-    }
+    private var rgbTuple: (UInt8, UInt8, UInt8) { color.rgb888 }
 }

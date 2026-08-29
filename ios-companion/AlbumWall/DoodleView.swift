@@ -121,7 +121,7 @@ struct DoodleView: View {
                     }
                 }
                 if !wall.reachable {
-                    HStack { Spacer(); MonoTag("NO LINK — DRAWING STAYS HERE"); Spacer() }
+                    HStack { Spacer(); MonoTag("NO LINK, DRAWING STAYS HERE"); Spacer() }
                 }
             }
             .padding(.horizontal, 26)
@@ -222,10 +222,7 @@ struct DoodleView: View {
 
     private func rgb() -> (UInt8, UInt8, UInt8) {
         if tool == "erase" { return (0, 0, 0) }
-        let c = UIColor(color)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        c.getRed(&r, green: &g, blue: &b, alpha: &a)
-        return (UInt8(r * 255), UInt8(g * 255), UInt8(b * 255))
+        return color.rgb888
     }
 
     private func paint(at p: CGPoint, canvasSide: CGFloat) {

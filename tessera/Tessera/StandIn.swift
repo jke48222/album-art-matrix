@@ -26,6 +26,11 @@ final class StandIn {
     private var art: [UInt8]?          // 64x64x3 of whatever is playing
     private var artColors: [String] = []
     private var lastArtKey = ""
+    private var pushed: [UInt8]? = nil                    // a frame the user put up
+    private var clip: (frames: [[UInt8]], fps: Double)? = nil
+    private var clipStarted = Date()
+    private var sleepUntil: Date? = nil
+    private var sleepTotal: TimeInterval = 0
 
     init() {
         state.mode = "art"
@@ -34,6 +39,8 @@ final class StandIn {
         state.matchArt = true
     }
 
+    /// Every key send() can carry. Dropping one here made the control snap
+    /// back after its success haptic, which is worse than not having it.
     func apply(_ patch: [String: Any]) {
         if let v = patch["mode"] as? String { state.mode = v }
         if let v = patch["brightness"] as? Double { state.brightness = v }
@@ -43,6 +50,35 @@ final class StandIn {
         if let v = patch["match_art"] as? Bool { state.matchArt = v }
         if let v = patch["color"] as? String { state.color = v }
         if let v = patch["color2"] as? String { state.color2 = v }
+        if let v = patch["ticker_text"] as? String { state.tickerText = v }
+        if let v = patch["ticker_loop"] as? Bool { state.tickerLoop = v }
+        if let v = patch["clock_24h"] as? Bool { state.clock24h = v }
+        if let v = patch["idle"] as? String { state.idle = v }
+        if let v = (patch["sleep_fade_min"] as? NSNumber)?.doubleValue {
+            if v > 0 {
+                sleepTotal = v * 60
+                sleepUntil = Date().addingTimeInterval(sleepTotal)
+            } else {
+                sleepUntil = nil
+                state.sleepRemaining = nil
+            }
+        }
+    }
+
+    /// A pushed frame is content, same as on the real wall: hold it in mode
+    /// "frame" until something else is chosen, never let the art tick
+    /// overwrite it.
+    func push(frame px: [UInt8]) {
+        pushed = px
+        state.mode = "frame"
+        state.shownSeq &+= 1
+    }
+
+    func push(clip frames: [[UInt8]], fps: Double) {
+        clip = (frames, min(24, max(1, fps)))
+        clipStarted = Date()
+        state.mode = "clip"
+        state.shownSeq &+= 1
     }
 
     // MARK: - Now playing, from this phone
@@ -72,6 +108,7 @@ final class StandIn {
             art = px
             artColors = Self.chroma(px)
             state.artColors = artColors
+            state.shownSeq &+= 1        // a new sleeve is an arrival here too
             // With no wall there is no journal, so the app keeps one. This is
             // what makes the Archive, the counts and the panel's backwards
             // drag all work before anything is built.
@@ -82,8 +119,13 @@ final class StandIn {
         }
     }
 
-    static func requestMusicAccess() {
-        MPMediaLibrary.requestAuthorization { _ in }
+    /// The completion matters: the caller usually wants to start the push the
+    /// moment access lands, and firing it before the grant resolves leaves the
+    /// push dead until the next tap.
+    static func requestMusicAccess(then done: @escaping () -> Void = {}) {
+        MPMediaLibrary.requestAuthorization { _ in
+            DispatchQueue.main.async { done() }
+        }
     }
 
     /// Something to look at when there is no track and no library access: a
@@ -116,9 +158,108 @@ final class StandIn {
         case "off":    px = [UInt8](repeating: 0, count: 64 * 64 * 3)
         case "cd":     px = disc(t)
         case "ambient": px = ambient(t)
+        case "frame":  px = pushed ?? art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
+        case "clip":
+            if let c = clip, !c.frames.isEmpty {
+                let i = Int(Date().timeIntervalSince(clipStarted) * c.fps)
+                px = c.frames[i % c.frames.count]
+            } else {
+                px = art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
+            }
+        case "ticker": px = ticker(t)
+        case "clock":  px = clock()
         default:       px = art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         }
+
+        // The sleep fade, same shape as the wall's: dim toward off across the
+        // window, then off. Brightness itself stays where the finger left it.
+        if let until = sleepUntil {
+            let left = until.timeIntervalSinceNow
+            if left <= 0 {
+                sleepUntil = nil
+                state.sleepRemaining = nil
+                state.mode = "off"
+                px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+            } else {
+                state.sleepRemaining = Int(left)
+                let fade = sleepTotal > 0 ? min(1, max(0, left / sleepTotal)) : 1
+                for i in px.indices { px[i] = UInt8(Double(px[i]) * fade) }
+            }
+        }
         return Data(px)
+    }
+
+    // MARK: - Ticker and clock, the wall's text modes at phone cost
+
+    private func inkBytes() -> (UInt8, UInt8, UInt8) {
+        let hex = (state.matchArt ? artColors.first : nil) ?? state.color
+        guard let c = rgb(hex) else { return (232, 176, 75) }
+        return (UInt8(c.0 * 255), UInt8(c.1 * 255), UInt8(c.2 * 255))
+    }
+
+    private func stamp(_ text: String, into px: inout [UInt8], x: Int, y: Int,
+                       rgb ink: (UInt8, UInt8, UInt8), scale: Int) {
+        var cx = x
+        for ch in text {
+            let rows = PixelFont.glyph(ch)
+            for (ry, mask) in rows.enumerated() {
+                for rx in 0..<5 where mask & (1 << (4 - rx)) != 0 {
+                    for sy in 0..<scale {
+                        for sx in 0..<scale {
+                            let xx = cx + rx * scale + sx
+                            let yy = y + ry * scale + sy
+                            guard (0..<64).contains(xx), (0..<64).contains(yy) else { continue }
+                            let o = (yy * 64 + xx) * 3
+                            px[o] = ink.0; px[o + 1] = ink.1; px[o + 2] = ink.2
+                        }
+                    }
+                }
+            }
+            cx += PixelFont.advance * scale
+        }
+    }
+
+    private func ticker(_ t: Double) -> [UInt8] {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        let text = PixelFont.normalize(state.tickerText.isEmpty ? "?" : state.tickerText)
+        let w = PixelFont.textWidth(text, scale: 2)
+        let travel = w + 64 + 4
+        var off = Int(t * 18)                       // the wall's px/s at speed 1
+        off = state.tickerLoop ? off % travel : min(off, travel)
+        stamp(text, into: &px, x: 64 - off, y: (64 - 14) / 2, rgb: inkBytes(), scale: 2)
+        return px
+    }
+
+    private func clock() -> [UInt8] {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        let now = Calendar.current.dateComponents([.hour, .minute, .second], from: Date())
+        var hour = now.hour ?? 0
+        var suffix: String? = nil
+        if !state.clock24h {
+            suffix = hour < 12 ? "AM" : "PM"
+            hour = hour % 12 == 0 ? 12 : hour % 12
+        }
+        let hh = String(format: "%02d", hour)
+        let mm = String(format: "%02d", now.minute ?? 0)
+        let ink = inkBytes()
+        let digitsW = PixelFont.textWidth(hh, scale: 2)
+        let x = (64 - (digitsW * 2 + 16)) / 2
+        let y = (64 - 14) / 2 - (suffix != nil ? 4 : 0)
+        stamp(hh, into: &px, x: x, y: y, rgb: ink, scale: 2)
+        if (now.second ?? 0) % 2 == 0 {             // the blinking colon
+            let cx = x + digitsW + 6, cy = y + 4
+            for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1),
+                             (0, 6), (1, 6), (0, 7), (1, 7)] {
+                let o = ((cy + dy) * 64 + cx + dx) * 3
+                px[o] = ink.0; px[o + 1] = ink.1; px[o + 2] = ink.2
+            }
+        }
+        stamp(mm, into: &px, x: x + digitsW + 16, y: y, rgb: ink, scale: 2)
+        if let suffix {
+            let sw = PixelFont.textWidth(suffix, scale: 1)
+            stamp(suffix, into: &px, x: (64 - sw) / 2, y: y + 19, rgb: ink, scale: 1)
+        }
+        return px
     }
 
     /// The sleeve as a record: circular crop, spindle hole, grooves catching a

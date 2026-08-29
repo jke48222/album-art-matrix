@@ -13,13 +13,13 @@ import type { WbProfile } from "@/lib/types";
 export const Route = createFileRoute("/profiles")({
   head: () => ({
     meta: [
-      { title: "White balance profiles — Album Art Matrix" },
+      { title: "White balance profiles - Album Art Matrix" },
       {
         name: "description",
         content:
           "Named, measurable white balance profiles for RGB LED panels, with a measurement procedure and honest guess badges.",
       },
-      { property: "og:title", content: "White balance profiles — Album Art Matrix" },
+      { property: "og:title", content: "White balance profiles - Album Art Matrix" },
       {
         property: "og:description",
         content: "Save measured LED panel white balance profiles, or keep the published typical values badged as a guess.",
@@ -101,16 +101,19 @@ function ProfilesPage() {
                     <span className="display-mid text-sm text-foreground">{p.name}</span>
                     {p.isMeasured ? <MeasuredBadge /> : <GuessBadge />}
                     <span className="num ml-auto text-xs text-muted-foreground">
-                      R {p.gainR.toFixed(2)} · G {p.gainG.toFixed(2)} · B {p.gainB.toFixed(2)}
+                      R {p.gainR.toFixed(2)} / G {p.gainG.toFixed(2)} / B {p.gainB.toFixed(2)}
                     </span>
                   </div>
                   <GainBars r={p.gainR} g={p.gainG} b={p.gainB} />
                   <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{p.notes}</p>
                   <p className="num mt-1.5 text-[11px] text-muted-foreground">
                     Δ vs defaults: R {delta[0] >= 0 ? "+" : ""}
-                    {delta[0].toFixed(2)} · G {delta[1] >= 0 ? "+" : ""}
-                    {delta[1].toFixed(2)} · B {delta[2] >= 0 ? "+" : ""}
-                    {delta[2].toFixed(2)} · created {new Date(p.createdAt).toLocaleDateString()}
+                    {delta[0].toFixed(2)} / G {delta[1] >= 0 ? "+" : ""}
+                    {delta[1].toFixed(2)} / B {delta[2] >= 0 ? "+" : ""}
+                    {/* ISO date, not toLocaleDateString: this renders during
+                        SSR, and a locale/timezone-dependent string hydrates
+                        differently on the client */}
+                    {delta[2].toFixed(2)}, created {String(p.createdAt).slice(0, 10)}
                   </p>
                   <div className="mt-3 flex gap-2">
                     <Button size="sm" variant={active ? "secondary" : "default"} onClick={() => setActiveProfile(p.id)}>
@@ -164,9 +167,9 @@ function ProfilesPage() {
                 ))}
               </div>
               <div className="placard-sunk p-3.5">
-                <p className="eyebrow">corrective gains · largest normalised to 1.00</p>
+                <p className="eyebrow">corrective gains / largest normalised to 1.00</p>
                 <p className="num mt-1.5 text-sm text-[var(--art)]">
-                  R {computed[0].toFixed(2)} · G {computed[1].toFixed(2)} · B {computed[2].toFixed(2)}
+                  R {computed[0].toFixed(2)} / G {computed[1].toFixed(2)} / B {computed[2].toFixed(2)}
                 </p>
                 <GainBars r={computed[0]} g={computed[1]} b={computed[2]} />
               </div>

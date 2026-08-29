@@ -165,6 +165,6 @@ export function makeComparePng(
   ctx.fillStyle = "#cfcfcf";
   ctx.font = "16px monospace";
   ctx.fillText("without white balance", 2, 19);
-  ctx.fillText("with white balance (looks warm on a monitor — expected)", w + gap + 2, 19);
+  ctx.fillText("with white balance (looks warm on a monitor - expected)", w + gap + 2, 19);
   return c;
 }

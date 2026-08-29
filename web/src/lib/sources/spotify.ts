@@ -1,5 +1,5 @@
 import type { NowPlaying, NowPlayingSource, SourceConfig } from "../types";
-import { status, TransportError } from "./base";
+import { fetchJson, status, TransportError } from "./base";
 
 /**
  * Authorization Code with PKCE. No client secret exists in this app, ever.
@@ -62,8 +62,10 @@ export async function beginSpotifyAuth(clientId: string) {
 
 export async function completeSpotifyAuth(clientId: string, code: string) {
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
-  if (!verifier) throw new Error("PKCE verifier missing — start the connection again.");
-  const res = await fetch(TOKEN_URL, {
+  if (!verifier) throw new Error("PKCE verifier missing - start the connection again.");
+  // fetchJson, like every other adapter: a hung token endpoint must time out
+  // instead of stalling the poll loop forever.
+  const res = await fetchJson(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -73,9 +75,10 @@ export async function completeSpotifyAuth(clientId: string, code: string) {
       redirect_uri: `${window.location.origin}/sources`,
       code_verifier: verifier,
     }),
-  });
-  const json = (await res.json()) as Record<string, unknown>;
-  if (!res.ok) throw new Error(String(json.error_description ?? json.error ?? "Token exchange failed"));
+  }, 10_000);
+  const json = (res.body ?? {}) as Record<string, unknown>;
+  if (res.status < 200 || res.status >= 300)
+    throw new Error(String(json.error_description ?? json.error ?? "Token exchange failed"));
   const tokens: SpotifyTokens = {
     accessToken: String(json.access_token),
     refreshToken: String(json.refresh_token ?? ""),
@@ -83,11 +86,11 @@ export async function completeSpotifyAuth(clientId: string, code: string) {
   };
   writeTokens(tokens);
   try {
-    const me = await fetch("https://api.spotify.com/v1/me", {
+    const me = await fetchJson("https://api.spotify.com/v1/me", {
       headers: { Authorization: `Bearer ${tokens.accessToken}` },
     });
-    if (me.ok) {
-      const p = (await me.json()) as Record<string, unknown>;
+    if (me.status === 200) {
+      const p = (me.body ?? {}) as Record<string, unknown>;
       tokens.displayName = String(p.display_name ?? p.id ?? "");
       writeTokens(tokens);
     }
@@ -99,7 +102,7 @@ export async function completeSpotifyAuth(clientId: string, code: string) {
 }
 
 async function refresh(clientId: string, tokens: SpotifyTokens): Promise<SpotifyTokens> {
-  const res = await fetch(TOKEN_URL, {
+  const res = await fetchJson(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -107,9 +110,10 @@ async function refresh(clientId: string, tokens: SpotifyTokens): Promise<Spotify
       grant_type: "refresh_token",
       refresh_token: tokens.refreshToken,
     }),
-  });
-  const json = (await res.json()) as Record<string, unknown>;
-  if (!res.ok) throw new TransportError("Spotify refresh failed — reconnect the account.", "http", res.status);
+  }, 10_000);
+  const json = (res.body ?? {}) as Record<string, unknown>;
+  if (res.status < 200 || res.status >= 300)
+    throw new TransportError("Spotify refresh failed - reconnect the account.", "http", res.status);
   const next: SpotifyTokens = {
     ...tokens,
     accessToken: String(json.access_token),
@@ -142,7 +146,7 @@ export const spotifySource: NowPlayingSource = {
     }
 
     const call = (t: SpotifyTokens) =>
-      fetch("https://api.spotify.com/v1/me/player/currently-playing", {
+      fetchJson("https://api.spotify.com/v1/me/player/currently-playing", {
         headers: { Authorization: `Bearer ${t.accessToken}` },
       });
 
@@ -156,9 +160,10 @@ export const spotifySource: NowPlayingSource = {
       throw new TransportError(`Rate limited by Spotify. Retry-After: ${wait} s.`, "http", 429);
     }
     if (res.status === 204) return null;
-    if (!res.ok) throw new TransportError(`Spotify returned HTTP ${res.status}.`, "http", res.status);
+    if (res.status < 200 || res.status >= 300)
+      throw new TransportError(`Spotify returned HTTP ${res.status}.`, "http", res.status);
 
-    const body = (await res.json()) as any;
+    const body = res.body as any;
     const item = body?.item;
     if (!item) return null;
     const images: { url: string; width: number }[] = item.album?.images ?? [];

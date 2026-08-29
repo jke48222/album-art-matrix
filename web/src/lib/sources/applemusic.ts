@@ -3,14 +3,11 @@ import { fetchJson, status, TransportError } from "./base";
 
 export const DEFAULT_BRIDGE_URL = "http://localhost:8787/nowplaying";
 
-/** Which tier of the Mac-side reporter answered. */
+/** Which side of the Mac reporter answered - the values it actually sends
+ * (scripts/mac_reporter.py): a live phone push, or the Mac tier ladder. */
 export const TIERS: Record<string, string> = {
-  "0": "companion state file",
-  "1": "Music.app (AppleScript)",
-  "2": "MusicKit account query",
-  companion: "companion state file",
-  music: "Music.app (AppleScript)",
-  musickit: "MusicKit account query",
+  "iphone push": "iPhone push (live from the phone)",
+  "mac tiers": "Mac tiers (state file, Music.app, MusicKit)",
 };
 
 function tierLabel(v: unknown): string {

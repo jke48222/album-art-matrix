@@ -19,13 +19,13 @@ import type { IdleBehaviour, NowPlaying, PipelineResult, ViewMode } from "@/lib/
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Album Art Matrix — the wall" },
+      { title: "Album Art Matrix - the wall" },
       {
         name: "description",
         content:
           "Whatever is playing, downscaled with Lanczos-3, sharpened, white balanced in linear light, and rendered as a 3x3 wall of 64x64 HUB75 P2.5 LED panels.",
       },
-      { property: "og:title", content: "Album Art Matrix — the wall" },
+      { property: "og:title", content: "Album Art Matrix - the wall" },
       {
         property: "og:description",
         content: "A phone remote and simulator for a nine-panel RGB LED album art wall.",
@@ -68,6 +68,9 @@ function WallPage() {
   const lastLogged = useRef<string | null>(null);
   const lastGood = useRef<PipelineResult | null>(null);
   const resultFor = useRef<string | null>(null); // which trackId the current result renders
+  // what the current result was rendered FROM, so a same-album track change
+  // (same artUrl) can claim the existing frame instead of being skipped
+  const rendered = useRef<{ url: string; proc: unknown } | null>(null);
 
   useEffect(() => {
     const raw = sessionStorage.getItem("aam.rerender");
@@ -104,6 +107,7 @@ function WallPage() {
   // Test pattern takes over the wall until dismissed.
   useEffect(() => {
     if (!pattern) return;
+    rendered.current = null; // the art frame is gone; re-render it after
     void process(makePattern(pattern));
   }, [pattern, process]);
 
@@ -117,11 +121,21 @@ function WallPage() {
     }
     let cancelled = false;
     const forTrack = track?.trackId ?? null;
+    // Album playback: the next track carries the SAME artUrl, so the frame
+    // on the wall is already right. Claim it for this track and skip the
+    // recompute - before this, the effect never re-ran (it was keyed on
+    // artUrl alone), resultFor stayed on the previous track, and history
+    // silently skipped every later track of an album.
+    if (rendered.current?.url === url && rendered.current?.proc === process) {
+      resultFor.current = forTrack;
+      return;
+    }
     setArtError(null);
     loadArt(url)
       .then(async (img) => {
         if (cancelled) return;
         await process(img);
+        rendered.current = { url, proc: process };
         resultFor.current = forTrack;
       })
       .catch((e: unknown) => {
@@ -136,7 +150,7 @@ function WallPage() {
     return () => {
       cancelled = true;
     };
-  }, [track?.artUrl, pattern, process]);
+  }, [track?.trackId, track?.artUrl, pattern, process]);
 
   // Idle drift: one generated gradient through the real pipeline, when chosen.
   useEffect(() => {
@@ -228,11 +242,14 @@ function WallPage() {
       let res: Response;
       if (settings.pushFormat === "brain") {
         if (result.size !== 64) {
-          toast.error("The Pi brain takes 64×64 frames only. Set the wall to 1 panel to push.");
+          toast.error("The Pi brain takes 64x64 frames only. Set the wall to 1 panel to push.");
           return;
         }
+        // The brain white-balances /frame pixels itself, so it must get the
+        // UNbalanced buffer - sending `balanced` applied the gains twice and
+        // landed over-warm and dim on the wall.
         let bin = "";
-        for (let i = 0; i < result.balanced.length; i++) bin += String.fromCharCode(result.balanced[i]);
+        for (let i = 0; i < result.unbalanced.length; i++) bin += String.fromCharCode(result.unbalanced[i]);
         res = await fetch(settings.pushEndpoint, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -246,7 +263,7 @@ function WallPage() {
         });
       }
       if (!res.ok) throw new Error(`wall replied ${res.status}`);
-      toast.success(`Frame accepted by the wall (${result.size}×${result.size}).`);
+      toast.success(`Frame accepted by the wall (${result.size}x${result.size}).`);
     } catch (e) {
       toast.error(`Frame not delivered: ${e instanceof Error ? e.message : String(e)}.`);
     }
@@ -256,7 +273,7 @@ function WallPage() {
     if (!result) return;
     const blob = new Blob([new Uint8Array(result.balanced)], { type: "application/octet-stream" });
     download(blob, `frame-${result.size}x${result.size}.rgb888.bin`);
-    toast.success(`${result.balanced.length.toLocaleString()} bytes — exactly what the renderer eats.`);
+    toast.success(`${result.balanced.length.toLocaleString()} bytes, exactly what the renderer eats.`);
   };
 
   const idleLabel = {
@@ -373,7 +390,7 @@ function WallPage() {
           {pattern && (
             <div className="hairline-t mt-4 pt-3">
               <p className="num text-[10px] uppercase tracking-[0.12em] text-warning">
-                test pattern on the wall &middot; {PATTERNS.find((p) => p.id === pattern)?.label}
+                test pattern on the wall / {PATTERNS.find((p) => p.id === pattern)?.label}
               </p>
             </div>
           )}
@@ -385,7 +402,7 @@ function WallPage() {
           {(artError || state.lastError) && (
             <div className="mt-4 space-y-2">
               {artError && <HonestNote tone="warn">{artError}</HonestNote>}
-              {state.lastError && <HonestNote tone="warn">Last source error — {state.lastError}</HonestNote>}
+              {state.lastError && <HonestNote tone="warn">Last source error - {state.lastError}</HonestNote>}
             </div>
           )}
         </div>
@@ -431,16 +448,16 @@ function WallPage() {
             <Readout label="profile" value={activeProfile.name.toLowerCase()} />
             <Readout
               label="gains"
-              value={`R ${gainsUsed[0].toFixed(2)} · G ${gainsUsed[1].toFixed(2)} · B ${gainsUsed[2].toFixed(2)}`}
+              value={`R ${gainsUsed[0].toFixed(2)} / G ${gainsUsed[1].toFixed(2)} / B ${gainsUsed[2].toFixed(2)}`}
               tone={activeProfile.isMeasured || !settings.applyWhiteBalance ? undefined : "warn"}
             />
             {power && (
               <>
-                <Readout label="frame draw" value={`${power.amps.toFixed(1)} A · ${power.watts.toFixed(0)} W model`} />
+                <Readout label="frame draw" value={`${power.amps.toFixed(1)} A / ${power.watts.toFixed(0)} W model`} />
                 <Readout label="duty" value={`${(power.averageLevel * 100).toFixed(1)}%`} />
               </>
             )}
-            <Readout label="panel" value={`${settings.wallSize}×${settings.wallSize} · ${(settings.wallSize / 64) ** 2}× p2.5`} />
+            <Readout label="panel" value={`${settings.wallSize}x${settings.wallSize} / ${(settings.wallSize / 64) ** 2}x p2.5`} />
           </div>
 
           <div className="hairline-t pt-3">
@@ -544,7 +561,7 @@ function WallPage() {
               download(await canvasToBlob(makeScaledPng(result.balanced, result.size, 4)), `wall-${result.size}-4x.png`);
             }}
           >
-            png 4×
+            png 4x
           </ExportBtn>
           <ExportBtn
             disabled={!result}
@@ -624,7 +641,7 @@ function NowPlayingPlacard({
       <h1 className="display-mid mt-2 line-clamp-2 text-2xl leading-tight text-foreground">{track.title}</h1>
       <p className="num mt-1 truncate text-xs text-muted-foreground">
         {track.artist}
-        {track.album ? ` — ${track.album}` : ""}
+        {track.album ? ` - ${track.album}` : ""}
       </p>
 
       <div className="mt-auto pt-5">
@@ -634,8 +651,8 @@ function NowPlayingPlacard({
               <span className="absolute inset-y-0 left-0 -my-px h-[3px] bg-[var(--art)]" style={{ width: `${frac * 100}%` }} />
             </div>
             <div className="num mt-1.5 flex justify-between text-[9px] tracking-[0.08em] text-muted-foreground">
-              <span>{elapsed != null ? fmtMs(elapsed) : "–"}</span>
-              <span>{track.durationMs ? fmtMs(track.durationMs) : "–"}</span>
+              <span>{elapsed != null ? fmtMs(elapsed) : "-"}</span>
+              <span>{track.durationMs ? fmtMs(track.durationMs) : "-"}</span>
             </div>
           </div>
         ) : (
@@ -643,9 +660,9 @@ function NowPlayingPlacard({
         )}
         <p className="num mt-2 text-[9px] uppercase tracking-[0.1em] text-muted-foreground">
           {answeredBy ?? "override"}
-          {track.tier ? ` · ${track.tier}` : ""}
-          {lastPollAt ? ` · polled ${new Date(lastPollAt).toLocaleTimeString()}` : ""}
-          {pipelineMs != null ? ` · pipeline ${pipelineMs.toFixed(0)} ms` : ""}
+          {track.tier ? ` / ${track.tier}` : ""}
+          {lastPollAt ? ` / polled ${new Date(lastPollAt).toLocaleTimeString()}` : ""}
+          {pipelineMs != null ? ` / pipeline ${pipelineMs.toFixed(0)} ms` : ""}
         </p>
       </div>
     </div>

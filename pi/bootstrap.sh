@@ -49,8 +49,12 @@ cd "$HOME/album-art-matrix/renderer"
 make
 
 echo ">>> systemd units (installed but not enabled, enable once it all works)"
-sudo cp "$HOME/album-art-matrix/pi/album-art-renderer.service" /etc/systemd/system/
-sudo cp "$HOME/album-art-matrix/pi/album-art-matrix.service" /etc/systemd/system/
+# The unit files are written for user "pi"; substitute the real user and home
+# at install time so a Pi with a different login user still boots the wall.
+for u in album-art-renderer.service album-art-matrix.service; do
+  sed -e "s|^User=pi$|User=$USER|" -e "s|/home/pi|$HOME|g" \
+    "$HOME/album-art-matrix/pi/$u" | sudo tee "/etc/systemd/system/$u" >/dev/null
+done
 sudo systemctl daemon-reload
 
 echo ""

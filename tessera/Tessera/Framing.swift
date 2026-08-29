@@ -45,6 +45,10 @@ struct Framing: View {
     @State private var preview: [UInt8] = [UInt8](repeating: 0, count: 64 * 64 * 3)
     @State private var playhead = 0
     @State private var working = false
+    // @State so the publisher survives body re-evaluation; inline it and any
+    // gesture-driven redraw restarts the interval, freezing the playback.
+    @State private var clipTimer = Timer.publish(
+        every: 1 / Clip.fps, on: .main, in: .common).autoconnect()
     /// The window's side in points, measured once the layout knows it. Every
     /// piece of the arithmetic below is in these units.
     @State private var side: CGFloat = 0
@@ -121,7 +125,7 @@ struct Framing: View {
         .padding(.bottom, Safe.bottom + 12)
         // A clip plays while you aim it, because a clip's subject moves and
         // framing a frozen first frame is framing the wrong thing.
-        .onReceive(Timer.publish(every: 1 / Clip.fps, on: .main, in: .common).autoconnect()) { _ in
+        .onReceive(clipTimer) { _ in
             guard isClip else { return }
             playhead = (playhead + 1) % source.count
             redraw(side: side)

@@ -243,23 +243,6 @@ struct GhostButton: View {
     }
 }
 
-// ---- page furniture -----------------------------------------------------
-struct FooterRail: View {
-    @Environment(\.theme) private var t
-    let left: String
-    let right: String
-    var body: some View {
-        VStack(spacing: 12) {
-            Rectangle().fill(t.hairline).frame(height: 1)
-            HStack {
-                MonoTag(left)
-                Spacer()
-                MonoTag(right)
-            }
-        }
-    }
-}
-
 struct SettingsSection<Content: View>: View {
     @Environment(\.theme) private var t
     let title: String
@@ -398,7 +381,7 @@ struct CompactStatus: View {
             }
             .frame(width: 26, height: 26)
             .overlay(Rectangle().stroke(t.hairline, lineWidth: 1))
-            MonoTag("ON THE WALL · \(modeName)")
+            MonoTag("ON THE WALL, \(modeName)")
             Spacer()
             Circle()
                 .fill(wall.reachable ? t.ink : Theme.signal)

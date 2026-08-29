@@ -183,7 +183,8 @@ enum Finishes {
         let key = "\(data.hashValue):\(finish):\(Int(duty * 10))"
         if let hit = cache[key] { return hit }
         let processed = apply(data, finish: finish)
-        guard let img = raster(processed, duty: duty) else { return nil }
+        guard let img = EmitterTile.render(processed, cell: 3, duty: duty)
+        else { return nil }
         if cache.count > 24 { cache.removeAll() }
         cache[key] = img
         return img
@@ -224,32 +225,6 @@ enum Finishes {
         return px
     }
 
-    /// Small emitter render, same language as the hero at thumbnail size.
-    private static func raster(_ px: [UInt8], duty: Double) -> UIImage? {
-        let cell: CGFloat = 3
-        let side: CGFloat = 64 * cell
-        let fmt = UIGraphicsImageRendererFormat.default()
-        fmt.scale = 1
-        fmt.opaque = true
-        let d = CGFloat(max(0.05, min(1.0, duty)))
-        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { rctx in
-            let ctx = rctx.cgContext
-            ctx.setFillColor(UIColor.black.cgColor)
-            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
-            let r = cell * 0.36
-            for i in 0..<(64 * 64) {
-                let o = i * 3
-                guard px[o] > 6 || px[o + 1] > 6 || px[o + 2] > 6 else { continue }
-                let cx = CGFloat(i % 64) * cell + cell / 2
-                let cy = CGFloat(i / 64) * cell + cell / 2
-                ctx.setFillColor(UIColor(red: CGFloat(px[o]) / 255 * d,
-                                         green: CGFloat(px[o + 1]) / 255 * d,
-                                         blue: CGFloat(px[o + 2]) / 255 * d,
-                                         alpha: 1).cgColor)
-                ctx.fillEllipse(in: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
-            }
-        }
-    }
 }
 
 // MARK: - Link chip

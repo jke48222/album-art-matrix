@@ -164,7 +164,17 @@ struct WallLiveActivity: Widget {
                 // grid is unreadable, but its colour is not.
                 CompactMark(state: context.state)
             } compactTrailing: {
-                if let f = context.state.fraction {
+                // Text(timerInterval:) is the ONE surface ActivityKit keeps
+                // advancing between updates, so the running clock lives here;
+                // a percentage would freeze the moment the update landed.
+                if context.state.playing, let iv = context.state.songInterval {
+                    Text(timerInterval: iv, countsDown: false,
+                         showsHours: false)
+                        .font(.system(size: 12, design: .monospaced))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .frame(maxWidth: 44)
+                        .multilineTextAlignment(.trailing)
+                } else if let f = context.state.fraction {
                     Text("\(Int(f * 100))%")
                         .font(.system(size: 12, design: .monospaced))
                         .foregroundStyle(.white.opacity(0.7))
