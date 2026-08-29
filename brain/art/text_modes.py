@@ -12,6 +12,29 @@ from .effects import _hex_rgb
 from .pixelfont import draw_text, normalize, text_width
 
 
+def wrap_text(text: str, width_px: int, scale: int) -> list[str]:
+    """Greedy word wrap against the pixel font's real widths. A word wider
+    than the whole line is broken hard rather than dropped."""
+    lines, cur = [], ""
+    for word in text.split():
+        cand = word if not cur else cur + " " + word
+        if text_width(cand, scale) <= width_px:
+            cur = cand
+            continue
+        if cur:
+            lines.append(cur)
+        while text_width(word, scale) > width_px:
+            k = 1
+            while k < len(word) and text_width(word[:k + 1], scale) <= width_px:
+                k += 1
+            lines.append(word[:k])
+            word = word[k:]
+        cur = word
+    if cur:
+        lines.append(cur)
+    return lines or ["?"]
+
+
 class Ticker:
     """Text scrolling right to left, 2x glyphs, vertically centered.
 
@@ -160,3 +183,93 @@ class Countdown:
         color = tuple(min(255, int(c * 1.15)) for c in self.color) if bright \
             else self.color
         draw_text(canvas, text, x, y, color, self.SCALE)
+
+
+class Crawl:
+    """Long text up the panel: flat like a teleprompter, or tilted away like
+    the opening of a film.
+
+    The text is rasterised once into a tall mask, and each frame is a
+    resampling of it: every output row knows which source row it shows and
+    how wide the plane is there. Flat mode is the identity version of the
+    same machinery. Tilt compresses rows toward a vanishing point at the top
+    and fades them out just before they reach it, which is the whole trick;
+    at 64 pixels nothing more is needed and nothing more would fit.
+
+    Rows are blended between their two nearest source rows, because at a few
+    pixels a second nearest-neighbour stepping reads as a tick, and a crawl
+    should pour.
+    """
+
+    def __init__(self, size: int, text: str, color: str = "#f4f1ea",
+                 speed: float = 1.0, loop: bool = True, tilt: bool = False):
+        self.size = size
+        self.color = np.array(_hex_rgb(color), dtype=np.float32)
+        self.loop = loop
+        # Reading several lines is slower work than watching one slide by.
+        self.px_per_s = 5.5 * max(0.1, speed)
+
+        lines = wrap_text(normalize(text) or "?", size - 4, 1)
+        line_h = 9                      # 7 px of glyph, 2 of leading
+        h = len(lines) * line_h + 1
+        rgb = np.zeros((h, size, 3), dtype=np.uint8)
+        for i, ln in enumerate(lines):
+            x = (size - text_width(ln, 1)) // 2
+            draw_text(rgb, ln, x, i * line_h, (255, 255, 255), 1)
+        self.mask = rgb[:, :, 0].astype(np.float32) / 255.0
+        self.h = h
+
+        ys = np.arange(size, dtype=np.float32)
+        d = ys / (size - 1)             # 0 at the top row, 1 at the bottom
+        if tilt:
+            scale = 0.28 + 0.87 * d ** 1.35   # >1 at the bottom: the near line overflows
+            self.fade = np.clip((d - 0.05) / 0.30, 0.0, 1.0) ** 1.2
+        else:
+            scale = np.ones(size, dtype=np.float32)
+            # a soft entrance and exit, the way a prompter masks its glass
+            self.fade = np.minimum(1.0, np.minimum(d / 0.08, (1 - d) / 0.08))
+
+        # One output row advances 1/scale source rows; walking that from the
+        # bottom of the view upward gives each row its distance behind the
+        # front of the crawl.
+        step = 1.0 / scale
+        rev = np.concatenate([[0.0], np.cumsum(step[::-1][:-1])])
+        self.offset = rev[::-1].astype(np.float32)
+        self.span = float(self.offset[0])
+
+        # Horizontal resampling per row: where each output pixel reads from,
+        # and whether that lands on the plane at all.
+        c = (size - 1) / 2.0
+        xs = np.arange(size, dtype=np.float32)
+        self.xi = np.zeros((size, size), dtype=np.int32)
+        self.xok = np.zeros((size, size), dtype=bool)
+        for y in range(size):
+            src = (xs - c) / scale[y] + c
+            idx = np.round(src).astype(np.int32)
+            ok = (idx >= 0) & (idx < size)
+            self.xi[y] = np.clip(idx, 0, size - 1)
+            self.xok[y] = ok
+
+    def done(self, t: float) -> bool:
+        if self.loop:
+            return False
+        return t * self.px_per_s > self.h + self.span + 8
+
+    def frame_at(self, t: float) -> Image.Image:
+        travel = self.h + self.span + 8
+        p = (t * self.px_per_s) % travel if self.loop else t * self.px_per_s
+        src = p - self.offset           # source row per output row, floats
+        out = np.zeros((self.size, self.size, 3), dtype=np.float32)
+        for y in range(self.size):
+            lo = int(np.floor(src[y]))
+            frac = src[y] - lo
+            row = np.zeros(self.size, dtype=np.float32)
+            if 0 <= lo < self.h:
+                row += self.mask[lo] * (1.0 - frac)
+            if 0 <= lo + 1 < self.h:
+                row += self.mask[lo + 1] * frac
+            if not row.any():
+                continue
+            vals = np.where(self.xok[y], row[self.xi[y]], 0.0) * self.fade[y]
+            out[y] = vals[:, None] * self.color
+        return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGB")

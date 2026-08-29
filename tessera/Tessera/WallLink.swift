@@ -21,6 +21,7 @@ struct WallState: Equatable {
     var color2: String = "#e0491f"
     var tickerText: String = "HELLO"
     var tickerLoop: Bool = true
+    var tickerStyle: String = "across"
     var clock24h: Bool = true
     var idle: String = "black"
     var away: String = "stay"
@@ -80,6 +81,7 @@ struct WallState: Equatable {
         color2 = json["color2"] as? String ?? "#e0491f"
         tickerText = json["ticker_text"] as? String ?? "HELLO"
         tickerLoop = json["ticker_loop"] as? Bool ?? true
+        tickerStyle = json["ticker_style"] as? String ?? "across"
         clock24h = json["clock_24h"] as? Bool ?? true
         idle = json["idle"] as? String ?? "black"
         away = json["away"] as? String ?? "stay"
@@ -276,6 +278,7 @@ final class WallSession {
             keep("color2", &fresh.color2, mine.color2)
             keep("ticker_text", &fresh.tickerText, mine.tickerText)
             keep("ticker_loop", &fresh.tickerLoop, mine.tickerLoop)
+            keep("ticker_style", &fresh.tickerStyle, mine.tickerStyle)
             keep("clock_24h", &fresh.clock24h, mine.clock24h)
             keep("idle", &fresh.idle, mine.idle)
             keep("away", &fresh.away, mine.away)
@@ -495,6 +498,7 @@ final class WallSession {
         if let c = merged["color2"] as? String { state.color2 = c }
         if let v = merged["ticker_text"] as? String { state.tickerText = v }
         if let v = merged["ticker_loop"] as? Bool { state.tickerLoop = v }
+        if let v = merged["ticker_style"] as? String { state.tickerStyle = v }
         if let v = merged["clock_24h"] as? Bool { state.clock24h = v }
         if let v = merged["idle"] as? String { state.idle = v }
         if let v = merged["away"] as? String { state.away = v }

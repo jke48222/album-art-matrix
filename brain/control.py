@@ -47,7 +47,8 @@ DEFAULTS = {
     "match_art": False,      # ambient colors follow the current sleeve
     "finish": "clean",       # art downscale finish: clean | dither | poster
     "ticker_text": "HELLO",  # ticker mode message (<= 120 chars)
-    "ticker_loop": True,     # loop, or scroll once then back to art
+    "ticker_loop": True,
+    "ticker_style": "across",  # across (slide) | up (prompter) | tilt (crawl)     # loop, or scroll once then back to art
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
     "idle": "black",         # silence: black | hold | dim | ambient
     "away": "stay",          # phone gone >15 min: stay | off
@@ -145,6 +146,8 @@ class ControlState:
                     self._s[k] = _clamp(v, -180.0, 180.0)
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
                     self._s[k] = bool(v)
+                elif k == "ticker_style" and v in ("across", "up", "tilt"):
+                    self._s[k] = v
                 elif k == "ticker_text" and isinstance(v, str):
                     clean = "".join(c for c in v if c.isprintable())[:120]
                     self._s[k] = clean or "?"

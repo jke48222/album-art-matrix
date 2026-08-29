@@ -482,6 +482,7 @@ struct LampInks: View {
 struct TickerRow: View {
     let text: String
     let loop: Bool
+    let style: String
     let accent: Color
     var onSet: (String, Any) -> Void
 
@@ -508,6 +509,15 @@ struct TickerRow: View {
                     .foregroundStyle(draft.isEmpty ? Ink.faint : accent)
                     .disabled(draft.isEmpty)
             }
+
+            // How the words move. Sliding across is a sign; rising is a
+            // prompter; tilted is the one film everyone has seen.
+            PillRow(
+                label: "how it moves",
+                options: [("across", "across"), ("rising", "up"), ("crawl", "tilt")],
+                selected: style,
+                accent: accent
+            ) { onSet("ticker_style", $0) }
 
             PillRow(
                 label: "when it reaches the end",
