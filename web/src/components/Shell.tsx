@@ -59,7 +59,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
               Album&nbsp;Art&nbsp;Matrix
             </span>
             <span className="eyebrow mt-1.5 block">
-              3&times;3 &middot; hub75 &middot; p2.5 &middot; simulation
+              3x3 / hub75 / p2.5 / simulation
             </span>
           </Link>
 
@@ -98,7 +98,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {review !== "off" && (
           <div className="mx-auto w-full max-w-3xl px-5 pt-2">
             <p className="num border border-warning/50 px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] text-warning">
-              review mode &middot; forced into &ldquo;{REVIEW_STATES.find((s) => s.id === review)?.label}&rdquo; &middot; not a live reading
+              review mode / forced into &ldquo;{REVIEW_STATES.find((s) => s.id === review)?.label}&rdquo; / not a live reading
             </p>
           </div>
         )}
@@ -108,7 +108,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
 
       <footer className="relative z-10 mx-auto w-full max-w-3xl px-5 pb-28 pt-3 md:pb-8">
         <p className="eyebrow leading-relaxed normal-case tracking-[0.06em]">
-          Simulation and circuit models only. Nine 64&times;64 HUB75 P2.5 panels, 3&times;3, 480 mm on a side. Ten
+          Simulation and circuit models only. Nine 64x64 HUB75 P2.5 panels, 3x3, 480 mm on a side. Ten
           panels are on the bench; the wall is not yet assembled, and nothing here is a measurement of it.
         </p>
       </footer>

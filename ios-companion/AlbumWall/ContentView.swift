@@ -139,7 +139,7 @@ struct MusicView: View {
                         .animation(.easeInOut(duration: 0.4), value: panelKey)
                         .overlay(Color.black.opacity(dimAlpha))
                     }
-                    MonoTag("ALBUMWALL P2.5 · 64 × 64 · REV A")
+                    MonoTag("ALBUMWALL P2.5, 64x64, REV A")
                         .frame(maxWidth: .infinity)
                 }
                 .padding(.horizontal, 14)
@@ -231,13 +231,7 @@ struct MusicView: View {
         }
     }
 
-    private var clockRGB: (UInt8, UInt8, UInt8) {
-        let hex = (wall.state.match_art ? wall.state.art_colors?.first : nil)
-            ?? wall.state.color
-        var v: UInt64 = 0
-        Scanner(string: String(hex.dropFirst())).scanHexInt64(&v)
-        return (UInt8((v >> 16) & 0xff), UInt8((v >> 8) & 0xff), UInt8(v & 0xff))
-    }
+    private var clockRGB: (UInt8, UInt8, UInt8) { wall.state.inkRGB }
 
     private var dimAlpha: Double {
         !wall.reachable || wall.state.mode == "off" ? 0
@@ -289,13 +283,13 @@ struct MusicView: View {
     }
 
     private var nowTitle: String {
-        pusher.trackTitle == "—"
+        pusher.trackTitle == "-"
             ? (wall.state.now_showing?["title"] ?? "Nothing playing")
             : pusher.trackTitle
     }
 
     private var nowArtist: String {
-        pusher.trackTitle == "—"
+        pusher.trackTitle == "-"
             ? (wall.state.now_showing?["artist"] ?? "Play something in Apple Music")
             : pusher.artist
     }
@@ -552,7 +546,7 @@ struct LampView: View {
 
         if wall.state.effect != "solid" {
             SliderRow(label: "MOTION",
-                      valueText: String(format: "%.1f×", wall.state.speed),
+                      valueText: String(format: "%.1fx", wall.state.speed),
                       value: $wall.state.speed, range: 0.1...3.0,
                       onLive: { wall.send(glowPatch(["speed": $0]), debounce: true) }) {
                 wall.send(glowPatch(["speed": $0]))
@@ -657,13 +651,7 @@ struct LampView: View {
         wall.state.match_art ? wall.state.art_colors : nil
     }
 
-    private var inkRGB: (UInt8, UInt8, UInt8) {
-        let hex = (wall.state.match_art ? wall.state.art_colors?.first : nil)
-            ?? wall.state.color
-        var v: UInt64 = 0
-        Scanner(string: String(hex.dropFirst())).scanHexInt64(&v)
-        return (UInt8((v >> 16) & 0xff), UInt8((v >> 8) & 0xff), UInt8(v & 0xff))
-    }
+    private var inkRGB: (UInt8, UInt8, UInt8) { wall.state.inkRGB }
 
     private var dimAlpha: Double {
         min(0.95, 1 - pow(wall.state.brightness, 0.6))
@@ -712,7 +700,7 @@ struct CreateView: View {
             card(icon: .create, title: "Doodle",
                  sub: "Draw on the wall, pixel by pixel") { showDoodle = true }
             card(icon: .wall, title: "A photo",
-                 sub: "Crop a picture down to 64 × 64") { showPhoto = true }
+                 sub: "Crop a picture down to 64x64") { showPhoto = true }
             card(icon: .lamp, title: "Ticker",
                  sub: "Scroll a message across the room") { showTicker = true }
             card(icon: .record, title: "A video",
@@ -727,7 +715,7 @@ struct CreateView: View {
                         creationCell(c)
                     }
                 }
-                MonoTag("TAP TO SEND · HOLD TO DELETE")
+                MonoTag("TAP TO SEND, HOLD TO DELETE")
                     .frame(maxWidth: .infinity)
                     .padding(.top, 2)
             }
@@ -893,9 +881,9 @@ struct WallView: View {
             }
 
             SettingsSection(title: "LINK") {
-                hostRow(name: "Wall · Raspberry Pi",
+                hostRow(name: "Wall (Raspberry Pi)",
                         host: $wall.wallHost, ok: wall.reachable)
-                hostRow(name: "Reporter · Mac",
+                hostRow(name: "Reporter (Mac)",
                         host: $pusher.reporterHost,
                         ok: pusher.lastPush != "unreachable"
                             && pusher.lastPush != "never")
@@ -952,7 +940,7 @@ struct WallView: View {
 
             HStack {
                 Spacer()
-                MonoTag("ALBUMWALL 0.3 · 4096 LEDS · BITSLIP6")
+                MonoTag("ALBUMWALL 0.3, 4096 LEDS, BITSLIP6")
                 Spacer()
             }
             .padding(.top, 12)
@@ -1089,7 +1077,7 @@ struct FirstRunView: View {
             PrimaryButton(label: "Allow access") { pusher.requestAccess() }
             HStack {
                 Spacer()
-                MonoTag("P2.5 · 4096 LEDS")
+                MonoTag("P2.5, 4096 LEDS")
                 Spacer()
             }
             .padding(.top, 18)

@@ -75,7 +75,11 @@ class ControlState:
         self.clip = None             # {"fps": float, "frames": [bytes]}
         self.last_frame = None       # pre-WB RGB of whatever was last shown
         self.replay = None           # journal entry the main loop should re-show
-        self.sleep = None            # {"t0": epoch, "minutes": N} while fading
+        self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
+        # Bumps whenever new content lands (track change, replay, pushed frame
+        # or clip) — never on a settings change. Clients key their arrival
+        # animations on this instead of guessing from title strings.
+        self.shown_seq = 0
         try:
             with open(STATE_PATH) as fh:
                 self._merge(json.load(fh), persist=False)
@@ -113,7 +117,8 @@ class ControlState:
                 elif k == "speed":
                     self._s[k] = _clamp(v, 0.1, 3.0)
                 elif k in ("color", "color2") and isinstance(v, str) \
-                        and len(v) == 7 and v.startswith("#"):
+                        and len(v) == 7 and v.startswith("#") \
+                        and all(c in "0123456789abcdefABCDEF" for c in v[1:]):
                     self._s[k] = v.lower()
                 else:
                     rejected[k] = v
@@ -132,7 +137,9 @@ class ControlState:
         # sleep fade is a command, not a persisted setting
         if "sleep_fade_min" in patch:
             minutes = _clamp(patch.pop("sleep_fade_min"), 0, 180)
-            self.sleep = ({"t0": time.time(), "minutes": minutes}
+            # monotonic, not wall time: an NTP step on an RTC-less Pi must not
+            # snap the fade to the end (or stall it) mid-way
+            self.sleep = ({"t0": time.monotonic(), "minutes": minutes}
                           if minutes > 0 else None)
         rejected = self._merge(patch)
         self.dirty.set()
@@ -141,11 +148,12 @@ class ControlState:
     def public_state(self) -> dict:
         """What GET /state returns — settings plus live extras."""
         out = {**self.get(), "now_showing": self.now_showing,
-               "progress": self.progress}
+               "progress": self.progress, "shown_seq": self.shown_seq}
         if self.art_colors:
             out["art_colors"] = list(self.art_colors)
-        if self.sleep:
-            left = self.sleep["minutes"] * 60 - (time.time() - self.sleep["t0"])
+        sl = self.sleep              # snapshot: the render thread can null it
+        if sl:
+            left = sl["minutes"] * 60 - (time.monotonic() - sl["t0"])
             out["sleep_remaining_s"] = max(0, int(left))
         return out
 
@@ -272,6 +280,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                                      "bytes, base64-encoded"})
                     return
                 ctrl.frame_override = px
+                ctrl.shown_seq += 1
                 ctrl.apply({"mode": "frame"})
                 self._json(200, ctrl.public_state())
                 return
@@ -298,6 +307,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                         return
                     frames.append(b)
                 ctrl.clip = {"fps": _clamp(fps, 1, 24), "frames": frames}
+                ctrl.shown_seq += 1
                 ctrl.apply({"mode": "clip"})
                 self._json(200, ctrl.public_state())
                 return

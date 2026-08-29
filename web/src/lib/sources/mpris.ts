@@ -7,7 +7,7 @@ export const MPRIS_CAVEAT =
 export const mprisSource: NowPlayingSource = {
   id: "mpris",
   label: "Local player (MPRIS)",
-  description: "MPRIS / D-Bus via playerctl on Linux — whatever desktop player is running.",
+  description: "MPRIS / D-Bus via playerctl on Linux - whatever desktop player is running.",
 
   probe(cfg: SourceConfig) {
     const bridge = String(cfg.config.bridgeUrl ?? "").trim();

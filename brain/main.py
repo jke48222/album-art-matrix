@@ -109,6 +109,7 @@ def main():
     # The achieved rate is a measurement, not the target: if the Pi cannot hold
     # anim_fps this is where you find out, instead of guessing from a video.
     fps_count, fps_since, fps_last = 0, time.monotonic(), 0.0
+    fps_lastc = time.monotonic()     # when the meter last counted a frame
     # Absolute deadline, not "now + budget". Event.wait() overshoots by around
     # a millisecond, and adding that to a fresh `now` every pass compounds it:
     # at a 120 fps target that alone cost ~15% of the frames.
@@ -116,7 +117,7 @@ def main():
     ctrl = ControlState(seed={
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
-    })
+    }, frame_len=size * size * 3)
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
 
     source = SourceChain(build_sources(cfg))
@@ -140,25 +141,53 @@ def main():
     clock, clock_key = None, None
     clip_i, clip_next = 0, 0.0
     black = bytes(size * size * 3)
+    idle_prev = None                 # which idle override is currently applied
+
+    def show_sleeve(art_url):
+        """The one path that puts a sleeve on the wall: fetch, prepare, arm
+        the disc animator, extract colours. Callers add their bookkeeping."""
+        nonlocal last_pre, animator, t0, need_show
+        pre = prepare(
+            fetch_art(art_url), size,
+            unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
+            unsharp_percent=int(pipe.get("unsharp_percent", 60)),
+        )
+        last_pre = pre
+        animator = DiscAnimator(pre, size, rpm=ctrl.get()["rpm"])
+        t0 = time.monotonic()
+        need_show = True
+        ctrl.art_colors = dominant_colors(pre)
+
+    def pace(tick):
+        """Frame pacing + fps meter shared by the animated modes. The absolute
+        deadline carries the Event.wait overshoot fix; the meter restarts its
+        window after any stint in a non-animated mode, so the first report
+        after one is a measurement, not an average over the idle gap."""
+        nonlocal deadline, fps_count, fps_since, fps_last, fps_lastc
+        if tick - fps_lastc > 1.0:
+            fps_count, fps_since = 0, tick
+        fps_lastc = tick
+        fps_count += 1
+        if tick - fps_since >= 5.0:
+            fps_last = fps_count / (tick - fps_since)
+            print(f"[main] {fps_last:.0f} fps sustained "
+                  f"(target {anim_fps:.0f})")
+            fps_count, fps_since = 0, tick
+        deadline = max(deadline + 1.0 / anim_fps, tick)
+        gap = deadline - time.monotonic()
+        if gap > 0 and ctrl.dirty.wait(gap):
+            ctrl.dirty.clear()
 
     while True:
         # ---- phone asked to re-show something from the journal ----------
         if ctrl.replay is not None:
             entry, ctrl.replay = ctrl.replay, None
             try:
-                pre = prepare(
-                    fetch_art(entry["art_url"]), size,
-                    unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
-                    unsharp_percent=int(pipe.get("unsharp_percent", 60)),
-                )
-                last_pre = pre
-                animator = DiscAnimator(pre, size, rpm=ctrl.get()["rpm"])
-                t0 = time.monotonic()
-                need_show = True
+                show_sleeve(entry["art_url"])
                 ctrl.now_showing = {"title": entry.get("title", "?"),
                                     "artist": entry.get("artist", "?"),
                                     "album": entry.get("album", "")}
-                ctrl.art_colors = dominant_colors(pre)
+                ctrl.shown_seq += 1
                 hold_until = time.monotonic() + 600   # current track waits
                 print(f"[main] replay: {entry.get('artist')} — "
                       f"{entry.get('title')}")
@@ -187,22 +216,19 @@ def main():
 
         if now and now.track_id != last_track \
                 and time.monotonic() >= hold_until:
+            # the old track's clock must not survive onto the new one when
+            # the reporting tier has no progress to replace it with
+            if now.progress_ms is None:
+                prog = None
+                ctrl.progress = {}
             if now.art_url:
                 try:
-                    pre = prepare(
-                        fetch_art(now.art_url), size,
-                        unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
-                        unsharp_percent=int(pipe.get("unsharp_percent", 60)),
-                    )
-                    last_pre = pre
-                    animator = DiscAnimator(pre, size, rpm=ctrl.get()["rpm"])
-                    t0 = time.monotonic()
+                    show_sleeve(now.art_url)
                     last_track = now.track_id
-                    need_show = True
                     ctrl.now_showing = {"title": now.title,
                                         "artist": now.artist,
                                         "album": now.album}
-                    ctrl.art_colors = dominant_colors(pre)
+                    ctrl.shown_seq += 1
                     ctrl.journal_append({
                         "ts": int(time.time()),
                         "title": now.title, "artist": now.artist,
@@ -229,30 +255,39 @@ def main():
             # a pending replay bails out of the render loop immediately
             while time.monotonic() < poll_end and ctrl.replay is None:
                 s = ctrl.get()
+                sl = ctrl.sleep      # snapshot: the API thread can null this
                 fade = 1.0                       # sleep fade scales brightness
-                if ctrl.sleep is not None:
-                    el_min = (time.time() - ctrl.sleep["t0"]) / 60.0
-                    if el_min >= ctrl.sleep["minutes"]:
+                if sl is not None:
+                    el_min = (time.monotonic() - sl["t0"]) / 60.0
+                    if el_min >= sl["minutes"]:
                         ctrl.sleep = None
+                        sl = None
                         ctrl.apply({"mode": "off"})
                         s = ctrl.get()
                     else:
-                        fade = 1.0 - el_min / ctrl.sleep["minutes"]
+                        fade = max(0.0, min(1.0, 1.0 - el_min / sl["minutes"]))
                 eff = tuple(g * s["brightness"] * fade for g in gains)
                 mode = s["mode"]
 
                 # A minute of silence, and only for the modes that are about a
                 # track. Choosing a lamp or a clock is a decision the music
                 # stopping does not get to overrule.
+                idle_now = None
                 if quiet_since is not None and mode in ("art", "cd") \
                         and time.monotonic() - quiet_since > 60:
                     idle = s.get("idle", "black")
                     if idle == "black":
-                        mode = "off"
+                        mode, idle_now = "off", "black"
                     elif idle == "dim":
                         eff = tuple(g * 0.3 for g in eff)
+                        idle_now = "dim"
                     elif idle == "ambient":
-                        mode = "ambient"
+                        mode, idle_now = "ambient", "ambient"
+                if idle_now != idle_prev:
+                    # engaging or lifting the override is a repaint, or the
+                    # dimmed sleeve never shows and black outlives the silence
+                    idle_prev = idle_now
+                    need_show = True
 
                 if mode == "off":
                     if not blacked:
@@ -265,13 +300,17 @@ def main():
                 blacked = False
 
                 if mode == "frame" and ctrl.frame_override is not None:
-                    if frame_shown is not ctrl.frame_override:
+                    if frame_shown is not ctrl.frame_override \
+                            or sl is not None:
                         f = Image.frombytes("RGB", (size, size),
                                             ctrl.frame_override)
                         sink.show(white_balance(f, eff).tobytes(),
                                   pre_wb_img=f)
                         frame_shown = ctrl.frame_override
-                    if ctrl.dirty.wait(poll_end - time.monotonic()):
+                    wait_s = poll_end - time.monotonic()
+                    if sl is not None:           # keep fading a held frame
+                        wait_s = min(wait_s, 1.0)
+                    if ctrl.dirty.wait(max(0.0, wait_s)):
                         ctrl.dirty.clear()
                         frame_shown = None
                     continue
@@ -295,10 +334,7 @@ def main():
                         continue
                     f = ticker.frame_at(tick - ticker_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    deadline = max(deadline + 1.0 / anim_fps, tick)
-                    gap = deadline - time.monotonic()
-                    if gap > 0 and ctrl.dirty.wait(gap):
-                        ctrl.dirty.clear()
+                    pace(tick)
                     continue
 
                 if mode == "clock":
@@ -339,16 +375,7 @@ def main():
                     tick = time.monotonic()
                     f = ambient.frame_at(tick - amb_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    fps_count += 1
-                    if tick - fps_since >= 5.0:
-                        fps_last = fps_count / (tick - fps_since)
-                        print(f"[main] {fps_last:.0f} fps sustained "
-                              f"(target {anim_fps:.0f})")
-                        fps_count, fps_since = 0, tick
-                    deadline = max(deadline + 1.0 / anim_fps, tick)
-                    gap = deadline - time.monotonic()
-                    if gap > 0 and ctrl.dirty.wait(gap):
-                        ctrl.dirty.clear()
+                    pace(tick)
                     continue
 
                 if mode == "cd" and animator is not None:
@@ -364,16 +391,7 @@ def main():
                             frac = min(1.0, at / prog[3])
                     f = animator.frame_at(tick - t0, progress_s=at, fraction=frac)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    fps_count += 1
-                    if tick - fps_since >= 5.0:
-                        fps_last = fps_count / (tick - fps_since)
-                        print(f"[main] {fps_last:.0f} fps sustained "
-                              f"(target {anim_fps:.0f})")
-                        fps_count, fps_since = 0, tick
-                    deadline = max(deadline + 1.0 / anim_fps, tick)
-                    gap = deadline - time.monotonic()
-                    if gap > 0 and ctrl.dirty.wait(gap):
-                        ctrl.dirty.clear()
+                    pace(tick)
                     continue
 
                 # static sleeve ("art", or "cd" before any art has arrived)
@@ -385,7 +403,7 @@ def main():
                               pre_wb_img=fin_img)
                     need_show = False
                 wait_s = poll_end - time.monotonic()
-                if ctrl.sleep is not None:       # keep fading while static
+                if sl is not None:               # keep fading while static
                     wait_s = min(wait_s, 1.0)
                     need_show = True
                 if ctrl.dirty.wait(max(0.0, wait_s)):

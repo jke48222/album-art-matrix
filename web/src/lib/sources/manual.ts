@@ -43,7 +43,7 @@ export const manualSource: NowPlayingSource = {
     return {
       trackId: `manual:${m.setAt}`,
       title: m.title || "Manual image",
-      artist: m.artist || "—",
+      artist: m.artist || "-",
       album: m.album || "",
       artUrl: m.artUrl,
       progressMs: null,

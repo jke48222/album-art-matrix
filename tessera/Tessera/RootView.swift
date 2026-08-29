@@ -133,8 +133,11 @@ struct RootView: View {
                 stablePalette = lighting.reading.palette
             }
         }
-        .onChange(of: wall.state.title ?? "") { _, new in
+        .onChange(of: wall.arrivalKey) { _, new in
             // A new sleeve landing on 4,096 LEDs is an event, not a fade.
+            // Keyed on the wall's own shown_seq (title as the old-brain
+            // fallback), so same-title tracks surge too and mode taps never
+            // false-fire it.
             guard !lastTitle.isEmpty, new != lastTitle, !isOff, !new.isEmpty else {
                 lastTitle = new
                 return

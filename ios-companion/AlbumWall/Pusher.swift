@@ -17,11 +17,10 @@ import MediaPlayer
 import SwiftUI
 
 final class Pusher: ObservableObject {
-    @Published var trackTitle: String = "—"
+    @Published var trackTitle: String = "-"
     @Published var artist: String = ""
     @Published var isPlaying = false
     @Published var lastPush: String = "never"
-    @Published var lastPushDate: Date? = nil
     @Published var authorized = false
     @Published var artwork: UIImage? = nil   // current sleeve, for the preview
     @Published var progressMs: Int = 0       // track position at last push
@@ -75,7 +74,7 @@ final class Pusher: ObservableObject {
         let art = item?.artwork?.image(at: CGSize(width: 256, height: 256))
         let pos = Int(player.currentPlaybackTime * 1000)
         DispatchQueue.main.async {
-            self.trackTitle = item?.title ?? "—"
+            self.trackTitle = item?.title ?? "-"
             self.artist = item?.artist ?? ""
             self.isPlaying = playing
             self.artwork = art
@@ -83,7 +82,7 @@ final class Pusher: ObservableObject {
             self.durationMs = Int((item?.playbackDuration ?? 0) * 1000)
             self.progressDate = Date()
             LiveActivityManager.sync(
-                title: item?.title ?? "—", artist: item?.artist ?? "",
+                title: item?.title ?? "-", artist: item?.artist ?? "",
                 playing: playing, mode: LiveActivityManager.lastMode)
             SharedSnapshot.write(title: item?.title, artist: item?.artist,
                                  frame: art?.led64())
@@ -110,7 +109,6 @@ final class Pusher: ObservableObject {
                 let f = DateFormatter(); f.timeStyle = .medium
                 let ok = err == nil && resp != nil
                 self?.lastPush = ok ? f.string(from: Date()) : "unreachable"
-                if ok { self?.lastPushDate = Date() }
             }
         }.resume()
     }

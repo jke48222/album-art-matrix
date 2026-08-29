@@ -15,13 +15,13 @@ import type { IdleBehaviour, WallSize } from "@/lib/types";
 export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
-      { title: "Settings — Album Art Matrix" },
+      { title: "Settings - Album Art Matrix" },
       {
         name: "description",
         content:
-          "Wall size, sharpening, poll interval, brightness, idle behaviour and push-to-wall — plus a config.toml the Raspberry Pi can read.",
+          "Wall size, sharpening, poll interval, brightness, idle behaviour and push-to-wall - plus a config.toml the Raspberry Pi can read.",
       },
-      { property: "og:title", content: "Settings — Album Art Matrix" },
+      { property: "og:title", content: "Settings - Album Art Matrix" },
       {
         property: "og:description",
         content: "Every pipeline and wall control in one place, exportable as a Pi-ready config file.",
@@ -75,7 +75,7 @@ function SettingsPage() {
                   onClick={() => setSettings({ wallSize: s })}
                   className="num"
                 >
-                  {s}×{s}
+                  {s}x{s}
                 </Button>
               ))}
             </div>
@@ -188,7 +188,7 @@ function SettingsPage() {
             label="Endpoint"
             hint={
               settings.pushFormat === "brain"
-                ? "The hardware brain's control API: http://album-matrix.local:8788/frame — takes {px: base64} at 64×64 and shows it on the real wall."
+                ? "The hardware brain's control API: http://album-matrix.local:8788/frame - takes {px: base64} at 64x64 and shows it on the real wall."
                 : "Any listener that accepts a bare RGB888 body as application/octet-stream, N*N*3 bytes."
             }
           >
@@ -201,7 +201,7 @@ function SettingsPage() {
           </Field>
           <HonestNote tone="warn">
             With push on and no endpoint reachable, the app reports the failure instead of pretending the frame
-            landed. The Pi brain format only accepts 64×64 frames today.
+            landed. The Pi brain format only accepts 64x64 frames today.
           </HonestNote>
         </CardContent>
       </Card>

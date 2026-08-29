@@ -37,6 +37,10 @@ final class NowPlayingPush {
     @ObservationIgnored private var session: AVAudioSession?
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var lastKey = ""
+    /// Block-based observers hand back tokens, and removeObserver(self) does
+    /// NOT remove them: without keeping these, every restart() stacked
+    /// another live pair and each track change posted once per stack.
+    @ObservationIgnored private var observers: [NSObjectProtocol] = []
 
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
@@ -46,15 +50,15 @@ final class NowPlayingPush {
         running = true
         music.beginGeneratingPlaybackNotificationsIfNeeded()
 
-        NotificationCenter.default.addObserver(
+        observers.append(NotificationCenter.default.addObserver(
             forName: .MPMusicPlayerControllerNowPlayingItemDidChange,
             object: music, queue: .main
-        ) { [weak self] _ in Task { @MainActor in self?.post(force: true) } }
+        ) { [weak self] _ in Task { @MainActor in self?.post(force: true) } })
 
-        NotificationCenter.default.addObserver(
+        observers.append(NotificationCenter.default.addObserver(
             forName: .MPMusicPlayerControllerPlaybackStateDidChange,
             object: music, queue: .main
-        ) { [weak self] _ in Task { @MainActor in self?.post(force: true) } }
+        ) { [weak self] _ in Task { @MainActor in self?.post(force: true) } })
 
         // The reporter forgets a push after 40 seconds, so a held note has to
         // be repeated or the wall would drop the track mid-song.
@@ -73,7 +77,9 @@ final class NowPlayingPush {
         running = false
         timer?.cancel(); timer = nil
         stopKeepAlive()
-        NotificationCenter.default.removeObserver(self)
+        for o in observers { NotificationCenter.default.removeObserver(o) }
+        observers = []
+        music.endGeneratingPlaybackNotifications()
     }
 
     func restart() { stop(); start() }

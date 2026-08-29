@@ -21,13 +21,13 @@ import type { SourceId } from "@/lib/types";
 export const Route = createFileRoute("/sources")({
   head: () => ({
     meta: [
-      { title: "Now-playing sources — Album Art Matrix" },
+      { title: "Now-playing sources - Album Art Matrix" },
       {
         name: "description",
         content:
-          "A priority-ordered source chain: Apple Music, Spotify PKCE, AcoustID, Last.fm, MPRIS, manual and demo — each honest about its state.",
+          "A priority-ordered source chain: Apple Music, Spotify PKCE, AcoustID, Last.fm, MPRIS, manual and demo - each honest about its state.",
       },
-      { property: "og:title", content: "Now-playing sources — Album Art Matrix" },
+      { property: "og:title", content: "Now-playing sources - Album Art Matrix" },
       {
         property: "og:description",
         content: "Reorder, enable and configure the now-playing source chain. No source ever invents a track.",
@@ -190,13 +190,13 @@ function SourceSettings({ id }: { id: SourceId }) {
         {mode === "direct" ? (
           <HonestNote tone="warn">
             Direct mode drives AppleScript and MusicKit on macOS directly. A browser cannot reach either, so it is
-            unavailable here. It is a real option in the desktop build — it is not hidden and it is not faked.
+            unavailable here. It is a real option in the desktop build - it is not hidden and it is not faked.
           </HonestNote>
         ) : (
           <>
             <Field
               label="Bridge URL"
-              hint="Run the small reporter on your Mac; it serves GET /nowplaying — 200 with the track, 204 when there is nothing to show. Point this at http://your-mac.local:8787/nowplaying to reach the Mac from a phone on the same network."
+              hint="Run the small reporter on your Mac; it serves GET /nowplaying - 200 with the track, 204 when there is nothing to show. Point this at http://your-mac.local:8787/nowplaying to reach the Mac from a phone on the same network."
             >
               <Input
                 className="num"
@@ -222,7 +222,7 @@ function SourceSettings({ id }: { id: SourceId }) {
       <div className="space-y-3">
         <Field
           label="Spotify Client ID"
-          hint="Yours, stored on this device only. Authorization Code with PKCE — there is no client secret anywhere in this app. Add this page's URL as a redirect URI in your Spotify app settings."
+          hint="Yours, stored on this device only. Authorization Code with PKCE - there is no client secret anywhere in this app. Add this page's URL as a redirect URI in your Spotify app settings."
         >
           <Input
             className="num"
@@ -406,7 +406,7 @@ function DemoPanel() {
         ))}
       </div>
       <p className="num text-[11px] text-muted-foreground">
-        current: {cover.artist} — {cover.title}
+        current: {cover.artist} - {cover.title}
       </p>
     </div>
   );

@@ -114,7 +114,7 @@ export function Readout({ label, value, tone }: { label: string; value: React.Re
 /* ---------- the strip ---------- */
 
 /*
- * Sliding-ink segmented control — the web twin of the iOS app's StripControl.
+ * Sliding-ink segmented control - the web twin of the iOS app's StripControl.
  * A hairline strip; the active cell is inverted, and the ink block slides.
  */
 export function Strip<T extends string>({

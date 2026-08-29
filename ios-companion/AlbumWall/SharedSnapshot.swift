@@ -9,7 +9,12 @@ enum SharedSnapshot {
     static let suite = UserDefaults(suiteName: "group.com.jalenedusei.albumwall")
     private static var lastKey = ""
     private static var lastReload = Date.distantPast
-    private static var lastWallFrame = Date.distantPast
+    // Persisted beside framePNG: an in-memory stamp reset on every launch,
+    // which let the phone-art fallback overwrite a fresher saved wall frame.
+    private static var lastWallFrame: Date {
+        get { suite?.object(forKey: "wallFrameAt") as? Date ?? .distantPast }
+        set { suite?.set(newValue, forKey: "wallFrameAt") }
+    }
 
     static func write(title: String? = nil, artist: String? = nil,
                       mode: String? = nil, frame: UIImage? = nil,

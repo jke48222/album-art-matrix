@@ -19,17 +19,31 @@ done
 HOST="${HOST:-${ALBUM_PI_HOST:-wall}}"
 
 FILES=(brain renderer pi scripts)
-[ -f config.toml ] && FILES+=(config.toml)
 
 echo ">>> syncing to $HOST"
 rsync -a --delete --exclude '__pycache__' --exclude '.venv' "${FILES[@]}" "$HOST":album-art-matrix/
 
-# The synced config is the Mac's; flip the two Pi-side settings in place so
-# a deploy never silently reverts the Pi to preview mode / local adapter.
-ssh "$HOST" 'cd ~/album-art-matrix && sed -i \
-  -e "s|^type = \"preview\"|type = \"pi\"|" \
-  -e "s|^endpoint = \"\"|endpoint = \"http://Jalens-MacBook-Pro.local:8787\"|" \
-  config.toml'
+# The Pi OWNS its config. Deploys used to rsync the Mac's config.toml across
+# and sed two keys back, which silently reverted every other Pi-side edit,
+# including measured white-balance gains, the whole point of calibrating.
+# The config is seeded once (with the two Pi-side flips applied and the
+# outcome verified); after that the Pi's copy is never touched. Edit it on
+# the Pi, or delete it there to re-seed from the Mac's copy.
+if [ -f config.toml ]; then
+  if ssh "$HOST" '[ -f ~/album-art-matrix/config.toml ]'; then
+    echo ">>> config.toml already on the Pi — left alone (the Pi owns it)"
+  else
+    scp -q config.toml "$HOST":album-art-matrix/config.toml
+    ssh "$HOST" 'cd ~/album-art-matrix && sed -i \
+      -e "s|^type = \"preview\"|type = \"pi\"|" \
+      -e "s|^endpoint = \"\"|endpoint = \"http://Jalens-MacBook-Pro.local:8787\"|" \
+      config.toml \
+      && grep -q "^type = \"pi\"" config.toml \
+      && grep -q "^endpoint = \"http" config.toml' \
+      || { echo ">>> config seed FAILED its check — fix ~/album-art-matrix/config.toml on the Pi"; exit 1; }
+    echo ">>> config.toml seeded (sink=pi, endpoint=Mac reporter)"
+  fi
+fi
 
 # Spotify tokens: authorize once on the Mac (browser needed), reuse on the headless Pi.
 TOK="$HOME/.config/album-art-matrix/spotify_tokens.json"

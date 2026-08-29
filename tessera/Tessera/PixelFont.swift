@@ -4,9 +4,9 @@
 // Do not hand-edit: the whole point is that the phone and the wall render a
 // letter identically. Regenerate when the Python font changes.
 //
-// Rows are 5-bit masks, bit 4 is the leftmost column. Uppercase only; an
-// unknown character renders as a hollow box so a typo is visible instead of
-// silently vanishing.
+// Rows are 5-bit masks, bit 4 is the leftmost column. Case-sensitive, like
+// the wall; an unknown character renders as a hollow box so a typo is
+// visible instead of silently vanishing.
 
 import Foundation
 
@@ -105,7 +105,6 @@ enum PixelFont {
         ">": [0x08, 0x04, 0x02, 0x01, 0x02, 0x04, 0x08],
         "@": [0x0E, 0x11, 0x17, 0x15, 0x17, 0x10, 0x0E],
         "[": [0x0E, 0x08, 0x08, 0x08, 0x08, 0x08, 0x0E],
-        "\\": [0x10, 0x10, 0x08, 0x04, 0x02, 0x01, 0x01],
         "]": [0x0E, 0x02, 0x02, 0x02, 0x02, 0x02, 0x0E],
         "^": [0x04, 0x0A, 0x11, 0x00, 0x00, 0x00, 0x00],
         "_": [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x1F],
@@ -122,7 +121,7 @@ enum PixelFont {
     static func normalize(_ text: String) -> String {
         var out = ""
         var skip = false
-        let chars = Array(text.uppercased())
+        let chars = Array(text)
         for (i, ch) in chars.enumerated() {
             if skip { skip = false; continue }
             if ch == "<", i + 1 < chars.count, chars[i + 1] == "3" {

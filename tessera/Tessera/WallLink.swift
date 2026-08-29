@@ -28,6 +28,10 @@ struct WallState: Equatable {
     var album: String? = nil
     var artColors: [String] = []
     var sleepRemaining: Int? = nil
+    /// Bumped by the brain whenever new CONTENT lands (track change, replay,
+    /// pushed frame or clip), never on a settings change. The one honest key
+    /// for arrival animations; 0 means an older brain that does not send it.
+    var shownSeq: Int = 0
     /// Where the song is. Held as "this was true then" rather than as a
     /// number, so the phone can run the same clock the wall runs instead of
     /// showing a position that went stale the moment it arrived.
@@ -80,6 +84,7 @@ struct WallState: Equatable {
         }
         artColors = json["art_colors"] as? [String] ?? []
         sleepRemaining = json["sleep_remaining_s"] as? Int
+        shownSeq = json["shown_seq"] as? Int ?? 0
     }
 }
 
@@ -114,6 +119,9 @@ final class WallSession {
     let live = LiveWall()
     @ObservationIgnored private let standIn = StandIn()
     @ObservationIgnored private var misses = 0
+    /// A cached snapshot means a real wall exists somewhere; the stand-in
+    /// must not paint over it just because the wall is out of reach today.
+    @ObservationIgnored private var hadSnapshot = false
 
     // The simulator shares the Mac's network: localhost reaches a brain
     // running beside it. On device the wall's mDNS name is the default.
@@ -178,6 +186,7 @@ final class WallSession {
                 state.artist = cached.artist
                 state.mode = cached.mode
                 link = .offline(since: cached.updated ?? Date())
+                hadSnapshot = true
             }
         }
         guard pollTask == nil else { return }
@@ -187,6 +196,10 @@ final class WallSession {
                 guard let self else { return }
                 if self.link.isStandIn {
                     self.tickStandIn()
+                    // Keep looking for a real wall: one quiet probe every 5s,
+                    // so a Pi that boots later takes over by itself instead
+                    // of waiting for someone to find Look again in Setup.
+                    if tick % 40 == 0 { await self.pollState() }
                     tick &+= 1
                     try? await Task.sleep(for: .milliseconds(125))
                     continue
@@ -248,8 +261,11 @@ final class WallSession {
             misses += 1
             // Three misses is about six seconds of asking. After that, stop
             // showing an empty room and run a wall instead. Anything the app
-            // has genuinely seen before is still worth showing as offline.
-            if lastSync == nil, misses >= 3 {
+            // has genuinely seen before is still worth showing as offline —
+            // and a cached snapshot counts as seen: an owner opening the app
+            // away from home keeps their wall's last frame, stamped, rather
+            // than having it painted over by a phone-made one.
+            if lastSync == nil, misses >= 3, !hadSnapshot, !link.isStandIn {
                 enterStandIn()
             } else if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
@@ -277,15 +293,37 @@ final class WallSession {
 
     private func tickStandIn() {
         standIn.refreshNowPlaying()
-        var s = standIn.state
-        s.brightness = state.brightness      // keep whatever the finger set
-        standIn.apply(["brightness": s.brightness])
-        state = s
+        // frame() first: a sleep fade expiring inside it flips mode to off,
+        // and the state published here must be the one that drew the frame.
         frame = standIn.frame()
+        state = standIn.state
         live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
     }
 
     private var linkIsSearching: Bool { if case .searching = link { true } else { false } }
+
+    /// Identity of what the wall is SHOWING, for arrival animations. The
+    /// brain's shown_seq bumps on every new content and never on a settings
+    /// change, so keying on it sweeps for same-title tracks and repeat pushes
+    /// and never false-fires on a mode tap. An older brain (seq 0) falls back
+    /// to the title; the stand-in mints its own seq.
+    var arrivalKey: String {
+        state.shownSeq > 0 ? "seq-\(state.shownSeq)" : (state.title ?? "")
+    }
+
+    /// The one JSON POST every endpoint shares: request shape, status check,
+    /// timeout. Four hand-rolled copies of this had already drifted apart.
+    private func postJSON(_ path: String, _ obj: [String: Any]) async -> Bool {
+        guard let u = url(path),
+              let body = try? JSONSerialization.data(withJSONObject: obj) else { return false }
+        var req = URLRequest(url: u)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = body
+        guard let (_, resp) = try? await http.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return false }
+        return true
+    }
 
     private func pullFrame() async {
         guard let frameURL = url("/frame.raw") else { return }
@@ -300,42 +338,48 @@ final class WallSession {
 
     /// Put a moving thing on the wall. The brain loops it until a mode
     /// change; up to 240 frames at up to 24 fps is its whole appetite.
+    /// Same rules as every other send: the stand-in plays it, and a wall
+    /// that is away gets it queued instead of dropped after a success face.
     func pushClip(_ frames: [[UInt8]], fps: Double) {
-        let valid = frames.filter { $0.count == 64 * 64 * 3 }.prefix(240)
-        guard !valid.isEmpty,
-              let u = url("/clip"),
-              let body = try? JSONSerialization.data(withJSONObject: [
-                  "fps": min(24, max(1, fps)),
-                  "frames": valid.map { Data($0).base64EncodedString() },
-              ]) else { return }
-        var req = URLRequest(url: u)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        Task { [http] in
-            if (try? await http.data(for: req)) == nil {
-                await MainActor.run { Taps.error() }
+        let valid = Array(frames.filter { $0.count == 64 * 64 * 3 }.prefix(240))
+        guard !valid.isEmpty else { return }
+        if link.isStandIn {
+            standIn.push(clip: valid, fps: fps)
+            state = standIn.state
+            Taps.landed()
+            return
+        }
+        Task { [weak self] in
+            guard let self else { return }
+            if await self.postJSON("/clip", [
+                "fps": min(24, max(1, fps)),
+                "frames": valid.map { Data($0).base64EncodedString() },
+            ]) {
+                Taps.landed()
             } else {
-                await MainActor.run { Taps.landed() }
+                self.outbox.add(clip: valid, fps: fps)
+                Taps.error()
             }
         }
     }
 
     /// Wear a journal entry again. The wall pins it for ten minutes so the
-    /// currently playing track does not immediately steamroll it.
+    /// currently playing track does not immediately steamroll it. Entries the
+    /// PHONE recorded (stand-in days) carry timestamps the wall's journal has
+    /// never heard of, so those replay from the local store as a frame push,
+    /// which also makes the panel scrub work with no wall at all.
     func replay(ts: Int) {
-        guard let u = url("/replay"),
-              let body = try? JSONSerialization.data(withJSONObject: ["ts": ts]) else { return }
-        var req = URLRequest(url: u)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        Task { [http] in
-            if let (_, resp) = try? await http.data(for: req),
-               (resp as? HTTPURLResponse)?.statusCode == 200 {
-                await MainActor.run { Taps.landed() }
+        if let px = LocalJournal.frame(ts) {
+            pushFrame(px)
+            return
+        }
+        if link.isStandIn { Taps.error(); return }
+        Task { [weak self] in
+            guard let self else { return }
+            if await self.postJSON("/replay", ["ts": ts]) {
+                Taps.landed()
             } else {
-                await MainActor.run { Taps.error() }
+                Taps.error()
             }
         }
     }
@@ -354,24 +398,21 @@ final class WallSession {
     func pushFrame(_ px: [UInt8]) {
         guard px.count == 64 * 64 * 3 else { return }
         if link.isStandIn {
-            frame = Data(px)                 // it lands on the stand-in wall
+            // It lands on the stand-in wall the way it lands on the real one:
+            // as content, in mode "frame", held until something else is
+            // chosen. Writing only `frame` here let the next art tick erase
+            // the drawing within 125 ms of its success haptic.
+            standIn.push(frame: px)
+            state = standIn.state
+            frame = standIn.frame()
             Taps.landed()
             return
         }
-        guard let u = url("/frame"),
-              let body = try? JSONSerialization.data(
-                withJSONObject: ["px": Data(px).base64EncodedString()]
-              ) else { return }
-        var req = URLRequest(url: u)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        Task { [http, weak self] in
-            if (try? await http.data(for: req)) == nil {
-                await MainActor.run {
-                    self?.outbox.add(frame: px)
-                    Taps.error()
-                }
+        Task { [weak self] in
+            guard let self else { return }
+            if !(await self.postJSON("/frame", ["px": Data(px).base64EncodedString()])) {
+                self.outbox.add(frame: px)
+                Taps.error()
             }
         }
     }
@@ -402,36 +443,49 @@ final class WallSession {
             return
         }
 
-        guard let u = url("/state"),
-              let body = try? JSONSerialization.data(withJSONObject: merged) else { return }
-        var req = URLRequest(url: u)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = body
-        Task { [http, weak self] in
-            do {
-                _ = try await http.data(for: req)
-            } catch {
-                await MainActor.run {
-                    guard let self else { return }
-                    // Intent survives the network. It goes out when the wall
-                    // answers again, and the UI says so in the meantime.
-                    self.outbox.add(patch: merged)
-                    Taps.error()
-                }
+        Task { [weak self] in
+            guard let self else { return }
+            if !(await self.postJSON("/state", merged)) {
+                // Intent survives the network. It goes out when the wall
+                // answers again, and the UI says so in the meantime.
+                self.outbox.add(patch: merged)
+                Taps.error()
             }
         }
     }
 
-    /// Everything queued while the wall was away, in one pass, settings first
-    /// so a frame is not immediately overwritten by a mode change.
+    /// Everything queued while the wall was away, in one ORDERED pass. The
+    /// brain force-sets mode "frame" on a frame push, so the kinds are sent
+    /// oldest first and the newest intent lands last and wins; firing them as
+    /// parallel tasks let the network decide which one the user meant.
     private func flushOutbox() {
         guard !outbox.isEmpty else { return }
-        let patch = outbox.patch
-        let frame = outbox.frame
+        var jobs: [(Date, () async -> Bool)] = []
+        if let f = outbox.frame {
+            jobs.append((outbox.frameAt ?? .distantPast,
+                         { await self.postJSON("/frame", ["px": Data(f).base64EncodedString()]) }))
+        }
+        if let c = outbox.clip {
+            jobs.append((outbox.clipAt ?? .distantPast,
+                         { await self.postJSON("/clip", [
+                             "fps": min(24, max(1, c.fps)),
+                             "frames": c.frames.map { Data($0).base64EncodedString() },
+                         ]) }))
+        }
+        if !outbox.patch.isEmpty {
+            let p = outbox.patch
+            jobs.append((outbox.patchAt ?? .distantPast,
+                         { await self.postJSON("/state", p) }))
+        }
         outbox.clear()
-        if !patch.isEmpty { send(patch as [String: Any]) }
-        if let frame { pushFrame(frame) }
-        Taps.landed()
+        jobs.sort { $0.0 < $1.0 }
+        Task { [weak self] in
+            var allLanded = true
+            for job in jobs {
+                if !(await job.1()) { allLanded = false }
+            }
+            guard self != nil else { return }
+            if allLanded { Taps.landed() } else { Taps.error() }
+        }
     }
 }

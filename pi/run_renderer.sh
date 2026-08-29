@@ -9,6 +9,10 @@ set -euo pipefail
 FIFO="${FRAME_FIFO:-/tmp/album-frame.fifo}"
 [ -p "$FIFO" ] || mkfifo "$FIFO"
 export FRAME_FIFO="$FIFO"
+# Map-rate cap; must cover [animation] fps in config.toml (the brain produces
+# at fps, this decides how many of those map). Set HERE so a tuned value has
+# one home that survives reboots — the systemd unit runs this script.
+export MAX_MAP_HZ="${MAX_MAP_HZ:-60}"
 exec "$HOME/album-art-matrix/renderer/art_display" \
   -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 \
   -d 64 -f 120 -g 2.2 -t none -l 1.0 -b 160

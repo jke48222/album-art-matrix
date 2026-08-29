@@ -20,5 +20,8 @@ web/.wrangler/
 web/.nitro/
 web/.tanstack/
 
-# tessera iOS app build output
+# tessera iOS app build output (build-device is the on-device DerivedData —
+# same 600M+ class of regenerated output as ios-companion's, never track it)
 tessera/build/
+tessera/build-device/
+build-device/

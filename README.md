@@ -17,17 +17,18 @@ been ordered; no panel has arrived. The section below is exact about what exists
 | PCB layout (`pcb/backplane.kicad_pcb`) | Routed. 20 design rule check runs are committed as `pcb/drc1.json` through `drc20.json`, and reading them in order is the honest record of the layout. The last run has **no rule violations and no unrouted signal**. What it still reports is 7 ground pour islands: the GND zone fragmented into pieces that no via stitches together, on a board whose entire power argument rests on a continuous return path. Its 107 warnings are 26 silkscreen clearances and, for the rest, KiCad noting that the vendored `pcb/footprints/` are not installed as a system library. |
 | Fab outputs (`pcb/fab/`) | Gerbers, drill, pick and place, and board views are exported. **Stitch the ground islands before ordering.** |
 | Art pipeline (`brain/art/`) | Built, runs on a laptop, has an offline test. |
-| Wall control API (`brain/control.py`) | Built, 305 lines. Serves mode, brightness, spin rate, and ambient settings on port 8788. Exercised only against the laptop preview sink. |
-| Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, ambient light effects, clock and ticker over a hand made pixel font. All verified as PNGs, none on an LED. |
-| iOS companion (`ios-companion/`) | Built, 4,330 lines of Swift. Reads the on device now playing state and pushes it to the reporter, and remote controls the wall. Runs on device. **The simulator cannot exercise it**, because MediaPlayer is stubbed there, so it stops at the first run screen. |
-| Web app (`web/`) | Built and runs (TanStack Start + React). The whole pipeline reimplemented in TypeScript — Lanczos-3, Pillow-semantics unsharp, gamma 2.2, WB in linear light — plus a seven-source now-playing chain, an LED wall simulator, history, WB profiles, a wiring calculator, and push-to-wall. Verified live against `scripts/mac_reporter.py`; the brain push matches `brain/control.py`'s contract but has not been fired at the real Pi yet. |
+| Wall control API (`brain/control.py`) | Built, 335 lines. Serves mode, brightness, spin rate, ambient settings, finishes, ticker and clock text, a sleep fade, a journal with replay, and raw frame and clip pushes on port 8788. Has run on the real Pi and answered the apps over the network; has never had a panel behind it. |
+| Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, eight ambient light effects (solid, breathe, pulse, rainbow, gradient, plaid, weave, deco), clock and ticker over a generated pixel font, plus pushed frames and clips. All verified as PNGs, none on an LED. |
+| iOS companion, first app (`ios-companion/`) | Built, 4,406 lines of Swift. Reads the on device now playing state and pushes it to the reporter, and remote controls the wall. Runs on device. **The simulator cannot exercise it**, because MediaPlayer is stubbed there. Superseded by Tessera for daily use; still installs and works. |
+| Tessera (`tessera/`) | The current iOS app, 6,257 lines of Swift. Wall screen fed by the wall's own frames, Studio (draw, photo, words, video on one 64x64 canvas), Archive, Settings, widgets and a Live Activity, an offline outbox, and a stand-in wall the phone runs when no hardware answers. Verified in the simulator against a local brain and installed on a phone; never against a panel. |
+| Web app (`web/`) | Built and runs (TanStack Start + React). The whole pipeline reimplemented in TypeScript (Lanczos-3, Pillow-semantics unsharp, gamma 2.2, WB in linear light), plus a seven-source now-playing chain, an LED wall simulator, history, WB profiles, a wiring calculator, and push-to-wall. Verified live against `scripts/mac_reporter.py`; the brain push matches `brain/control.py`'s contract but has not been fired at the real Pi yet. |
 | Panel intake QA (`scripts/panel_qa.py`) | Test pattern generator and procedure written, 271 reference frames rendered in `qa_preview/`. `qa/QA-SHEET.md` is an **empty template**. No panel has been through it. |
-| Now playing, Apple Music (`brain/nowplaying/applemusic.py`) | Built, 216 lines. |
+| Now playing, Apple Music (`brain/nowplaying/applemusic.py`) | Built, 232 lines. |
 | Now playing, Spotify (`brain/nowplaying/spotify.py`) | Built, 223 lines, dormant behind a config flag. |
-| Now playing, Last.fm / AcoustID / local player | **Stubs.** Each is a class whose `get_current()` returns `None`. |
-| Renderer (`renderer/art_display.c`) | 92 lines of C, written. **Never compiled**, because it links a library that only builds on a Pi. |
-| Pi provisioning (`pi/`) | Scripts written. Never executed. `pi/PI-SETUP.md` step 3 begins with "Pi arrives". |
-| Parts | **Partly purchased.** `PARTS-TRACKER.xlsx` carries actual prices paid for the first light path: Pi 5, card, cooler, matrix bonnet, colour sensor, cabling. The panels themselves and the Mean Well supplies are still open. `PARTS.md` remains the shopping list. |
+| Now playing, Last.fm / AcoustID / local player | **Not built.** The config reserves the adapter names; no code exists for them. |
+| Renderer (`renderer/art_display.c`) | 202 lines of C. Compiled and run on the Pi 5; frames flow through the FIFO and the map-rate cap. It has never had a panel on the other side. |
+| Pi provisioning (`pi/`) | Executed on the real Pi: bootstrap, venv, renderer build, systemd units for brain and renderer. The wall boots headless and answers the network. |
+| Parts | **Panels arrived**: ten Waveshare P2.5 64x64, driver confirmed FM6124HJ (conventional, no init sequence needed). Pi 5, card, cooler and sundries on hand. First light is blocked on the HUB75 bonnet and 5V supplies still on order. `PARTS-TRACKER.xlsx` carries prices actually paid; `PARTS.md` remains the list. |
 | White balance gains | Placeholders. `config.example.toml` labels the current values "a GUESS" pending measurement. |
 
 Everything above is design, simulation, and software. Nothing in this repository has met a panel,
@@ -242,15 +243,18 @@ and has not been done.
 
 ## The render path
 
-`renderer/art_display.c` is 92 lines. It creates the named pipe, blocks on a reader, accepts exactly
-one raw RGB888 frame per connection, expands it to the library's stride if needed, and hands it to
-the panel library's BCM mapper. The main thread then calls `render_forever()`, which owns the refresh
-loop.
+`renderer/art_display.c` is 202 lines. It creates the named pipe, holds it open, and streams raw
+RGB888 frames out of it back to back, expanding to the library's stride if needed and handing each
+frame to the panel library's BCM mapper. Mapping is capped at MAX_MAP_HZ (60 by default) because the
+library has no double buffer, so every map is a small tearing window; a rate-limited frame is parked
+and mapped when its slot opens, never dropped, since the last frame of a burst is usually a
+transition (off, a pushed doodle) that will not be sent again. The main thread calls
+`render_forever()`, which owns the refresh loop.
 
-It has never been compiled. It includes `<rpihub75/rpihub75.h>` and links `-lrpihub75_gpu`, which is
-the third party library `bitslip6/rpi-gpu-hub75-matrix`, and that library builds against a Pi's GPU
-and GPIO. There is no Pi. `pi/bootstrap.sh` is written to clone and build it, and `renderer/Makefile`
-is written to link against it, and neither has run.
+It compiles and runs on the Pi 5. It includes `<rpihub75/rpihub75.h>` and links `-lrpihub75_gpu`,
+the third party library `bitslip6/rpi-gpu-hub75-matrix`, which `pi/bootstrap.sh` clones and builds;
+that has all run on the real Pi. What has not happened is a panel: the renderer's output has only
+ever gone into the library, never into LEDs.
 
 One number needs a label. The comment in `art_display.c` and the comment in `pi/run_renderer.sh` both
 mention 9600 Hz. **That is the refresh rate advertised by that third party library, on hardware this
@@ -383,33 +387,39 @@ displayed anything.
 ## Project layout
 
 ```
-brain/                  1,679 lines of Python: the now playing control plane
-├── main.py             Poll loop. Tracks state in one variable, last_track.
-│                       There is no database and no history of what has played.
+brain/                  2,275 lines of Python: the now playing control plane
+├── main.py             Poll loop, render loop, journal writes. A dirty event
+│                       from the API wakes it instead of waiting out the poll.
 ├── control.py          HTTP state API on 8788. Mode, brightness, spin rate,
-│                       ambient effect and colours. A write sets a dirty event
-│                       that wakes the poll loop instead of waiting out its 5s.
+│                       ambient, finishes, ticker and clock, sleep fade,
+│                       journal + replay, raw frame and clip pushes. State
+│                       persists to control.json; plays go to journal.jsonl.
 ├── nowplaying/
-│   ├── applemusic.py   Built (216 lines). Tiered: a state file, then osascript
+│   ├── applemusic.py   Built (232 lines). Tiered: a state file, then osascript
 │   │                   against Music.app, then a MusicKit account query.
-│   ├── spotify.py      Built (223 lines), PKCE OAuth. Dormant, needs a client id.
-│   ├── lastfm.py       Stub. get_current() returns None.
-│   ├── acoustid.py     Stub. get_current() returns None.
-│   └── localplayer.py  Stub. get_current() returns None.
+│   └── spotify.py      Built (223 lines), PKCE OAuth. Dormant, needs a client id.
 ├── art/
-│   ├── fetch.py        Cover URL to cached image
+│   ├── fetch.py        Cover URL to cached image (decode before cache)
 │   ├── pipeline.py     The colour work
 │   ├── disc.py         Sleeve as a spinning disc, supersampled, fixed sheen
-│   ├── effects.py      Ambient generators for when nothing is playing
-│   ├── pixelfont.py    A 64px-panel font, drawn by hand
+│   ├── effects.py      Eight ambient generators for when nothing is playing
+│   ├── pixelfont.py    The 5x7 font, single source for both apps' Swift copies
 │   └── text_modes.py   Clock and scrolling ticker over that font
 └── sinks/              mac_preview.py (PNG, for development), pi_renderer.py (FIFO)
 
-ios-companion/          AlbumWall, 4,330 lines of Swift
+ios-companion/          AlbumWall, the first app, 4,406 lines of Swift
 ├── AlbumWall/          The app: on device now playing push, wall remote,
 │                       photo and video push, App Intents, Live Activity
 ├── AlbumWallWidgets/   Home screen widgets and the Live Activity surface
 └── design/             Screen designs the app was built from
+
+tessera/                The current iOS app, 6,257 lines of Swift
+├── Tessera/            Wall screen, Studio (draw / photo / words / video),
+│                       Archive, Settings, offline outbox, stand-in wall
+├── TesseraWidgets/     Home screen widgets
+├── Shared/             Live Activity attributes, shared snapshot
+└── Tools/              gen_pixelfont.py (regenerates both apps' fonts),
+                        make_icon.py
 
 web/                    The control plane in a browser: pipeline (same math,
                         TypeScript), source chain, wall simulator, history,
@@ -428,7 +438,8 @@ pcb/
 ├── fab/                Gerbers, drill, pick and place, board views
 └── sims/               ngspice decks, numeric outputs, three figures, run_sims.py
 
-renderer/               art_display.c (92 lines) and its Makefile. Never compiled.
+renderer/               art_display.c (202 lines) and its Makefile. Builds and
+                        runs on the Pi; no panel has been on the other side.
 pi/                     PI-SETUP.md runbook, wiring.svg, bootstrap.sh, run_renderer.sh,
                         systemd units
 scripts/                mac_reporter.py (Mac HTTP endpoint the Pi polls), panel_qa.py +
@@ -446,25 +457,31 @@ deploy.sh               rsync to the Pi, with --bootstrap for the first run
 
 Stated plainly, because the value of everything above depends on this list being complete.
 
-- **No hardware has been driven.** Some first light parts are ordered; no panel has arrived, and
-  nothing in this repository has lit an LED.
+- **No panel has been driven.** The ten panels have arrived and the Pi runs the whole software
+  stack, but the bonnet and the 5V supplies have not landed, so nothing in this repository has lit
+  an LED.
 - **The PCB is routed but not signed off.** The last design rule check finds no violations and no
   unrouted signal, but it still reports 7 ground pour islands, which is the one defect that matters
   most on a board whose power design assumes a continuous return. Gerbers exist; stitch the ground
   first. The board is also still parked: the build uses the bonnet and bus bar path.
-- **The iOS app has never been verified end to end.** It builds and runs on device, but the
-  simulator stubs MediaPlayer, so its now playing path has only been reasoned about, not watched.
+- **Neither iOS app's now playing path is verifiable off a phone.** They build and run on device,
+  but the simulator stubs MediaPlayer, so that path is only ever exercised on real hardware.
 - **No panel has been through intake QA.** The patterns and the procedure exist; the results sheet
   is an empty table.
-- **The renderer has never been compiled**, because the library it links only builds on a Pi.
-- **Three of the five now playing adapters are stubs** that return `None`.
-- **No measured performance of any kind.** Not refresh rate, not frame time, not CPU usage, not
-  scheduler latency, not power draw. The 9600 Hz figure that appears in two source comments is a
-  third party library's specification and a target for this design, not a result.
-- **No persistence.** The brain holds the current track in one in memory variable. Nothing is
-  recorded, so there is no history of what has played and nothing to replay.
-- **The remote control app is unproven against a wall.** It talks to `brain/control.py`, and that
-  API has only ever driven a PNG on a laptop.
+- **The renderer's output has never reached an LED.** It compiles and runs on the Pi, but with no
+  panel attached everything it maps goes into the library and stops there.
+- **The acoustid, lastfm and localplayer adapters do not exist.** Only the names are reserved in
+  the config.
+- **Panel performance is unmeasured.** The software side is measured (`scripts/bench_frames.py`
+  bounds the producer, the brain prints its sustained fps, and the 60 Hz map cap came out of a
+  measured black-flashing regression), but refresh on real LEDs, CPU under a real load, and power
+  draw are not. The 9600 Hz figure in the source comments is the panel library's specification,
+  not a result from this room.
+- **History is a journal, not a database.** Plays land in `journal.jsonl` (capped at 500, replay
+  by timestamp); there is no search and no analytics on the brain side.
+- **Every app is unproven against a wall.** Web, AlbumWall and Tessera all drive
+  `brain/control.py`, and that API has run on the real Pi, but the loop from app to brain to lit
+  panel has never been closed.
 - **The web app's push-to-wall has not touched the Pi.** Its "Pi brain" push format matches
   `brain/control.py`'s `/frame` contract byte for byte, and the CORS headers that let a browser call
   that API are committed here, but the Pi was offline when this landed, so the loop web → brain →

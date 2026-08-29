@@ -67,7 +67,7 @@ struct VideoPushView: View {
                         Spacer()
                     }
                     if fit == "fill" {
-                        MonoTag("PINCH · DRAG THE PREVIEW TO FRAME")
+                        MonoTag("PINCH AND DRAG THE PREVIEW TO FRAME")
                     }
                 }
                 picker
@@ -174,7 +174,7 @@ struct VideoPushView: View {
             HStack {
                 MonoTag(clock(trimStart))
                 Spacer()
-                MonoTag("\(Int(span.rounded()))S · \(Int(span * Double(fps))) FRAMES")
+                MonoTag("\(Int(span.rounded()))S, \(Int(span * Double(fps))) FRAMES")
                 Spacer()
                 MonoTag(clock(trimEnd))
             }
@@ -333,12 +333,12 @@ struct VideoPushView: View {
     private var upToDate: Bool { !frames.isEmpty && extractedKey == paramsKey }
 
     private var rangeLabel: String {
-        String(format: "%@ – %@ · %.0fS",
+        String(format: "%@ TO %@, %.0fS",
                clock(trimStart), clock(trimEnd), span)
     }
 
     private var captionLeft: String {
-        extracting ? "READING" : (url == nil ? "PREVIEW" : (upToDate ? "64×64 LIVE" : "FRAME IT"))
+        extracting ? "READING" : (url == nil ? "PREVIEW" : (upToDate ? "64x64 LIVE" : "FRAME IT"))
     }
 
     private var captionRight: String {
@@ -507,10 +507,18 @@ struct VideoPushView: View {
     }
 
     private func ship() {
-        wall.sendClip(frames, fps: fps, preview: previews.first)
+        let send = wall.sendClip(frames, fps: fps, preview: previews.first)
         creations.addClip(frames, fps: fps)     // lands in Create history
         withAnimation { sent = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { dismiss() }
+        Task {
+            // Dismiss only on a confirmed 200; a rejected or dropped clip
+            // un-flips the button instead of pretending it landed.
+            let ok = await send.value
+            try? await Task.sleep(nanoseconds: 900_000_000)
+            await MainActor.run {
+                if ok { dismiss() } else { withAnimation { sent = false } }
+            }
+        }
     }
 
     static func readFrames(url: URL,
@@ -564,7 +572,9 @@ struct VideoPushView: View {
             frames.append(rgb)
             images.append(UIImage.fromRGB64(rgb) ?? final)
             onProgress(min(1, (pts - cfg.start) / max(0.1, cfg.span)))
-            if frames.count >= Int(cfg.span * Double(cfg.fps)) + 1 { break }
+            // hard cap at the brain's /clip limit; the old "+ 1" could
+            // collect a 241st frame and earn a 400 at full trim
+            if frames.count >= min(240, max(1, Int((cfg.span * Double(cfg.fps)).rounded()))) { break }
         }
         reader.cancelReading()
         return (frames, images)

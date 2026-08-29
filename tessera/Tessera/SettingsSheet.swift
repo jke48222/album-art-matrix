@@ -298,8 +298,10 @@ struct SettingsSheet: View {
         let trimmed = reporter.trimmingCharacters(in: .whitespaces)
         wall.push.host = trimmed
         Taps.commit()
-        StandIn.requestMusicAccess()
-        wall.push.restart()
+        // restart() bails while access is .notDetermined, so it has to run in
+        // the grant's completion: firing it immediately left the push dead
+        // until a second tap, with nothing on screen saying why.
+        StandIn.requestMusicAccess { [weak wall] in wall?.push.restart() }
     }
 
     private func commitHost() {

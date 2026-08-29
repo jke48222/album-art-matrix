@@ -8,12 +8,8 @@ import time
 import numpy as np
 from PIL import Image
 
+from .effects import _hex_rgb
 from .pixelfont import draw_text, normalize, text_width
-
-
-def _hex_rgb(s: str):
-    s = s.lstrip("#")
-    return tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
 
 
 class Ticker:

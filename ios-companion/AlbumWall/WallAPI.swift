@@ -69,12 +69,12 @@ final class WallAPI: ObservableObject {
     @Published var reachable = false
     @Published var journal: [JournalEntry] = []
     @Published var lastSentFrame: UIImage? = nil   // what /frame last showed
-    @Published var lastSentData: Data? = nil       // its raw bytes, for re-sends
     @Published var wallFrame: UIImage? = nil       // the wall's actual pixels
 
     @AppStorage("wallHost") var wallHost = "album-matrix.local:8788"
 
     private var pending: Task<Void, Never>?
+    private var queued: [String: Any] = [:]
     private var poll: Timer?
 
     init() {
@@ -136,14 +136,31 @@ final class WallAPI: ObservableObject {
     }
 
     /// Send a partial patch. Debounced slightly so slider drags don't flood.
+    /// Patches COALESCE: a mode tap landing inside a color drag's debounce
+    /// window must not delete the color patch, so superseding a pending send
+    /// merges the intent instead of dropping it.
     func send(_ patch: [String: Any], debounce: Bool = false) {
+        queued.merge(patch) { _, new in new }
         pending?.cancel()
         pending = Task { [weak self] in
             if debounce {
                 try? await Task.sleep(nanoseconds: 250_000_000)
-                if Task.isCancelled { return }
+                if Task.isCancelled { return }   // superseded; intent stays queued
             }
-            await self?.post(path: "/state", body: patch)
+            await self?.flushQueued()
+        }
+    }
+
+    @MainActor
+    private func flushQueued() async {
+        let body = queued
+        queued = [:]
+        guard !body.isEmpty else { return }
+        let ok = await post(path: "/state", body: body)
+        if !ok && Task.isCancelled {
+            // cancelled mid-flight by a newer send: nothing was confirmed,
+            // so keep the intent (newer values win over the re-queued ones)
+            queued.merge(body) { cur, _ in cur }
         }
     }
 
@@ -152,20 +169,21 @@ final class WallAPI: ObservableObject {
     }
 
     /// px: exactly 64*64*3 raw RGB bytes. preview: same pixels as an image.
-    func sendFrame(_ px: Data, preview: UIImage?) {
-        guard px.count == 64 * 64 * 3 else { return }
+    @discardableResult
+    func sendFrame(_ px: Data, preview: UIImage?) -> Task<Bool, Never> {
+        guard px.count == 64 * 64 * 3 else { return Task { false } }
         lastSentFrame = preview
-        lastSentData = px
-        Task { await post(path: "/frame", body: ["px": px.base64EncodedString()]) }
+        return Task { await post(path: "/frame",
+                                 body: ["px": px.base64EncodedString()]) }
     }
 
     /// frames: each exactly 64*64*3 raw RGB. The wall loops them at fps.
-    func sendClip(_ frames: [Data], fps: Int, preview: UIImage?) {
+    @discardableResult
+    func sendClip(_ frames: [Data], fps: Int, preview: UIImage?) -> Task<Bool, Never> {
         guard !frames.isEmpty, frames.allSatisfy({ $0.count == 64 * 64 * 3 })
-        else { return }
+        else { return Task { false } }
         lastSentFrame = preview
-        lastSentData = frames[0]
-        Task {
+        return Task {
             await post(path: "/clip", body: [
                 "fps": fps,
                 "frames": frames.map { $0.base64EncodedString() },
@@ -187,21 +205,30 @@ final class WallAPI: ObservableObject {
     }
 
     @MainActor
-    private func post(path: String, body: [String: Any]) async {
-        guard let url = url(path) else { return }
+    @discardableResult
+    private func post(path: String, body: [String: Any]) async -> Bool {
+        guard let url = url(path) else { return false }
         var req = URLRequest(url: url, timeoutInterval: 5)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = try? JSONSerialization.data(withJSONObject: body)
-        guard let (data, _) = try? await URLSession.shared.data(for: req),
-              let s = try? JSONDecoder().decode(WallState.self, from: data)
-        else { reachable = false; return }
-        state = s
+        guard let (data, resp) = try? await URLSession.shared.data(for: req)
+        else {
+            // a send superseded mid-flight is not the wall going away
+            if !Task.isCancelled { reachable = false }
+            return false
+        }
+        // The wall answered, so the link is up even if it rejected the body.
         reachable = true
+        guard (resp as? HTTPURLResponse)?.statusCode == 200,
+              let s = try? JSONDecoder().decode(WallState.self, from: data)
+        else { return false }   // an error body must not read as fresh state
+        state = s
         // the wall re-renders on the change; pull its new pixels shortly
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { [weak self] in
             self?.fetchWallFrame()
         }
+        return true
     }
 }
 
@@ -216,11 +243,29 @@ extension Color {
     }
 
     var hexString: String {
+        let (r, g, b) = rgb888
+        return String(format: "#%02x%02x%02x", Int(r), Int(g), Int(b))
+    }
+
+    /// getRed returns EXTENDED sRGB, so a vivid P3 pick can land outside
+    /// 0...1 — clamp before UInt8 or the conversion traps mid-brushstroke.
+    var rgb888: (UInt8, UInt8, UInt8) {
         let c = UIColor(self)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         c.getRed(&r, green: &g, blue: &b, alpha: &a)
-        return String(format: "#%02x%02x%02x",
-                      Int(round(r * 255)), Int(round(g * 255)),
-                      Int(round(b * 255)))
+        func b8(_ v: CGFloat) -> UInt8 { UInt8(max(0, min(255, v * 255))) }
+        return (b8(r), b8(g), b8(b))
+    }
+}
+
+extension WallState {
+    /// The ink the wall itself would use: the first art colour when matching,
+    /// else the chosen color, as raw RGB bytes.
+    var inkRGB: (UInt8, UInt8, UInt8) {
+        let hex = (match_art ? art_colors?.first : nil) ?? color
+        var v: UInt64 = 0
+        Scanner(string: String(hex.dropFirst())).scanHexInt64(&v)
+        return (UInt8((v >> 16) & 0xff), UInt8((v >> 8) & 0xff),
+                UInt8(v & 0xff))
     }
 }

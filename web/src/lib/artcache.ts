@@ -57,6 +57,15 @@ async function idbPut(key: string, blob: Blob) {
   });
 }
 
+async function idbDelete(key: string) {
+  const db = await open();
+  return new Promise<void>((res, rej) => {
+    const tx = db.transaction(STORE, "readwrite").objectStore(STORE).delete(key);
+    tx.onsuccess = () => res();
+    tx.onerror = () => rej(tx.error);
+  });
+}
+
 export async function cacheStats(): Promise<{ count: number; bytes: number }> {
   try {
     const db = await open();
@@ -145,6 +154,10 @@ export async function loadArt(url: string): Promise<RgbaImage> {
     const objectUrl = URL.createObjectURL(cached);
     try {
       return toRgba(await loadImageElement(objectUrl, false));
+    } catch {
+      // A cached blob that no longer decodes is poison, not a CORS problem:
+      // drop it and take the network path below.
+      await idbDelete(key).catch(() => undefined);
     } finally {
       URL.revokeObjectURL(objectUrl);
     }
@@ -170,10 +183,13 @@ export async function loadArt(url: string): Promise<RgbaImage> {
       message: `Artwork is ${(blob.size / 1e6).toFixed(1)} MB, over the ${MAX_BYTES / 1e6} MB limit.`,
     });
   }
-  await idbPut(key, blob).catch(() => undefined);
   const objectUrl = URL.createObjectURL(blob);
   try {
-    return toRgba(await loadImageElement(objectUrl, false));
+    const out = toRgba(await loadImageElement(objectUrl, false));
+    // Cache only what provably decoded: a corrupt body stored first would
+    // permanently break this cover until the cache was cleared by hand.
+    await idbPut(key, blob).catch(() => undefined);
+    return out;
   } finally {
     URL.revokeObjectURL(objectUrl);
   }

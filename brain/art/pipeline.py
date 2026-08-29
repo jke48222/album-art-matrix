@@ -13,6 +13,8 @@ The renderer runs with -g 2.2 so the bitslip6 library decodes back to linear
 for 64-bit BCM and applies temporal dither (steps 5's "built into the
 library"). Handing it encoded 8-bit keeps shadow precision through the pipe.
 """
+from functools import lru_cache
+
 import numpy as np
 from PIL import Image, ImageFilter
 
@@ -27,14 +29,29 @@ def prepare(img: Image.Image, size: int,
     return img
 
 
-def white_balance(img: Image.Image, gains) -> np.ndarray:
-    """Steps 3-5: linear decode, per-channel gains, re-encode. uint8 HxWx3."""
-    arr = np.asarray(img, dtype=np.float32) / 255.0
-    linear = np.power(arr, 2.2)
-    linear *= np.asarray(gains, dtype=np.float32)[None, None, :]
+@lru_cache(maxsize=8)
+def _wb_lut(gains: tuple) -> np.ndarray:
+    """3x256 uint8 table for white_balance. The mapping depends only on the
+    input byte and that channel's gain (the same float32 ops on the same
+    values, so bit-identical to the direct formula) — and this runs per frame
+    at animation rate on a Pi, where two full-array pow() calls were most of
+    the frame budget."""
+    v = np.arange(256, dtype=np.float32) / 255.0
+    linear = np.power(v, 2.2)[None, :] \
+        * np.asarray(gains, dtype=np.float32)[:, None]
     np.clip(linear, 0.0, 1.0, out=linear)
     encoded = np.power(linear, 1.0 / 2.2) * 255.0
     return (encoded + 0.5).astype(np.uint8)
+
+
+def white_balance(img: Image.Image, gains) -> np.ndarray:
+    """Steps 3-5: linear decode, per-channel gains, re-encode. uint8 HxWx3."""
+    lut = _wb_lut((float(gains[0]), float(gains[1]), float(gains[2])))
+    arr = np.asarray(img)
+    out = np.empty_like(arr)
+    for c in range(3):
+        out[..., c] = lut[c][arr[..., c]]
+    return out
 
 
 def process(img: Image.Image, size: int, gains,

@@ -7,13 +7,13 @@ import { computePower, DEFAULT_POWER, type PowerInputs, type PowerOutputs } from
 export const Route = createFileRoute("/power")({
   head: () => ({
     meta: [
-      { title: "Power calculator — Album Art Matrix" },
+      { title: "Power calculator - Album Art Matrix" },
       {
         name: "description",
         content:
           "Circuit model for a HUB75 LED wall: trunk IR drop, voltage at the panel and the supply trim needed to land 5.00 V.",
       },
-      { property: "og:title", content: "Power calculator — Album Art Matrix" },
+      { property: "og:title", content: "Power calculator - Album Art Matrix" },
       {
         property: "og:description",
         content: "Model trunk IR drop, panel voltage and supply trim for a 3x3 HUB75 P2.5 LED wall.",
@@ -57,13 +57,13 @@ function FeedDiagram({ i, o }: { i: PowerInputs; o: PowerOutputs }) {
 
   let x = wireX0;
   const segments: { x0: number; x1: number; label: string; drop: number; stroke: number }[] = [];
-  segments.push({ x0: x, x1: (x += seg[0]), label: `trunk ${i.trunkLengthM.toFixed(1)} m · ${i.trunkAwg} awg`, drop: o.trunkDrop, stroke: trunkW });
+  segments.push({ x0: x, x1: (x += seg[0]), label: `trunk ${i.trunkLengthM.toFixed(1)} m / ${i.trunkAwg} awg`, drop: o.trunkDrop, stroke: trunkW });
   const fuseX = x + 4;
   x += 26;
   segments.push({ x0: x, x1: (x += seg[1]), label: "fuse + clip", drop: o.fuseDrop, stroke: trunkW });
   const jX = x + 4;
   x += 26;
-  segments.push({ x0: x, x1: wireX1, label: `harness ${i.harnessLengthM.toFixed(1)} m · 18 awg`, drop: o.harnessDrop, stroke: 2 });
+  segments.push({ x0: x, x1: wireX1, label: `harness ${i.harnessLengthM.toFixed(1)} m / 18 awg`, drop: o.harnessDrop, stroke: 2 });
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
@@ -146,7 +146,7 @@ function PowerPage() {
         {out.warning && (
           <p className="num mt-2 border-t border-primary/40 pt-2.5 text-[10px] leading-relaxed text-primary">
             {out.panelVolts.toFixed(2)} V at the panel is below 4.90 V. The driver chips misbehave under that: dim
-            patches, colour shifts, flicker on bright frames — which looks exactly like a software bug. Shorten the
+            patches, colour shifts, flicker on bright frames - which looks exactly like a software bug. Shorten the
             trunk, go heavier, split the feed, or trim the supply up.
           </p>
         )}
@@ -232,9 +232,9 @@ function PowerPage() {
             <Readout label="feed sections" value={`${out.sections}`} />
             <Readout label="current per section" value={`${out.sectionAmps.toFixed(1)} A`} />
             <Readout label="trunk resistance, out + back" value={`${(out.trunkOhms * 1000).toFixed(1)} mΩ`} />
-            <Readout label="drop · trunk" value={`${out.trunkDrop.toFixed(3)} V`} />
-            <Readout label="drop · fuse and clip" value={`${out.fuseDrop.toFixed(3)} V`} />
-            <Readout label="drop · harness" value={`${out.harnessDrop.toFixed(3)} V`} />
+            <Readout label="drop / trunk" value={`${out.trunkDrop.toFixed(3)} V`} />
+            <Readout label="drop / fuse and clip" value={`${out.fuseDrop.toFixed(3)} V`} />
+            <Readout label="drop / harness" value={`${out.harnessDrop.toFixed(3)} V`} />
             <Readout label="total drop" value={`${out.totalDrop.toFixed(3)} V`} />
             <Readout label="voltage at the panel" value={`${out.panelVolts.toFixed(2)} V`} tone={out.warning ? "alert" : undefined} />
             <Readout label="trim to land 5.00 v" value={`${out.requiredTrim.toFixed(2)} V`} />

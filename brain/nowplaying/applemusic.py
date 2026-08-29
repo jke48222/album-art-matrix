@@ -23,6 +23,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 
 from . import NowPlaying, NowPlayingSource
 
@@ -31,6 +32,12 @@ MUSICKIT_HELPER = os.path.join(WIDGETSUITE, "musickit-fetch.py")
 STATE_JSON = os.path.expanduser(
     "~/Library/Group Containers/group.com.jalenedusei.widgetsuite/"
     "now-spinning/state.json")
+# A crashed companion leaves state.json claiming "playing" forever, which
+# would pin the wall on a dead track and shadow the live tiers below it
+# (the reporter's push tier expires for exactly this reason). The file is
+# rewritten on track changes, so 20 minutes of silence outlasts almost any
+# song while still letting a corpse expire.
+STATE_JSON_TTL_S = 20 * 60
 
 # NB: "st" is a reserved word in macOS 27 AppleScript — hence pstate.
 OSA_META = '''
@@ -141,6 +148,8 @@ class AppleMusicSource(NowPlayingSource):
     # ---- tiers ---------------------------------------------------------
     def _tier0_state_json(self):
         try:
+            if time.time() - os.path.getmtime(STATE_JSON) > STATE_JSON_TTL_S:
+                return None
             with open(STATE_JSON) as fh:
                 s = json.load(fh)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
@@ -210,7 +219,14 @@ class AppleMusicSource(NowPlayingSource):
         self._warned = False
         if resp.status_code != 200:
             return None
-        return NowPlaying(**resp.json())
+        try:
+            data = resp.json()
+        except ValueError:
+            return None
+        # The reporter decorates its payload (e.g. "tier"); take only the
+        # dataclass's own fields so decoration never breaks this side.
+        return NowPlaying(**{k: v for k, v in data.items()
+                             if k in NowPlaying.__dataclass_fields__})
 
     def get_current(self):
         return self._remote() if self.endpoint else self._local()

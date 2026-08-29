@@ -23,15 +23,26 @@ final class Outbox {
     private(set) var patch: [String: Any] = [:]
     /// The most recent frame waiting to be sent.
     private(set) var frame: [UInt8]? = nil
-    private(set) var queuedAt: Date? = nil
+    /// The most recent clip. Session-only: a clip can run to ~3 MB, which is
+    /// not something to park in the app-group plist. It survives being
+    /// offline, not a relaunch, and the summary says it is queued.
+    private(set) var clip: (frames: [[UInt8]], fps: Double)? = nil
+    /// When each kind was queued, so a flush can replay them in the order
+    /// they were meant: the brain force-sets mode on a frame push, and
+    /// whichever intent came LAST must win.
+    private(set) var patchAt: Date? = nil
+    private(set) var frameAt: Date? = nil
+    private(set) var clipAt: Date? = nil
+    var queuedAt: Date? { [patchAt, frameAt, clipAt].compactMap { $0 }.max() }
 
-    var isEmpty: Bool { patch.isEmpty && frame == nil }
+    var isEmpty: Bool { patch.isEmpty && frame == nil && clip == nil }
 
     /// What to tell the user, in their words rather than the network's.
     var summary: String? {
         guard !isEmpty else { return nil }
         var parts: [String] = []
         if frame != nil { parts.append("a frame") }
+        if clip != nil { parts.append("a clip") }
         if !patch.isEmpty {
             parts.append(patch.count == 1 ? "one change" : "\(patch.count) changes")
         }
@@ -47,21 +58,30 @@ final class Outbox {
 
     func add(patch p: [String: Any]) {
         for (k, v) in p { patch[k] = v }
-        queuedAt = Date()
+        patchAt = Date()
         save()
     }
 
     func add(frame f: [UInt8]) {
         guard f.count == 64 * 64 * 3 else { return }
         frame = f
-        queuedAt = Date()
+        frameAt = Date()
         save()
+    }
+
+    func add(clip frames: [[UInt8]], fps: Double) {
+        guard !frames.isEmpty else { return }
+        clip = (frames, fps)
+        clipAt = Date()
     }
 
     func clear() {
         patch = [:]
         frame = nil
-        queuedAt = nil
+        clip = nil
+        patchAt = nil
+        frameAt = nil
+        clipAt = nil
         save()
     }
 
@@ -70,7 +90,8 @@ final class Outbox {
         var blob: [String: Any] = [:]
         if !patch.isEmpty { blob["patch"] = patch }
         if let frame { blob["frame"] = Data(frame) }
-        if let queuedAt { blob["at"] = queuedAt }
+        if let patchAt { blob["patchAt"] = patchAt }
+        if let frameAt { blob["frameAt"] = frameAt }
         store.set(blob, forKey: Self.key)
     }
 
@@ -78,6 +99,8 @@ final class Outbox {
         guard let blob = store?.dictionary(forKey: Self.key) else { return }
         if let p = blob["patch"] as? [String: Any] { patch = p }
         if let d = blob["frame"] as? Data, d.count == 64 * 64 * 3 { frame = [UInt8](d) }
-        queuedAt = blob["at"] as? Date
+        // tolerate the old single-stamp format
+        patchAt = (blob["patchAt"] as? Date) ?? (blob["at"] as? Date)
+        frameAt = (blob["frameAt"] as? Date) ?? (blob["at"] as? Date)
     }
 }

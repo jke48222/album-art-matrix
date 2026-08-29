@@ -19,7 +19,7 @@ export const PATTERNS: { id: PatternId; label: string; purpose: string }[] = [
   {
     id: "synthetic",
     label: "Synthetic cover",
-    purpose: "Gradient, vinyl disc and fine detail — exposes banding, aliasing and downscale mush.",
+    purpose: "Gradient, vinyl disc and fine detail - exposes banding, aliasing and downscale mush.",
   },
   { id: "white", label: "Full white", purpose: "Every pixel 255. Measure white balance against a real panel." },
   { id: "red", label: "Full red", purpose: "Per-channel output, red emitters only." },
