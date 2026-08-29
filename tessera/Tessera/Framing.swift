@@ -15,6 +15,21 @@
 import SwiftUI
 import UIKit
 
+/// The screen's own edges, read from UIKit.
+///
+/// This screen is presented over two other full-screen covers, and by that
+/// depth SwiftUI reports no insets at all: the layout ran to the glass, under
+/// the clock and over the home indicator. Asking the window directly is the
+/// one answer that does not depend on how many presentations deep we are.
+enum Safe {
+    private static var insets: UIEdgeInsets {
+        (UIApplication.shared.connectedScenes.first as? UIWindowScene)?
+            .windows.first(where: { $0.isKeyWindow })?.safeAreaInsets ?? .zero
+    }
+    static var top: CGFloat { insets.top }
+    static var bottom: CGFloat { insets.bottom }
+}
+
 struct Framing: View {
     /// One image for a still, many for a clip. The window applies to all of
     /// them: a clip is one shot, not a hundred separately-aimed ones.
@@ -30,19 +45,20 @@ struct Framing: View {
     @State private var preview: [UInt8] = [UInt8](repeating: 0, count: 64 * 64 * 3)
     @State private var playhead = 0
     @State private var working = false
+    /// The window's side in points, measured once the layout knows it. Every
+    /// piece of the arithmetic below is in these units.
+    @State private var side: CGFloat = 0
 
     private var isClip: Bool { source.count > 1 }
     private var still: CGImage? { source.first }
 
     var body: some View {
-        GeometryReader { geo in
-            let side = min(geo.size.width - 24, geo.size.height * 0.62)
+        VStack(spacing: 0) {
+            head
+                .padding(.horizontal, 20)
+                .padding(.bottom, 18)
 
-            VStack(spacing: 0) {
-                head
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
-
+            GeometryReader { geo in
                 ZStack {
                     // What you are leaving out, still visible, still dim.
                     if let cg = still {
@@ -52,7 +68,7 @@ struct Framing: View {
                             .frame(width: side, height: side)
                             .scaleEffect(zoom)
                             .offset(pan)
-                            .opacity(0.22)
+                            .opacity(0.3)
                             .allowsHitTesting(false)
                     }
 
@@ -91,22 +107,26 @@ struct Framing: View {
                     }
                     redraw(side: side)
                 }
+                .onAppear {
+                    side = min(geo.size.width * 0.8, geo.size.height - 24)
+                    redraw(side: side)
+                }
+            }
 
-                foot(side: side)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 18)
-                    .padding(.bottom, 8)
-            }
-            .padding(.vertical, 18)
-            .onAppear { redraw(side: side) }
-            // A clip plays while you aim it, because a clip's subject moves
-            // and framing a frozen first frame is framing the wrong thing.
-            .onReceive(Timer.publish(every: 1 / Clip.fps, on: .main, in: .common).autoconnect()) { _ in
-                guard isClip else { return }
-                playhead = (playhead + 1) % source.count
-                redraw(side: side)
-            }
+            foot
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
         }
+        .padding(.top, Safe.top + 12)
+        .padding(.bottom, Safe.bottom + 12)
+        // A clip plays while you aim it, because a clip's subject moves and
+        // framing a frozen first frame is framing the wrong thing.
+        .onReceive(Timer.publish(every: 1 / Clip.fps, on: .main, in: .common).autoconnect()) { _ in
+            guard isClip else { return }
+            playhead = (playhead + 1) % source.count
+            redraw(side: side)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Ink.ground)
         .preferredColorScheme(.dark)
     }
@@ -127,7 +147,7 @@ struct Framing: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func foot(side: CGFloat) -> some View {
+    private var foot: some View {
         HStack(spacing: 18) {
             Button("Back") { Taps.detent(intensity: 0.3); onCancel() }
                 .buttonStyle(PressStyle(scale: 0.96))
@@ -142,7 +162,7 @@ struct Framing: View {
 
             Button(working ? "Working" : "Use it") {
                 Taps.commit()
-                commit(side: side)
+                commit()
             }
             .buttonStyle(PressStyle(scale: 0.96))
             .font(.ui(15, .semibold))
@@ -181,8 +201,8 @@ struct Framing: View {
         if let px = Framing.sample(cg, rect: window(first, side: side)) { preview = px }
     }
 
-    private func commit(side: CGFloat) {
-        guard let first = still else { return }
+    private func commit() {
+        guard let first = still, side > 0 else { return }
         working = true
         let rect = window(first, side: side)
         let frames = source.compactMap { Framing.sample($0, rect: rect) }
