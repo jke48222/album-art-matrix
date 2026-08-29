@@ -201,6 +201,12 @@ struct WallHero: View {
     let confirmed: Double            // what the wall last told us
     @Binding var dragging: Double?   // non-nil while the finger is adjusting
     let link: LinkState
+    /// Changes when a NEW SLEEVE arrives, not when a new frame does. In an
+    /// animated mode the frame changes many times a second and every one of
+    /// those is emphatically not an arrival; keying the repaint on the frame
+    /// restarted a 500ms blank-and-relight several times a second, which on
+    /// the panel reads as flashing black.
+    let arrivalKey: String
     var onCommit: (Double) -> Void
     var onHold: () -> Void
 
@@ -300,7 +306,7 @@ struct WallHero: View {
                     }
             )
             .overlay(alignment: .topTrailing) { staleStamp }
-            .onChange(of: reading.key) { _, _ in arrive() }
+            .onChange(of: arrivalKey) { _, _ in arrive() }
             .onAppear { outgoing = reading.panel }
             .accessibilityElement()
             .accessibilityLabel("The wall")

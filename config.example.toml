@@ -49,16 +49,22 @@ rpm = 7.5         # one revolution per four bars at 120 BPM
 # the BCM bit-plane refresh, which builds colour depth by rescanning a row, and
 # is a different number from how often new content appears.
 #
-# 120 is chosen from measurement, not taste. `scripts/bench_frames.py` puts the
-# slowest animated mode (the spinning disc, the only one doing real work) at
-# ~540 fps on an M-series Mac. A Pi 5 running the same NumPy is slower, and the
-# renderer and white balance share that CPU, so this leaves roughly 4x headroom
-# even if the Pi is 4x slower. The brain logs the rate it actually achieves, so
-# if the Pi cannot hold 120 you will see it say so rather than silently drop.
+# 60, arrived at the hard way. `scripts/bench_frames.py` says the PRODUCER can
+# do ~540 fps for the slowest animated mode on an M-series Mac, so 120 looked
+# free. It was not: the display path, not the producer, is the binding limit.
+# art_display maps a frame into the same bit-plane buffer the refresh thread is
+# scanning, so each map is a window where the panel can show a half-built
+# frame. At 20 fps that window was rare enough to miss; at 120 it was constant
+# black flashing on the panels.
 #
-# Raising this further is unlikely to be visible: the panel's own frame ceiling
-# has never been measured, and nothing in the eye needs more than this.
-fps = 120
+# So the renderer now caps mapping at MAX_MAP_HZ (60 by default) and drops the
+# rest, and there is no point asking for frames it will throw away. A dropped
+# frame is invisible; a torn one is not.
+#
+# To find the real ceiling on hardware: raise MAX_MAP_HZ on art_display, raise
+# this to match, and watch for tearing. art_display reports mapped/dropped
+# every ten seconds and the brain reports the rate it sustains.
+fps = 60
 
 [control]
 port = 8788     # wall control API (iOS companion posts here)

@@ -38,6 +38,7 @@ struct WallScreen: View {
                     confirmed: isOff ? 0.05 : wall.state.brightness,
                     dragging: $dragLight,
                     link: wall.link,
+                    arrivalKey: wall.state.title ?? wall.state.mode,
                     onCommit: { wall.send(["brightness": $0]) },
                     onHold: { wall.send(["mode": isOff ? "art" : "off"]) }
                 )

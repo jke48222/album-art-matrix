@@ -61,6 +61,8 @@ final class WallSession {
     var frame: Data? = nil            // 64*64*3 RGB888, pre-white-balance
     var link: LinkState = .searching
     var lastSync: Date? = nil
+    /// What you asked for while the wall was not listening.
+    let outbox = Outbox()
 
     // The simulator shares the Mac's network: localhost reaches a brain
     // running beside it. On device the wall's mDNS name is the default.
@@ -88,6 +90,18 @@ final class WallSession {
     /// 8 fps is enough for a spinning disc to read as spinning, and a static
     /// sleeve does not need even that.
     func start() {
+        // A cold launch away from the wall should show the last wall we saw,
+        // stamped, rather than a dark rectangle pretending to be the truth.
+        if frame == nil {
+            let cached = WallSnapshot.read()
+            if let px = cached.px {
+                frame = Data(px)
+                state.title = cached.title
+                state.artist = cached.artist
+                state.mode = cached.mode
+                link = .offline(since: cached.updated ?? Date())
+            }
+        }
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
             var tick = 0
@@ -118,11 +132,15 @@ final class WallSession {
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw URLError(.cannotParseResponse)
             }
+            let reconnected = !wasLive
             state = WallState(json: json)
             lastSync = Date()
-            if !wasLive { Taps.found() }   // the lamp switched on
+            if reconnected { Taps.found() }   // the lamp switched on
             wasLive = true
             link = .live
+            if reconnected { flushOutbox() }
+            WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
+                               artist: state.artist, mode: state.mode, host: host)
         } catch {
             if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
@@ -184,9 +202,12 @@ final class WallSession {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
-        Task { [http] in
+        Task { [http, weak self] in
             if (try? await http.data(for: req)) == nil {
-                await MainActor.run { Taps.error() }
+                await MainActor.run {
+                    self?.outbox.add(frame: px)
+                    Taps.error()
+                }
             }
         }
     }
@@ -210,12 +231,30 @@ final class WallSession {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
-        Task { [http] in
+        Task { [http, weak self] in
             do {
                 _ = try await http.data(for: req)
             } catch {
-                await MainActor.run { Taps.error() }
+                await MainActor.run {
+                    guard let self else { return }
+                    // Intent survives the network. It goes out when the wall
+                    // answers again, and the UI says so in the meantime.
+                    self.outbox.add(patch: merged)
+                    Taps.error()
+                }
             }
         }
+    }
+
+    /// Everything queued while the wall was away, in one pass, settings first
+    /// so a frame is not immediately overwritten by a mode change.
+    private func flushOutbox() {
+        guard !outbox.isEmpty else { return }
+        let patch = outbox.patch
+        let frame = outbox.frame
+        outbox.clear()
+        if !patch.isEmpty { send(patch as [String: Any]) }
+        if let frame { pushFrame(frame) }
+        Taps.landed()
     }
 }
