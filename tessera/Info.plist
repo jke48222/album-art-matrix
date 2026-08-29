@@ -4,6 +4,8 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Tessera</string>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Shows what you are playing, so there is something real on the wall.</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Tessera talks to the LED wall and the Mac reporter on your network. Nothing leaves it.</string>
 	<key>NSAppTransportSecurity</key>

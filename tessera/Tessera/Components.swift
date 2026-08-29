@@ -271,21 +271,22 @@ struct LinkChip: View {
         switch link {
         case .live: Ink.moss
         case .searching: Ink.tile
-        case .offline: Ink.faint
+        case .offline, .standIn: Ink.faint
         }
     }
     private var text: Color {
         switch link {
         case .live: Ink.moss
         case .searching: Ink.dim
-        case .offline: Ink.faint
+        case .offline, .standIn: Ink.faint
         }
     }
     private var label: String {
         switch link {
         case .live: "live"
-        case .searching: "finding"
-        case .offline: "offline"
+        case .searching: "looking"
+        case .offline: "away"
+        case .standIn: "no wall yet"
         }
     }
 }
@@ -339,8 +340,9 @@ struct Placard: View {
     private var silence: String {
         switch link {
         case .live: state.mode == "off" ? "Asleep." : "Nothing playing."
-        case .searching: "Looking for the wall."
-        case .offline: "The wall is not answering."
+        case .searching: "Looking for your wall."
+        case .offline: "Showing the last thing your wall had."
+        case .standIn: "Nothing playing."
         }
     }
 }

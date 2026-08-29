@@ -24,10 +24,10 @@ def render(size: int = SIZE) -> Image.Image:
     gd = ImageDraw.Draw(glow)
     d = ImageDraw.Draw(img)
 
-    margin = size * 0.19
+    margin = size * 0.09
     span = size - margin * 2
     cell = span / GRID
-    r = cell * 0.34
+    r = cell * 0.36
 
     # The lit tile sits one step up and left of centre, so the mark has a
     # direction and never reads as a symmetric logo-grid.
@@ -41,7 +41,7 @@ def render(size: int = SIZE) -> Image.Image:
             if (gx, gy) == (lit_x, lit_y):
                 # the halo goes on the additive layer
                 # A fully lit emitter blooms bigger than its dark neighbours.
-                hr = r * 3.4
+                hr = r * 3.6
                 gd.ellipse((cx - hr, cy - hr, cx + hr, cy + hr), fill=LIT)
                 lr = r * 1.45
                 d.ellipse((cx - lr, cy - lr, cx + lr, cy + lr), fill=LIT)

@@ -48,8 +48,11 @@ enum LinkState: Equatable {
     case searching
     case live                 // LAN, answering
     case offline(since: Date) // cached truth, stamped
+    case standIn              // no wall anywhere; the app is running one
 
     var isLive: Bool { if case .live = self { true } else { false } }
+    /// True when what is on screen is the app's own, not a wall's.
+    var isStandIn: Bool { if case .standIn = self { true } else { false } }
 }
 
 // MARK: - Session
@@ -63,6 +66,11 @@ final class WallSession {
     var lastSync: Date? = nil
     /// What you asked for while the wall was not listening.
     let outbox = Outbox()
+
+    /// A wall of our own, for when there is not one yet. Everything
+    /// downstream takes frames and state without knowing the difference.
+    @ObservationIgnored private let standIn = StandIn()
+    @ObservationIgnored private var misses = 0
 
     // The simulator shares the Mac's network: localhost reaches a brain
     // running beside it. On device the wall's mDNS name is the default.
@@ -133,6 +141,12 @@ final class WallSession {
             var tick = 0
             while !Task.isCancelled {
                 guard let self else { return }
+                if self.link.isStandIn {
+                    self.tickStandIn()
+                    tick &+= 1
+                    try? await Task.sleep(for: .milliseconds(125))
+                    continue
+                }
                 let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
                 if tick % 16 == 0 { await self.pollState() }          // 2s
                 if animating || tick % 2 == 0 { await self.pullFrame() }
@@ -180,11 +194,43 @@ final class WallSession {
             WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
                                artist: state.artist, mode: state.mode, host: host)
         } catch {
-            if wasLive || linkIsSearching {
+            misses += 1
+            // Three misses is about six seconds of asking. After that, stop
+            // showing an empty room and run a wall instead. Anything the app
+            // has genuinely seen before is still worth showing as offline.
+            if lastSync == nil, misses >= 3 {
+                enterStandIn()
+            } else if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
             }
             wasLive = false
         }
+    }
+
+    // MARK: - Stand-in
+
+    private func enterStandIn() {
+        guard !link.isStandIn else { return }
+        standIn.refreshNowPlaying()
+        state = standIn.state
+        link = .standIn
+    }
+
+    /// Leave the stand-in and go looking again. The next successful poll
+    /// takes over completely.
+    func lookForWallAgain() {
+        misses = 0
+        link = .searching
+        Task { await pollState() }
+    }
+
+    private func tickStandIn() {
+        standIn.refreshNowPlaying()
+        var s = standIn.state
+        s.brightness = state.brightness      // keep whatever the finger set
+        standIn.apply(["brightness": s.brightness])
+        state = s
+        frame = standIn.frame()
     }
 
     private var linkIsSearching: Bool { if case .searching = link { true } else { false } }
@@ -255,6 +301,11 @@ final class WallSession {
     /// Put an exact 64x64 frame on the wall. What you drew is what it lights.
     func pushFrame(_ px: [UInt8]) {
         guard px.count == 64 * 64 * 3 else { return }
+        if link.isStandIn {
+            frame = Data(px)                 // it lands on the stand-in wall
+            Taps.landed()
+            return
+        }
         guard let u = url("/frame"),
               let body = try? JSONSerialization.data(
                 withJSONObject: ["px": Data(px).base64EncodedString()]
@@ -286,6 +337,12 @@ final class WallSession {
         if let ma = merged["match_art"] as? Bool { state.matchArt = ma }
         merged.removeValue(forKey: "_local")
         for key in merged.keys { pending[key] = Date() }
+
+        if link.isStandIn {
+            standIn.apply(merged)
+            state = standIn.state
+            return
+        }
 
         guard let u = url("/state"),
               let body = try? JSONSerialization.data(withJSONObject: merged) else { return }
