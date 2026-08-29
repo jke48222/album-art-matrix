@@ -22,6 +22,10 @@ struct JournalEntry: Equatable {
     let artist: String
     let album: String
     let artURL: String?
+    /// Recorded by the app rather than by a wall, which means the frame is
+    /// held here instead of being refetchable from an address. See
+    /// [[LocalJournal]] for why the two cannot be the same thing.
+    var local: Bool = false
 
     var date: Date { Date(timeIntervalSince1970: TimeInterval(ts)) }
 }
@@ -58,7 +62,10 @@ final class ArchiveStore {
     func load(host: String) async {
         loading = true
         defer { loading = false }
-        guard let u = URL(string: "http://\(host)/journal?limit=200") else { return }
+        guard let u = URL(string: "http://\(host)/journal?limit=200") else {
+            adoptLocal()
+            return
+        }
         do {
             let (data, _) = try await URLSession.shared.data(from: u)
             guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -77,11 +84,29 @@ final class ArchiveStore {
             }
             .sorted { $0.ts > $1.ts }
 
-            runs = Self.collapse(entries)
-            failed = nil
+            // A wall that answers with nothing has not worn anything yet,
+            // and the app may still have. Both are the same list.
+            runs = Self.collapse(Self.merge(entries, LocalJournal.entries()))
+            failed = runs.isEmpty ? "Nothing here yet." : nil
         } catch {
-            failed = "Nothing here yet."
+            adoptLocal()
         }
+    }
+
+    /// No wall, or no answer from it: what the app itself has seen.
+    private func adoptLocal() {
+        runs = Self.collapse(LocalJournal.entries())
+        failed = runs.isEmpty ? "Nothing here yet." : nil
+    }
+
+    /// Newest first, and never the same wearing twice. A sleeve can be in
+    /// both lists when the app watched a wall that was also writing its own
+    /// journal, and one of those is enough.
+    private static func merge(_ a: [JournalEntry], _ b: [JournalEntry]) -> [JournalEntry] {
+        var seen = Set<String>()
+        return (a + b)
+            .sorted { $0.ts > $1.ts }
+            .filter { seen.insert("\($0.ts)|\($0.title)").inserted }
     }
 
     private static func collapse(_ entries: [JournalEntry]) -> [WornRun] {
@@ -101,6 +126,22 @@ final class ArchiveStore {
     /// the cell shows an unlit lattice until then, which is what a panel with
     /// nothing on it actually looks like.
     func tile(_ entry: JournalEntry) -> UIImage? {
+        // A locally recorded sleeve carries its own frame, so there is
+        // nothing to fetch and nothing to reduce: this is the bytes the app
+        // actually put on its own wall.
+        if entry.local {
+            let key = "local:\(entry.ts)"
+            if let hit = tiles[key] { return hit }
+            guard !inFlight.contains(key), let px = LocalJournal.frame(entry.ts) else { return nil }
+            inFlight.insert(key)
+            if let img = EmitterTile.render(px, cell: 4) {
+                tiles[key] = img
+                inFlight.remove(key)
+                return img
+            }
+            inFlight.remove(key)
+            return nil
+        }
         guard let key = entry.artURL else { return nil }
         if let hit = tiles[key] { return hit }   // observed read
         guard !inFlight.contains(key), let url = URL(string: key) else { return nil }
@@ -195,7 +236,7 @@ enum EmitterTile {
 
 struct ArchiveScreen: View {
     @Environment(WallSession.self) private var wall
-    @State private var store = ArchiveStore()
+    @Environment(ArchiveStore.self) private var store
     @State private var opened: WornRun? = nil
     @Namespace private var zoom
 
@@ -210,6 +251,7 @@ struct ArchiveScreen: View {
                 if store.runs.isEmpty {
                     emptyState
                 } else {
+                    counts
                     ForEach(days, id: \.0) { (day, runs) in
                         band(day: day, runs: runs)
                     }
@@ -220,7 +262,6 @@ struct ArchiveScreen: View {
             .padding(.bottom, 60)
         }
         .scrollIndicators(.hidden)
-        .task { await store.load(host: wall.host) }
         .refreshable { await store.load(host: wall.host) }
         .overlay { detail }
     }
@@ -231,12 +272,27 @@ struct ArchiveScreen: View {
                 .font(.display(18))
                 .kerning(3.0)
                 .foregroundStyle(Ink.ink)
-            Text(store.runs.isEmpty ? " " : "\(store.runs.count) sleeves the wall has carried")
+            Text(store.runs.isEmpty ? " " : "everything the wall has carried")
                 .font(.ui(13))
                 .foregroundStyle(Ink.dim)
         }
         .padding(.horizontal, 6)
         .padding(.bottom, 2)
+    }
+
+    /// The shape of the listening, before the sleeves themselves. It goes
+    /// above the grid because it is the one thing here you cannot get by
+    /// scrolling: the grid is the record, this is what the record adds up to.
+    @ViewBuilder private var counts: some View {
+        let stats = WornStats.read(store.runs)
+        if !stats.isEmpty {
+            VStack(alignment: .leading, spacing: 18) {
+                WornClockBand(stats: stats, accent: accent)
+                WornCount(stats: stats, accent: accent)
+            }
+            .padding(.horizontal, 6)
+            .padding(.bottom, 4)
+        }
     }
 
     /// Newest day first; inside a day, newest first.

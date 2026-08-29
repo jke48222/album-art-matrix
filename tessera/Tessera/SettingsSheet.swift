@@ -13,6 +13,7 @@ struct SettingsSheet: View {
     @State private var host: String = ""
     @State private var sleepMinutes: Double = 30
     @State private var brightness: Double = 1
+    @State private var reporter: String = ""
 
     var body: some View {
         NavigationStack {
@@ -28,7 +29,10 @@ struct SettingsSheet: View {
                     .padding(.bottom, -8)
 
                     theWall
+                    telling
                     if wall.link.isStandIn { music }
+                    whenItStops
+                    lockScreen
                     sleep
                     light
                     panelCheck
@@ -52,6 +56,7 @@ struct SettingsSheet: View {
         .preferredColorScheme(.dark)
         .onAppear {
             host = wall.host
+            reporter = wall.push.host
             brightness = wall.state.brightness
         }
     }
@@ -90,6 +95,83 @@ struct SettingsSheet: View {
                 LinkChip(link: wall.link)
             }
             .padding(.top, 10)
+        }
+    }
+
+    /// The reason a phone app exists: it can see what is playing, and the
+    /// Mac cannot see it in time.
+    private var telling: some View {
+        Section("telling the wall what is playing",
+                note: "Your phone knows what is playing the moment it changes. The Mac finds out about a track late, so without this the wall changes late too. Tessera posts to the reporter on your Mac, which answers on port 8787.") {
+            TextField("your-mac.local:8787", text: $reporter)
+                .font(.machine(13))
+                .foregroundStyle(Ink.ink)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .keyboardType(.URL)
+                .padding(.vertical, 12).padding(.horizontal, 14)
+                .background(Ink.sunk)
+                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+                .onSubmit { commitReporter() }
+
+            HStack(spacing: 16) {
+                Button("Start telling it") { commitReporter() }
+                    .buttonStyle(PressStyle(scale: 0.97))
+                    .font(.ui(13, .medium))
+                    .foregroundStyle(accent)
+                Spacer()
+                if let sent = wall.push.lastSent {
+                    Text("sent \(sent.formatted(date: .omitted, time: .shortened))")
+                        .font(.machine(10))
+                        .foregroundStyle(Ink.moss)
+                }
+            }
+            .padding(.top, 8)
+
+            Toggle(isOn: Binding(
+                get: { wall.push.keepAlive },
+                set: { wall.push.keepAlive = $0; wall.push.restart() }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Keep telling it in my pocket").font(.ui(15)).foregroundStyle(Ink.ink)
+                    Text("Holds a silent audio session so iOS does not suspend the app. Costs a little battery and never interrupts Music.")
+                        .font(.ui(12)).foregroundStyle(Ink.faint)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(accent)
+            .padding(.top, 6)
+        }
+    }
+
+    /// The lock-screen presence, which is off until asked for.
+    private var lockScreen: some View {
+        Section("on the lock screen", note: nil) {
+            Toggle(isOn: Binding(
+                get: { wall.live.enabled },
+                set: { wall.live.enabled = $0; Taps.detent(intensity: 0.5) }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Show the wall while it is on").font(.ui(15)).foregroundStyle(Ink.ink)
+                    Text("A twelve by twelve version of what it is showing, on the lock screen and in the Dynamic Island. It ends itself when the wall goes dark.")
+                        .font(.ui(12)).foregroundStyle(Ink.faint)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .tint(accent)
+        }
+    }
+
+    /// What the wall does when the music stops.
+    private var whenItStops: some View {
+        Section("when nothing is playing", note: nil) {
+            PillRow(
+                label: "",
+                options: [("go dark", "black"), ("hold it", "hold"),
+                          ("dim it", "dim"), ("drift", "ambient")],
+                selected: wall.state.idle,
+                accent: accent
+            ) { wall.send(["idle": $0]) }
         }
     }
 
@@ -210,6 +292,14 @@ struct SettingsSheet: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    private func commitReporter() {
+        let trimmed = reporter.trimmingCharacters(in: .whitespaces)
+        wall.push.host = trimmed
+        Taps.commit()
+        StandIn.requestMusicAccess()
+        wall.push.restart()
     }
 
     private func commitHost() {

@@ -19,11 +19,36 @@ struct WallState: Equatable {
     var matchArt: Bool = false
     var color: String = "#e8b04b"
     var color2: String = "#e0491f"
+    var tickerText: String = "HELLO"
+    var tickerLoop: Bool = true
+    var clock24h: Bool = true
+    var idle: String = "black"
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
     var artColors: [String] = []
     var sleepRemaining: Int? = nil
+    /// Where the song is. Held as "this was true then" rather than as a
+    /// number, so the phone can run the same clock the wall runs instead of
+    /// showing a position that went stale the moment it arrived.
+    var songAt: Double? = nil          // seconds in, at `songStamped`
+    var songOf: Double? = nil          // seconds long
+    var songPlaying: Bool = false
+    var songStamped: Date? = nil
+
+    /// The position now, extrapolated. Nil when nothing has said one.
+    var songNow: Double? {
+        guard let at = songAt, let stamped = songStamped else { return nil }
+        guard songPlaying else { return at }
+        let run = at + Date().timeIntervalSince(stamped)
+        return min(run, songOf ?? run)
+    }
+
+    /// 0 to 1 through the track, when both ends are known.
+    var songFraction: Double? {
+        guard let of = songOf, of > 1, let now = songNow else { return nil }
+        return min(1, max(0, now / of))
+    }
 
     init() {}
 
@@ -36,10 +61,22 @@ struct WallState: Equatable {
         matchArt = json["match_art"] as? Bool ?? false
         color = json["color"] as? String ?? "#e8b04b"
         color2 = json["color2"] as? String ?? "#e0491f"
+        tickerText = json["ticker_text"] as? String ?? "HELLO"
+        tickerLoop = json["ticker_loop"] as? Bool ?? true
+        clock24h = json["clock_24h"] as? Bool ?? true
+        idle = json["idle"] as? String ?? "black"
         if let now = json["now_showing"] as? [String: Any] {
             title = now["title"] as? String
             artist = now["artist"] as? String
             album = now["album"] as? String
+        }
+        if let p = json["progress"] as? [String: Any], let at = p["at"] as? Double {
+            songAt = at / 1000
+            songOf = (p["of"] as? Double).map { $0 / 1000 }
+            songPlaying = p["playing"] as? Bool ?? false
+            // The wall stamps in its own clock; what matters is elapsed since
+            // it spoke, and this is the moment it reached us.
+            songStamped = Date()
         }
         artColors = json["art_colors"] as? [String] ?? []
         sleepRemaining = json["sleep_remaining_s"] as? Int
@@ -71,6 +108,10 @@ final class WallSession {
 
     /// A wall of our own, for when there is not one yet. Everything
     /// downstream takes frames and state without knowing the difference.
+    /// The phone telling the wall what is playing.
+    let push = NowPlayingPush()
+    /// The wall on the lock screen, when the owner wants it there.
+    let live = LiveWall()
     @ObservationIgnored private let standIn = StandIn()
     @ObservationIgnored private var misses = 0
 
@@ -126,6 +167,7 @@ final class WallSession {
     /// 8 fps is enough for a spinning disc to read as spinning, and a static
     /// sleeve does not need even that.
     func start() {
+        push.start()
         // A cold launch away from the wall should show the last wall we saw,
         // stamped, rather than a dark rectangle pretending to be the truth.
         if frame == nil {
@@ -186,6 +228,10 @@ final class WallSession {
             keep("match_art", &fresh.matchArt, mine.matchArt)
             keep("color", &fresh.color, mine.color)
             keep("color2", &fresh.color2, mine.color2)
+            keep("ticker_text", &fresh.tickerText, mine.tickerText)
+            keep("ticker_loop", &fresh.tickerLoop, mine.tickerLoop)
+            keep("clock_24h", &fresh.clock24h, mine.clock24h)
+            keep("idle", &fresh.idle, mine.idle)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
@@ -197,6 +243,7 @@ final class WallSession {
             if reconnected { flushOutbox() }
             WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
                                artist: state.artist, mode: state.mode, host: host)
+            live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: host)
         } catch {
             misses += 1
             // Three misses is about six seconds of asking. After that, stop
@@ -235,6 +282,7 @@ final class WallSession {
         standIn.apply(["brightness": s.brightness])
         state = s
         frame = standIn.frame()
+        live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
     }
 
     private var linkIsSearching: Bool { if case .searching = link { true } else { false } }
@@ -341,6 +389,10 @@ final class WallSession {
         if let ma = merged["match_art"] as? Bool { state.matchArt = ma }
         if let c = merged["color"] as? String { state.color = c }
         if let c = merged["color2"] as? String { state.color2 = c }
+        if let v = merged["ticker_text"] as? String { state.tickerText = v }
+        if let v = merged["ticker_loop"] as? Bool { state.tickerLoop = v }
+        if let v = merged["clock_24h"] as? Bool { state.clock24h = v }
+        if let v = merged["idle"] as? String { state.idle = v }
         merged.removeValue(forKey: "_local")
         for key in merged.keys { pending[key] = Date() }
 

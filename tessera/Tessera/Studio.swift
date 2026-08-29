@@ -225,6 +225,8 @@ struct StudioScreen: View {
     @State private var clip: [[UInt8]] = []
     @State private var clipFrame = 0
     @State private var loadingMedia = false
+    /// Picked media, waiting to be aimed. Nil when there is nothing to aim.
+    @State private var framing: FramingJob? = nil
     @State private var sent = false
     @State private var words = ""
     @State private var writing = false
@@ -270,6 +272,26 @@ struct StudioScreen: View {
         .preferredColorScheme(.dark)
         .presentationBackground(Ink.ground)
         .onAppear { kept.load() }
+        // Aiming happens on its own surface: it needs the whole screen and it
+        // is a decision, not an adjustment you leave half-made.
+        .fullScreenCover(item: $framing) { job in
+            Framing(source: job.source, accent: accent) {
+                framing = nil
+                media = nil
+            } onUse: { frames in
+                framing = nil
+                media = nil
+                if frames.count > 1 {
+                    clip = frames
+                    clipFrame = 0
+                    canvas.load(frames[0])
+                } else if let one = frames.first {
+                    clip = []
+                    canvas.load(one)
+                }
+                Taps.commit()
+            }
+        }
         .onChange(of: media) { _, item in
             guard let item else { return }
             loadingMedia = true
@@ -281,17 +303,15 @@ struct StudioScreen: View {
                     let frames = await Clip.frames(from: movie.url)
                     try? FileManager.default.removeItem(at: movie.url)
                     if !frames.isEmpty {
-                        clip = frames
-                        clipFrame = 0
-                        canvas.load(frames[0])
-                        Taps.commit()
+                        framing = FramingJob(source: frames)
+                        Taps.detent(intensity: 0.5)
                         return
                     }
                 }
                 if let data = try? await item.loadTransferable(type: Data.self),
-                   let img = UIImage(data: data) {
-                    canvas.load(image: img)
-                    Taps.commit()
+                   let img = UIImage(data: data), let cg = Clip.upright(img) {
+                    framing = FramingJob(source: [cg])
+                    Taps.detent(intensity: 0.5)
                 }
             }
         }
@@ -632,13 +652,15 @@ private struct BrushButton: View {
 /// Not a video editor. AlbumWall grew a trim rail, a crop viewport and an
 /// fps picker, which is a lot of interface for a thing that ends as twelve
 /// thousand bytes a frame. Here a clip is a clip: the first few seconds,
-/// centre-cropped square, sampled to the panel's own resolution, previewed by
+/// aimed once in Framing, sampled to the panel's own resolution, previewed by
 /// playing it on the canvas, and sent whole.
 enum Clip {
     static let fps: Double = 12
     static let maxFrames = 120        // ten seconds; the brain's ceiling is 240
 
-    static func frames(from url: URL) async -> [[UInt8]] {
+    /// Frames as they came out of the video, small but uncropped: aiming the
+    /// panel is Framing's job and it cannot un-crop what this threw away.
+    static func frames(from url: URL) async -> [CGImage] {
         let asset = AVURLAsset(url: url)
         guard let duration = try? await asset.load(.duration) else { return [] }
         let seconds = min(CMTimeGetSeconds(duration), Double(maxFrames) / fps)
@@ -655,12 +677,29 @@ enum Clip {
             NSValue(time: CMTime(seconds: Double($0) / fps, preferredTimescale: 600))
         }
 
-        var out: [[UInt8]] = []
+        var out: [CGImage] = []
         for value in times {
             guard let cg = try? await gen.image(at: value.timeValue).image else { continue }
-            if let px = square64(cg) { out.append(px) }
+            out.append(cg)
         }
         return out
+    }
+
+    /// A photo, redrawn upright and cut down to something a gesture can
+    /// resample sixty times a second. UIImage carries rotation as a flag
+    /// rather than in its pixels, so a portrait shot handed straight to Core
+    /// Graphics arrives on its side; this is where that gets settled.
+    static func upright(_ image: UIImage, max side: CGFloat = 1200) -> CGImage? {
+        let w = image.size.width, h = image.size.height
+        guard w > 0, h > 0 else { return nil }
+        let k = min(1, side / max(w, h))
+        let size = CGSize(width: (w * k).rounded(), height: (h * k).rounded())
+        let fmt = UIGraphicsImageRendererFormat.default()
+        fmt.scale = 1
+        fmt.opaque = true
+        return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }.cgImage
     }
 
     /// The wall is square and a phone video is not, so the middle of the
@@ -691,6 +730,12 @@ enum Clip {
     }
 }
 
+
+/// Picked media on its way to the framing step.
+struct FramingJob: Identifiable {
+    let id = UUID()
+    let source: [CGImage]
+}
 
 /// PhotosPicker hands a movie over as a file; this receives it into a
 /// temporary URL that AVAsset can open.

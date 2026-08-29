@@ -14,7 +14,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
-    case make, erase, photo, letters
+    case make, erase, photo, letters, clock
 }
 
 struct GlyphShape: View {
@@ -121,6 +121,18 @@ struct GlyphShape: View {
                 ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - 5.5 * u, y: box.minY + 3 * u,
                                                 width: sun * 2, height: sun * 2)),
                          with: .color(.white))
+
+            case .clock:
+                // a face and two hands
+                let c = CGPoint(x: box.midX, y: box.midY)
+                let rr = box.width / 2
+                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - rr, y: c.y - rr, width: rr * 2, height: rr * 2)),
+                           with: .color(.white), lineWidth: lw)
+                var hands = Path()
+                hands.move(to: c); hands.addLine(to: CGPoint(x: c.x, y: c.y - rr * 0.55))
+                hands.move(to: c); hands.addLine(to: CGPoint(x: c.x + rr * 0.42, y: c.y))
+                ctx.stroke(hands, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
 
             case .letters:
                 // three stacked bars: a line of type at 64 pixels

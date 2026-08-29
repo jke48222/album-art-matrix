@@ -426,3 +426,57 @@ struct LampInks: View {
                       Int(max(0, min(255, bl * 255))))
     }
 }
+
+
+// MARK: - Ticker
+
+/// What the wall should letter, in the wall's own font. Typing here is
+/// typing on the wall: it letters this itself rather than being handed a
+/// picture of it, which is what makes it scroll.
+struct TickerRow: View {
+    let text: String
+    let loop: Bool
+    let accent: Color
+    var onSet: (String, Any) -> Void
+
+    @State private var draft = ""
+    @FocusState private var typing: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                TextField("say something", text: $draft)
+                    .font(.machine(14))
+                    .foregroundStyle(Ink.ink)
+                    .autocorrectionDisabled()
+                    .focused($typing)
+                    .submitLabel(.send)
+                    .padding(.vertical, 12).padding(.horizontal, 14)
+                    .background(Ink.sunk)
+                    .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+                    .onSubmit { send() }
+
+                Button("Send") { send() }
+                    .buttonStyle(PressStyle(scale: 0.96))
+                    .font(.ui(14, .semibold))
+                    .foregroundStyle(draft.isEmpty ? Ink.faint : accent)
+                    .disabled(draft.isEmpty)
+            }
+
+            PillRow(
+                label: "when it reaches the end",
+                options: [("loop", true), ("back to art", false)],
+                selected: loop,
+                accent: accent
+            ) { onSet("ticker_loop", $0) }
+        }
+        .onAppear { if draft.isEmpty { draft = text } }
+    }
+
+    private func send() {
+        guard !draft.isEmpty else { return }
+        Taps.commit()
+        typing = false
+        onSet("ticker_text", draft)
+    }
+}
