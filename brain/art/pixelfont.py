@@ -132,10 +132,52 @@ def glyph(ch: str):
     return FONT.get(ch, FONT["_BOX"])
 
 
+# ---- Hangul --------------------------------------------------------------
+# All 11,172 modern syllables plus the 51 compatibility jamo, baked from
+# Galmuri7 (OFL) by Tools/gen_hangul.py into 7-row bitmasks, bit 6 leftmost,
+# 7 columns wide, advance 8. Same vertical band as the ASCII glyphs, so the
+# two scripts sit on one baseline and mix freely mid-line.
+_HANGUL: bytes | None = None
+
+
+def _hangul() -> bytes:
+    global _HANGUL
+    if _HANGUL is None:
+        import os
+        path = os.path.join(os.path.dirname(__file__), "hangul7.bin")
+        try:
+            with open(path, "rb") as fh:
+                _HANGUL = fh.read()
+        except OSError:
+            _HANGUL = b""
+    return _HANGUL
+
+
+def cell(ch: str):
+    """(rows, width, advance) for any letterable character, else None.
+    ASCII is 5 wide advance 6; Hangul is 7 wide advance 8."""
+    if ch in FONT and ch != "_BOX":
+        return FONT[ch], 5, 6
+    cp = ord(ch)
+    if 0xAC00 <= cp <= 0xD7A3:
+        off = (cp - 0xAC00) * 7
+    elif 0x3131 <= cp <= 0x3163:
+        off = (11172 + cp - 0x3131) * 7
+    else:
+        return None
+    blob = _hangul()
+    if len(blob) < off + 7:
+        return None
+    return blob[off:off + 7], 7, 8
+
+
 def text_width(text: str, scale: int = 1) -> int:
-    """Total pixel width including 1-column gaps."""
-    n = len(text)
-    return (n * 5 + max(0, n - 1)) * scale
+    """Total pixel width including 1-column gaps, both scripts."""
+    total = 0
+    for ch in text:
+        c = cell(ch)
+        total += c[2] if c else 6
+    return max(0, total - 1) * scale
 
 
 def draw_text(canvas: np.ndarray, text: str, x: int, y: int,
@@ -144,10 +186,11 @@ def draw_text(canvas: np.ndarray, text: str, x: int, y: int,
     h, w = canvas.shape[:2]
     cx = x
     for ch in text:
-        rows = glyph(ch)
+        c = cell(ch)
+        rows, width, advance = c if c else (FONT["_BOX"], 5, 6)
         for ry, mask in enumerate(rows):
-            for rx in range(5):
-                if not mask & (1 << (4 - rx)):
+            for rx in range(width):
+                if not mask & (1 << (width - 1 - rx)):
                     continue
                 px = cx + rx * scale
                 py = y + ry * scale
@@ -156,4 +199,4 @@ def draw_text(canvas: np.ndarray, text: str, x: int, y: int,
                         xx, yy = px + sx, py + sy
                         if 0 <= xx < w and 0 <= yy < h:
                             canvas[yy, xx] = color
-        cx += 6 * scale
+        cx += advance * scale

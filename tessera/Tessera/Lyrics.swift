@@ -16,14 +16,16 @@ final class LyricsBook {
     private(set) var sheet: [(Double, String)]? = nil
     private var loading = false
 
-    func ask(track id: String, artist: String, title: String, album: String) {
+    func ask(track id: String, artist: String, title: String, album: String,
+             duration: Double? = nil) {
         guard id != track, !loading else { return }
         loading = true
         let old = track
         track = id
         sheet = nil
         Task { [weak self] in
-            let found = await Self.fetch(artist: artist, title: title, album: album)
+            let found = await Self.fetch(artist: artist, title: title,
+                                         album: album, duration: duration)
             await MainActor.run {
                 guard let self, self.track == id else { return }
                 self.sheet = found
@@ -35,7 +37,8 @@ final class LyricsBook {
 
     // MARK: fetch
 
-    static func fetch(artist: String, title: String, album: String) async -> [(Double, String)]? {
+    static func fetch(artist: String, title: String, album: String,
+                      duration: Double? = nil) async -> [(Double, String)]? {
         func request(_ path: String, _ items: [URLQueryItem]) async -> [[String: Any]] {
             var comps = URLComponents(string: "https://lrclib.net/api/\(path)")!
             comps.queryItems = items
@@ -53,19 +56,31 @@ final class LyricsBook {
             return []
         }
 
-        var hits = await request("get", [
+        var items: [URLQueryItem] = [
             .init(name: "artist_name", value: artist),
             .init(name: "track_name", value: title),
             .init(name: "album_name", value: album),
-        ])
+        ]
+        if let duration { items.append(.init(name: "duration", value: String(Int(duration)))) }
+        var hits = await request("get", items)
         if !(hits.first?["syncedLyrics"] is String) {
             hits = await request("search", [
                 .init(name: "artist_name", value: artist),
                 .init(name: "track_name", value: title),
             ])
         }
-        guard let raw = hits.first(where: { $0["syncedLyrics"] is String })?["syncedLyrics"] as? String
-        else { return nil }
+        // Among candidates, the one whose length matches the song is the one
+        // whose TIMESTAMPS match the song: an album cut synced to a radio
+        // edit drifts a little more every chorus.
+        let synced = hits.filter { $0["syncedLyrics"] is String }
+        let best: [String: Any]? = duration.flatMap { d in
+            synced.min { a, b in
+                let da = abs((a["duration"] as? Double ?? 1e9) - d)
+                let db = abs((b["duration"] as? Double ?? 1e9) - d)
+                return da < db
+            }
+        } ?? synced.first
+        guard let raw = best?["syncedLyrics"] as? String else { return nil }
         let lines = parse(lrc: raw)
         return lines.isEmpty ? nil : lines
     }
@@ -88,19 +103,36 @@ final class LyricsBook {
 
     // MARK: render
 
-    static let dim: Float = 0.26
-    static let ramp = 0.16
+    /// The brat look: a flat field in the album's loudest voice, the line
+    /// in lowercase filling from the left, black or white by what the field
+    /// needs, words popping in one at a time. Big where the line is short.
+    static let ramp = 0.12
 
     static func render(sheet: [(Double, String)], at t: Double,
-                       over art: [UInt8],
-                       ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
-        var px = art.map { UInt8(Float($0) * dim) }
+                       bg voice: (Double, Double, Double),
+                       ink chosen: (UInt8, UInt8, UInt8)? = nil) -> [UInt8] {
+        // push the field toward its loudest self
+        let ui = UIColor(red: voice.0, green: voice.1, blue: voice.2, alpha: 1)
+        var h: CGFloat = 0, sat: CGFloat = 0, bri: CGFloat = 0, a: CGFloat = 0
+        ui.getHue(&h, saturation: &sat, brightness: &bri, alpha: &a)
+        let loud = UIColor(hue: h, saturation: min(1, sat * 1.5 + 0.12),
+                           brightness: min(1, bri * 1.25 + 0.18), alpha: 1)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        loud.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let bg = (UInt8(r * 255), UInt8(g * 255), UInt8(b * 255))
+        let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        let ink: (UInt8, UInt8, UInt8) = chosen
+            ?? (lum > 0.45 ? (12, 12, 10) : (244, 241, 234))
 
-        // the current line
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        for i in stride(from: 0, to: px.count, by: 3) {
+            px[i] = bg.0; px[i + 1] = bg.1; px[i + 2] = bg.2
+        }
+
         guard let idx = currentIndex(sheet, t) else { return px }
         let (t0, text) = sheet[idx]
         let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
-        let rows = letterable(text)
+        let (rows, scale) = layout(text)
         guard !rows.isEmpty else { return px }
 
         let tokens = rows.flatMap { $0.split(separator: " ") }
@@ -108,34 +140,54 @@ final class LyricsBook {
         let span = min(2.4, max(0.6, (t1 - t0) * 0.55))
         let step = span / Double(n)
 
+        let lineH = 7 * scale + 2
         var shown = 0
-        var y = (64 - (rows.count * 9 - 2)) / 2
+        var y = (64 - (rows.count * lineH - 2)) / 2
         for row in rows {
-            var x = (64 - PixelFont.textWidth(row, scale: 1)) / 2
-            for word in row.split(separator: " ").map(String.init) {
-                let born = t0 + Double(shown) * step
+            let words = row.split(separator: " ").map(String.init)
+            var visible = 0
+            var newestK = 1.0
+            for i in 0..<words.count {
+                let born = t0 + Double(shown + i) * step
                 if t >= born {
-                    let k = Float(min(1.0, (t - born) / ramp))
-                    // shadow first: the word's own footprint, darkened
-                    var mask = [UInt8](repeating: 0, count: 64 * 64 * 3)
-                    PixelDraw.text(&mask, word, x: x + 1, y: y + 1,
-                                   rgb: (255, 255, 255), scale: 1)
-                    for i in stride(from: 0, to: mask.count, by: 3) where mask[i] > 0 {
-                        px[i] = UInt8(Float(px[i]) * 0.25)
-                        px[i + 1] = UInt8(Float(px[i + 1]) * 0.25)
-                        px[i + 2] = UInt8(Float(px[i + 2]) * 0.25)
-                    }
-                    let voiced = (UInt8(Float(ink.0) * (0.25 + 0.75 * k)),
-                                  UInt8(Float(ink.1) * (0.25 + 0.75 * k)),
-                                  UInt8(Float(ink.2) * (0.25 + 0.75 * k)))
-                    PixelDraw.text(&px, word, x: x, y: y, rgb: voiced, scale: 1)
+                    visible = i + 1
+                    newestK = min(1.0, (t - born) / ramp)
                 }
-                shown += 1
-                x += PixelFont.textWidth(word, scale: 1) + 6
             }
-            y += 9
+            shown += words.count
+            guard visible > 0 else { y += lineH; continue }
+            let x = 2
+            let settled = words.prefix(visible - 1).joined(separator: " ")
+            if !settled.isEmpty {
+                PixelDraw.text(&px, settled, x: x, y: y, rgb: ink, scale: scale)
+            }
+            let last = words[visible - 1]
+            let lx = x + (settled.isEmpty ? 0
+                : PixelFont.textWidth(settled, scale: scale) + 6 * scale)
+            let k = visible == words.count ? newestK : 1.0
+            let mixed = (UInt8(Double(ink.0) * k + Double(bg.0) * (1 - k)),
+                         UInt8(Double(ink.1) * k + Double(bg.1) * (1 - k)),
+                         UInt8(Double(ink.2) * k + Double(bg.2) * (1 - k)))
+            PixelDraw.text(&px, last, x: lx, y: y, rgb: mixed, scale: scale)
+            y += lineH
         }
         return px
+    }
+
+    /// Wrapped rows of the letterable, lowercased line, at the biggest scale
+    /// whose block still fits the panel.
+    static func layout(_ text: String) -> (rows: [String], scale: Int) {
+        let kept = PixelFont.normalize(text.lowercased())
+            .filter { PixelFont.cell($0) != nil || $0 == " " }
+            .split(separator: " ").joined(separator: " ")
+        guard !kept.isEmpty else { return ([], 1) }
+        for scale in [2, 1] {
+            let rows = PixelFont.wrap(kept, maxWidth: 60, scale: scale)
+            if rows.count * (7 * scale + 2) - 2 <= 60 {
+                return (rows, scale)
+            }
+        }
+        return (Array(PixelFont.wrap(kept, maxWidth: 60, scale: 1).suffix(6)), 1)
     }
 
     private static func currentIndex(_ sheet: [(Double, String)], _ t: Double) -> Int? {
@@ -151,9 +203,12 @@ final class LyricsBook {
     /// Wrapped rows of the letterable part of a line.
     private static func letterable(_ text: String) -> [String] {
         let kept = PixelFont.normalize(text)
-            .filter { PixelFont.glyphs[$0] != nil || $0 == " " }
+            .filter { PixelFont.cell($0) != nil || $0 == " " }
             .split(separator: " ").joined(separator: " ")
         guard !kept.isEmpty else { return [] }
-        return Array(PixelFont.wrap(kept, maxWidth: 58, scale: 1).prefix(6))
+        // six rows is the panel's whole height at this leading; a line that
+        // wants more gets its LAST six, because the end of a lyric line is
+        // the part being sung when the cap matters
+        return Array(PixelFont.wrap(kept, maxWidth: 60, scale: 1).suffix(6))
     }
 }

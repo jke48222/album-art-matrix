@@ -48,7 +48,9 @@ struct WallScreen: View {
                     touching: $onPanel,
                     onCommit: { wall.send(["brightness": $0]) },
                     onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
-                    onWear: { wall.replay(ts: $0.ts) }
+                    onWear: { wall.replay(ts: $0.ts) },
+                    onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
+                    onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
                 )
                 .padding(.horizontal, -4)
                 .padding(.bottom, 26)
@@ -129,15 +131,17 @@ struct WallScreen: View {
     /// wall IS for a while, not things you do to it.
     private var modeRow: some View {
         VStack(spacing: 16) {
+            // Grouped by what they are: the song's faces on the top row,
+            // the room's faces below.
             HStack(spacing: 0) {
                 glyph(.art, "art", mode: "art")
                 glyph(.spin, "spin", mode: "cd")
-                glyph(.lamp, "lamp", mode: "ambient")
+                glyph(.lyrics, "lyrics", mode: "lyrics")
                 glyph(.nine, "nine", mode: "nine")
             }
             HStack(spacing: 0) {
                 Spacer().frame(maxWidth: .infinity)
-                glyph(.lyrics, "lyrics", mode: "lyrics")
+                glyph(.lamp, "lamp", mode: "ambient")
                 glyph(.clock, "clock", mode: "clock")
                 glyph(.dark, "off", mode: "off")
                 Spacer().frame(maxWidth: .infinity)
