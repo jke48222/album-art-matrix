@@ -68,6 +68,7 @@ struct RootView: View {
         ZStack(alignment: .bottom) {
             Room(
                 palette: light.isOff ? [] : light.palette,
+                px: light.isOff ? nil : light.reading.px,
                 light: light.room,
                 surge: arrival
             )

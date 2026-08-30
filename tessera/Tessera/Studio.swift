@@ -43,6 +43,41 @@ final class Canvas64 {
     /// A fast drag delivers points far apart; without interpolation the
     /// stroke comes out as dots.
 
+    // MARK: history
+
+    /// Undo as snapshots, because at 12KB a frame the honest approach is
+    /// also the cheap one: forty snapshots is half a megabyte, and forty
+    /// steps is more history than a 64-pixel drawing has ever needed.
+    private(set) var canUndo = false
+    private(set) var canRedo = false
+    private var undoStack: [[UInt8]] = []
+    private var redoStack: [[UInt8]] = []
+
+    /// Call BEFORE a mutation: the state being left is what undo returns to.
+    func checkpoint() {
+        undoStack.append(px)
+        if undoStack.count > 40 { undoStack.removeFirst() }
+        redoStack.removeAll()
+        canUndo = true
+        canRedo = false
+    }
+
+    func undo() {
+        guard let prev = undoStack.popLast() else { return }
+        redoStack.append(px)
+        px = prev
+        canUndo = !undoStack.isEmpty
+        canRedo = true
+    }
+
+    func redo() {
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(px)
+        px = next
+        canUndo = true
+        canRedo = !redoStack.isEmpty
+    }
+
     /// The bucket. Fills the connected region under the tap with the ink,
     /// where "connected" means neighbouring tiles near the tapped tile's
     /// colour. The tolerance exists for imported photos, whose regions are
@@ -121,7 +156,7 @@ final class Canvas64 {
     /// own font at the largest scale that fits, wrapped and centred, over
     /// whatever `base` already held so typing never destroys a drawing.
     func stamp(text: String, over base: [UInt8], rgb: (UInt8, UInt8, UInt8),
-               size: Int? = nil) {
+               size: Int? = nil, colors: [(UInt8, UInt8, UInt8)] = []) {
         var out = base
         let words = PixelFont.normalize(text)
         guard !words.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -129,14 +164,13 @@ final class Canvas64 {
             return
         }
 
-        // A chosen size is obeyed even when the block overflows the panel:
-        // the bottom clips, which is visible and honest, and choosing is the
-        // point. Auto keeps the old behaviour: biggest scale that fits.
-        var scale = size ?? 4
+        // The size is a wish with a ceiling: start at what was asked and
+        // come down until the wrapped block fits the panel, so letters are
+        // aware of the edges and never walk off them.
+        var scale = min(4, max(1, size ?? 4))
         var lines: [String] = []
         while scale >= 1 {
             lines = PixelFont.wrap(words, maxWidth: 62, scale: scale)
-            if size != nil { break }
             let blockHeight = lines.count * (PixelFont.height * scale + scale) - scale
             let widest = lines.map { PixelFont.textWidth($0, scale: scale) }.max() ?? 0
             if blockHeight <= 62 && widest <= 62 { break }
@@ -148,11 +182,19 @@ final class Canvas64 {
         let blockHeight = lines.count * lineStep - scale
         var y = max(1, (64 - blockHeight) / 2)
 
+        var gi = 0
         for line in lines {
             let w = PixelFont.textWidth(line, scale: scale)
             var x = (64 - w) / 2
             for ch in line {
                 let rows = PixelFont.glyph(ch)
+                let glyphInk: (UInt8, UInt8, UInt8)
+                if ch != " " {
+                    glyphInk = gi < colors.count ? colors[gi] : rgb
+                    gi += 1
+                } else {
+                    glyphInk = rgb
+                }
                 for (ry, mask) in rows.enumerated() {
                     for rx in 0..<PixelFont.width where mask & (1 << (4 - rx)) != 0 {
                         for sy in 0..<scale {
@@ -161,7 +203,7 @@ final class Canvas64 {
                                 let yy = y + ry * scale + sy
                                 guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
                                 let o = (yy * 64 + xx) * 3
-                                out[o] = rgb.0; out[o + 1] = rgb.1; out[o + 2] = rgb.2
+                                out[o] = glyphInk.0; out[o + 1] = glyphInk.1; out[o + 2] = glyphInk.2
                             }
                         }
                     }
@@ -238,8 +280,11 @@ struct StudioScreen: View {
     /// Whatever the picker last mixed, kept as a swatch of its own so a
     /// custom colour survives switching away and back.
     @State private var custom: Color = .white
-    @State private var erasing = false
-    @State private var filling = false
+    /// One hand, one tool. Pen, eraser and bucket are an exclusive set with
+    /// the pen as home; a mode you can only leave by re-tapping the thing
+    /// that put you in it is a trap, and both of these were.
+    enum Tool { case pen, erase, fill }
+    @State private var tool: Tool = .pen
     @State private var thick = false
     /// The stroke's position in CELLS, kept as floats. Quantising each touch
     /// sample to a cell before joining them is what made lines wobble: a
@@ -262,9 +307,12 @@ struct StudioScreen: View {
     @State private var sent = false
     @State private var words = ""
     @State private var writing = false
-    /// Chosen glyph size for words; nil lets the canvas pick the biggest
-    /// that fits.
-    @State private var wordScale: Int? = nil
+    /// Wished glyph size for words, 1 to 4. The stamp treats it as a wish,
+    /// never a warrant: it comes down until the block fits the panel, so
+    /// letters cannot walk off the edges no matter what the scroller says.
+    @State private var wordScale: Double = 4
+    /// Per-glyph inks for the stamped words, same contract as the wall's.
+    @State private var wordColors: [String] = []
     /// What the canvas held before words started, so typing composes over a
     /// drawing instead of replacing it.
     @State private var beneath: [UInt8] = []
@@ -292,8 +340,35 @@ struct StudioScreen: View {
                         .font(.ui(15, .medium))
                         .foregroundStyle(Ink.dim)
                 }
+                ToolbarItemGroup(placement: .principal) {
+                    HStack(spacing: 26) {
+                        Button {
+                            canvas.undo()
+                        } label: {
+                            GlyphShape(glyph: .undo, lineWidth: 1.7)
+                                .frame(width: 19, height: 19)
+                                .foregroundStyle(canvas.canUndo ? Ink.ink : Ink.faint)
+                        }
+                        .buttonStyle(PressStyle(scale: 0.88))
+                        .disabled(!canvas.canUndo)
+                        .accessibilityLabel("Undo")
+
+                        Button {
+                            canvas.redo()
+                        } label: {
+                            GlyphShape(glyph: .undo, lineWidth: 1.7)
+                                .frame(width: 19, height: 19)
+                                .scaleEffect(x: -1)
+                                .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
+                        }
+                        .buttonStyle(PressStyle(scale: 0.88))
+                        .disabled(!canvas.canRedo)
+                        .accessibilityLabel("Redo")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
+                        canvas.checkpoint()
                         clip = []
                         canvas.clear()
                     }
@@ -305,7 +380,11 @@ struct StudioScreen: View {
         }
         .preferredColorScheme(.dark)
         .presentationBackground(Ink.ground)
-        .onAppear { kept.load() }
+        .onAppear {
+            kept.load()
+            frozen = [(255, 255, 255), (232, 176, 75)]
+                + roomPalette.prefix(3).map { Self.rgb(of: $0) }
+        }
         // Aiming happens on its own surface: it needs the whole screen and it
         // is a decision, not an adjustment you leave half-made.
         .fullScreenCover(item: $framing) { job in
@@ -315,6 +394,7 @@ struct StudioScreen: View {
             } onUse: { frames in
                 framing = nil
                 media = nil
+                canvas.checkpoint()
                 if frames.count > 1 {
                     clip = frames
                     clipFrame = 0
@@ -388,13 +468,16 @@ struct StudioScreen: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
-                        if lastF == nil { Taps.warm() }
+                        if lastF == nil {
+                            Taps.warm()
+                            if tool != .fill { canvas.checkpoint() }
+                        }
                         if writing { leaveWords() }
-                        guard !filling else { return }   // the bucket pours on release
+                        guard tool != .fill else { return }   // the bucket pours on release
                         let cell = geo.size.width / 64
                         let fx = min(63.49, max(0.0, g.location.x / cell - 0.5))
                         let fy = min(63.49, max(0.0, g.location.y / cell - 0.5))
-                        let rgb: (UInt8, UInt8, UInt8) = erasing ? (0, 0, 0) : ink
+                        let rgb: (UInt8, UInt8, UInt8) = tool == .erase ? (0, 0, 0) : ink
                         let radius = thick ? 1 : 0
                         if let l = lastF {
                             // A resting finger jitters by a third of a cell;
@@ -409,11 +492,12 @@ struct StudioScreen: View {
                     }
                     .onEnded { g in
                         lastF = nil
-                        if filling {
+                        if tool == .fill {
                             let cell = geo.size.width / 64
                             let x = min(63, max(0, Int(g.location.x / cell)))
                             let y = min(63, max(0, Int(g.location.y / cell)))
-                            canvas.fill(x: x, y: y, rgb: erasing ? (0, 0, 0) : ink)
+                            canvas.checkpoint()
+                            canvas.fill(x: x, y: y, rgb: ink)
                             Taps.commit()
                         } else {
                             Taps.detent(intensity: 0.3)
@@ -432,9 +516,16 @@ struct StudioScreen: View {
         Color(red: Double(ink.0) / 255, green: Double(ink.1) / 255, blue: Double(ink.2) / 255)
     }
 
+    /// The album's suggestions, captured ONCE when the studio opens. They
+    /// used to track the wall live, and a track change mid-drawing would
+    /// vanish the swatch you were using out from under your finger. The ink
+    /// you are holding also always earns a swatch, so a colour can never
+    /// become unreachable while it is in your hand.
+    @State private var frozen: [(UInt8, UInt8, UInt8)] = []
+
     private var swatches: [(UInt8, UInt8, UInt8)] {
-        var out: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
-        for c in roomPalette.prefix(3) { out.append(Self.rgb(of: c)) }
+        var out = frozen
+        if !out.contains(where: { $0 == ink }) { out.append(ink) }
         return out
     }
 
@@ -468,7 +559,7 @@ struct StudioScreen: View {
                 }
                 .onChange(of: custom) { _, c in
                     ink = Self.rgb(of: c)
-                    erasing = false
+                    if tool == .erase { tool = .pen }
                     Taps.detent(intensity: 0.5)
                 }
             .accessibilityLabel("Mix a colour")
@@ -478,10 +569,12 @@ struct StudioScreen: View {
     }
 
     private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
-        let on = !erasing && rgb == ink
+        let on = tool != .erase && rgb == ink
         return Button {
             ink = rgb
-            erasing = false
+            // choosing a colour is choosing to make marks, not unmake them;
+            // the bucket keeps it, since a pour has a colour too
+            if tool == .erase { tool = .pen }
         } label: {
             Circle()
                 .fill(Color(red: Double(rgb.0) / 255,
@@ -509,38 +602,44 @@ struct StudioScreen: View {
 
     private var tools: some View {
         HStack(spacing: 0) {
-            GlyphButton(glyph: .erase, label: "erase", active: erasing,
-                        accent: accent, lit: 0.6, diameter: 54) {
+            GlyphButton(glyph: .pen, label: "pen", active: tool == .pen,
+                        accent: accent, lit: 0.6, diameter: 46) {
                 leaveWords()
-                erasing.toggle()
-                if erasing { filling = false }
+                tool = .pen
             }
             .frame(maxWidth: .infinity)
 
-            BrushButton(thick: thick, accent: erasing ? Ink.dim : inkColor) {
+            GlyphButton(glyph: .erase, label: "erase", active: tool == .erase,
+                        accent: accent, lit: 0.6, diameter: 46) {
                 leaveWords()
-                thick.toggle()
+                tool = .erase
             }
             .frame(maxWidth: .infinity)
 
             // The bucket: tap a region and it takes the ink, the way paint
             // finds the edges of a shape. On 4,096 tiles this is how a
             // background happens in one gesture instead of four hundred.
-            GlyphButton(glyph: .fill, label: "fill", active: filling,
-                        accent: accent, lit: 0.6, diameter: 54) {
+            GlyphButton(glyph: .fill, label: "fill", active: tool == .fill,
+                        accent: accent, lit: 0.6, diameter: 46) {
                 leaveWords()
-                filling.toggle()
-                if filling { erasing = false }
+                tool = .fill
+            }
+            .frame(maxWidth: .infinity)
+
+            BrushButton(thick: thick, accent: tool == .erase ? Ink.dim : inkColor) {
+                leaveWords()
+                thick.toggle()
             }
             .frame(maxWidth: .infinity)
 
             GlyphButton(glyph: .letters, label: "words", active: writing,
-                        accent: accent, lit: 0.6, diameter: 54) {
-                filling = false
+                        accent: accent, lit: 0.6, diameter: 46) {
+                tool = .pen
                 if writing {
                     writing = false
                     typing = false
                 } else {
+                    canvas.checkpoint()
                     beneath = canvas.px
                     writing = true
                     typing = true
@@ -555,10 +654,10 @@ struct StudioScreen: View {
                         Circle().strokeBorder(clip.isEmpty ? Ink.hairline : accent,
                                               lineWidth: clip.isEmpty ? 1 : 1.5)
                         GlyphShape(glyph: .photo, lineWidth: 1.6)
-                            .frame(width: 54 * 0.42, height: 54 * 0.42)
+                            .frame(width: 46 * 0.42, height: 46 * 0.42)
                             .foregroundStyle(clip.isEmpty ? Ink.dim : accent)
                     }
-                    .frame(width: 54, height: 54)
+                    .frame(width: 46, height: 46)
                     Text(loadingMedia ? "reading" : (clip.isEmpty ? "media" : "\(clip.count)f"))
                         .font(.machine(9))
                         .textCase(.uppercase)
@@ -596,39 +695,50 @@ struct StudioScreen: View {
             }
             .buttonStyle(.plain)
         }
-        // The size is a choice, not a consequence of how much you typed.
-        HStack(spacing: 8) {
-            ForEach([("fit", nil), ("small", 1), ("mid", 2), ("big", 3)],
-                    id: \.0) { (label, value) in
-                let on = wordScale == value
-                Button {
-                    wordScale = value
-                } label: {
-                    Text(label)
-                        .font(.machine(11))
-                        .foregroundStyle(on ? Ink.ground : Ink.dim)
-                        .padding(.vertical, 7)
-                        .padding(.horizontal, 13)
-                        .background(on ? inkColor : Ink.sunk,
-                                    in: Capsule())
-                        .overlay { if !on { Capsule().strokeBorder(Ink.hairline, lineWidth: 1) } }
-                }
-                .buttonStyle(PressStyle(scale: 0.95))
+        // The size is a choice, not a consequence of how much you typed;
+        // the stamp still refuses to let it overflow the panel.
+        HStack(spacing: 12) {
+            Text("size")
+                .font(.ui(12, .medium))
+                .foregroundStyle(Ink.dim)
+            Slider(value: $wordScale, in: 1...4, step: 1)
+                .tint(inkColor)
+            Text("\(Int(wordScale))")
+                .font(.machine(12))
+                .foregroundStyle(Ink.dim)
+                .frame(width: 16)
+        }
+
+        // The same inker the wall's words use: both buttons, one language.
+        if words.contains(where: { $0 != " " }) {
+            LetterInker(text: words, colors: wordColors, accent: inkColor) {
+                wordColors = $0
             }
         }
         }
         .onChange(of: words) { _, new in
-            canvas.stamp(text: new, over: beneath, rgb: erasing ? (255, 255, 255) : ink,
-                         size: wordScale)
+            canvas.stamp(text: new, over: beneath, rgb: ink, size: wordSize,
+                         colors: wordInks)
         }
         .onChange(of: wordScale) { _, _ in
-            canvas.stamp(text: words, over: beneath, rgb: erasing ? (255, 255, 255) : ink,
-                         size: wordScale)
+            Taps.detent(intensity: 0.4)
+            canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
+                         colors: wordInks)
+        }
+        .onChange(of: wordColors) { _, _ in
+            canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
+                         colors: wordInks)
         }
         // The return key is finishing, not hiding: the words are part of the
         // drawing now and every other tool is a tap away again.
         .onSubmit { leaveWords() }
         .transition(.opacity)
+    }
+
+    private var wordSize: Int { Int(wordScale) }
+
+    private var wordInks: [(UInt8, UInt8, UInt8)] {
+        wordColors.compactMap { Color(wallHex: $0) }.map { Self.rgb(of: $0) }
     }
 
     /// Words mode ends the moment you reach for anything else. What was
@@ -688,6 +798,7 @@ struct StudioScreen: View {
                         .frame(width: 76, height: 76)
                         .onTapGesture {
                             Taps.detent()
+                            canvas.checkpoint()
                             canvas.load(m.px)
                         }
                         .contextMenu {

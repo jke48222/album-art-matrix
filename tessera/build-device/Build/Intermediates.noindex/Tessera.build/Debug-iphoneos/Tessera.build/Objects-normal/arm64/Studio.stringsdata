@@ -7,7 +7,23 @@
         "key": "Close",
         "location": {
           "startingColumn": 28,
-          "startingLine": 291
+          "startingLine": 339
+        }
+      },
+      {
+        "comment": "",
+        "key": "Undo",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 354
+        }
+      },
+      {
+        "comment": "",
+        "key": "Redo",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 366
         }
       },
       {
@@ -15,7 +31,7 @@
         "key": "Clear",
         "location": {
           "startingColumn": 28,
-          "startingLine": 296
+          "startingLine": 370
         }
       },
       {
@@ -23,7 +39,7 @@
         "key": "Canvas, 64 by 64 tiles. Draw with one finger.",
         "location": {
           "startingColumn": 33,
-          "startingLine": 423
+          "startingLine": 507
         }
       },
       {
@@ -31,7 +47,7 @@
         "key": "Mix a colour",
         "location": {
           "startingColumn": 33,
-          "startingLine": 474
+          "startingLine": 565
         }
       },
       {
@@ -39,7 +55,7 @@
         "key": "Ink",
         "location": {
           "startingColumn": 29,
-          "startingLine": 496
+          "startingLine": 589
         }
       },
       {
@@ -47,7 +63,7 @@
         "key": "reading",
         "location": {
           "startingColumn": 41,
-          "startingLine": 562
+          "startingLine": 661
         }
       },
       {
@@ -55,7 +71,7 @@
         "key": "media",
         "location": {
           "startingColumn": 69,
-          "startingLine": 562
+          "startingLine": 661
         }
       },
       {
@@ -63,7 +79,7 @@
         "key": "%lldf",
         "location": {
           "startingColumn": 79,
-          "startingLine": 562
+          "startingLine": 661
         }
       },
       {
@@ -71,7 +87,7 @@
         "key": "say something",
         "location": {
           "startingColumn": 23,
-          "startingLine": 577
+          "startingLine": 676
         }
       },
       {
@@ -79,7 +95,23 @@
         "key": "undo",
         "location": {
           "startingColumn": 22,
-          "startingLine": 593
+          "startingLine": 692
+        }
+      },
+      {
+        "comment": "",
+        "key": "size",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 701
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 706
         }
       },
       {
@@ -87,7 +119,7 @@
         "key": "On the wall",
         "location": {
           "startingColumn": 25,
-          "startingLine": 657
+          "startingLine": 767
         }
       },
       {
@@ -95,7 +127,7 @@
         "key": "Play it on the wall",
         "location": {
           "startingColumn": 43,
-          "startingLine": 658
+          "startingLine": 768
         }
       },
       {
@@ -103,7 +135,7 @@
         "key": "Put it on the wall",
         "location": {
           "startingColumn": 67,
-          "startingLine": 658
+          "startingLine": 768
         }
       },
       {
@@ -111,7 +143,7 @@
         "key": "made",
         "location": {
           "startingColumn": 18,
-          "startingLine": 675
+          "startingLine": 785
         }
       },
       {
@@ -119,7 +151,7 @@
         "key": "Something you made. Tap to load it back.",
         "location": {
           "startingColumn": 45,
-          "startingLine": 696
+          "startingLine": 807
         }
       },
       {
@@ -127,7 +159,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 36,
-          "startingLine": 694
+          "startingLine": 805
         }
       },
       {
@@ -135,7 +167,7 @@
         "key": "Wide brush",
         "location": {
           "startingColumn": 37,
-          "startingLine": 745
+          "startingLine": 856
         }
       },
       {
@@ -143,7 +175,7 @@
         "key": "Fine brush",
         "location": {
           "startingColumn": 52,
-          "startingLine": 745
+          "startingLine": 856
         }
       },
       {
@@ -151,7 +183,7 @@
         "key": "wide",
         "location": {
           "startingColumn": 30,
-          "startingLine": 738
+          "startingLine": 849
         }
       },
       {
@@ -159,7 +191,7 @@
         "key": "fine",
         "location": {
           "startingColumn": 39,
-          "startingLine": 738
+          "startingLine": 849
         }
       }
     ]

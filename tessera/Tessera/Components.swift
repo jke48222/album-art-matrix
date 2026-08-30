@@ -491,9 +491,6 @@ struct TickerRow: View {
     @State private var draft = ""
     @FocusState private var typing: Bool
 
-    /// The inks a letter cycles through. The wall's own voices first.
-    private static let inkwell = ["#eae4d8", "#e8b04b", "#e0491f", "#7fa87a",
-                                  "#31c3d4", "#8b7fd4", "#d44a8b"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -545,79 +542,12 @@ struct TickerRow: View {
 
     // MARK: letter inks
 
-    private var glyphs: [Character] {
-        text.filter { $0 != " " }
-    }
-
-    /// Tap a letter to walk it through the inkwell. Scatter deals the whole
-    /// well across the word; one ink takes everything back.
     @ViewBuilder private var letterInks: some View {
-        if !glyphs.isEmpty {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("colour the letters")
-                    .font(.ui(12, .medium))
-                    .foregroundStyle(Ink.dim)
-
-                ScrollView(.horizontal) {
-                    HStack(spacing: 5) {
-                        ForEach(Array(glyphs.enumerated()), id: \.offset) { (i, ch) in
-                            let hex = i < colors.count ? colors[i] : "#eae4d8"
-                            Button {
-                                cycle(i)
-                            } label: {
-                                Text(String(ch))
-                                    .font(.machine(17))
-                                    .foregroundStyle(Color(wallHex: hex) ?? Ink.ink)
-                                    .frame(width: 30, height: 38)
-                                    .background(Ink.sunk)
-                                    .overlay {
-                                        RoundedRectangle(cornerRadius: 7)
-                                            .strokeBorder(
-                                                i < colors.count
-                                                    ? (Color(wallHex: hex) ?? Ink.hairline).opacity(0.45)
-                                                    : Ink.hairline,
-                                                lineWidth: 1)
-                                    }
-                                    .clipShape(RoundedRectangle(cornerRadius: 7))
-                            }
-                            .buttonStyle(PressStyle(scale: 0.9))
-                            .accessibilityLabel("Letter \(String(ch)), tap to change its colour")
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
-                .scrollIndicators(.hidden)
-
-                HStack(spacing: 18) {
-                    Button("scatter") {
-                        onSet("ticker_colors",
-                              (0..<glyphs.count).map { Self.inkwell[($0 + 1) % Self.inkwell.count] })
-                    }
-                    .buttonStyle(PressStyle(scale: 0.96))
-                    .font(.ui(13, .medium))
-                    .foregroundStyle(accent)
-
-                    if !colors.isEmpty {
-                        Button("one ink") {
-                            onSet("ticker_colors", [String]())
-                        }
-                        .buttonStyle(PressStyle(scale: 0.96))
-                        .font(.ui(13))
-                        .foregroundStyle(Ink.dim)
-                    }
-                    Spacer()
-                }
+        if text.contains(where: { $0 != " " }) {
+            LetterInker(text: text, colors: colors, accent: accent) {
+                onSet("ticker_colors", $0)
             }
         }
-    }
-
-    private func cycle(_ i: Int) {
-        // pad with the base ink up to this glyph, then step this one
-        var next = colors
-        while next.count <= i { next.append(Self.inkwell[0]) }
-        let at = Self.inkwell.firstIndex(of: next[i]) ?? 0
-        next[i] = Self.inkwell[(at + 1) % Self.inkwell.count]
-        onSet("ticker_colors", next)
     }
 }
 
@@ -700,5 +630,159 @@ private struct DrainRule: View {
             }
         }
         .frame(width: 64, height: 3)
+    }
+}
+
+
+// MARK: - Letter inker
+
+/// Colouring letters, done the way painting is done: choose an ink, then
+/// touch the letters that should wear it. A drag paints every letter it
+/// crosses, which is how a word gets striped in one gesture. Shared by the
+/// wall's words and the Studio's, so both speak the same language.
+///
+/// Inks belong to visible glyphs in order and spaces take nothing, the same
+/// contract the movers and the stamp render by.
+struct LetterInker: View {
+    let text: String
+    let colors: [String]
+    let accent: Color
+    var onChange: ([String]) -> Void
+
+    @State private var brush = "#e8b04b"
+    @State private var mixed: Color = .white
+
+    static let well = ["#eae4d8", "#e8b04b", "#e0491f", "#7fa87a",
+                       "#31c3d4", "#8b7fd4", "#d44a8b"]
+    private static let base = "#eae4d8"
+
+    private var glyphs: [Character] { text.filter { $0 != " " } }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("colour the letters")
+                .font(.ui(12, .medium))
+                .foregroundStyle(Ink.dim)
+
+            // the inkwell: pick what the finger carries
+            HStack(spacing: 10) {
+                ForEach(Self.well, id: \.self) { hex in
+                    let on = brush == hex
+                    Button {
+                        brush = hex
+                        Taps.detent(intensity: 0.35)
+                    } label: {
+                        Circle()
+                            .fill(Color(wallHex: hex) ?? Ink.ink)
+                            .frame(width: 26, height: 26)
+                            .overlay {
+                                if on {
+                                    Circle().strokeBorder(Ink.ink, lineWidth: 2).padding(-4)
+                                }
+                            }
+                    }
+                    .buttonStyle(PressStyle(scale: 0.85))
+                    .accessibilityLabel("Ink \(hex)")
+                }
+                ColorPicker(selection: $mixed, supportsOpacity: false) { EmptyView() }
+                    .labelsHidden()
+                    .frame(width: 26, height: 26)
+                    .onChange(of: mixed) { _, c in
+                        brush = Self.hex(of: c)
+                        Taps.detent(intensity: 0.35)
+                    }
+                    .accessibilityLabel("Mix an ink")
+                Spacer()
+            }
+
+            // the letters: tap one, or drag across many
+            GeometryReader { geo in
+                let cols = max(1, Int(geo.size.width / 34))
+                let rows = stride(from: 0, to: glyphs.count, by: cols).map {
+                    Array(glyphs.enumerated())[$0..<min($0 + cols, glyphs.count)]
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(Array(rows.enumerated()), id: \.offset) { (_, row) in
+                        HStack(spacing: 4) {
+                            ForEach(row, id: \.offset) { (i, ch) in
+                                chip(i, ch)
+                            }
+                        }
+                    }
+                }
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { g in
+                            let col = Int(g.location.x / 34)
+                            let rowI = Int(g.location.y / 44)
+                            let idx = rowI * cols + col
+                            guard col >= 0, col < cols, rowI >= 0,
+                                  idx >= 0, idx < glyphs.count else { return }
+                            paint(idx)
+                        }
+                )
+            }
+            .frame(height: max(38, CGFloat((glyphs.count + 9) / 10) * 44 - 6))
+
+            HStack(spacing: 18) {
+                act("rainbow") {
+                    onChange((0..<glyphs.count).map { i in
+                        Self.hex(of: Color(hue: Double(i) / Double(max(1, glyphs.count)),
+                                           saturation: 0.75, brightness: 0.95))
+                    })
+                }
+                act("scatter") {
+                    onChange((0..<glyphs.count).map { Self.well[($0 + 1) % Self.well.count] })
+                }
+                if !colors.isEmpty {
+                    act("one ink") { onChange([]) }
+                }
+                Spacer()
+            }
+        }
+    }
+
+    private func chip(_ i: Int, _ ch: Character) -> some View {
+        let hex = i < colors.count ? colors[i] : Self.base
+        return Text(String(ch))
+            .font(.machine(17))
+            .foregroundStyle(Color(wallHex: hex) ?? Ink.ink)
+            .frame(width: 30, height: 38)
+            .background(Ink.sunk)
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .strokeBorder(i < colors.count
+                        ? (Color(wallHex: hex) ?? Ink.hairline).opacity(0.45)
+                        : Ink.hairline, lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+    }
+
+    private func act(_ label: String, _ run: @escaping () -> Void) -> some View {
+        Button(label) {
+            run()
+            Taps.commit()
+        }
+        .buttonStyle(PressStyle(scale: 0.96))
+        .font(.ui(13, .medium))
+        .foregroundStyle(label == "one ink" ? Ink.dim : accent)
+    }
+
+    private func paint(_ i: Int) {
+        var next = colors
+        while next.count < glyphs.count { next.append(Self.base) }
+        guard next[i] != brush else { return }
+        next[i] = brush
+        Taps.detent(intensity: 0.3)
+        onChange(next)
+    }
+
+    static func hex(of c: Color) -> String {
+        let ui = UIColor(c)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return String(format: "#%02x%02x%02x",
+                      Int(r * 255), Int(g * 255), Int(b * 255))
     }
 }

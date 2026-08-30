@@ -55,7 +55,7 @@
         "key": "say something",
         "location": {
           "startingColumn": 27,
-          "startingLine": 501
+          "startingLine": 498
         }
       },
       {
@@ -63,39 +63,7 @@
         "key": "Send",
         "location": {
           "startingColumn": 24,
-          "startingLine": 512
-        }
-      },
-      {
-        "comment": "",
-        "key": "colour the letters",
-        "location": {
-          "startingColumn": 22,
-          "startingLine": 557
-        }
-      },
-      {
-        "comment": "",
-        "key": "Letter %@, tap to change its colour",
-        "location": {
-          "startingColumn": 49,
-          "startingLine": 584
-        }
-      },
-      {
-        "comment": "",
-        "key": "scatter",
-        "location": {
-          "startingColumn": 28,
-          "startingLine": 592
-        }
-      },
-      {
-        "comment": "",
-        "key": "one ink",
-        "location": {
-          "startingColumn": 32,
-          "startingLine": 601
+          "startingLine": 509
         }
       },
       {
@@ -103,7 +71,7 @@
         "key": "Done",
         "location": {
           "startingColumn": 41,
-          "startingLine": 649
+          "startingLine": 579
         }
       },
       {
@@ -111,7 +79,7 @@
         "key": "Cancel",
         "location": {
           "startingColumn": 50,
-          "startingLine": 649
+          "startingLine": 579
         }
       },
       {
@@ -119,7 +87,7 @@
         "key": "count something down",
         "location": {
           "startingColumn": 22,
-          "startingLine": 658
+          "startingLine": 588
         }
       },
       {
@@ -127,7 +95,31 @@
         "key": "%lldm",
         "location": {
           "startingColumn": 34,
-          "startingLine": 666
+          "startingLine": 596
+        }
+      },
+      {
+        "comment": "",
+        "key": "colour the letters",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 663
+        }
+      },
+      {
+        "comment": "",
+        "key": "Mix an ink",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 694
+        }
+      },
+      {
+        "comment": "",
+        "key": "Ink %@",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 685
         }
       }
     ]

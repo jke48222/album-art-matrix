@@ -4,10 +4,26 @@
     "Localizable": [
       {
         "comment": "",
+        "key": "counting down",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 67
+        }
+      },
+      {
+        "comment": "",
+        "key": "stop",
+        "location": {
+          "startingColumn": 32,
+          "startingLine": 71
+        }
+      },
+      {
+        "comment": "",
         "key": "TESSERA",
         "location": {
           "startingColumn": 18,
-          "startingLine": 82
+          "startingLine": 103
         }
       },
       {
@@ -15,7 +31,7 @@
         "key": "Setup. Link is %@.",
         "location": {
           "startingColumn": 33,
-          "startingLine": 96
+          "startingLine": 117
         }
       },
       {
@@ -23,7 +39,7 @@
         "key": "Take the album's colours",
         "location": {
           "startingColumn": 26,
-          "startingLine": 168
+          "startingLine": 189
         }
       }
     ]
