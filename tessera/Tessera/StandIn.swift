@@ -268,18 +268,18 @@ final class StandIn {
         let mm = String(format: "%02d", now.minute ?? 0)
         let ink = inkBytes()
         let digitsW = PixelFont.textWidth(hh, scale: 2)
-        let x = (64 - (digitsW * 2 + 16)) / 2
+        let x = (64 - (digitsW * 2 + 10)) / 2
         let y = (64 - 14) / 2 - (suffix != nil ? 4 : 0)
         stamp(hh, into: &px, x: x, y: y, rgb: ink, scale: 2)
         if (now.second ?? 0) % 2 == 0 {             // the blinking colon
-            let cx = x + digitsW + 6, cy = y + 4
+            let cx = x + digitsW + 4, cy = y + 4
             for (dx, dy) in [(0, 0), (1, 0), (0, 1), (1, 1),
                              (0, 6), (1, 6), (0, 7), (1, 7)] {
                 let o = ((cy + dy) * 64 + cx + dx) * 3
                 px[o] = ink.0; px[o + 1] = ink.1; px[o + 2] = ink.2
             }
         }
-        stamp(mm, into: &px, x: x + digitsW + 16, y: y, rgb: ink, scale: 2)
+        stamp(mm, into: &px, x: x + digitsW + 10, y: y, rgb: ink, scale: 2)
         if let suffix {
             let sw = PixelFont.textWidth(suffix, scale: 1)
             stamp(suffix, into: &px, x: (64 - sw) / 2, y: y + 19, rgb: ink, scale: 1)

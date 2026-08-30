@@ -15,6 +15,7 @@ enum Glyph: String, CaseIterable, Hashable {
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
     case make, erase, photo, letters, clock, snake, fill, pen, undo
+    case play, pause, skip, back
 }
 
 struct GlyphShape: View {
@@ -71,21 +72,80 @@ struct GlyphShape: View {
                            style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
 
             case .fill:
-                // a drop about to land: fill is what it does when it does
-                let cx = box.midX
-                let r = box.width * 0.30
-                let cy = box.maxY - r - 1.2 * u
-                let top = CGPoint(x: cx, y: box.minY + 1.2 * u)
-                var drop = Path()
-                drop.move(to: top)
-                drop.addQuadCurve(to: CGPoint(x: cx + r, y: cy),
-                                  control: CGPoint(x: cx + r * 0.9, y: cy - r * 1.7))
-                drop.addArc(center: CGPoint(x: cx, y: cy), radius: r,
-                            startAngle: .degrees(0), endAngle: .degrees(180),
-                            clockwise: false)
-                drop.addQuadCurve(to: top,
-                                  control: CGPoint(x: cx - r * 0.9, y: cy - r * 1.7))
-                ctx.fill(drop, with: .color(.white))
+                // a paint bucket mid-pour: the tin tipped, the handle above,
+                // one drop already loose
+                var tilted = ctx
+                tilted.translateBy(x: box.midX, y: box.midY)
+                tilted.rotate(by: .degrees(-24))
+                tilted.translateBy(x: -box.midX, y: -box.midY)
+                let bw = box.width * 0.52, bh = box.height * 0.44
+                let bx = box.midX - bw / 2, by = box.midY - bh * 0.28
+                var tin = Path()
+                tin.move(to: CGPoint(x: bx, y: by))
+                tin.addLine(to: CGPoint(x: bx + bw, y: by))
+                tin.addLine(to: CGPoint(x: bx + bw - 1.4 * u, y: by + bh))
+                tin.addLine(to: CGPoint(x: bx + 1.4 * u, y: by + bh))
+                tin.closeSubpath()
+                tilted.stroke(tin, with: .color(.white),
+                              style: StrokeStyle(lineWidth: lw, lineJoin: .round))
+                var handle = Path()
+                handle.addArc(center: CGPoint(x: box.midX, y: by),
+                              radius: bw * 0.42,
+                              startAngle: .degrees(200), endAngle: .degrees(340),
+                              clockwise: false)
+                tilted.stroke(handle, with: .color(.white),
+                              style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
+                let dd = 1.9 * u
+                ctx.fill(Path(ellipseIn: CGRect(x: box.minX + 1.2 * u,
+                                                y: box.maxY - dd - 0.4 * u,
+                                                width: dd, height: dd)),
+                         with: .color(.white))
+
+            case .play:
+                var p = Path()
+                p.move(to: CGPoint(x: box.minX + 2.4 * u, y: box.minY + 1.6 * u))
+                p.addLine(to: CGPoint(x: box.maxX - 1.4 * u, y: box.midY))
+                p.addLine(to: CGPoint(x: box.minX + 2.4 * u, y: box.maxY - 1.6 * u))
+                p.closeSubpath()
+                ctx.fill(p, with: .color(.white))
+
+            case .pause:
+                let bw2 = 2.6 * u
+                for x in [box.minX + 3.2 * u, box.maxX - 3.2 * u - bw2] {
+                    ctx.fill(Path(roundedRect: CGRect(x: x, y: box.minY + 1.6 * u,
+                                                      width: bw2,
+                                                      height: box.height - 3.2 * u),
+                                  cornerRadius: 1),
+                             with: .color(.white))
+                }
+
+            case .skip:
+                var p = Path()
+                p.move(to: CGPoint(x: box.minX + 1.6 * u, y: box.minY + 2.4 * u))
+                p.addLine(to: CGPoint(x: box.midX + 1.6 * u, y: box.midY))
+                p.addLine(to: CGPoint(x: box.minX + 1.6 * u, y: box.maxY - 2.4 * u))
+                p.closeSubpath()
+                ctx.fill(p, with: .color(.white))
+                ctx.fill(Path(roundedRect: CGRect(x: box.midX + 2.6 * u,
+                                                  y: box.minY + 2.4 * u,
+                                                  width: 1.7 * u,
+                                                  height: box.height - 4.8 * u),
+                              cornerRadius: 0.8),
+                         with: .color(.white))
+
+            case .back:
+                var p = Path()
+                p.move(to: CGPoint(x: box.maxX - 1.6 * u, y: box.minY + 2.4 * u))
+                p.addLine(to: CGPoint(x: box.midX - 1.6 * u, y: box.midY))
+                p.addLine(to: CGPoint(x: box.maxX - 1.6 * u, y: box.maxY - 2.4 * u))
+                p.closeSubpath()
+                ctx.fill(p, with: .color(.white))
+                ctx.fill(Path(roundedRect: CGRect(x: box.midX - 4.3 * u,
+                                                  y: box.minY + 2.4 * u,
+                                                  width: 1.7 * u,
+                                                  height: box.height - 4.8 * u),
+                              cornerRadius: 0.8),
+                         with: .color(.white))
 
             case .snake:
                 // A serpentine chasing its meal: the body is three arcs of a
