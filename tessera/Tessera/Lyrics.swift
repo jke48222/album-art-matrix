@@ -57,13 +57,18 @@ final class SongClock {
         if raw != lastRaw {
             lastRaw = raw
             let diff = raw - predicted
-            if abs(diff) > 0.9 {
-                // a seek, or the player was wrenched: follow it at once
+            if abs(diff) > 0.25 {
+                // wrong by more than a word: follow the player at once. The
+                // old 12%-per-update slew took ten seconds to drain a half-
+                // second error, and every line in those ten seconds arrived
+                // late and dumped its backlog in one frame — the perfectly
+                // periodic stutter the owner described.
                 anchorTime = raw
                 anchorHost = host
             } else {
-                // a small disagreement: lean toward it, never lurch
-                anchorTime += diff * 0.12
+                // inside a word's width: close half the gap per reading,
+                // converged within a couple of seconds, never a visible jump
+                anchorTime += diff * 0.5
             }
         }
         return anchorTime + (host - anchorHost)
@@ -345,7 +350,10 @@ final class LyricsBook {
             visible = i + 1
             newestK = min(1.0, (t - borns[i]) / ramp)
         }
-        guard visible > 0 else { return px }
+        guard visible > 0 else {
+            drawFoot(&px, footRows, at: footTop, ink: ink)
+            return px
+        }
 
         // the frame's whole visual identity: line, words shown, and the
         // newest word's ramp bucketed to its handful of distinct steps
