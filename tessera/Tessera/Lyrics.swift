@@ -122,9 +122,11 @@ final class LyricsBook {
                     let split = Self.splitVoices(found)
                     self.sheet = split.mains
                     self.adlibs = split.adlibs
+                    FlightLog.note("LYR", "sheet landed: \(split.mains.count) lines, \(split.adlibs.count) adlibs for \(title)")
                 } else {
                     self.sheet = nil
                     self.adlibs = []
+                    FlightLog.note("LYR", "no sheet for \(title)")
                 }
             }
         }
@@ -316,24 +318,11 @@ final class LyricsBook {
     /// republish entirely.
     private static var frameMemo: (key: String, px: [UInt8])? = nil
 
-    /// A flight recorder for the sync itself: every rendered lyric frame
-    /// appends one line. Pulled off the device to see what actually
-    /// happened instead of theorizing about it.
-    static var diag: [String] = []
-    static var diagWall: Double = 0
+    /// Per-frame notes for the sync, into the shared flight log. Frames are
+    /// the one place frame-level granularity earned its keep.
     static func diagNote(raw: Double, clock: Double, idx: Int, visible: Int) {
-        let now = CACurrentMediaTime()
-        diag.append(String(format: "%.3f raw=%.3f clk=%.3f idx=%d vis=%d",
-                           now, raw, clock, idx, visible))
-        if diag.count > 3000 { diag.removeFirst(1000) }
-        if now - diagWall > 5 {
-            diagWall = now
-            let url = FileManager.default.urls(
-                for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("lyrlog.txt")
-            try? diag.joined(separator: "\n").write(
-                to: url, atomically: true, encoding: .utf8)
-        }
+        FlightLog.note("LYR", String(
+            format: "raw=%.3f clk=%.3f idx=%d vis=%d", raw, clock, idx, visible))
     }
 
     static func render(sheet: [LyricLine], at t: Double,

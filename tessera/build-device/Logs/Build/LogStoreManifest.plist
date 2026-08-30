@@ -6,7 +6,7 @@
 	<integer>13</integer>
 	<key>logs</key>
 	<dict>
-		<key>56DB2100-3E29-49AD-AF46-F48B0EF14417</key>
+		<key>46C296E6-B941-444D-BD8A-213A8283CF26</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>56DB2100-3E29-49AD-AF46-F48B0EF14417.xcactivitylog</string>
+			<string>46C296E6-B941-444D-BD8A-213A8283CF26.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,13 +40,13 @@
 			<key>signature</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>timeStartedRecording</key>
-			<real>809822574.93536603</real>
+			<real>809823478.44840205</real>
 			<key>timeStoppedRecording</key>
-			<real>809822586.78213203</real>
+			<real>809823492.43993998</real>
 			<key>title</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>uniqueIdentifier</key>
-			<string>56DB2100-3E29-49AD-AF46-F48B0EF14417</string>
+			<string>46C296E6-B941-444D-BD8A-213A8283CF26</string>
 		</dict>
 		<key>6F09F627-1B7E-484C-905D-559870BD3C8B</key>
 		<dict>

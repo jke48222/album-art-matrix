@@ -355,6 +355,7 @@ struct WallHero: View {
                             let dx = g.translation.width
                             if abs(dx) > 44 {
                                 // push left for next, pull right for previous
+                                FlightLog.note("SWIPE", dx < 0 ? "next" : "previous")
                                 if dx < 0 { onFlickNext() } else { onFlickPrev() }
                                 Taps.commit()
                             }
