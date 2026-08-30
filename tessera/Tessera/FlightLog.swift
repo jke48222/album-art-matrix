@@ -25,7 +25,22 @@ enum FlightLog {
         return f
     }()
 
+    private static var seeded = false
+
     static func note(_ category: String, _ message: String) {
+        // continuity across launches: the first note of a session pulls the
+        // previous session's tail back into the ring, so "done" after a
+        // relaunch still hands over the whole story
+        if !seeded {
+            seeded = true
+            let url = FileManager.default.urls(
+                for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("flightlog.txt")
+            if let old = try? String(contentsOf: url, encoding: .utf8) {
+                lines = old.split(separator: "\n").suffix(3000).map(String.init)
+                lines.append("---- app launched ----")
+            }
+        }
         lines.append("\(day.string(from: Date())) [\(category)] \(message)")
         if lines.count > 6000 { lines.removeFirst(2000) }
         let now = CACurrentMediaTime()
