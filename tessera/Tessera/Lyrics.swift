@@ -366,7 +366,10 @@ final class LyricsBook {
         guard !rows.isEmpty else { return px }
 
         let lineH = 7 * scale + 2
-        var y = (64 - (rows.count * lineH - 2)) / 2
+        // centred in the region the foot has left standing, NOT the panel:
+        // centring on 64 was exactly how the two voices ended up on top of
+        // each other whenever the second one sang
+        var y = max(1, (regionH - (rows.count * lineH - 2)) / 2)
         var drawn = 0
         for row in rows {
             let words = row.split(separator: " ").map(String.init)
