@@ -14,6 +14,7 @@
 // effects, same names. When the wall exists, the wall's own renders are the
 // truth and this is only what fills the gap.
 
+import AVFoundation
 import Foundation
 import SwiftUI
 import UIKit
