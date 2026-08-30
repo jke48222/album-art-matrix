@@ -187,7 +187,7 @@ final class Canvas64 {
             let w = PixelFont.textWidth(line, scale: scale)
             var x = (64 - w) / 2
             for ch in line {
-                let rows = PixelFont.glyph(ch)
+                let (rows, gw, adv) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6)
                 let glyphInk: (UInt8, UInt8, UInt8)
                 if ch != " " {
                     glyphInk = gi < colors.count ? colors[gi] : rgb
@@ -196,7 +196,7 @@ final class Canvas64 {
                     glyphInk = rgb
                 }
                 for (ry, mask) in rows.enumerated() {
-                    for rx in 0..<PixelFont.width where mask & (1 << (4 - rx)) != 0 {
+                    for rx in 0..<gw where mask & (1 << (gw - 1 - rx)) != 0 {
                         for sy in 0..<scale {
                             for sx in 0..<scale {
                                 let xx = x + rx * scale + sx
@@ -208,7 +208,7 @@ final class Canvas64 {
                         }
                     }
                 }
-                x += PixelFont.advance * scale
+                x += adv * scale
             }
             y += lineStep
         }
@@ -326,6 +326,7 @@ struct StudioScreen: View {
                     if writing { compose }
                     inks
                     tools
+                    penOptions
                     send
                     if !kept.made.isEmpty { keptStrip }
                 }
@@ -602,38 +603,16 @@ struct StudioScreen: View {
 
     private var tools: some View {
         HStack(spacing: 0) {
-            GlyphButton(glyph: .pen, label: "pen", active: tool == .pen,
-                        accent: accent, lit: 0.6, diameter: 46) {
+            GlyphButton(glyph: .pen, label: "pen",
+                        active: !writing,
+                        accent: accent, lit: 0.6, diameter: 54) {
                 leaveWords()
                 tool = .pen
             }
             .frame(maxWidth: .infinity)
 
-            GlyphButton(glyph: .erase, label: "erase", active: tool == .erase,
-                        accent: accent, lit: 0.6, diameter: 46) {
-                leaveWords()
-                tool = .erase
-            }
-            .frame(maxWidth: .infinity)
-
-            // The bucket: tap a region and it takes the ink, the way paint
-            // finds the edges of a shape. On 4,096 tiles this is how a
-            // background happens in one gesture instead of four hundred.
-            GlyphButton(glyph: .fill, label: "fill", active: tool == .fill,
-                        accent: accent, lit: 0.6, diameter: 46) {
-                leaveWords()
-                tool = .fill
-            }
-            .frame(maxWidth: .infinity)
-
-            BrushButton(thick: thick, accent: tool == .erase ? Ink.dim : inkColor) {
-                leaveWords()
-                thick.toggle()
-            }
-            .frame(maxWidth: .infinity)
-
             GlyphButton(glyph: .letters, label: "words", active: writing,
-                        accent: accent, lit: 0.6, diameter: 46) {
+                        accent: accent, lit: 0.6, diameter: 54) {
                 tool = .pen
                 if writing {
                     writing = false
@@ -654,10 +633,10 @@ struct StudioScreen: View {
                         Circle().strokeBorder(clip.isEmpty ? Ink.hairline : accent,
                                               lineWidth: clip.isEmpty ? 1 : 1.5)
                         GlyphShape(glyph: .photo, lineWidth: 1.6)
-                            .frame(width: 46 * 0.42, height: 46 * 0.42)
+                            .frame(width: 54 * 0.42, height: 54 * 0.42)
                             .foregroundStyle(clip.isEmpty ? Ink.dim : accent)
                     }
-                    .frame(width: 46, height: 46)
+                    .frame(width: 54, height: 54)
                     Text(loadingMedia ? "reading" : (clip.isEmpty ? "media" : "\(clip.count)f"))
                         .font(.machine(9))
                         .textCase(.uppercase)
@@ -665,7 +644,6 @@ struct StudioScreen: View {
                 }
             }
             .frame(maxWidth: .infinity)
-
         }
     }
 
@@ -719,9 +697,10 @@ struct StudioScreen: View {
             canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
                          colors: wordInks)
         }
-        // The return key is finishing, not hiding: the words are part of the
-        // drawing now and every other tool is a tap away again.
-        .onSubmit { leaveWords() }
+        // The return key puts the KEYBOARD away, nothing else: you stay on
+        // words, where the size rail and the letter inks still apply to what
+        // you just typed. Words mode ends when you pick another tool.
+        .onSubmit { typing = false }
         .transition(.opacity)
     }
 
@@ -729,6 +708,29 @@ struct StudioScreen: View {
 
     private var wordInks: [(UInt8, UInt8, UInt8)] {
         wordColors.compactMap { Color(wallHex: $0) }.map { Self.rgb(of: $0) }
+    }
+
+    /// The pen's own pocket: how it marks, and its two alter egos. Lives
+    /// under the row so the top level stays three ideas: pen, words, media.
+    @ViewBuilder private var penOptions: some View {
+        if !writing {
+            HStack(spacing: 18) {
+                BrushButton(thick: thick, accent: tool == .erase ? Ink.dim : inkColor) {
+                    thick.toggle()
+                }
+                GlyphButton(glyph: .erase, label: "erase", active: tool == .erase,
+                            accent: accent, lit: 0.6, diameter: 40) {
+                    tool = tool == .erase ? .pen : .erase
+                }
+                GlyphButton(glyph: .fill, label: "fill", active: tool == .fill,
+                            accent: accent, lit: 0.6, diameter: 40) {
+                    tool = tool == .fill ? .pen : .fill
+                }
+                Spacer()
+            }
+            .padding(.leading, 10)
+            .transition(.opacity)
+        }
     }
 
     /// Words mode ends the moment you reach for anything else. What was

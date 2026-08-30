@@ -140,23 +140,72 @@ enum PixelFont {
 
     static func glyph(_ ch: Character) -> [UInt8] { glyphs[ch] ?? box }
 
-    /// Total width including the one-column gaps.
-    static func textWidth(_ text: String, scale: Int = 1) -> Int {
-        let n = text.count
-        return (n * width + max(0, n - 1)) * scale
+    // ---- Hangul ----------------------------------------------------------
+    // All 11,172 modern syllables plus the compatibility jamo, baked from
+    // Galmuri7 (OFL) by Tools/gen_hangul.py: 7-row bitmasks, bit 6 leftmost,
+    // 7 wide, advance 8, on the same baseline band as the ASCII glyphs.
+    static let hangul: Data = {
+        guard let url = Bundle.main.url(forResource: "Hangul7", withExtension: "bin"),
+              let data = try? Data(contentsOf: url) else { return Data() }
+        return data
+    }()
+
+    /// (rows, width, advance) for any letterable character, else nil.
+    static func cell(_ ch: Character) -> (rows: [UInt8], width: Int, advance: Int)? {
+        if let rows = glyphs[ch] { return (rows, 5, 6) }
+        guard ch.unicodeScalars.count == 1,
+              let scalar = ch.unicodeScalars.first else { return nil }
+        let cp = Int(scalar.value)
+        let off: Int
+        if cp >= 0xAC00, cp <= 0xD7A3 {
+            off = (cp - 0xAC00) * 7
+        } else if cp >= 0x3131, cp <= 0x3163 {
+            off = (11172 + cp - 0x3131) * 7
+        } else {
+            return nil
+        }
+        guard hangul.count >= off + 7 else { return nil }
+        return (Array(hangul[off..<(off + 7)]), 7, 8)
     }
 
-    /// Greedy wrap to a pixel width, so a long line becomes several.
+    /// Total width including the one-column gaps, both scripts.
+    static func textWidth(_ text: String, scale: Int = 1) -> Int {
+        var total = 0
+        for ch in text { total += cell(ch)?.advance ?? 6 }
+        return max(0, total - 1) * scale
+    }
+
+    /// Greedy wrap to a pixel width. A word wider than the whole line is
+    /// broken hard, which is not a corner case here: Korean is usually
+    /// written without spaces, so an entire lyric line can be one "word".
     static func wrap(_ text: String, maxWidth: Int, scale: Int) -> [String] {
         var lines: [String] = []
         var line = ""
+        func hardBreak(_ word: String) -> String {
+            var w = word
+            while textWidth(w, scale: scale) > maxWidth, w.count > 1 {
+                var k = 1
+                while k < w.count,
+                      textWidth(String(w.prefix(k + 1)), scale: scale) <= maxWidth {
+                    k += 1
+                }
+                lines.append(String(w.prefix(k)))
+                w = String(w.dropFirst(k))
+            }
+            return w
+        }
         for word in text.split(separator: " ", omittingEmptySubsequences: false) {
-            let candidate = line.isEmpty ? String(word) : line + " " + word
+            var word = String(word)
+            if textWidth(word, scale: scale) > maxWidth {
+                if !line.isEmpty { lines.append(line); line = "" }
+                word = hardBreak(word)
+            }
+            let candidate = line.isEmpty ? word : line + " " + word
             if textWidth(candidate, scale: scale) <= maxWidth || line.isEmpty {
                 line = candidate
             } else {
                 lines.append(line)
-                line = String(word)
+                line = word
             }
         }
         if !line.isEmpty { lines.append(line) }

@@ -5,20 +5,22 @@ by track, artist, album and duration; the answer's syncedLyrics is LRC text,
 "[mm:ss.xx] line" per line. No auth, no key, and misses are common enough
 that having none is a first-class state here, never an error.
 
-Display: the current line only, wrapped in the wall's own font, lettered
-over the sleeve dimmed to a quarter of itself. Words arrive one at a time
-across the early part of the line's window, each with a two-frame brightness
-ramp so it lands rather than teleports; the whole line then stands until the
-next one takes over. LRC gives line times, not word times, so word timing is
-an even spread, which is a guess, and an honest one: it is how people read.
+Display: the brat look. A flat field in the album's loudest voice, the
+line in lowercase filling the panel from the left, black or white by
+whatever the field needs, words popping in one at a time. Big where the
+line is short, smaller only when it must be. Between lines the field just
+holds, which is the confidence the whole aesthetic runs on. LRC gives line
+times, not word times, so word timing is an even spread, which is a guess,
+and an honest one: it is how people read.
 """
+import colorsys
 import re
 import threading
 
 import numpy as np
 from PIL import Image
 
-from .pixelfont import FONT, draw_text, normalize, text_width
+from .pixelfont import cell, draw_text, normalize, text_width
 from .text_modes import wrap_text
 
 _STAMP = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
@@ -119,73 +121,89 @@ class LyricBook:
 
 
 class LyricCanvas:
-    """Renders one track's lines over its sleeve."""
+    """One track's lines, on the flat loud field."""
 
-    DIM = 0.26            # how much of the sleeve survives under the words
-    RAMP = 0.16           # seconds a new word takes to reach full ink
+    RAMP = 0.12           # seconds a new word takes to land
 
-    def __init__(self, size: int, art: Image.Image, sheet: LyricSheet,
-                 color: str = "#f4f1ea"):
+    def __init__(self, size: int, art, sheet: LyricSheet,
+                 color: str = "#8ace00"):
         self.size = size
         self.sheet = sheet
-        base = np.asarray(
-            art.convert("RGB").resize((size, size), Image.LANCZOS),
-            dtype=np.float32) * self.DIM
-        self.base = base
-        s = color.lstrip("#")
-        self.ink = tuple(int(s[i:i + 2], 16) for i in (0, 2, 4))
-        self._wrapped: dict[str, list[str]] = {}
+        # the field: the given colour pushed toward its loudest self
+        c = color.lstrip("#")
+        r, g, b = (int(c[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        h, s_, v = colorsys.rgb_to_hsv(r, g, b)
+        r, g, b = colorsys.hsv_to_rgb(h, min(1.0, s_ * 1.5 + 0.12),
+                                      min(1.0, v * 1.25 + 0.18))
+        self.bg = (int(r * 255), int(g * 255), int(b * 255))
+        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
+        self.ink = (12, 12, 10) if lum > 0.45 else (244, 241, 234)
+        self.base = np.broadcast_to(
+            np.array(self.bg, dtype=np.uint8), (size, size, 3)).copy()
+        self._laid: dict[str, tuple[list[str], int]] = {}
 
-    def _rows(self, text: str) -> list[str]:
-        rows = self._wrapped.get(text)
-        if rows is None:
-            # Letter what the font can letter. K-pop and half the world mix
-            # scripts mid-line; the ASCII fragments keep their timing and the
-            # rest steps aside, which beats rows of fallback boxes. A line
-            # with nothing letterable shows the sleeve alone for its bar.
-            kept = "".join(
-                ch for ch in normalize(text)
-                if ch in FONT or ch == " ")
-            kept = " ".join(kept.split())
-            rows = wrap_text(kept, self.size - 6, 1)[:6] if kept else []
-            self._wrapped[text] = rows
-        return rows
+    def _layout(self, text: str) -> tuple[list[str], int]:
+        """Wrapped rows and the scale they earned: as big as fits."""
+        hit = self._laid.get(text)
+        if hit is not None:
+            return hit
+        kept = "".join(
+            ch for ch in normalize(text.lower())
+            if cell(ch) is not None or ch == " ")
+        kept = " ".join(kept.split())
+        rows: list[str] = []
+        scale = 1
+        if kept:
+            for try_scale in (2, 1):
+                rows = wrap_text(kept, self.size - 4, try_scale)
+                line_h = 7 * try_scale + 2
+                if len(rows) * line_h - 2 <= self.size - 4:
+                    scale = try_scale
+                    break
+            else:
+                rows = wrap_text(kept, self.size - 4, 1)[-6:]
+                scale = 1
+        out = (rows, scale)
+        self._laid[text] = out
+        return out
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
         text, t0, t1 = self.sheet.at(t)
-        if text:
-            rows = self._rows(text)
+        rows, scale = self._layout(text) if text else ([], 1)
+        if rows:
             tokens = [w for row in rows for w in row.split()]
             n = max(1, len(tokens))
-            # words spread across the front of the line's window: readable
-            # long before the next line, and never slower than the song
             span = min(2.4, max(0.6, (t1 - t0) * 0.55))
             step = span / n
 
-            line_h = 9
+            line_h = 7 * scale + 2
             block_h = len(rows) * line_h - 2
             y = (self.size - block_h) // 2
             shown = 0
-            arr = canvas
             for row in rows:
-                x = (self.size - text_width(row, 1)) // 2
-                for word in row.split():
-                    born = t0 + shown * step
+                words = row.split()
+                visible, newest_k = 0, 1.0
+                for i in range(len(words)):
+                    born = t0 + (shown + i) * step
                     if t >= born:
-                        k = min(1.0, (t - born) / self.RAMP)
-                        ink = tuple(int(c * (0.25 + 0.75 * k)) for c in self.ink)
-                        u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-                        # the shadow: paint the offset copy white to get its
-                        # footprint (black on zeros has none), then darken
-                        draw_text(u8, word, x + 1, y + 1, (255, 255, 255), 1)
-                        mask = u8.sum(axis=2) > 0
-                        arr[mask] *= 0.25
-                        u8[:] = 0
-                        draw_text(u8, word, x, y, ink, 1)
-                        mask = u8.sum(axis=2) > 0
-                        arr[mask] = u8[mask]
-                    shown += 1
-                    x += text_width(word, 1) + 6
+                        visible = i + 1
+                        newest_k = min(1.0, (t - born) / self.RAMP)
+                shown += len(words)
+                if visible == 0:
+                    y += line_h
+                    continue
+                # left-anchored, drawn as prefixes of the wrapped row so the
+                # walk can never disagree with the wrap
+                x = 2
+                settled = " ".join(words[:visible - 1])
+                if settled:
+                    draw_text(canvas, settled, x, y, self.ink, scale)
+                last = words[visible - 1]
+                lx = x + (text_width(settled, scale) + 6 * scale if settled else 0)
+                k = newest_k if visible == len(words) else 1.0
+                ink = tuple(int(self.ink[i] * k + self.bg[i] * (1 - k))
+                            for i in range(3))
+                draw_text(canvas, last, lx, y, ink, scale)
                 y += line_h
-        return Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), "RGB")
+        return Image.fromarray(canvas, "RGB")

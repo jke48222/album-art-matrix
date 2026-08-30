@@ -6,6 +6,48 @@
 	<integer>13</integer>
 	<key>logs</key>
 	<dict>
+		<key>050A0DD2-CCB5-4985-9446-5A700E97EC8A</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>050A0DD2-CCB5-4985-9446-5A700E97EC8A.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>7</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>Tessera project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>Tessera</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Building project Tessera with scheme Tessera</string>
+			<key>timeStartedRecording</key>
+			<real>809804914.51256299</real>
+			<key>timeStoppedRecording</key>
+			<real>809804924.48285198</real>
+			<key>title</key>
+			<string>Building project Tessera with scheme Tessera</string>
+			<key>uniqueIdentifier</key>
+			<string>050A0DD2-CCB5-4985-9446-5A700E97EC8A</string>
+		</dict>
 		<key>635CF259-16FA-407C-ACFB-80441CF95073</key>
 		<dict>
 			<key>className</key>
@@ -47,48 +89,6 @@
 			<string>Building project Tessera with scheme Tessera</string>
 			<key>uniqueIdentifier</key>
 			<string>635CF259-16FA-407C-ACFB-80441CF95073</string>
-		</dict>
-		<key>B393C20A-4FAD-4C0C-85DD-8987878D84AC</key>
-		<dict>
-			<key>className</key>
-			<string>IDECommandLineBuildLog</string>
-			<key>documentTypeString</key>
-			<string>&lt;nil&gt;</string>
-			<key>domainType</key>
-			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
-			<key>fileName</key>
-			<string>B393C20A-4FAD-4C0C-85DD-8987878D84AC.xcactivitylog</string>
-			<key>hasPrimaryLog</key>
-			<true/>
-			<key>primaryObservable</key>
-			<dict>
-				<key>highLevelStatus</key>
-				<string>W</string>
-				<key>totalNumberOfAnalyzerIssues</key>
-				<integer>0</integer>
-				<key>totalNumberOfErrors</key>
-				<integer>0</integer>
-				<key>totalNumberOfTestFailures</key>
-				<integer>0</integer>
-				<key>totalNumberOfWarnings</key>
-				<integer>9</integer>
-			</dict>
-			<key>schemeIdentifier-containerName</key>
-			<string>Tessera project</string>
-			<key>schemeIdentifier-schemeName</key>
-			<string>Tessera</string>
-			<key>schemeIdentifier-sharedScheme</key>
-			<integer>1</integer>
-			<key>signature</key>
-			<string>Building project Tessera with scheme Tessera</string>
-			<key>timeStartedRecording</key>
-			<real>809752971.25668204</real>
-			<key>timeStoppedRecording</key>
-			<real>809752975.22160804</real>
-			<key>title</key>
-			<string>Building project Tessera with scheme Tessera</string>
-			<key>uniqueIdentifier</key>
-			<string>B393C20A-4FAD-4C0C-85DD-8987878D84AC</string>
 		</dict>
 	</dict>
 </dict>

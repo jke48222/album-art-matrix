@@ -208,9 +208,10 @@ enum PixelDraw {
                      width: Int = 64, height: Int = 64) {
         var cx = x
         for ch in text {
-            let rows = PixelFont.glyph(ch)
+            // both scripts: ASCII 5 wide, Hangul 7 wide, unknown = the box
+            let (rows, gw, adv) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6)
             for (ry, mask) in rows.enumerated() {
-                for rx in 0..<PixelFont.width where mask & (1 << (4 - rx)) != 0 {
+                for rx in 0..<gw where mask & (1 << (gw - 1 - rx)) != 0 {
                     for sy in 0..<scale {
                         for sx in 0..<scale {
                             let xx = cx + rx * scale + sx
@@ -222,7 +223,7 @@ enum PixelDraw {
                     }
                 }
             }
-            cx += PixelFont.advance * scale
+            cx += adv * scale
         }
     }
 

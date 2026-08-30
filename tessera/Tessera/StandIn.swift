@@ -98,6 +98,13 @@ final class StandIn {
         pushed = px
         state.mode = "frame"
         state.shownSeq &+= 1
+        // A drawing is a face the wall wore: it belongs to the history the
+        // panel scrubs through, stamped with when it went up.
+        let fmt = DateFormatter()
+        fmt.dateFormat = "HH:mm"
+        LocalJournal.append(title: "From the Studio",
+                            artist: fmt.string(from: Date()),
+                            album: "", frame: px)
     }
 
     func push(clip frames: [[UInt8]], fps: Double) {
@@ -198,7 +205,7 @@ final class StandIn {
             }
         case "ticker": px = ticker(t)
         case "clock":  px = clock()
-        default:       px = art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
+        default:       px = finished(art) ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         }
 
         // The sleep fade, same shape as the wall's: dim toward off across the
@@ -231,9 +238,9 @@ final class StandIn {
                        rgb ink: (UInt8, UInt8, UInt8), scale: Int) {
         var cx = x
         for ch in text {
-            let rows = PixelFont.glyph(ch)
+            let (rows, gw, adv) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6)
             for (ry, mask) in rows.enumerated() {
-                for rx in 0..<5 where mask & (1 << (4 - rx)) != 0 {
+                for rx in 0..<gw where mask & (1 << (gw - 1 - rx)) != 0 {
                     for sy in 0..<scale {
                         for sx in 0..<scale {
                             let xx = cx + rx * scale + sx
@@ -245,7 +252,7 @@ final class StandIn {
                     }
                 }
             }
-            cx += PixelFont.advance * scale
+            cx += adv * scale
         }
     }
 
@@ -380,20 +387,62 @@ final class StandIn {
     private func lyricsFrame() -> [UInt8] {
         guard let art else { return [UInt8](repeating: 0, count: 64 * 64 * 3) }
         if let title = state.title {
+            let item = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem
             lyricsBook.ask(track: lastArtKey, artist: state.artist ?? "",
-                           title: title, album: state.album ?? "")
+                           title: title, album: state.album ?? "",
+                           duration: (item?.playbackDuration).flatMap { $0 > 0 ? $0 : nil })
         }
         guard let sheet = lyricsBook.sheet, lyricsBook.track == lastArtKey else {
             return art       // nothing to sing yet: the sleeve, undimmed
         }
-        let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime
-        let ink = (state.matchArt ? artColors.first : nil).flatMap { rgb($0) }
-        let inkB: (UInt8, UInt8, UInt8) = ink.map {
-            (UInt8(min(255, $0.0 * 255 * 1.2 + 40)),
-             UInt8(min(255, $0.1 * 255 * 1.2 + 40)),
-             UInt8(min(255, $0.2 * 255 * 1.2 + 40)))
-        } ?? (244, 241, 234)
-        return LyricsBook.render(sheet: sheet, at: t, over: art, ink: inkB)
+        // A shade of lead: the line lands AS it is sung, not a beat after.
+        let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime + 0.35
+        // the field speaks in the album's loudest voice
+        let voice = (artColors.first ?? state.color)
+        let c = rgb(voice) ?? (0.54, 0.81, 0.0)
+        return LyricsBook.render(sheet: sheet, at: t, bg: c)
+    }
+
+    /// The finishes, phone-side, so choosing one changes the wall you are
+    /// looking at and not just three thumbnails. Same math as the brain:
+    /// poster is 3 bits a channel; dither is Floyd-Steinberg to the same
+    /// levels, error carried right and down.
+    private var finishCache: (key: String, px: [UInt8])? = nil
+    private func finished(_ art: [UInt8]?) -> [UInt8]? {
+        guard let art else { return nil }
+        let f = state.finish
+        guard f != "clean" else { return art }
+        let key = "\(lastArtKey)|\(f)"
+        if let c = finishCache, c.key == key { return c.px }
+        var out = art
+        func q(_ v: Double) -> Double {
+            (Double(Int(max(0, min(255, v))) >> 5) * 255.0 / 7.0).rounded()
+        }
+        if f == "poster" {
+            for i in out.indices { out[i] = UInt8(q(Double(art[i]))) }
+        } else if f == "dither" {
+            var work = art.map(Double.init)
+            for y in 0..<64 {
+                for x in 0..<64 {
+                    for c in 0..<3 {
+                        let o = (y * 64 + x) * 3 + c
+                        let old = work[o]
+                        let new = q(old)
+                        work[o] = new
+                        let err = old - new
+                        if x + 1 < 64 { work[o + 3] += err * 7 / 16 }
+                        if y + 1 < 64 {
+                            if x > 0 { work[o + 64 * 3 - 3] += err * 3 / 16 }
+                            work[o + 64 * 3] += err * 5 / 16
+                            if x + 1 < 64 { work[o + 64 * 3 + 3] += err * 1 / 16 }
+                        }
+                    }
+                }
+            }
+            for i in out.indices { out[i] = UInt8(max(0, min(255, work[i]))) }
+        }
+        finishCache = (key, out)
+        return out
     }
 
     private func countdownFrame() -> [UInt8] {

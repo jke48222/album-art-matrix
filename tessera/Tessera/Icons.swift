@@ -119,21 +119,32 @@ struct GlyphShape: View {
                 }
 
             case .lyrics:
-                // words leaving a mouth: a quote pair and the line below it
-                for x in [box.minX + 3.4 * u, box.minX + 7.6 * u] {
-                    var tick = Path()
-                    tick.move(to: CGPoint(x: x + 1.6 * u, y: box.minY + 1.6 * u))
-                    tick.addLine(to: CGPoint(x: x, y: box.minY + 5.6 * u))
-                    ctx.stroke(tick, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                }
-                for (i, w) in [(0, 0.62), (1, 0.40)].map({ ($0.0, $0.1) }) {
+                // an eighth note, and the two lines it is singing
+                let headR = 2.0 * u
+                let headC = CGPoint(x: box.minX + 3.6 * u, y: box.maxY - 3.0 * u)
+                ctx.fill(Path(ellipseIn: CGRect(x: headC.x - headR, y: headC.y - headR * 0.8,
+                                                width: headR * 2, height: headR * 1.6)),
+                         with: .color(.white))
+                var stem = Path()
+                let stemTop = CGPoint(x: headC.x + headR - lw * 0.4, y: box.minY + 2.2 * u)
+                stem.move(to: CGPoint(x: headC.x + headR - lw * 0.4, y: headC.y))
+                stem.addLine(to: stemTop)
+                ctx.stroke(stem, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
+                var flag = Path()
+                flag.move(to: stemTop)
+                flag.addQuadCurve(
+                    to: CGPoint(x: stemTop.x + 3.6 * u, y: stemTop.y + 4.6 * u),
+                    control: CGPoint(x: stemTop.x + 3.8 * u, y: stemTop.y + 0.8 * u))
+                ctx.stroke(flag, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
+                for (i, w) in [(0, 5.4), (1, 3.6)] as [(Int, CGFloat)] {
                     var line = Path()
-                    let ly = box.midY + CGFloat(i) * 3.4 * u + 1.2 * u
-                    line.move(to: CGPoint(x: box.minX + 1.4 * u, y: ly))
-                    line.addLine(to: CGPoint(x: box.minX + 1.4 * u + box.width * w, y: ly))
+                    let ly = box.midY + CGFloat(i) * 3.0 * u + 0.4 * u
+                    line.move(to: CGPoint(x: box.maxX - w * u, y: ly))
+                    line.addLine(to: CGPoint(x: box.maxX - 1.0 * u, y: ly))
                     ctx.stroke(line, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                               style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
                 }
 
             case .play:

@@ -235,6 +235,10 @@ struct WallHero: View {
     var onCommit: (Double) -> Void
     var onHold: () -> Void
     var onWear: (JournalEntry) -> Void = { _ in }
+    /// A short flick, left or right, is a SONG gesture: previous or next.
+    /// The sustained pull is what walks the wall's own history.
+    var onFlickPrev: () -> Void = {}
+    var onFlickNext: () -> Void = {}
 
     @State private var startValue: Double? = nil
     @State private var lastDetent: Int = -1
@@ -245,9 +249,10 @@ struct WallHero: View {
 
     private enum Axis { case light, back }
 
-    /// How far you have to pull for one more sleeve. Wide enough that a
-    /// glancing swipe does not rewind the room by six records.
-    private let stride: CGFloat = 52
+    /// How far you have to pull for one more sleeve. A record's width of
+    /// travel per record: the first cut moved six sleeves on a flick and
+    /// felt like dropping the crate.
+    private let stride: CGFloat = 110
 
     // Arrival: a new sleeve does not cross-dissolve onto a wall of LEDs, it
     // repaints. The outgoing frame is extinguished column by column, then the
@@ -420,11 +425,16 @@ struct WallHero: View {
                             }
                         }
                     }
-                    .onEnded { _ in
+                    .onEnded { g in
                         cancelHold()
                         touching = false
                         if axis == .back {
-                            if back > 0, let run = scrubbed {
+                            let dx = g.translation.width
+                            if back == 0, abs(dx) > 40 {
+                                // never pulled far enough for history: a flick
+                                if dx < 0 { onFlickPrev() } else { onFlickNext() }
+                                Taps.commit()
+                            } else if back > 0, let run = scrubbed {
                                 onWear(run.entry)
                                 Taps.commit()
                             }
