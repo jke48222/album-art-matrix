@@ -30,7 +30,7 @@ STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
-MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer")
+MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics")
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
 IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence

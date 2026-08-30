@@ -124,18 +124,20 @@ struct WallScreen: View {
         .padding(.top, 4)
     }
 
-    /// Five faces. Words left this row at the owner's request: making text
-    /// lives in the Studio now, and a ticker set some other way (Siri, the
-    /// web) still surfaces its controls below when it is running.
+    /// Seven faces. Words left this row at the owner's request (text is made
+    /// in the Studio); nine and lyrics joined it because both are things the
+    /// wall IS for a while, not things you do to it.
     private var modeRow: some View {
         VStack(spacing: 16) {
             HStack(spacing: 0) {
                 glyph(.art, "art", mode: "art")
                 glyph(.spin, "spin", mode: "cd")
                 glyph(.lamp, "lamp", mode: "ambient")
+                glyph(.nine, "nine", mode: "nine")
             }
             HStack(spacing: 0) {
                 Spacer().frame(maxWidth: .infinity)
+                glyph(.lyrics, "lyrics", mode: "lyrics")
                 glyph(.clock, "clock", mode: "clock")
                 glyph(.dark, "off", mode: "off")
                 Spacer().frame(maxWidth: .infinity)
@@ -161,7 +163,7 @@ struct WallScreen: View {
     private var normalizedMode: String {
         let m = wall.state.mode
         if m == "timer" { return "clock" }   // a countdown is the clock, busy
-        return ["art", "cd", "ambient", "off", "ticker", "clock"].contains(m)
+        return ["art", "cd", "ambient", "off", "ticker", "clock", "nine", "lyrics"].contains(m)
             ? m : "art"
     }
 
@@ -227,6 +229,18 @@ struct WallScreen: View {
                     ) { wall.send(["clock_24h": $0]) }
                 }
             }
+
+        case "nine":
+            Text("The last nine sleeves the wall has worn, newest first.")
+                .font(.ui(13))
+                .foregroundStyle(litDim)
+                .fixedSize(horizontal: false, vertical: true)
+
+        case "lyrics":
+            Text("The words, over the sleeve, in time with the song. They come from LRCLIB, so a track it has never heard shows the sleeve alone.")
+                .font(.ui(13))
+                .foregroundStyle(litDim)
+                .fixedSize(horizontal: false, vertical: true)
 
         default:
             FinishRow(
