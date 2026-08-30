@@ -24,45 +24,73 @@ from .pixelfont import cell, draw_text, normalize, text_width
 from .text_modes import wrap_text
 
 _STAMP = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
+_WORD = re.compile(r"<(\d+):(\d+(?:\.\d+)?)>")
+_OFFSET = re.compile(r"\[offset:\s*([+-]?\d+)\s*\]", re.I)
 
 
-def parse_lrc(text: str) -> list[tuple[float, str]]:
-    """[(seconds, line)], sorted. A line may carry several stamps."""
+def parse_lrc(text: str):
+    """[(seconds, line, word_times|None)], sorted.
+
+    Honours the whole spec, because the spec is where the sync lives:
+      [offset:±ms]   a global shift baked in by whoever synced the file;
+                     positive means the lyrics belong EARLIER. Ignoring it
+                     was a per-song error of up to half a second.
+      <mm:ss.xx>     Enhanced-LRC word stamps. When a sheet carries them,
+                     word pops stop being a guess and become the truth.
+    """
+    off = 0.0
+    m = _OFFSET.search(text)
+    if m:
+        off = int(m.group(1)) / 1000.0
     out = []
     for raw in text.splitlines():
         stamps = _STAMP.findall(raw)
         if not stamps:
             continue
-        words = _STAMP.sub("", raw).strip()
-        for m, s in stamps:
-            out.append((int(m) * 60 + float(s), words))
+        body = _STAMP.sub("", raw).strip()
+        wstamps = _WORD.findall(body)
+        words = None
+        if wstamps:
+            # words are the text runs between the angle stamps
+            parts = _WORD.split(body)
+            # parts = [lead, m, s, txt, m, s, txt, ...]
+            words = []
+            for i in range(1, len(parts) - 2, 3):
+                wt = int(parts[i]) * 60 + float(parts[i + 1]) - off
+                wtxt = parts[i + 2].strip()
+                if wtxt:
+                    words.append((wt, wtxt))
+            body = " ".join(w for _, w in words)
+        for m_, s_ in stamps:
+            out.append((int(m_) * 60 + float(s_) - off, body, words))
     out.sort(key=lambda p: p[0])
-    # lines sharing a timestamp collapse into one, or the earlier of the
-    # pair never shows at all
-    merged: list[tuple[float, str]] = []
-    for t, text in out:
+    merged = []
+    for t, text_, words in out:
         if merged and t - merged[-1][0] < 0.05:
-            prev_t, prev = merged[-1]
-            merged[-1] = (prev_t, (prev + " " + text).strip())
+            pt, ptxt, pw = merged[-1]
+            joined_words = (pw or []) + (words or []) if (pw or words) else None
+            merged[-1] = (pt, (ptxt + " " + text_).strip(), joined_words)
         else:
-            merged.append((t, text))
+            merged.append((t, text_, words))
     return merged
 
 
 def split_voices(lines):
     """Two voices out of one sheet: parentheses are the second singer,
-    wherever they sit in a line. Each ad-lib owns a window to the next
-    event; what remains outside the parentheses is the first voice."""
+    wherever they sit in a line. Word stamps survive only when the line
+    kept all its words; a line that lost parens to the foot falls back to
+    spread timing, which is honest about what we still know."""
     mains, raw = [], []
-    for t, text in lines:
-        text = text.strip()
+    for entry in lines:
+        t, text = entry[0], entry[1].strip()
+        words = entry[2] if len(entry) > 2 else None
         for g in re.findall(r"\([^()]*\)", text):
             if len(g) > 2:
                 raw.append((t, g))
         main = " ".join(re.sub(r"\([^()]*\)", " ", text).split())
         if main:
-            mains.append((t, main))
-    starts = sorted(t for t, _ in lines)
+            mains.append((t, main, words if main == text else None))
+    starts = sorted(e[0] for e in lines)
     adlibs = []
     for t, text in raw:
         nxt = next((x for x in starts if x > t + 0.05), t + 4)
@@ -73,7 +101,7 @@ def split_voices(lines):
 class LyricSheet:
     """One track's synced lines, and where we are in them."""
 
-    def __init__(self, lines: list[tuple[float, str]]):
+    def __init__(self, lines):
         self.lines, self.adlibs = split_voices(lines)
 
     def at(self, t: float):
@@ -91,7 +119,8 @@ class LyricSheet:
                 hi = mid - 1
         t0 = lines[lo][0]
         t1 = lines[lo + 1][0] if lo + 1 < len(lines) else t0 + 6.0
-        return lines[lo][1], t0, t1
+        words = lines[lo][2] if len(lines[lo]) > 2 else None
+        return lines[lo][1], t0, t1, words
 
 
 def fetch_sheet(artist: str, title: str, album: str,
@@ -189,6 +218,29 @@ class LyricCanvas:
         self.ink = (244, 241, 234)
         self._laid: dict[tuple, tuple] = {}
 
+    def _borns(self, tokens, t0, t1, word_times):
+        """When each visible token arrives. Real Enhanced-LRC stamps when
+        the sheet has them; otherwise a spread weighted by each word's
+        length, because long words take longer to sing than short ones and
+        equal steps never felt like the song."""
+        if word_times:
+            filtered = []
+            for wt, wtxt in word_times:
+                kept = "".join(ch for ch in normalize(wtxt.lower())
+                               if cell(ch) is not None or ch == " ").strip()
+                if kept:
+                    filtered.append(wt)
+            if len(filtered) == len(tokens):
+                return filtered
+        span = min(2.4, max(0.6, (t1 - t0) * 0.55))
+        weights = [max(2, len(w)) for w in tokens]
+        total = sum(weights)
+        borns, acc = [], 0
+        for w in weights:
+            borns.append(t0 + span * acc / total)
+            acc += w
+        return borns
+
     def _tokens(self, text: str) -> list[str]:
         kept = "".join(
             ch for ch in normalize(text.lower())
@@ -246,7 +298,7 @@ class LyricCanvas:
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
-        text, t0, t1 = self.sheet.at(t)
+        text, t0, t1, word_times = self.sheet.at(t)
         # the foot row's claimants: a live ad-lib outranks the preview
         adlib = next((a[2] for a in self.sheet.adlibs
                       if a[0] <= t < a[1]), None)
@@ -257,14 +309,12 @@ class LyricCanvas:
         tokens = self._tokens(text) if text else []
         if tokens:
             n = len(tokens)
-            span = min(2.4, max(0.6, (t1 - t0) * 0.55))
-            step = span / n
+            borns = self._borns(tokens, t0, t1, word_times)
             visible, newest_k = 0, 1.0
             for i in range(n):
-                born = t0 + i * step
-                if t >= born:
+                if t >= borns[i]:
                     visible = i + 1
-                    newest_k = min(1.0, (t - born) / self.RAMP)
+                    newest_k = min(1.0, (t - borns[i]) / self.RAMP)
             if visible:
                 rows, scale = self._layout((t0, visible, region_h),
                                            tokens[:visible], region_h)
