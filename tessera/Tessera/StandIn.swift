@@ -121,7 +121,15 @@ final class StandIn {
     /// The system music player knows what is playing; artwork comes with it.
     /// Nothing is invented: with no track and no permission, the stand-in
     /// draws its own thing and says nothing about music.
+    private var lastPoll = Date.distantPast
+
     func refreshNowPlaying() {
+        // Every read of the system player crosses a process boundary, and
+        // this used to run fifteen times a second: the main thread hitched
+        // on someone else's XPC and the whole app read as "not flowing".
+        // A track changes on the scale of minutes; once a second is honest.
+        guard Date().timeIntervalSince(lastPoll) > 1.0 || lastArtKey.isEmpty else { return }
+        lastPoll = Date()
         guard MPMediaLibrary.authorizationStatus() == .authorized else {
             if art == nil { makeFallbackArt() }
             return
@@ -389,7 +397,9 @@ final class StandIn {
     /// best clock in the whole system: zero network between it and the song.
     private func lyricsFrame() -> [UInt8] {
         guard let art else { return [UInt8](repeating: 0, count: 64 * 64 * 3) }
-        if let title = state.title {
+        // only reach across to the player when there is a NEW track to ask
+        // about; asking is idempotent but the nowPlayingItem read is XPC
+        if let title = state.title, lyricsBook.track != lastArtKey {
             let item = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem
             lyricsBook.ask(track: lastArtKey, artist: state.artist ?? "",
                            title: title, album: state.album ?? "",
@@ -403,8 +413,9 @@ final class StandIn {
         // the person singing along can hear by how much.
         let nudge = UserDefaults.standard.double(forKey: "lyrics.nudge")
         let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime + 0.35 + nudge
-        return LyricsBook.render(sheet: sheet, at: t, over: art,
-                                 artKey: lastArtKey, ink: (244, 241, 234))
+        return LyricsBook.render(sheet: sheet, at: t, adlibs: lyricsBook.adlibs,
+                                 over: art, artKey: lastArtKey,
+                                 ink: (244, 241, 234))
     }
 
     /// The finishes, phone-side, so choosing one changes the wall you are

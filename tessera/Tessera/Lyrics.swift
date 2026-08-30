@@ -26,14 +26,22 @@ final class SongClock {
     private var anchorTime: Double = 0
     private var anchorHost: Double = 0
     private var lastRaw: Double = -1
+    private var stateAt: Double = 0
+    private var statePlaying = true
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
-    func hardReset() { lastRaw = -1 }
+    func hardReset() { lastRaw = -1; stateAt = 0 }
 
     func now() -> Double {
         let raw = music.currentPlaybackTime
         let host = CACurrentMediaTime()
-        guard music.playbackState == .playing else {
+        // playbackState is a second XPC hop; it changes on the scale of
+        // taps, not frames, so half a second of trust is plenty
+        if host - stateAt > 0.5 {
+            statePlaying = music.playbackState == .playing
+            stateAt = host
+        }
+        guard statePlaying else {
             anchorTime = raw
             anchorHost = host
             lastRaw = raw
@@ -66,6 +74,8 @@ final class SongClock {
 final class LyricsBook {
     private(set) var track = ""
     private(set) var sheet: [(Double, String)]? = nil
+    /// The second voice: ad-libs and echoes, each with the window it owns.
+    private(set) var adlibs: [(start: Double, end: Double, text: String)] = []
     /// Supersession by generation, not a lock: the old design refused new
     /// asks while one was in flight, and a fetch that lost its race left the
     /// flag stuck forever — every later track then showed no words at all.
@@ -83,9 +93,55 @@ final class LyricsBook {
                                          album: album, duration: duration)
             await MainActor.run {
                 guard let self, self.generation == gen else { return }
-                self.sheet = found
+                if let found {
+                    let split = Self.splitVoices(found)
+                    self.sheet = split.mains
+                    self.adlibs = split.adlibs
+                } else {
+                    self.sheet = nil
+                    self.adlibs = []
+                }
             }
         }
+    }
+
+    /// Two voices out of one sheet. A line living entirely in parentheses
+    /// is the second singer; a trailing parenthetical on a main line is an
+    /// echo that belongs to that line's moment. Each ad-lib owns a window
+    /// from its stamp to the next event, so it plays under whatever the
+    /// first voice is doing.
+    static func splitVoices(_ lines: [(Double, String)])
+        -> (mains: [(Double, String)], adlibs: [(Double, Double, String)]) {
+        var mains: [(Double, String)] = []
+        var raw: [(Double, String)] = []      // adlib starts, windows later
+        for (t, text) in lines {
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("("), trimmed.hasSuffix(")"),
+               trimmed.count > 2 {
+                raw.append((t, trimmed))
+                continue
+            }
+            // a trailing echo: "line of song (yeah)"
+            if trimmed.hasSuffix(")"),
+               let open = trimmed.lastIndex(of: "("),
+               open > trimmed.startIndex {
+                let main = String(trimmed[..<open])
+                    .trimmingCharacters(in: .whitespaces)
+                let echo = String(trimmed[open...])
+                if !main.isEmpty {
+                    mains.append((t, main))
+                    raw.append((t, echo))
+                    continue
+                }
+            }
+            mains.append((t, trimmed))
+        }
+        let everyStart = lines.map { $0.0 }.sorted()
+        let adlibs = raw.map { (t, text) -> (Double, Double, String) in
+            let next = everyStart.first { $0 > t + 0.05 } ?? (t + 4)
+            return (t, min(next, t + 6), text)
+        }
+        return (mains, adlibs)
     }
 
     // MARK: fetch
@@ -207,8 +263,12 @@ final class LyricsBook {
     private static var frameMemo: (key: String, px: [UInt8])? = nil
 
     static func render(sheet: [(Double, String)], at t: Double,
+                       adlibs: [(start: Double, end: Double, text: String)] = [],
                        over art: [UInt8], artKey: String = "",
                        ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
+        // what the foot row sings right now: a live ad-lib outranks the
+        // preview of what comes next
+        let liveAdlib = adlibs.first { t >= $0.start && t < $0.end }?.text
         let base: [UInt8]
         if let c = dimCache, c.key == artKey, !artKey.isEmpty {
             base = c.px
@@ -219,20 +279,16 @@ final class LyricsBook {
         var px = base
 
         guard let idx = currentIndex(sheet, t) else {
-            // before the first vocal: the opening line waits, dim, so the
-            // start of the song is never a surprise
-            if let first = sheet.first {
-                drawPreview(&px, first.1, ink: ink)
+            if let adlib = liveAdlib {
+                drawFoot(&px, adlib, ink: ink)
             }
             return px
         }
         let (t0, text) = sheet[idx]
         let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
-        let nextText = idx + 1 < sheet.count ? sheet[idx + 1].1 : ""
         let tokens = letterableTokens(text)
         guard !tokens.isEmpty else {
-            // an instrumental bar: only the coming line, waiting
-            if !nextText.isEmpty { drawPreview(&px, nextText, ink: ink) }
+            if let adlib = liveAdlib { drawFoot(&px, adlib, ink: ink) }
             return px
         }
 
@@ -254,7 +310,7 @@ final class LyricsBook {
         // the frame's whole visual identity: line, words shown, and the
         // newest word's ramp bucketed to its handful of distinct steps
         let kBucket = newestK >= 1 ? 9 : Int(newestK * 8)
-        let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)|\(nextText.hashValue)"
+        let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)|\((liveAdlib ?? "").hashValue)"
         if let memo = frameMemo, memo.key == frameKey { return memo.px }
 
         let key = "\(t0)|\(visible)|\(text.hashValue)"
@@ -302,19 +358,17 @@ final class LyricsBook {
             }
             y += lineH
         }
-        // the NEXT line rides beneath, dim and whole: fast sequences stop
-        // reading as skipped because every line is on screen before its
-        // moment arrives
-        if !nextText.isEmpty { drawPreview(&px, nextText, ink: ink) }
+        // the foot belongs to the second voice, and to no one else: when
+        // nobody is answering, the row stays dark
+        if let adlib = liveAdlib { drawFoot(&px, adlib, ink: ink) }
         frameMemo = (frameKey, px)
         return px
     }
 
-    /// The coming line, one small dim row at the panel's foot. Karaoke's
-    /// whole trick, at 64 pixels: you read the future while singing the
-    /// present.
-    private static func drawPreview(_ px: inout [UInt8], _ text: String,
-                                    ink: (UInt8, UInt8, UInt8)) {
+    /// The panel's foot: the second singer's row, one row, never more,
+    /// parentheses kept because that is how the second voice writes.
+    private static func drawFoot(_ px: inout [UInt8], _ text: String,
+                                 ink: (UInt8, UInt8, UInt8)) {
         let tokens = letterableTokens(text)
         guard !tokens.isEmpty else { return }
         let joined = tokens.joined(separator: " ")
@@ -328,10 +382,11 @@ final class LyricsBook {
             px[i + 1] = UInt8(Float(px[i + 1]) * 0.35)
             px[i + 2] = UInt8(Float(px[i + 2]) * 0.35)
         }
-        let dimInk = (UInt8(Float(ink.0) * 0.42),
-                      UInt8(Float(ink.1) * 0.42),
-                      UInt8(Float(ink.2) * 0.42))
-        PixelDraw.text(&px, row, x: x, y: y, rgb: dimInk, scale: 1)
+        let k: Float = 0.66
+        let footInk = (UInt8(Float(ink.0) * k),
+                       UInt8(Float(ink.1) * k),
+                       UInt8(Float(ink.2) * k))
+        PixelDraw.text(&px, row, x: x, y: y, rgb: footInk, scale: 1)
     }
 
     /// Biggest type the visible words allow: one line if any size holds it,
