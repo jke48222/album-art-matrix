@@ -360,15 +360,31 @@ struct GlyphShape: View {
                            style: StrokeStyle(lineWidth: lw, lineCap: .round))
 
             case .letters:
-                // three stacked bars: a line of type at 64 pixels
-                for (i, w) in [0.86, 0.62, 0.74].enumerated() {
-                    let y = box.minY + box.height * (0.24 + Double(i) * 0.26)
-                    var bar = Path()
-                    bar.move(to: CGPoint(x: box.minX, y: y))
-                    bar.addLine(to: CGPoint(x: box.minX + box.width * w, y: y))
-                    ctx.stroke(bar, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * 1.3, lineCap: .round))
+                // type, mid-thought: a set T and the cursor still blinking
+                let stemX = box.minX + 5.4 * u
+                var t = Path()
+                t.move(to: CGPoint(x: box.minX + 0.8 * u, y: box.minY + 2.0 * u))
+                t.addLine(to: CGPoint(x: box.minX + 10.0 * u, y: box.minY + 2.0 * u))
+                ctx.stroke(t, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 1.15, lineCap: .round))
+                var down = Path()
+                down.move(to: CGPoint(x: stemX, y: box.minY + 2.0 * u))
+                down.addLine(to: CGPoint(x: stemX, y: box.maxY - 2.2 * u))
+                ctx.stroke(down, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 1.15, lineCap: .round))
+                // serif feet: the tell that this is TYPE
+                for x in [box.minX + 0.8 * u, box.minX + 10.0 * u] {
+                    var serif = Path()
+                    serif.move(to: CGPoint(x: x, y: box.minY + 2.0 * u))
+                    serif.addLine(to: CGPoint(x: x, y: box.minY + 3.7 * u))
+                    ctx.stroke(serif, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
                 }
+                var cursor = Path()
+                cursor.move(to: CGPoint(x: box.maxX - 1.6 * u, y: box.midY + 0.4 * u))
+                cursor.addLine(to: CGPoint(x: box.maxX - 1.6 * u, y: box.maxY - 1.4 * u))
+                ctx.stroke(cursor, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
             }
         }
         .accessibilityHidden(true)
