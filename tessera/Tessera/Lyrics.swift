@@ -28,64 +28,75 @@ final class SongClock {
     private var lastRaw: Double = -1
     private var lastCorrect: Double = 0
     private var highWater: Double = 0
-    private var stateAt: Double = 0
-    private var statePlaying = true
-    private var music: MPMusicPlayerController { .systemMusicPlayer }
+    // the latest word from the sampler: raw player time, when it was taken,
+    // and whether the player said it was playing
+    private(set) var sampleRaw: Double = 0
+    private var sampleHost: Double = 0
+    private var samplePlaying = false
+    private var sampler: Task<Void, Never>? = nil
 
-    func hardReset() { lastRaw = -1; stateAt = 0; highWater = 0 }
+    func hardReset() { lastRaw = -1; highWater = 0 }
 
-    func now() -> Double {
-        let raw = music.currentPlaybackTime
-        let host = CACurrentMediaTime()
-        // playbackState is a second XPC hop; it changes on the scale of
-        // taps, not frames, so half a second of trust is plenty
-        if host - stateAt > 0.5 {
-            statePlaying = music.playbackState == .playing
-            stateAt = host
+    /// All Music XPC happens HERE, on a background task, five times a
+    /// second. currentPlaybackTime can block its calling thread for over
+    /// half a second when the media server is busy, and reading it on the
+    /// render path put a 600ms metronome into lyrics mode — the flight
+    /// recorder counted ninety-five beats of it.
+    func start() {
+        guard sampler == nil else { return }
+        sampler = Task.detached(priority: .utility) { [weak self] in
+            while !Task.isCancelled {
+                let music = MPMusicPlayerController.systemMusicPlayer
+                let raw = music.currentPlaybackTime
+                let playing = music.playbackState == .playing
+                let host = CACurrentMediaTime()
+                await MainActor.run { self?.ingest(raw, host, playing) }
+                try? await Task.sleep(for: .milliseconds(200))
+            }
         }
-        guard statePlaying else {
+    }
+
+    private func ingest(_ raw: Double, _ host: Double, _ playing: Bool) {
+        sampleRaw = raw
+        sampleHost = host
+        samplePlaying = playing
+        guard playing else {
             anchorTime = raw
             anchorHost = host
             lastRaw = raw
-            return raw
+            return
         }
         if lastRaw < 0 {
             anchorTime = raw
             anchorHost = host
             lastRaw = raw
-            return raw
+            return
         }
         let predicted = anchorTime + (host - anchorHost)
-        // corrections at most four times a second: on devices where the raw
-        // value is fresh every call, chasing it at frame rate would make
-        // the clock as jittery as the thing it exists to smooth
         if raw != lastRaw, host - lastCorrect > 0.25 {
             lastRaw = raw
             lastCorrect = host
             let diff = raw - predicted
             if abs(diff) > 0.25 {
-                // wrong by more than a word: follow the player at once. The
-                // old 12%-per-update slew took ten seconds to drain a half-
-                // second error, and every line in those ten seconds arrived
-                // late and dumped its backlog in one frame — the perfectly
-                // periodic stutter the owner described.
                 anchorTime = raw
                 anchorHost = host
             } else {
-                // inside a word's width: close half the gap per reading,
-                // converged within a couple of seconds, never a visible jump
                 anchorTime += diff * 0.5
             }
         }
-        // display time never walks backwards inside a track: a jittery raw
-        // must not un-sing words. A real backward seek exceeds the guard
-        // and resets the high-water mark through the jump above.
-        let out = anchorTime + (host - anchorHost)
+    }
+
+    /// Pure arithmetic; nothing here can block.
+    func now() -> Double {
+        start()
+        guard samplePlaying else { return sampleRaw }
+        let out = anchorTime + (CACurrentMediaTime() - anchorHost)
         if out + 0.3 < highWater { highWater = out }     // a genuine seek back
         highWater = max(highWater, out)
         return highWater
     }
 }
+
 
 /// One synced line: its start, its text, and, when the sheet is Enhanced
 /// LRC, the actual moment each word is sung.
@@ -371,8 +382,6 @@ final class LyricsBook {
             visible = i + 1
             newestK = min(1.0, (t - borns[i]) / ramp)
         }
-        diagNote(raw: MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime,
-                 clock: t, idx: idx, visible: visible)
         guard visible > 0 else {
             drawFoot(&px, footRows, at: footTop, ink: ink)
             return px
