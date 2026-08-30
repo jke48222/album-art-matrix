@@ -239,7 +239,11 @@ final class WallSession {
                 // the watchdog that caught the probe stall, kept on duty:
                 // any freeze of the render loop names itself and its mode
                 let beat = CACurrentMediaTime()
-                if beat - lastBeat > 0.3 {
+                if beat - lastBeat > 5 {
+                    // the phone slept or the app was suspended: that is rest,
+                    // not a stall, and the log should say so
+                    FlightLog.note("SLEEP", String(format: "%.0fs", beat - lastBeat))
+                } else if beat - lastBeat > 0.3 {
                     FlightLog.note("STALL", String(format: "%.0fms in mode %@",
                         (beat - lastBeat) * 1000, self.state.mode))
                 }

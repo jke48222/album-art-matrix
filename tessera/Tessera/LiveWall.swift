@@ -66,25 +66,28 @@ final class LiveWall {
         lastKey = key
         lastSent = Date()
 
+        // ActivityKit blocks whoever calls it (the lap timer clocked its
+        // update at 448ms on the render path), so every interaction happens
+        // on a detached task and only the bookkeeping comes back.
         if let activity {
-            Task {
+            Task.detached(priority: .utility) {
                 await activity.update(
                     ActivityContent(state: content, staleDate: Date().addingTimeInterval(15 * 60))
                 )
             }
         } else {
-            do {
-                activity = try Activity.request(
-                    attributes: WallAttributes(wall: wall),
+            let attrs = WallAttributes(wall: wall)
+            Task.detached(priority: .utility) { [weak self] in
+                let made = try? Activity.request(
+                    attributes: attrs,
                     content: ActivityContent(state: content,
                                              staleDate: Date().addingTimeInterval(15 * 60)),
                     pushType: nil
                 )
-                running = true
-            } catch {
-                // Denied, or too many activities. Either way this is not an
-                // error worth telling anyone about: the wall still works.
-                running = false
+                await MainActor.run {
+                    self?.activity = made
+                    self?.running = made != nil
+                }
             }
         }
     }
