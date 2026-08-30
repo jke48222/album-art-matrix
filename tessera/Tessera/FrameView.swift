@@ -208,11 +208,10 @@ struct PanelCanvas: View {
 /// brightness and is the entire reset affordance. Pressing and holding without
 /// dragging puts the wall to sleep, or wakes it.
 ///
-/// Drag sideways and the panel becomes the day, running backwards. Each step
-/// is one sleeve the wall wore, and lifting your finger puts that one back on
-/// it. Two axes on one surface is a lot to ask of a control, but it is the
-/// right ask here: both gestures are the wall changing what it shows, and
-/// neither belongs in a row of buttons underneath it.
+/// Swipe sideways and the song changes: right-to-left for the next track,
+/// left-to-right for the previous. That is the whole horizontal gesture. An
+/// earlier design also scrubbed the wall's history along this axis, and the
+/// two ideas fought each other in the hand until the owner called it.
 struct WallHero: View {
     let reading: FrameReading
     let confirmed: Double            // what the wall last told us
@@ -224,19 +223,12 @@ struct WallHero: View {
     /// restarted a 500ms blank-and-relight several times a second, which on
     /// the panel reads as flashing black.
     let arrivalKey: String
-    /// What the wall has worn, newest first. Empty disables the sideways
-    /// gesture entirely rather than making it do nothing, so the panel never
-    /// swallows a swipe it has no answer for.
-    var history: [WornRun] = []
-    var tile: (JournalEntry) -> UIImage? = { _ in nil }
     /// True whenever a finger is on the panel. The pager reads this and steps
     /// aside: a sideways drag here belongs to the wall, not to the page.
     @Binding var touching: Bool
     var onCommit: (Double) -> Void
     var onHold: () -> Void
-    var onWear: (JournalEntry) -> Void = { _ in }
-    /// A short flick, left or right, is a SONG gesture: previous or next.
-    /// The sustained pull is what walks the wall's own history.
+    /// The two sideways swipes: next and previous track.
     var onFlickPrev: () -> Void = {}
     var onFlickNext: () -> Void = {}
 
@@ -245,14 +237,8 @@ struct WallHero: View {
     @State private var holdWork: DispatchWorkItem? = nil
     @State private var moved = false
     @State private var axis: Axis? = nil
-    @State private var back: Int = 0              // sleeves behind now
 
-    private enum Axis { case light, back }
-
-    /// How far you have to pull for one more sleeve. A record's width of
-    /// travel per record: the first cut moved six sleeves on a flick and
-    /// felt like dropping the crate.
-    private let stride: CGFloat = 110
+    private enum Axis { case light, song }
 
     // Arrival: a new sleeve does not cross-dissolve onto a wall of LEDs, it
     // repaints. The outgoing frame is extinguished column by column, then the
@@ -265,11 +251,6 @@ struct WallHero: View {
 
     private var duty: Double { dragging ?? confirmed }
     private func norm(_ v: Double) -> Double { (v - 0.05) / 0.95 }
-
-    private var scrubbed: WornRun? {
-        guard back > 0, back < history.count else { return nil }
-        return history[back]
-    }
 
     var body: some View {
         GeometryReader { geo in
@@ -290,57 +271,6 @@ struct WallHero: View {
                     }
                     .opacity(scanPhase == .blanking ? 0 : 1)
 
-                // Scrubbed: the sleeve from back then, over the live one.
-                if back > 0, let run = scrubbed {
-                    ZStack(alignment: .bottomLeading) {
-                        if let img = tile(run.entry) {
-                            Image(uiImage: img)
-                                .interpolation(.none)
-                                .resizable()
-                                .scaledToFill()
-                        } else {
-                            Color.black
-                        }
-                        // Not a caption on a photo: a strip of the same ink
-                        // the placard uses, so the panel is still the panel.
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(run.entry.title)
-                                .font(.displayMid(16))
-                                .foregroundStyle(Ink.ink)
-                                .lineLimit(1)
-                            Text(run.entry.artist)
-                                .font(.ui(12))
-                                .foregroundStyle(Ink.dim)
-                                .lineLimit(1)
-                            Text(run.entry.date.formatted(date: .omitted, time: .shortened))
-                                .font(.machine(9))
-                                .foregroundStyle(Ink.faint)
-                                .padding(.top, 2)
-                        }
-                        .padding(14)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            LinearGradient(colors: [.clear, Ink.ground.opacity(0.92)],
-                                           startPoint: .top, endPoint: .bottom)
-                        )
-                    }
-                    .transition(.opacity)
-
-                    // How far back you are, as ticks: one lit per sleeve, so
-                    // the depth of the rewind is a thing you can see.
-                    HStack(spacing: 3) {
-                        ForEach(0..<min(back, 14), id: \.self) { _ in
-                            Rectangle().fill(Ink.ink.opacity(0.75)).frame(width: 2, height: 7)
-                        }
-                        if back > 14 {
-                            Text("+\(back - 14)").font(.machine(8)).foregroundStyle(Ink.dim)
-                        }
-                    }
-                    .padding(12)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .allowsHitTesting(false)
-                }
-
                 // Two marks, and they say different things.
                 //
                 // The dim one is where the wall actually is: it stays put
@@ -355,7 +285,7 @@ struct WallHero: View {
                 // The bright one is the finger. It only exists mid-drag, and
                 // it tracks continuously, so the gesture has a position and
                 // not just a number.
-                if dragging != nil, back == 0 {
+                if dragging != nil {
                     Rectangle()
                         .fill(Ink.ink)
                         .frame(height: 2)
@@ -365,7 +295,7 @@ struct WallHero: View {
                         .transition(.opacity)
                 }
 
-                if dragging != nil, back == 0 {
+                if dragging != nil {
                     Text("\(Int(duty * 100))%")
                         .font(.machine(11))
                         .foregroundStyle(Ink.ink)
@@ -395,22 +325,11 @@ struct WallHero: View {
                             if dy > 8, dy > dx * 1.3 {
                                 axis = .light; moved = true; cancelHold()
                             } else if dx > 12, dx > dy * 1.3 {
-                                axis = .back; cancelHold(); Taps.warm()
+                                axis = .song; cancelHold(); Taps.warm()
                             }
                         }
 
-                        if axis == .back {
-                            // Left goes backwards, the way a tape does; the
-                            // deep scrub exists only when there is a past.
-                            guard !history.isEmpty else { return }
-                            let steps = Int(max(0, -g.translation.width) / stride)
-                            let want = min(steps, history.count - 1)
-                            if want != back {
-                                back = want
-                                Taps.detent(intensity: want == 0 ? 0.3 : 0.55)
-                            }
-                            return
-                        }
+                        if axis == .song { return }   // judged on release
 
                         guard moved, let start = startValue else { return }
                         // Relative to touch-down, so grabbing never jumps the wall.
@@ -432,28 +351,13 @@ struct WallHero: View {
                     .onEnded { g in
                         cancelHold()
                         touching = false
-                        if axis == .back {
+                        if axis == .song {
                             let dx = g.translation.width
-                            // A flick is FAST and SHORT: real momentum, and
-                            // the finger never travelled a full stride. A
-                            // slow medium drag is someone peeking at history
-                            // and letting go, and skipping their song for it
-                            // was the bug that felt so wrong.
-                            let fling = abs(g.predictedEndTranslation.width - dx) > 60
-                            if back == 0, abs(dx) > 36, abs(dx) < stride, fling {
-                                // the phone convention: push the song away to
-                                // the left for the NEXT one, pull from the
-                                // left for the previous
+                            if abs(dx) > 44 {
+                                // push left for next, pull right for previous
                                 if dx < 0 { onFlickNext() } else { onFlickPrev() }
                                 Taps.commit()
-                            } else if back > 0, let run = scrubbed {
-                                onWear(run.entry)
-                                Taps.commit()
                             }
-                            // The wall answers in its own time; letting go
-                            // here rather than waiting for it keeps the panel
-                            // from sitting on a stale sleeve if it does not.
-                            withAnimation(Motion.settle) { back = 0 }
                         } else if moved, let v = dragging {
                             onCommit(v)
                             Taps.commit()
@@ -470,7 +374,7 @@ struct WallHero: View {
             .accessibilityElement()
             .accessibilityLabel("The wall")
             .accessibilityValue("Brightness \(Int(duty * 100)) percent")
-            .accessibilityHint("Adjust to dim the wall. Press and hold to put it to sleep. Swipe left to go back through what it has worn.")
+            .accessibilityHint("Adjust to dim the wall. Press and hold to put it to sleep. Swipe left for the next track, right for the previous.")
             .accessibilityAdjustableAction { dir in
                 onCommit(dir == .increment ? min(1.0, confirmed + 0.05) : max(0.05, confirmed - 0.05))
             }
