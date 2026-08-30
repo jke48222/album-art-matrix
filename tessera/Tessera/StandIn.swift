@@ -74,6 +74,7 @@ final class StandIn {
         if let v = patch["ticker_text"] as? String { state.tickerText = v }
         if let v = patch["ticker_loop"] as? Bool { state.tickerLoop = v }
         if let v = patch["ticker_style"] as? String { state.tickerStyle = v }
+        if let v = patch["ticker_colors"] as? [String] { state.tickerColors = v }
         if let v = patch["clock_24h"] as? Bool { state.clock24h = v }
         if let v = patch["idle"] as? String { state.idle = v }
         if let v = (patch["sleep_fade_min"] as? NSNumber)?.doubleValue {
@@ -296,13 +297,18 @@ final class StandIn {
             }
             return (244, 241, 234)
         }()
-        let key = "\(state.tickerText)|\(state.tickerStyle)|\(state.tickerLoop)|\(ink.0).\(ink.1).\(ink.2)"
+        let glyphInks: [(UInt8, UInt8, UInt8)] = state.tickerColors.compactMap {
+            guard let c = rgb($0) else { return nil }
+            return (UInt8(c.0 * 255), UInt8(c.1 * 255), UInt8(c.2 * 255))
+        }
+        let key = "\(state.tickerText)|\(state.tickerStyle)|\(state.tickerLoop)|\(ink.0).\(ink.1).\(ink.2)|\(state.tickerColors.joined())"
         if mover == nil || key != moverKey {
             mover = TextMover(
                 text: state.tickerText,
                 style: TextMover.Style(rawValue: state.tickerStyle) ?? .across,
                 color: ink,
-                loop: state.tickerLoop
+                loop: state.tickerLoop,
+                colors: glyphInks
             )
             moverKey = key
             moverT0 = Date()

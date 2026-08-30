@@ -177,6 +177,7 @@ struct WallScreen: View {
                 text: wall.state.tickerText,
                 loop: wall.state.tickerLoop,
                 style: wall.state.tickerStyle,
+                colors: wall.state.tickerColors,
                 accent: accent
             ) { key, value in wall.send([key: value]) }
 

@@ -405,17 +405,20 @@ def main():
                 if mode == "ticker":
                     style = s.get("ticker_style", "across")
                     key = (s["ticker_text"], ink, s["speed"],
-                           s["ticker_loop"], style)
+                           s["ticker_loop"], style,
+                           tuple(s["ticker_colors"]))
                     if ticker is None or key != ticker_key:
                         if style == "across":
                             ticker = Ticker(size, s["ticker_text"], color=ink,
                                             speed=s["speed"],
-                                            loop=s["ticker_loop"])
+                                            loop=s["ticker_loop"],
+                                            colors=s["ticker_colors"])
                         else:
                             ticker = Crawl(size, s["ticker_text"], color=ink,
                                            speed=s["speed"],
                                            loop=s["ticker_loop"],
-                                           tilt=(style == "tilt"))
+                                           tilt=(style == "tilt"),
+                                           colors=s["ticker_colors"])
                         ticker_key, ticker_t0 = key, time.monotonic()
                     tick = time.monotonic()
                     if ticker.done(tick - ticker_t0):

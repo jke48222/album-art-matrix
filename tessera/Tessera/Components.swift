@@ -483,11 +483,17 @@ struct TickerRow: View {
     let text: String
     let loop: Bool
     let style: String
+    /// One ink per visible glyph of the SENT text, in order.
+    let colors: [String]
     let accent: Color
     var onSet: (String, Any) -> Void
 
     @State private var draft = ""
     @FocusState private var typing: Bool
+
+    /// The inks a letter cycles through. The wall's own voices first.
+    private static let inkwell = ["#eae4d8", "#e8b04b", "#e0491f", "#7fa87a",
+                                  "#31c3d4", "#8b7fd4", "#d44a8b"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -509,6 +515,8 @@ struct TickerRow: View {
                     .foregroundStyle(draft.isEmpty ? Ink.faint : accent)
                     .disabled(draft.isEmpty)
             }
+
+            letterInks
 
             // How the words move. Sliding across is a sign; rising is a
             // prompter; tilted is the one film everyone has seen.
@@ -533,6 +541,83 @@ struct TickerRow: View {
         guard !draft.isEmpty else { return }
         typing = false
         onSet("ticker_text", draft)
+    }
+
+    // MARK: letter inks
+
+    private var glyphs: [Character] {
+        text.filter { $0 != " " }
+    }
+
+    /// Tap a letter to walk it through the inkwell. Scatter deals the whole
+    /// well across the word; one ink takes everything back.
+    @ViewBuilder private var letterInks: some View {
+        if !glyphs.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("colour the letters")
+                    .font(.ui(12, .medium))
+                    .foregroundStyle(Ink.dim)
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: 5) {
+                        ForEach(Array(glyphs.enumerated()), id: \.offset) { (i, ch) in
+                            let hex = i < colors.count ? colors[i] : "#eae4d8"
+                            Button {
+                                cycle(i)
+                            } label: {
+                                Text(String(ch))
+                                    .font(.machine(17))
+                                    .foregroundStyle(Color(wallHex: hex) ?? Ink.ink)
+                                    .frame(width: 30, height: 38)
+                                    .background(Ink.sunk)
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 7)
+                                            .strokeBorder(
+                                                i < colors.count
+                                                    ? (Color(wallHex: hex) ?? Ink.hairline).opacity(0.45)
+                                                    : Ink.hairline,
+                                                lineWidth: 1)
+                                    }
+                                    .clipShape(RoundedRectangle(cornerRadius: 7))
+                            }
+                            .buttonStyle(PressStyle(scale: 0.9))
+                            .accessibilityLabel("Letter \(String(ch)), tap to change its colour")
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+                .scrollIndicators(.hidden)
+
+                HStack(spacing: 18) {
+                    Button("scatter") {
+                        onSet("ticker_colors",
+                              (0..<glyphs.count).map { Self.inkwell[($0 + 1) % Self.inkwell.count] })
+                    }
+                    .buttonStyle(PressStyle(scale: 0.96))
+                    .font(.ui(13, .medium))
+                    .foregroundStyle(accent)
+
+                    if !colors.isEmpty {
+                        Button("one ink") {
+                            onSet("ticker_colors", [String]())
+                        }
+                        .buttonStyle(PressStyle(scale: 0.96))
+                        .font(.ui(13))
+                        .foregroundStyle(Ink.dim)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private func cycle(_ i: Int) {
+        // pad with the base ink up to this glyph, then step this one
+        var next = colors
+        while next.count <= i { next.append(Self.inkwell[0]) }
+        let at = Self.inkwell.firstIndex(of: next[i]) ?? 0
+        next[i] = Self.inkwell[(at + 1) % Self.inkwell.count]
+        onSet("ticker_colors", next)
     }
 }
 
