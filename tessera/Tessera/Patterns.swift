@@ -204,7 +204,8 @@ enum Patterns {
 /// glyphs from drifting, this keeps the drawing from drifting.
 enum PixelDraw {
     static func text(_ px: inout [UInt8], _ text: String, x: Int, y: Int,
-                     rgb: (UInt8, UInt8, UInt8), scale: Int = 1) {
+                     rgb: (UInt8, UInt8, UInt8), scale: Int = 1,
+                     width: Int = 64, height: Int = 64) {
         var cx = x
         for ch in text {
             let rows = PixelFont.glyph(ch)
@@ -214,8 +215,8 @@ enum PixelDraw {
                         for sx in 0..<scale {
                             let xx = cx + rx * scale + sx
                             let yy = y + ry * scale + sy
-                            guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
-                            let o = (yy * 64 + xx) * 3
+                            guard xx >= 0, xx < width, yy >= 0, yy < height else { continue }
+                            let o = (yy * width + xx) * 3
                             px[o] = rgb.0; px[o + 1] = rgb.1; px[o + 2] = rgb.2
                         }
                     }
@@ -274,5 +275,139 @@ enum PixelDraw {
         for y in stride(from: 62, through: 1, by: -1) { p.append((0, y)) }
         for x in 1..<32 { p.append((x, 0)) }
         return p
+    }
+}
+
+
+/// The three ways words move, phone-side, mirroring brain/art/text_modes.py
+/// the way Patterns mirrors effects.py: same shapes, phone cost, so the
+/// words mode works before any wall exists. The wall's own renders stay the
+/// truth once it does.
+final class TextMover {
+    enum Style: String { case across, up, tilt }
+
+    private let style: Style
+    private let text: String
+    private let color: (UInt8, UInt8, UInt8)
+    private let loop: Bool
+    private let pxPerS: Double
+
+    // across
+    private var lineWidth = 0
+    // up/tilt: the tall mask and the per-row resampling tables
+    private var mask: [Float] = []
+    private var maskH = 0
+    private var offset = [Double](repeating: 0, count: 64)
+    private var span: Double = 0
+    private var xi = [[Int]](repeating: [], count: 64)
+    private var xok = [[Bool]](repeating: [], count: 64)
+    private var fade = [Double](repeating: 1, count: 64)
+
+    init(text raw: String, style: Style, color: (UInt8, UInt8, UInt8),
+         loop: Bool, speed: Double = 1.0) {
+        self.style = style
+        self.color = color
+        self.loop = loop
+        let clean = PixelFont.normalize(raw)
+        self.text = clean.isEmpty ? "?" : clean
+
+        switch style {
+        case .across:
+            pxPerS = 18.0 * max(0.1, speed)
+            lineWidth = PixelFont.textWidth(text, scale: 2)
+        case .up, .tilt:
+            pxPerS = 5.5 * max(0.1, speed)
+            buildMask()
+            buildRows()
+        }
+    }
+
+    private func buildMask() {
+        let lines = PixelFont.wrap(text, maxWidth: 60, scale: 1)
+        let lineH = 9
+        maskH = lines.count * lineH + 1
+        var rgb = [UInt8](repeating: 0, count: maskH * 64 * 3)
+        for (i, ln) in lines.enumerated() {
+            let x = (64 - PixelFont.textWidth(ln, scale: 1)) / 2
+            PixelDraw.text(&rgb, ln, x: x, y: i * lineH,
+                           rgb: (255, 255, 255), scale: 1,
+                           width: 64, height: maskH)
+        }
+        mask = (0..<(maskH * 64)).map { Float(rgb[$0 * 3]) / 255.0 }
+    }
+
+    private func buildRows() {
+        var scale = [Double](repeating: 1, count: 64)
+        for y in 0..<64 {
+            let d = Double(y) / 63.0
+            if style == .tilt {
+                scale[y] = 0.28 + 0.87 * pow(d, 1.35)
+                fade[y] = pow(min(1, max(0, (d - 0.05) / 0.30)), 1.2)
+            } else {
+                fade[y] = min(1, min(d / 0.08, (1 - d) / 0.08))
+            }
+        }
+        var acc = 0.0
+        for y in stride(from: 63, through: 0, by: -1) {
+            offset[y] = acc
+            acc += 1.0 / scale[y]
+        }
+        span = offset[0]
+        let c = 31.5
+        for y in 0..<64 {
+            var idx = [Int](); idx.reserveCapacity(64)
+            var ok = [Bool](); ok.reserveCapacity(64)
+            for x in 0..<64 {
+                let src = (Double(x) - c) / scale[y] + c
+                let i = Int(src.rounded())
+                ok.append(i >= 0 && i < 64)
+                idx.append(min(63, max(0, i)))
+            }
+            xi[y] = idx
+            xok[y] = ok
+        }
+    }
+
+    /// One frame at time t, and whether a non-looping run has finished.
+    func frame(at t: Double) -> (px: [UInt8], done: Bool) {
+        style == .across ? slide(t) : crawl(t)
+    }
+
+    private func slide(_ t: Double) -> ([UInt8], Bool) {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        let travel = Double(lineWidth + 64 + 4)
+        let dist = t * pxPerS
+        let off = loop ? dist.truncatingRemainder(dividingBy: travel) : min(dist, travel)
+        PixelDraw.text(&px, text, x: 64 - Int(off), y: (64 - 14) / 2,
+                       rgb: color, scale: 2)
+        return (px, !loop && dist > travel)
+    }
+
+    private func crawl(_ t: Double) -> ([UInt8], Bool) {
+        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        let travel = Double(maskH) + span + 8
+        let dist = t * pxPerS
+        let p = loop ? dist.truncatingRemainder(dividingBy: travel) : dist
+        for y in 0..<64 {
+            let src = p - offset[y]
+            let lo = Int(src.rounded(.down))
+            let frac = Float(src - Double(lo))
+            guard lo >= -1, lo < maskH else { continue }
+            let f = Float(fade[y])
+            guard f > 0.001 else { continue }
+            for x in 0..<64 where xok[y][x] {
+                let sx = xi[y][x]
+                var v: Float = 0
+                if lo >= 0, lo < maskH { v += mask[lo * 64 + sx] * (1 - frac) }
+                if lo + 1 >= 0, lo + 1 < maskH { v += mask[(lo + 1) * 64 + sx] * frac }
+                guard v > 0.004 else { continue }
+                let k = v * f
+                let o = (y * 64 + x) * 3
+                px[o] = UInt8(Float(color.0) * k)
+                px[o + 1] = UInt8(Float(color.1) * k)
+                px[o + 2] = UInt8(Float(color.2) * k)
+            }
+        }
+        return (px, !loop && dist > travel)
     }
 }

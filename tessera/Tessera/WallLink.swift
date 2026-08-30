@@ -242,6 +242,16 @@ final class WallSession {
                 let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
                 if tick % 16 == 0 { await self.pollState() }          // 2s
                 if animating || tick % 2 == 0 { await self.pullFrame() }
+                // An away wall keeps its last sleeve on screen, which is
+                // honest for art and a lie for everything animated: choose
+                // the lamp with no wall answering and a frozen sleeve says
+                // the choice did nothing. For modes the phone can render
+                // itself, the stand-in becomes the display while the outbox
+                // holds the intent for the wall's return.
+                if case .offline = self.link,
+                   ["ambient", "ticker", "timer", "cd"].contains(self.state.mode) {
+                    self.renderLocally()
+                }
                 tick &+= 1
                 try? await Task.sleep(for: .milliseconds(125))
             }
@@ -336,6 +346,29 @@ final class WallSession {
         misses = 0
         link = .searching
         Task { await pollState() }
+    }
+
+    /// The stand-in as a pure renderer: this session's own state pushed into
+    /// it, only the frame taken back. Unlike tickStandIn it never adopts the
+    /// stand-in's state, because when the wall is merely away the state is
+    /// still this session's business, not the stand-in's.
+    private func renderLocally() {
+        standIn.refreshNowPlaying()
+        standIn.apply([
+            "mode": state.mode,
+            "effect": state.effect,
+            "match_art": state.matchArt,
+            "color": state.color,
+            "color2": state.color2,
+            "ticker_text": state.tickerText,
+            "ticker_loop": state.tickerLoop,
+            "ticker_style": state.tickerStyle,
+            "rpm": state.rpm,
+        ])
+        let px = standIn.frame()
+        // a finished non-looping run hands back to art, wall or no wall
+        if standIn.state.mode != state.mode { state.mode = standIn.state.mode }
+        if px != frame { frame = px }
     }
 
     private func tickStandIn() {

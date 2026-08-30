@@ -224,7 +224,6 @@ struct StudioScreen: View {
     @State private var loadingMedia = false
     /// Picked media, waiting to be aimed. Nil when there is nothing to aim.
     @State private var framing: FramingJob? = nil
-    @State private var playing = false
     @State private var sent = false
     @State private var words = ""
     @State private var writing = false
@@ -271,9 +270,6 @@ struct StudioScreen: View {
         .onAppear { kept.load() }
         // Aiming happens on its own surface: it needs the whole screen and it
         // is a decision, not an adjustment you leave half-made.
-        .fullScreenCover(isPresented: $playing) {
-            SnakeScreen(accent: accent).environment(wall)
-        }
         .fullScreenCover(item: $framing) { job in
             Framing(source: job.source, accent: accent) {
                 framing = nil
@@ -505,12 +501,6 @@ struct StudioScreen: View {
             }
             .frame(maxWidth: .infinity)
 
-            // A game on 4,096 lights is still a thing you make the wall do.
-            GlyphButton(glyph: .snake, label: "snake", active: false,
-                        accent: accent, lit: 0.6, diameter: 54) {
-                playing = true
-            }
-            .frame(maxWidth: .infinity)
         }
     }
 

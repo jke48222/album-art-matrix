@@ -5,6 +5,7 @@ same contract as DiscAnimator, so the main loop treats art and ambience the
 same way: generate, white-balance (which also applies brightness), ship.
 """
 import colorsys
+import random
 
 import numpy as np
 from PIL import Image
@@ -31,6 +32,7 @@ class Ambient:
         self._plaid_cache = {}
         self._cloth_cache = {}
         self._weave_cache = {}
+        self._snake = None           # built on first snake frame
         # 256-entry hue table; constant, so never rebuilt in the frame loop
         self._rainbow_lut = np.array(
             [colorsys.hsv_to_rgb(h, 0.9, 1.0) for h in np.linspace(0, 1, 256)],
@@ -38,7 +40,8 @@ class Ambient:
 
     def frame_at(self, t: float) -> Image.Image:
         t *= self.speed
-        fn = getattr(self, f"_{self.effect}", self._solid)
+        fn = (self._snake_frame if self.effect == "snake"
+              else getattr(self, f"_{self.effect}", self._solid))
         arr = np.clip(fn(t), 0, 255).astype(np.uint8)
         return Image.fromarray(arr, "RGB")
 
@@ -353,3 +356,140 @@ class Ambient:
         k = (proj + 0.707) / 1.414
         k = np.clip(k, 0, 1)[:, :, None]
         return self.c1[None, None, :] * (1 - k) + self.c2[None, None, :] * k
+
+
+# ---- snake ---------------------------------------------------------------
+#
+# The wall playing itself. Same rules as the app's game: a 32x32 torus, the
+# only death is meeting yourself, a flood-fill greedy that chases the meal
+# without walling itself in. It is a lamp effect rather than a game because
+# that is what it turned out to be: a thing the wall does, in the album's
+# colours, that happens to be Snake.
+
+
+class _SnakeState:
+    N = 32
+    TICK = 0.13
+
+    def __init__(self):
+        self.rng = random.Random()
+        self.last = 0.0
+        self.deal()
+
+    def deal(self):
+        n = self.N
+        self.body = [(n // 2 - i, n // 2) for i in range(4)]
+        self.dir = (1, 0)
+        self.grow = 0
+        self.dead = 0.0              # >0: unravel clock
+        self.drop_food()
+
+    def drop_food(self):
+        while True:
+            p = (self.rng.randrange(self.N), self.rng.randrange(self.N))
+            if p not in self.body:
+                self.food = p
+                return
+
+    def pilot(self):
+        n = self.N
+        head = self.body[0]
+        occupied = set(self.body[:-1] if self.grow == 0 else self.body)
+        occupied.discard(head)
+
+        def wrap(p):
+            return (p[0] % n, p[1] % n)
+
+        def room(start):
+            want = len(self.body) + 8
+            seen = {start}
+            queue = [start]
+            i = 0
+            while i < len(queue) and len(seen) < want:
+                c = queue[i]; i += 1
+                for d in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    q = wrap((c[0] + d[0], c[1] + d[1]))
+                    if q not in occupied and q not in seen:
+                        seen.add(q)
+                        queue.append(q)
+            return len(seen)
+
+        def span(a, b):
+            d = abs(a - b)
+            return min(d, n - d)
+
+        options = []
+        for d in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            if d == (-self.dir[0], -self.dir[1]):
+                continue
+            p = wrap((head[0] + d[0], head[1] + d[1]))
+            if p not in occupied:
+                options.append((d, p))
+        if not options:
+            return None
+        need = len(self.body) + 4
+        scored = [(d, room(p), span(p[0], self.food[0]) + span(p[1], self.food[1]),
+                   0 if d == self.dir else 1) for d, p in options]
+        roomy = [s for s in scored if s[1] >= need]
+        pool = roomy or scored
+        return min(pool, key=lambda s: (s[2], s[3]))[0]
+
+    def tick(self):
+        if self.dead > 0:
+            if len(self.body) > 3:
+                del self.body[-3:]
+            elif self.body:
+                self.body.clear()
+            else:
+                self.dead += 1
+                if self.dead > 10:   # a beat of dark, then again
+                    self.deal()
+            return
+        d = self.pilot()
+        if d:
+            self.dir = d
+        n = self.N
+        head = ((self.body[0][0] + self.dir[0]) % n,
+                (self.body[0][1] + self.dir[1]) % n)
+        check = self.body if self.grow else self.body[:-1]
+        if head in check:
+            self.dead = 1.0
+            return
+        self.body.insert(0, head)
+        if head == self.food:
+            self.grow += 2
+            self.drop_food()
+        if self.grow:
+            self.grow -= 1
+        else:
+            self.body.pop()
+
+
+def _snake_frame(self, t):
+    if self._snake is None:
+        self._snake = _SnakeState()
+        self._snake.last = t
+    sn = self._snake
+    # advance on the game's own clock, however often frames are asked for
+    while t - sn.last >= sn.TICK:
+        sn.last += sn.TICK
+        sn.tick()
+
+    arr = np.zeros((self.size, self.size, 3), dtype=np.float32)
+
+    def block(p, col):
+        x, y = p[0] * 2, p[1] * 2
+        arr[y:y + 2, x:x + 2] = col
+
+    if not sn.dead:
+        block(sn.food, self.c2)
+    count = max(1, len(sn.body))
+    for i, seg in enumerate(sn.body):
+        k = 1.0 - 0.55 * i / count
+        block(seg, self.c1 * k)
+    if sn.body:
+        block(sn.body[0], np.clip(self.c1 * 1.25 + 40, 0, 255))
+    return arr
+
+
+Ambient._snake_frame = _snake_frame
