@@ -37,7 +37,16 @@ def parse_lrc(text: str) -> list[tuple[float, str]]:
         for m, s in stamps:
             out.append((int(m) * 60 + float(s), words))
     out.sort(key=lambda p: p[0])
-    return out
+    # lines sharing a timestamp collapse into one, or the earlier of the
+    # pair never shows at all
+    merged: list[tuple[float, str]] = []
+    for t, text in out:
+        if merged and t - merged[-1][0] < 0.05:
+            prev_t, prev = merged[-1]
+            merged[-1] = (prev_t, (prev + " " + text).strip())
+        else:
+            merged.append((t, text))
+    return merged
 
 
 class LyricSheet:
@@ -84,7 +93,14 @@ def fetch_sheet(artist: str, title: str, album: str,
                                         "track_name": title},
                                 timeout=10)
             hits = resp.json() if resp.status_code == 200 else []
-            data = next((h for h in hits if h.get("syncedLyrics")), None)
+            synced = [h for h in hits if h.get("syncedLyrics")]
+            # the candidate whose length matches the song is the one whose
+            # timestamps match the song
+            if duration_s and synced:
+                data = min(synced, key=lambda h: abs(
+                    (h.get("duration") or 1e9) - duration_s))
+            else:
+                data = synced[0] if synced else None
         if not (data and data.get("syncedLyrics")):
             return None
         lines = parse_lrc(data["syncedLyrics"])
@@ -121,89 +137,99 @@ class LyricBook:
 
 
 class LyricCanvas:
-    """One track's lines, on the flat loud field."""
+    """The brat behaviour on the sleeve: a line starts huge and steps down
+    in size as its words arrive and crowd it, lowercase, left-anchored,
+    lettered over the cover dimmed to a quarter, each row throwing its own
+    shadow. Layout is recomputed for exactly the words visible so far."""
 
-    RAMP = 0.12           # seconds a new word takes to land
+    DIM = 0.26
+    RAMP = 0.12
 
     def __init__(self, size: int, art, sheet: LyricSheet,
-                 color: str = "#8ace00"):
+                 color: str = "#f4f1ea"):
         self.size = size
         self.sheet = sheet
-        # the field: the given colour pushed toward its loudest self
-        c = color.lstrip("#")
-        r, g, b = (int(c[i:i + 2], 16) / 255 for i in (0, 2, 4))
-        h, s_, v = colorsys.rgb_to_hsv(r, g, b)
-        r, g, b = colorsys.hsv_to_rgb(h, min(1.0, s_ * 1.5 + 0.12),
-                                      min(1.0, v * 1.25 + 0.18))
-        self.bg = (int(r * 255), int(g * 255), int(b * 255))
-        lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        self.ink = (12, 12, 10) if lum > 0.45 else (244, 241, 234)
-        self.base = np.broadcast_to(
-            np.array(self.bg, dtype=np.uint8), (size, size, 3)).copy()
-        self._laid: dict[str, tuple[list[str], int]] = {}
+        if art is not None:
+            self.base = np.asarray(
+                art.convert("RGB").resize((size, size), Image.LANCZOS),
+                dtype=np.float32) * self.DIM
+        else:
+            self.base = np.zeros((size, size, 3), dtype=np.float32)
+        self.ink = (244, 241, 234)
+        self._laid: dict[tuple, tuple] = {}
 
-    def _layout(self, text: str) -> tuple[list[str], int]:
-        """Wrapped rows and the scale they earned: as big as fits."""
-        hit = self._laid.get(text)
-        if hit is not None:
-            return hit
+    def _tokens(self, text: str) -> list[str]:
         kept = "".join(
             ch for ch in normalize(text.lower())
             if cell(ch) is not None or ch == " ")
-        kept = " ".join(kept.split())
-        rows: list[str] = []
-        scale = 1
-        if kept:
-            for try_scale in (2, 1):
-                rows = wrap_text(kept, self.size - 4, try_scale)
-                line_h = 7 * try_scale + 2
-                if len(rows) * line_h - 2 <= self.size - 4:
-                    scale = try_scale
+        return kept.split()
+
+    def _layout(self, key, tokens: list[str]):
+        hit = self._laid.get(key)
+        if hit is not None:
+            return hit
+        joined = " ".join(tokens)
+        rows, scale = None, 1
+        for s_ in (4, 3, 2, 1):
+            if text_width(joined, s_) <= self.size - 4:
+                rows, scale = [joined], s_
+                break
+        if rows is None:
+            for s_ in (3, 2, 1):
+                cand = wrap_text(joined, self.size - 4, s_)
+                if (len(cand) * (7 * s_ + 2) - 2 <= self.size - 4
+                        and " ".join(cand) == joined):
+                    rows, scale = cand, s_
                     break
-            else:
-                rows = wrap_text(kept, self.size - 4, 1)[-6:]
-                scale = 1
-        out = (rows, scale)
-        self._laid[text] = out
-        return out
+        if rows is None:
+            rows, scale = wrap_text(joined, self.size - 4, 1)[-6:], 1
+        if len(self._laid) > 256:
+            self._laid.clear()
+        self._laid[key] = (rows, scale)
+        return rows, scale
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
         text, t0, t1 = self.sheet.at(t)
-        rows, scale = self._layout(text) if text else ([], 1)
-        if rows:
-            tokens = [w for row in rows for w in row.split()]
-            n = max(1, len(tokens))
+        tokens = self._tokens(text) if text else []
+        if tokens:
+            n = len(tokens)
             span = min(2.4, max(0.6, (t1 - t0) * 0.55))
             step = span / n
-
-            line_h = 7 * scale + 2
-            block_h = len(rows) * line_h - 2
-            y = (self.size - block_h) // 2
-            shown = 0
-            for row in rows:
-                words = row.split()
-                visible, newest_k = 0, 1.0
-                for i in range(len(words)):
-                    born = t0 + (shown + i) * step
-                    if t >= born:
-                        visible = i + 1
-                        newest_k = min(1.0, (t - born) / self.RAMP)
-                shown += len(words)
-                if visible == 0:
+            visible, newest_k = 0, 1.0
+            for i in range(n):
+                born = t0 + i * step
+                if t >= born:
+                    visible = i + 1
+                    newest_k = min(1.0, (t - born) / self.RAMP)
+            if visible:
+                rows, scale = self._layout((t0, visible), tokens[:visible])
+                line_h = 7 * scale + 2
+                y = (self.size - (len(rows) * line_h - 2)) // 2
+                drawn = 0
+                for row in rows:
+                    words = row.split()
+                    # the row's shadow, then its ink
+                    u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+                    draw_text(u8, row, 3, y + 1, (255, 255, 255), scale)
+                    mask = u8.sum(axis=2) > 0
+                    canvas[mask] *= 0.3
+                    drawn += len(words)
+                    last_row = drawn >= visible
+                    settled = " ".join(words[:-1]) if last_row else row
+                    if settled:
+                        u8[:] = 0
+                        draw_text(u8, settled, 2, y, self.ink, scale)
+                        mask = u8.sum(axis=2) > 0
+                        canvas[mask] = u8[mask]
+                    if last_row and words:
+                        lx = 2 + (text_width(settled, scale) + 6 * scale
+                                  if settled else 0)
+                        k = max(0.3, newest_k)
+                        ink = tuple(int(c * k) for c in self.ink)
+                        u8[:] = 0
+                        draw_text(u8, words[-1], lx, y, ink, scale)
+                        mask = u8.sum(axis=2) > 0
+                        canvas[mask] = u8[mask]
                     y += line_h
-                    continue
-                # left-anchored, drawn as prefixes of the wrapped row so the
-                # walk can never disagree with the wrap
-                x = 2
-                settled = " ".join(words[:visible - 1])
-                if settled:
-                    draw_text(canvas, settled, x, y, self.ink, scale)
-                last = words[visible - 1]
-                lx = x + (text_width(settled, scale) + 6 * scale if settled else 0)
-                k = newest_k if visible == len(words) else 1.0
-                ink = tuple(int(self.ink[i] * k + self.bg[i] * (1 - k))
-                            for i in range(3))
-                draw_text(canvas, last, lx, y, ink, scale)
-                y += line_h
-        return Image.fromarray(canvas, "RGB")
+        return Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), "RGB")

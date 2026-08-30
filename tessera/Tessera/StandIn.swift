@@ -395,12 +395,12 @@ final class StandIn {
         guard let sheet = lyricsBook.sheet, lyricsBook.track == lastArtKey else {
             return art       // nothing to sing yet: the sleeve, undimmed
         }
-        // A shade of lead: the line lands AS it is sung, not a beat after.
-        let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime + 0.35
-        // the field speaks in the album's loudest voice
-        let voice = (artColors.first ?? state.color)
-        let c = rgb(voice) ?? (0.54, 0.81, 0.0)
-        return LyricsBook.render(sheet: sheet, at: t, bg: c)
+        // A shade of lead so the line lands AS it is sung, plus the owner's
+        // own nudge: LRC files in the wild are themselves shifted, and only
+        // the person singing along can hear by how much.
+        let nudge = UserDefaults.standard.double(forKey: "lyrics.nudge")
+        let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime + 0.35 + nudge
+        return LyricsBook.render(sheet: sheet, at: t, over: art, ink: (244, 241, 234))
     }
 
     /// The finishes, phone-side, so choosing one changes the wall you are

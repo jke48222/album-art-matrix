@@ -739,24 +739,63 @@ struct StudioScreen: View {
     /// under the row so the top level stays three ideas: pen, words, media.
     @ViewBuilder private var penOptions: some View {
         if !writing {
-            HStack(spacing: 18) {
-                BrushButton(thick: thick, accent: tool == .erase ? Ink.dim : inkColor) {
+            // One capsule, three seats, the full width put to work: how the
+            // pen marks, and its two alter egos.
+            HStack(spacing: 0) {
+                pocketSeat(label: thick ? "wide" : "fine", on: false) {
                     thick.toggle()
+                } icon: {
+                    Circle().fill(tool == .erase ? Ink.dim : inkColor)
+                        .frame(width: thick ? 13 : 6, height: thick ? 13 : 6)
+                        .animation(Motion.settle, value: thick)
                 }
-                GlyphButton(glyph: .erase, label: "erase", active: tool == .erase,
-                            accent: accent, lit: 0.6, diameter: 40) {
+                seatRule
+                pocketSeat(label: "erase", on: tool == .erase) {
                     tool = tool == .erase ? .pen : .erase
+                } icon: {
+                    GlyphShape(glyph: .erase, lineWidth: 1.5)
+                        .frame(width: 17, height: 17)
+                        .foregroundStyle(tool == .erase ? accent : Ink.dim)
                 }
-                GlyphButton(glyph: .fill, label: "fill", active: tool == .fill,
-                            accent: accent, lit: 0.6, diameter: 40) {
+                seatRule
+                pocketSeat(label: "fill", on: tool == .fill) {
                     tool = tool == .fill ? .pen : .fill
+                } icon: {
+                    GlyphShape(glyph: .fill, lineWidth: 1.5)
+                        .frame(width: 17, height: 17)
+                        .foregroundStyle(tool == .fill ? accent : Ink.dim)
                 }
-                Spacer()
             }
-            .padding(.leading, 10)
+            .frame(height: 46)
+            .background(Ink.sunk, in: Capsule())
+            .overlay { Capsule().strokeBorder(Ink.hairline, lineWidth: 1) }
             .transition(.opacity)
         }
     }
+
+    private var seatRule: some View {
+        Rectangle().fill(Ink.hairline).frame(width: 1, height: 22)
+    }
+
+    private func pocketSeat(label: String, on: Bool,
+                            _ action: @escaping () -> Void,
+                            @ViewBuilder icon: () -> some View) -> some View {
+        Button(action: action) {
+            HStack(spacing: 9) {
+                icon()
+                Text(label)
+                    .font(.machine(11))
+                    .textCase(.uppercase)
+                    .foregroundStyle(on ? Ink.ink : Ink.dim)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(on ? Ink.ink.opacity(0.07) : .clear)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressStyle(scale: 0.97))
+        .clipShape(Capsule())
+    }
+
 
     /// Words mode ends the moment you reach for anything else. What was
     /// typed stays on the canvas as tiles; only the re-stamping stops, so a

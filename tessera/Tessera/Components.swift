@@ -695,35 +695,22 @@ struct LetterInker: View {
                 Spacer()
             }
 
-            // the letters: tap one, or drag across many
-            GeometryReader { geo in
-                let cols = max(1, Int(geo.size.width / 34))
-                let rows = stride(from: 0, to: glyphs.count, by: cols).map {
-                    Array(glyphs.enumerated())[$0..<min($0 + cols, glyphs.count)]
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(Array(rows.enumerated()), id: \.offset) { (_, row) in
-                        HStack(spacing: 4) {
-                            ForEach(row, id: \.offset) { (i, ch) in
-                                chip(i, ch)
-                            }
-                        }
+            // The letters. A grid that lays itself out; a tap paints one
+            // letter with the carried ink. (An earlier draft painted by
+            // dragging across coordinates it computed itself, and its idea
+            // of the rows drifted from the real layout: exactly the kind of
+            // cleverness a control that must never misfire cannot afford.)
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 30), spacing: 4)],
+                      alignment: .leading, spacing: 6) {
+                ForEach(Array(glyphs.enumerated()), id: \.offset) { (i, ch) in
+                    Button {
+                        paint(i)
+                    } label: {
+                        chip(i, ch)
                     }
+                    .buttonStyle(PressStyle(scale: 0.88))
                 }
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { g in
-                            let col = Int(g.location.x / 34)
-                            let rowI = Int(g.location.y / 44)
-                            let idx = rowI * cols + col
-                            guard col >= 0, col < cols, rowI >= 0,
-                                  idx >= 0, idx < glyphs.count else { return }
-                            paint(idx)
-                        }
-                )
             }
-            .frame(height: max(38, CGFloat((glyphs.count + 9) / 10) * 44 - 6))
 
             HStack(spacing: 18) {
                 act("rainbow") {
