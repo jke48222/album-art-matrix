@@ -50,23 +50,18 @@ def parse_lrc(text: str) -> list[tuple[float, str]]:
 
 
 def split_voices(lines):
-    """Two voices out of one sheet: a line living entirely in parentheses
-    is the second singer; a trailing parenthetical is an echo belonging to
-    its line's moment. Each ad-lib owns a window to the next event."""
+    """Two voices out of one sheet: parentheses are the second singer,
+    wherever they sit in a line. Each ad-lib owns a window to the next
+    event; what remains outside the parentheses is the first voice."""
     mains, raw = [], []
     for t, text in lines:
         text = text.strip()
-        if text.startswith("(") and text.endswith(")") and len(text) > 2:
-            raw.append((t, text))
-            continue
-        if text.endswith(")") and "(" in text[1:]:
-            cut = text.rindex("(")
-            main, echo = text[:cut].strip(), text[cut:]
-            if main:
-                mains.append((t, main))
-                raw.append((t, echo))
-                continue
-        mains.append((t, text))
+        for g in re.findall(r"\([^()]*\)", text):
+            if len(g) > 2:
+                raw.append((t, g))
+        main = " ".join(re.sub(r"\([^()]*\)", " ", text).split())
+        if main:
+            mains.append((t, main))
     starts = sorted(t for t, _ in lines)
     adlibs = []
     for t, text in raw:
