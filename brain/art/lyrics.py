@@ -200,51 +200,54 @@ class LyricCanvas:
             if cell(ch) is not None or ch == " ")
         return kept.split()
 
-    def _layout(self, key, tokens: list[str]):
+    def _layout(self, key, tokens: list[str], region_h: int = 60):
         hit = self._laid.get(key)
         if hit is not None:
             return hit
         joined = " ".join(tokens)
         rows, scale = None, 1
         for s_ in (4, 3, 2, 1):
-            if text_width(joined, s_) <= self.size - 4:
+            if text_width(joined, s_) <= self.size - 4 and 7 * s_ <= region_h:
                 rows, scale = [joined], s_
                 break
         if rows is None:
             for s_ in (3, 2, 1):
                 cand = wrap_text(joined, self.size - 4, s_)
-                if (len(cand) * (7 * s_ + 2) - 2 <= self.size - 14
+                if (len(cand) * (7 * s_ + 2) - 2 <= region_h - 2
                         and " ".join(cand) == joined):
                     rows, scale = cand, s_
                     break
         if rows is None:
-            rows, scale = wrap_text(joined, self.size - 4, 1)[-5:], 1
+            max_rows = max(1, (region_h - 2) // 9)
+            rows, scale = wrap_text(joined, self.size - 4, 1)[-max_rows:], 1
         if len(self._laid) > 256:
             self._laid.clear()
         self._laid[key] = (rows, scale)
         return rows, scale
 
-    def _foot(self, canvas, text: str):
-        """The second singer's row: one row at the panel's foot, never
-        more, parentheses kept because that is how the second voice
-        writes. Empty when nobody is answering."""
+    def _foot_rows(self, text: str) -> list[str]:
         tokens = self._tokens(text)
         if not tokens:
-            return
-        joined = " ".join(tokens)
-        rows = wrap_text(joined, self.size - 4, 1)
-        row = rows[0] if rows else joined
-        x = (self.size - min(self.size - 4, text_width(row, 1))) // 2
-        y = self.size - 9
-        u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-        draw_text(u8, row, x + 1, y + 1, (255, 255, 255), 1)
-        mask = u8.sum(axis=2) > 0
-        canvas[mask] *= 0.35
-        foot_ink = tuple(int(c * 0.66) for c in self.ink)
-        u8[:] = 0
-        draw_text(u8, row, x, y, foot_ink, 1)
-        mask = u8.sum(axis=2) > 0
-        canvas[mask] = u8[mask]
+            return []
+        return wrap_text(" ".join(tokens), self.size - 4, 1)[:3]
+
+    def _foot(self, canvas, rows: list[str], top: int):
+        """The second singer's rows at the panel's foot: whole, never
+        clipped mid-word, parentheses kept because that is how the second
+        voice writes."""
+        y = top
+        for row in rows:
+            x = (self.size - min(self.size - 4, text_width(row, 1))) // 2
+            u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+            draw_text(u8, row, x + 1, y + 1, (255, 255, 255), 1)
+            mask = u8.sum(axis=2) > 0
+            canvas[mask] *= 0.35
+            foot_ink = tuple(int(c * 0.66) for c in self.ink)
+            u8[:] = 0
+            draw_text(u8, row, x, y, foot_ink, 1)
+            mask = u8.sum(axis=2) > 0
+            canvas[mask] = u8[mask]
+            y += 9
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
@@ -252,6 +255,10 @@ class LyricCanvas:
         # the foot row's claimants: a live ad-lib outranks the preview
         adlib = next((a[2] for a in self.sheet.adlibs
                       if a[0] <= t < a[1]), None)
+        foot_rows = self._foot_rows(adlib) if adlib else []
+        foot_top = self.size if not foot_rows \
+            else self.size - (len(foot_rows) * 9 - 2) - 1
+        region_h = 60 if not foot_rows else foot_top - 3
         tokens = self._tokens(text) if text else []
         if tokens:
             n = len(tokens)
@@ -264,9 +271,10 @@ class LyricCanvas:
                     visible = i + 1
                     newest_k = min(1.0, (t - born) / self.RAMP)
             if visible:
-                rows, scale = self._layout((t0, visible), tokens[:visible])
+                rows, scale = self._layout((t0, visible, region_h),
+                                           tokens[:visible], region_h)
                 line_h = 7 * scale + 2
-                y = max(1, (self.size - 12 - (len(rows) * line_h - 2)) // 2)
+                y = max(1, (region_h - (len(rows) * line_h - 2)) // 2)
                 drawn = 0
                 for row in rows:
                     words = row.split()
@@ -293,6 +301,6 @@ class LyricCanvas:
                         mask = u8.sum(axis=2) > 0
                         canvas[mask] = u8[mask]
                     y += line_h
-        if adlib:
-            self._foot(canvas, adlib)
+        if foot_rows:
+            self._foot(canvas, foot_rows, foot_top)
         return Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), "RGB")

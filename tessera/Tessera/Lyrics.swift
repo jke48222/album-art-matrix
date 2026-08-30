@@ -266,9 +266,17 @@ final class LyricsBook {
                        adlibs: [(start: Double, end: Double, text: String)] = [],
                        over art: [UInt8], artKey: String = "",
                        ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
-        // what the foot row sings right now: a live ad-lib outranks the
-        // preview of what comes next
+        // what the foot sings right now
         let liveAdlib = adlibs.first { t >= $0.start && t < $0.end }?.text
+        // the foot takes the rows the whole ad-lib needs (up to two), and
+        // the first voice's region gives way above it: clipping the second
+        // singer mid-yeah was worse than a smaller headline
+        let footRows: [String] = liveAdlib.map { adlib in
+            Array(PixelFont.wrap(letterableTokens(adlib).joined(separator: " "),
+                                 maxWidth: 60, scale: 1).prefix(3))
+        } ?? []
+        let footTop = footRows.isEmpty ? 64 : 64 - (footRows.count * 9 - 2) - 1
+        let regionH = footRows.isEmpty ? 60 : footTop - 3
         let base: [UInt8]
         if let c = dimCache, c.key == artKey, !artKey.isEmpty {
             base = c.px
@@ -279,16 +287,14 @@ final class LyricsBook {
         var px = base
 
         guard let idx = currentIndex(sheet, t) else {
-            if let adlib = liveAdlib {
-                drawFoot(&px, adlib, ink: ink)
-            }
+            drawFoot(&px, footRows, at: footTop, ink: ink)
             return px
         }
         let (t0, text) = sheet[idx]
         let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
         let tokens = letterableTokens(text)
         guard !tokens.isEmpty else {
-            if let adlib = liveAdlib { drawFoot(&px, adlib, ink: ink) }
+            drawFoot(&px, footRows, at: footTop, ink: ink)
             return px
         }
 
@@ -313,12 +319,12 @@ final class LyricsBook {
         let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)|\((liveAdlib ?? "").hashValue)"
         if let memo = frameMemo, memo.key == frameKey { return memo.px }
 
-        let key = "\(t0)|\(visible)|\(text.hashValue)"
+        let key = "\(t0)|\(visible)|\(text.hashValue)|\(regionH)"
         let (rows, scale): ([String], Int)
         if let hit = layoutCache[key] {
             (rows, scale) = hit
         } else {
-            let laid = layout(tokens: Array(tokens.prefix(visible)))
+            let laid = layout(tokens: Array(tokens.prefix(visible)), regionH: regionH)
             if layoutCache.count > 256 { layoutCache.removeAll() }
             layoutCache[key] = laid
             (rows, scale) = laid
@@ -359,52 +365,56 @@ final class LyricsBook {
             y += lineH
         }
         // the foot belongs to the second voice, and to no one else: when
-        // nobody is answering, the row stays dark
-        if let adlib = liveAdlib { drawFoot(&px, adlib, ink: ink) }
+        // nobody is answering, it stays dark
+        drawFoot(&px, footRows, at: footTop, ink: ink)
         frameMemo = (frameKey, px)
         return px
     }
 
-    /// The panel's foot: the second singer's row, one row, never more,
-    /// parentheses kept because that is how the second voice writes.
-    private static func drawFoot(_ px: inout [UInt8], _ text: String,
-                                 ink: (UInt8, UInt8, UInt8)) {
-        let tokens = letterableTokens(text)
-        guard !tokens.isEmpty else { return }
-        let joined = tokens.joined(separator: " ")
-        let row = PixelFont.wrap(joined, maxWidth: 60, scale: 1).first ?? joined
-        let x = (64 - min(60, PixelFont.textWidth(row, scale: 1))) / 2
-        let y = 55
-        var mask = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        PixelDraw.text(&mask, row, x: x + 1, y: y + 1, rgb: (255, 255, 255), scale: 1)
-        for i in stride(from: 0, to: mask.count, by: 3) where mask[i] > 0 {
-            px[i] = UInt8(Float(px[i]) * 0.35)
-            px[i + 1] = UInt8(Float(px[i + 1]) * 0.35)
-            px[i + 2] = UInt8(Float(px[i + 2]) * 0.35)
+    /// The second singer's rows at the panel's foot: whole, never clipped
+    /// mid-word, parentheses kept because that is how the second voice
+    /// writes. Empty rows mean nobody is answering.
+    private static func drawFoot(_ px: inout [UInt8], _ rows: [String],
+                                 at top: Int, ink: (UInt8, UInt8, UInt8)) {
+        guard !rows.isEmpty else { return }
+        var y = top
+        for row in rows {
+            let x = (64 - min(60, PixelFont.textWidth(row, scale: 1))) / 2
+            var mask = [UInt8](repeating: 0, count: 64 * 64 * 3)
+            PixelDraw.text(&mask, row, x: x + 1, y: y + 1,
+                           rgb: (255, 255, 255), scale: 1)
+            for i in stride(from: 0, to: mask.count, by: 3) where mask[i] > 0 {
+                px[i] = UInt8(Float(px[i]) * 0.35)
+                px[i + 1] = UInt8(Float(px[i + 1]) * 0.35)
+                px[i + 2] = UInt8(Float(px[i + 2]) * 0.35)
+            }
+            let k: Float = 0.66
+            PixelDraw.text(&px, row, x: x, y: y,
+                           rgb: (UInt8(Float(ink.0) * k),
+                                 UInt8(Float(ink.1) * k),
+                                 UInt8(Float(ink.2) * k)), scale: 1)
+            y += 9
         }
-        let k: Float = 0.66
-        let footInk = (UInt8(Float(ink.0) * k),
-                       UInt8(Float(ink.1) * k),
-                       UInt8(Float(ink.2) * k))
-        PixelDraw.text(&px, row, x: x, y: y, rgb: footInk, scale: 1)
     }
 
     /// Biggest type the visible words allow: one line if any size holds it,
     /// then whole-word wraps, then the small hard-wrapped truth.
-    static func layout(tokens: [String]) -> ([String], Int) {
+    static func layout(tokens: [String], regionH: Int = 60) -> ([String], Int) {
         let joined = tokens.joined(separator: " ")
         for scale in [4, 3, 2, 1]
-        where PixelFont.textWidth(joined, scale: scale) <= 60 {
+        where PixelFont.textWidth(joined, scale: scale) <= 60
+            && 7 * scale <= regionH {
             return ([joined], scale)
         }
         for scale in [3, 2, 1] {
             let rows = PixelFont.wrap(joined, maxWidth: 60, scale: scale)
-            if rows.count * (7 * scale + 2) - 2 <= 50,
+            if rows.count * (7 * scale + 2) - 2 <= regionH - 2,
                rows.joined(separator: " ") == joined {
                 return (rows, scale)
             }
         }
-        return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(5)), 1)
+        let maxRows = max(1, (regionH - 2) / 9)
+        return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(maxRows)), 1)
     }
 
     static func letterableTokens(_ text: String) -> [String] {
