@@ -46,12 +46,9 @@ struct WallScreen: View {
                     dragging: $dragLight,
                     link: wall.link,
                     arrivalKey: wall.arrivalKey,
-                    history: worn.runs,
-                    tile: { worn.tile($0) },
                     touching: $onPanel,
                     onCommit: { wall.send(["brightness": $0]) },
                     onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
-                    onWear: { wall.replay(ts: $0.ts) },
                     onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
                     onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
                 )

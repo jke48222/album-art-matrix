@@ -9,6 +9,58 @@
 
 import Foundation
 import MediaPlayer
+import QuartzCore
+
+/// The song's position as a clock worth trusting.
+///
+/// MPMusicPlayerController.currentPlaybackTime is the truth, delivered
+/// badly: it crosses an XPC bridge, staircases, and can repeat itself for
+/// most of a second before jumping. Rendering lyrics straight off it is why
+/// nothing ever felt locked. This keeps its own monotonic clock anchored to
+/// the player's samples: between samples time flows smoothly at 1x; when a
+/// fresh sample disagrees a little, the anchor is SLEWED gently toward it
+/// (a fixed fraction per reading, never a visible jump); when it disagrees
+/// a lot, that is a seek, and the clock jumps with it.
+@MainActor
+final class SongClock {
+    private var anchorTime: Double = 0
+    private var anchorHost: Double = 0
+    private var lastRaw: Double = -1
+    private var music: MPMusicPlayerController { .systemMusicPlayer }
+
+    func hardReset() { lastRaw = -1 }
+
+    func now() -> Double {
+        let raw = music.currentPlaybackTime
+        let host = CACurrentMediaTime()
+        guard music.playbackState == .playing else {
+            anchorTime = raw
+            anchorHost = host
+            lastRaw = raw
+            return raw
+        }
+        if lastRaw < 0 {
+            anchorTime = raw
+            anchorHost = host
+            lastRaw = raw
+            return raw
+        }
+        let predicted = anchorTime + (host - anchorHost)
+        if raw != lastRaw {
+            lastRaw = raw
+            let diff = raw - predicted
+            if abs(diff) > 0.9 {
+                // a seek, or the player was wrenched: follow it at once
+                anchorTime = raw
+                anchorHost = host
+            } else {
+                // a small disagreement: lean toward it, never lurch
+                anchorTime += diff * 0.12
+            }
+        }
+        return anchorTime + (host - anchorHost)
+    }
+}
 
 @MainActor
 final class LyricsBook {

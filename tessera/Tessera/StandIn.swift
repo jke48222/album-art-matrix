@@ -32,6 +32,7 @@ final class StandIn {
     private var nineFrame: [UInt8]? = nil
     private var nineBuiltFor: Int? = nil
     private let lyricsBook = LyricsBook()
+    private let songClock = SongClock()
     private var art: [UInt8]?          // 64x64x3 of whatever is playing
     private var artColors: [String] = []
     private var lastArtKey = ""
@@ -135,6 +136,7 @@ final class StandIn {
         state.album = item.albumTitle
         guard key != lastArtKey else { return }
         lastArtKey = key
+        songClock.hardReset()        // a new track is a new zero
 
         if let image = item.artwork?.image(at: CGSize(width: 256, height: 256)),
            let cg = image.cgImage, let px = Clip.square64(cg) {
