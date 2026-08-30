@@ -49,6 +49,9 @@ final class SnakeGame {
     @ObservationIgnored private var overAt = Date()
 
     var accent: (Double, Double, Double) = (0.91, 0.69, 0.29)
+    /// The body's colour. Cream by default; the lamp effect hands it the
+    /// album's own thread so the wall snake wears the record.
+    var ink: (Double, Double, Double) = (0.918, 0.894, 0.847)
 
     /// Seconds per move. Starts easy and tightens as the snake earns it.
     var interval: Double { max(0.07, 0.14 * pow(0.975, Double(score))) }
@@ -227,6 +230,9 @@ final class SnakeGame {
         px = [UInt8](repeating: 0, count: 64 * 64 * 3)
 
         if phase == .over {
+            // Driving itself, a death is a beat of dark, not a scoreboard:
+            // a wall has no one to report to.
+            if auto { return }
             let ink: (UInt8, UInt8, UInt8) = (234, 228, 216)
             let a: (UInt8, UInt8, UInt8) = (UInt8(accent.0 * 255),
                                             UInt8(accent.1 * 255),
@@ -251,141 +257,18 @@ final class SnakeGame {
         let count = max(1, body.count)
         for (i, seg) in body.enumerated() {
             let k = 1.0 - 0.55 * Double(i) / Double(count)
-            let v = UInt8(min(255, 234 * k))
-            block(seg.0, seg.1, v, UInt8(min(255, 228 * k)), UInt8(min(255, 216 * k)))
+            block(seg.0, seg.1,
+                  UInt8(min(255, ink.0 * 255 * k)),
+                  UInt8(min(255, ink.1 * 255 * k)),
+                  UInt8(min(255, ink.2 * 255 * k)))
         }
         if let head = body.first {
-            block(head.0, head.1, 255, 250, 240)
+            block(head.0, head.1,
+                  UInt8(min(255, ink.0 * 255 * 1.25 + 30)),
+                  UInt8(min(255, ink.1 * 255 * 1.25 + 30)),
+                  UInt8(min(255, ink.2 * 255 * 1.25 + 30)))
         }
     }
 }
 
-// MARK: - The screen
 
-struct SnakeScreen: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.dismiss) private var dismiss
-
-    let accent: Color
-
-    @State private var game = SnakeGame()
-    @State private var latched = false
-    /// What the wall was doing before the game took it, put back on the way
-    /// out. A game that leaves the wall stuck on its corpse is a bad guest.
-    @State private var before = "art"
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("SNAKE")
-                    .font(.display(18))
-                    .kerning(3.0)
-                    .foregroundStyle(Ink.ink)
-                Spacer()
-                Text("\(game.score)")
-                    .font(.machine(22))
-                    .foregroundStyle(game.phase == .alive && !game.auto ? accent : Ink.dim)
-                    .contentTransition(.numericText())
-                    .animation(.linear(duration: 0.15), value: game.score)
-                Text("best \(game.best)")
-                    .font(.machine(11))
-                    .foregroundStyle(Ink.faint)
-                    .padding(.leading, 10)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 16)
-
-            PanelCanvas(px: game.px, duty: 1)
-                .aspectRatio(1, contentMode: .fit)
-                .padding(.horizontal, 8)
-                .contentShape(Rectangle())
-                .gesture(steering)
-                .onTapGesture {
-                    switch game.phase {
-                    case .ready, .over: Taps.commit(); game.deal()
-                    default: break
-                    }
-                }
-
-            Text(caption)
-                .font(.ui(13))
-                .foregroundStyle(Ink.dim)
-                .padding(.top, 18)
-                .animation(Motion.settle, value: game.phase)
-
-            Spacer(minLength: 0)
-
-            Button("Done") {
-                dismiss()
-            }
-            .buttonStyle(PressStyle(scale: 0.96))
-            .font(.ui(15))
-            .foregroundStyle(Ink.dim)
-            .padding(.bottom, 8)
-        }
-        .padding(.top, Safe.top + 12)
-        .padding(.bottom, Safe.bottom + 12)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Ink.ground)
-        .preferredColorScheme(.dark)
-        .onAppear {
-            let m = wall.state.mode
-            before = ["frame", "clip", "timer"].contains(m) ? "art" : m
-            if let c = accent.wallRGB { game.accent = c }
-            game.prepare()
-        }
-        .onDisappear {
-            wall.send(["mode": before])
-        }
-        .task {
-            // The game clock. Sleeping the interval each lap means speed-ups
-            // take hold at the next move, which is exactly when they should.
-            while !Task.isCancelled {
-                game.tick()
-                if game.phase == .alive || game.phase == .unraveling {
-                    wall.beam(game.px)
-                }
-                let wait = game.phase == .unraveling ? 0.05 : game.interval
-                try? await Task.sleep(for: .seconds(wait))
-            }
-        }
-    }
-
-    private var caption: String {
-        switch game.phase {
-        case .ready: "swipe to steer, or let it play"
-        case .alive: game.auto ? "playing itself. swipe to take over"
-                     : (game.score == 0 ? "swipe to steer" : " ")
-        case .unraveling: " "
-        case .over: game.auto ? " " : "tap to deal again"
-        }
-    }
-
-    /// The first committed direction of a drag, latched until the finger
-    /// lifts. Distance does not matter; direction is the entire message.
-    private var steering: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { g in
-                guard !latched else { return }
-                latched = true
-                let dx = g.translation.width, dy = g.translation.height
-                if abs(dx) > abs(dy) {
-                    game.steer((dx > 0 ? 1 : -1, 0))
-                } else {
-                    game.steer((0, dy > 0 ? 1 : -1))
-                }
-                Taps.detent(intensity: 0.25)
-            }
-            .onEnded { _ in latched = false }
-    }
-}
-
-private extension Color {
-    /// The accent as linear RGB for the renderer, when it resolves.
-    var wallRGB: (Double, Double, Double)? {
-        let ui = UIColor(self)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        guard ui.getRed(&r, green: &g, blue: &b, alpha: &a) else { return nil }
-        return (Double(r), Double(g), Double(b))
-    }
-}

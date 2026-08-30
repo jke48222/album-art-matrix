@@ -24,6 +24,11 @@ final class StandIn {
     private(set) var state = WallState()
     private var started = Date()
     private var timer: (end: Date, total: Double, ret: String)? = nil
+    private var snakeGame: SnakeGame? = nil
+    private var snakeTicked = Date()
+    private var mover: TextMover? = nil
+    private var moverKey = ""
+    private var moverT0 = Date()
     private var art: [UInt8]?          // 64x64x3 of whatever is playing
     private var artColors: [String] = []
     private var lastArtKey = ""
@@ -68,6 +73,7 @@ final class StandIn {
         if let v = patch["color2"] as? String { state.color2 = v }
         if let v = patch["ticker_text"] as? String { state.tickerText = v }
         if let v = patch["ticker_loop"] as? Bool { state.tickerLoop = v }
+        if let v = patch["ticker_style"] as? String { state.tickerStyle = v }
         if let v = patch["clock_24h"] as? Bool { state.clock24h = v }
         if let v = patch["idle"] as? String { state.idle = v }
         if let v = (patch["sleep_fade_min"] as? NSNumber)?.doubleValue {
@@ -175,6 +181,7 @@ final class StandIn {
         case "cd":     px = disc(t)
         case "ambient": px = ambient(t)
         case "timer":   px = countdownFrame()
+        case "ticker":  px = letteringFrame()
         case "frame":  px = pushed ?? art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         case "clip":
             if let c = clip, !c.frames.isEmpty {
@@ -279,6 +286,37 @@ final class StandIn {
         return px
     }
 
+    /// The words mode, wall-less: the same three movers the brain runs,
+    /// keyed so a new text, style or ink starts the run over from its top.
+    private func letteringFrame() -> [UInt8] {
+        let ink: (UInt8, UInt8, UInt8) = {
+            let hex = state.matchArt ? (artColors.first ?? state.color) : state.color
+            if let c = rgb(hex) {
+                return (UInt8(c.0 * 255), UInt8(c.1 * 255), UInt8(c.2 * 255))
+            }
+            return (244, 241, 234)
+        }()
+        let key = "\(state.tickerText)|\(state.tickerStyle)|\(state.tickerLoop)|\(ink.0).\(ink.1).\(ink.2)"
+        if mover == nil || key != moverKey {
+            mover = TextMover(
+                text: state.tickerText,
+                style: TextMover.Style(rawValue: state.tickerStyle) ?? .across,
+                color: ink,
+                loop: state.tickerLoop
+            )
+            moverKey = key
+            moverT0 = Date()
+        }
+        guard let mover else { return [UInt8](repeating: 0, count: 64 * 64 * 3) }
+        let (px, done) = mover.frame(at: Date().timeIntervalSince(moverT0))
+        if done {
+            // same contract as the wall: a finished run hands back to art
+            self.mover = nil
+            state.mode = "art"
+        }
+        return px
+    }
+
     private func countdownFrame() -> [UInt8] {
         guard let tm = timer else {
             state.mode = "clock"
@@ -350,12 +388,33 @@ final class StandIn {
         let (c1, c2) = colours()
         switch state.effect {
         case "plaid", "weave", "deco": return Patterns.frame(state.effect, t: t, c1: c1, c2: c2)
+        case "snake": return snakeFrame(c1, c2)
         case "solid":    return fill(c1)
         case "breathe":  return fill(scale(c1, 0.25 + 0.75 * (0.5 + 0.5 * sin(t * 1.25))))
         case "pulse":    return fill(scale(c1, pow(0.5 + 0.5 * sin(t * 3.0), 3)))
         case "rainbow":  return sweep(t)
         default:         return gradient(t, c1, c2)
         }
+    }
+
+    /// The wall playing itself, in the album's thread. The engine advances
+    /// on its own clock regardless of how often frames are asked for.
+    private func snakeFrame(_ c1: (Double, Double, Double),
+                            _ c2: (Double, Double, Double)) -> [UInt8] {
+        if snakeGame == nil {
+            let g = SnakeGame()
+            g.deal(auto: true)
+            snakeGame = g
+            snakeTicked = Date()
+        }
+        guard let g = snakeGame else { return [UInt8](repeating: 0, count: 64 * 64 * 3) }
+        g.ink = c1
+        g.accent = c2
+        while Date().timeIntervalSince(snakeTicked) >= g.interval {
+            snakeTicked.addTimeInterval(g.interval)
+            g.tick()
+        }
+        return g.px
     }
 
     private func colours() -> ((Double, Double, Double), (Double, Double, Double)) {

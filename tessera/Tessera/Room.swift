@@ -7,6 +7,39 @@
 // the room is Ink.ground and nothing else.
 
 import SwiftUI
+import UIKit
+
+/// Fine monochrome grain, generated once and tiled. The room's gradient is
+/// smooth by construction, and smooth gradients on OLED read as plastic;
+/// a breath of noise gives the light something to land on, the way paint
+/// does. Static on purpose: animated grain is film, static grain is a wall.
+private enum Grain {
+    static let tile: UIImage = {
+        let side = 160
+        var seed: UInt64 = 0x9E3779B97F4A7C15
+        func next() -> UInt8 {
+            seed ^= seed << 13; seed ^= seed >> 7; seed ^= seed << 17
+            return UInt8(truncatingIfNeeded: seed)
+        }
+        let count = side * side * 4
+        var buf = [UInt8](repeating: 0, count: count)
+        for i in stride(from: 0, to: count, by: 4) {
+            let v = next()
+            buf[i] = v; buf[i + 1] = v; buf[i + 2] = v
+            buf[i + 3] = 255
+        }
+        let cg = buf.withUnsafeMutableBytes { raw -> CGImage? in
+            guard let ctx = CGContext(
+                data: raw.baseAddress, width: side, height: side,
+                bitsPerComponent: 8, bytesPerRow: side * 4,
+                space: CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
+            ) else { return nil }
+            return ctx.makeImage()
+        }
+        return cg.map { UIImage(cgImage: $0) } ?? UIImage()
+    }()
+}
 
 struct Room: View {
     let palette: [Color]
@@ -25,6 +58,16 @@ struct Room: View {
                     .blur(radius: 44)
                     .ignoresSafeArea()
             }
+            // The tooth of the wall, over the light so the light lands on
+            // it. Overlay blend rides the colour underneath rather than
+            // sitting on it as a grey film.
+            Image(uiImage: Grain.tile)
+                .resizable(resizingMode: .tile)
+                .opacity(0.07)
+                .blendMode(.overlay)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .ignoresSafeArea()
         .animation(.easeInOut(duration: 1.1), value: light)

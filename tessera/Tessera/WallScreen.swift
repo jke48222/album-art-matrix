@@ -145,8 +145,8 @@ struct WallScreen: View {
                 PillRow(
                     label: "light",
                     options: [("plaid", "plaid"), ("weave", "weave"), ("deco", "deco"),
-                              ("solid", "solid"), ("breathe", "breathe"), ("pulse", "pulse"),
-                              ("rainbow", "rainbow"), ("fade", "gradient")],
+                              ("snake", "snake"), ("solid", "solid"), ("breathe", "breathe"),
+                              ("pulse", "pulse"), ("rainbow", "rainbow"), ("fade", "gradient")],
                     selected: wall.state.effect,
                     accent: accent
                 ) { wall.send(["effect": $0]) }

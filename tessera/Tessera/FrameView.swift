@@ -31,7 +31,7 @@ struct FrameReading {
 }
 
 enum FrameRenderer {
-    private static var cacheKey: String = ""
+    private static var cachedData: Data? = nil
     private static var cached: FrameReading = .dark
 
     /// Analysis only. The panel is drawn live (see PanelCanvas), so duty is a
@@ -39,11 +39,16 @@ enum FrameRenderer {
     /// is what made the brightness drag move in visible jumps.
     static func read(_ data: Data?) -> FrameReading {
         guard let data, data.count == 64 * 64 * 3 else { return .dark }
-        let key = "\(data.hashValue)"
-        if key == cacheKey { return cached }
+        // Compare the WHOLE buffer, never Data.hashValue: Foundation hashes
+        // only a short prefix of a Data, and any mode whose top rows stay
+        // dark (the ticker letters at mid-height) produced identical hashes
+        // for every frame — so this cache served the first dark frame
+        // forever and the panel looked broken while the model was fine.
+        if data == cachedData { return cached }
 
         var lum = [Float](repeating: 0, count: 64 * 64)
         var total: Float = 0
+        var digest: UInt64 = 0xcbf2_9ce4_8422_2325     // FNV-1a, whole frame
         data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
             let p = raw.bindMemory(to: UInt8.self)
             for i in 0..<(64 * 64) {
@@ -51,8 +56,12 @@ enum FrameRenderer {
                 let l = 0.2126 * Float(p[o]) + 0.7152 * Float(p[o + 1]) + 0.0722 * Float(p[o + 2])
                 lum[i] = l
                 total += l
+                digest = (digest ^ UInt64(p[o])) &* 0x1000_0000_01b3
+                digest = (digest ^ UInt64(p[o + 1])) &* 0x1000_0000_01b3
+                digest = (digest ^ UInt64(p[o + 2])) &* 0x1000_0000_01b3
             }
         }
+        let key = String(digest, radix: 36)
         let lit = min(1.0, pow(Double(total) / Double(64 * 64) / 255.0 * 3.2, 0.8))
 
         let reading = FrameReading(
@@ -61,7 +70,7 @@ enum FrameRenderer {
             lit: lit,
             key: key
         )
-        cacheKey = key
+        cachedData = data
         cached = reading
         return reading
     }
