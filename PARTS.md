@@ -1,66 +1,103 @@
-# All-stages bulk order — by store
-Strategy: Micro Center (Marietta) walk-in for Pi + tools + shelf-luck items;
-ONE AliExpress order for panels + wiring sundries (2-4 wk freight); ONE Mouser
-order for the safety-critical power parts; Adafruit only for what the MC shelf
-lacks. Prices checked 2026-08-19 where noted.
+# Parts ledger
 
-## 1 · Micro Center, today (18-min pickup / walk-in)
-| Item | Link / SKU | Price |
-|---|---|---|
-| Pi 5 — **2 GB if on the shelf, else the 1 GB** (SC2162, SKU 959668, 16 in stock) | https://www.microcenter.com/product/704295/raspberry-pi-5-1gb · all variants: https://www.microcenter.com/search/search_results.aspx?Ntt=raspberry+pi+5 | $42.99 (1 GB) |
-| MC house 32 GB microSD (the add-on on that page) | https://www.microcenter.com/product/658457 | $9.99 |
-| Raspberry Pi Active Cooler | https://www.microcenter.com/search/search_results.aspx?Ntt=raspberry+pi+active+cooler | ~$6 |
-| 27 W USB-C PSU — ONLY if no 27 W+ PD charger owned | https://www.microcenter.com/search/search_results.aspx?Ntt=raspberry+pi+27w | ~$14 |
-| IEC power cord (cut it = the LRS mains pigtail) | https://www.microcenter.com/search/search_results.aspx?Ntt=iec+power+cord | ~$5 |
-| Inland soldering iron/station + 63/37 solder | https://www.microcenter.com/search/search_results.aspx?Ntt=inland+soldering | ~$25-40 |
-| Inland multimeter (DC-side checks) | https://www.microcenter.com/search/search_results.aspx?Ntt=inland+multimeter | ~$15-30 |
-| Wire strippers, precision screwdrivers, heat-shrink kit, F-F jumper wires | search each; Inland versions exist | ~$25 |
-| **Shelf-luck checks** (buy on sight, skips the Adafruit order): Adafruit Triple LED Matrix Bonnet #6358, TCS34725 breakout, any 64×64 P2.5/P3 HUB75 panel | https://www.microcenter.com/search/search_results.aspx?Ntt=adafruit+triple+led+matrix+bonnet · ?Ntt=tcs34725 · ?Ntt=hub75 | — |
+Topology note: there is no backplane PCB in this build. Power runs PSU to bus
+bar to fused 14 AWG drops to the panels' own harnesses. Logic runs through the
+Adafruit Triple Matrix Bonnet.
 
-## 2 · AliExpress — one bulk order (all stages, 2-4 week freight)
-| Item | Search | Price |
-|---|---|---|
-| **10× P2.5 64×64 HUB75, 160×160 mm** (9 wall + 1 spare/bench) — SAME seller, SAME order, ask for same batch (mixed brightness bins = visible tile boundaries) | https://www.aliexpress.com/w/wholesale-P2.5-64x64-HUB75.html | ~$250-320 |
-| Checklist per listing: ABCDE address, 1/32 scan, exactly 160×160 mm, conventional driver (FM6126A/SM16xxx) — **NOT ICN2053/2153/MBI515x**, indoor panel | | |
-| 14 AWG silicone wire, 5 m red + 5 m black | https://www.aliexpress.com/w/wholesale-14awg-silicone-wire.html | ~$12 |
-| 2× bus bars / power distribution blocks | https://www.aliexpress.com/w/wholesale-power-distribution-terminal-bus-bar.html | ~$10 |
-| 10× ATC inline fuse holders (14 AWG) + 10 A blade fuse pack | https://www.aliexpress.com/w/wholesale-ATC-inline-fuse-holder-14awg.html | ~$12 |
-| Ratcheting crimper (SN-48BS class) + fork/ring terminal kit | https://www.aliexpress.com/w/wholesale-SN-48BS-crimper.html | ~$20 |
-| IEC C14 panel inlet with switch + fuse (S2 power box) | https://www.aliexpress.com/w/wholesale-iec-320-c14-switch-fuse.html | ~$4 |
-| M3 screw/standoff assortment (panel mounting) | https://www.aliexpress.com/w/wholesale-m3-screw-standoff-assortment.html | ~$6 |
-| Spare HUB75 IDC cables + 4-pin power harnesses | https://www.aliexpress.com/w/wholesale-hub75-16pin-idc-cable.html | ~$6 |
-| TCS34725 breakout (if MC/Adafruit not used) | https://www.aliexpress.com/w/wholesale-TCS34725.html | ~$3 |
-| VEML7700 breakout (S6 auto-brightness) | https://www.aliexpress.com/w/wholesale-VEML7700.html | ~$3 |
-| Optional: mini USB mic (S3 fingerprint fallback path) | https://www.aliexpress.com/w/wholesale-mini-usb-microphone.html | ~$8 |
+## Owned before this round
 
-## 3 · Mouser — one order (safety-critical; do NOT AliExpress these)
-| Item | Link | Price |
-|---|---|---|
-| Mean Well LRS-50-5 (S1 panel PSU) | https://www.mouser.com/ProductDetail/MEAN-WELL/LRS-50-5 | ~$16 |
-| Mean Well LRS-350-5 (S2 wall PSU) | https://www.mouser.com/ProductDetail/MEAN-WELL/LRS-350-5 | ~$45 |
-| SL22 10005 NTC inrush limiter | https://www.mouser.com/c/?q=SL22%2010005 | ~$3 |
-Mean Well fakes are rampant on AliExpress; the mains side is the one place we
-don't save $20.
+- Raspberry Pi 5, microSD, Active Cooler, 27 W USB-C supply
+- 10x 64x64 P2.5 HUB75 panels (9 for the wall, 1 spare)
+- Pico 2 W (spare from a previous project, hosts the colorimeter)
 
-## 4 · Adafruit — only for MC shelf gaps
-Triple Bonnet #6358 ($9.95) + riser (~$2): https://www.adafruit.com/product/6358
-Optional first-light-now panel #3649 ($54.95): https://www.adafruit.com/product/3649
-Genuine TCS34725 #1334 ($7.95): https://www.adafruit.com/product/1334
+## Ordered 2026-08-30
 
-## 5 · Amazon
-Behringer UCA202 line-in (S3 ears, ~$30): https://www.amazon.com/s?k=Behringer+UCA202
+Amazon, first order:
 
-## 6 · Local, at S6 (can't usefully pre-order)
-3 mm opal acrylic diffuser + 3 mm "LED grey" smoked ND acrylic, cut 480×480 mm
-(TAP Plastics or local shop); hardwood + French cleat + fasteners.
+| Item | Price |
+|---|---|
+| Plustool ratcheting crimper, AWG 22-10, heat shrink dies | $18.99 |
+| RVBOATPAT bus bar pair, 150 A, 1/4 inch studs, 12x M4 each | $16.99 |
+| URTOOLS heat gun, 900 W | $14.99 |
+| 100x blue 16-14 AWG heat shrink butt connectors | $9.99 |
+| OOK French cleat, 100 lb | $15.97 |
+| Fgruh 750 pc M3 hex screw kit (screws, nuts, washers, no standoffs) | $9.99 |
+| ELEGOO Dupont jumper kit | $6.98 |
+| 2x Amazon Basics IEC C13 power cords (one becomes the bench pigtail) | $13.88 |
+| Digital multimeter | $9.98 |
 
-## Notes
-- **1 GB Pi 5 verdict:** works for every on-device job in this build
-  (~450-550 MB steady state: OS ~200 + renderer <100 + brain ~150 + fpcalc
-  ~60 transient). bootstrap.sh now sets up zram; per-track beat-grid/section
-  precompute runs on the Mac by design. Take the 2 GB for ~$7 more if it's on
-  the shelf; don't make a second trip for it.
-- Panel power never transits the bonnet; injection per panel from the bus bar
-  at S2 (fused 14 AWG drops), NTC in the AC line, star ground at the PSU.
-- Multimeter discipline: verify the LRS outputs on the DC side; don't probe
-  mains with a budget meter.
+Amazon, second order:
+
+| Item | Price |
+|---|---|
+| Mean Well LRS-350-5, 300 W 5 V (wall supply, S2) | $43.54 |
+| Mean Well LRS-50-5, 50 W 5 V (bench supply, S1) | $19.90 |
+| Antrader IEC C14 inlet with switch and fuse, 2 pc | $9.99 |
+| Nilight 10x inline ATC fuse holders, 14 AWG | $10.10 |
+| 25x 10 A ATC blade fuses | $4.99 |
+| 2x TCS34725 color sensor breakouts | $8.99 |
+| Haerkn 14 AWG 2-core silicone wire, 25 ft | $19.98 |
+| 60 W soldering iron kit | $11.99 |
+| ALBO 250 pc blue 16-14 AWG heat shrink ring terminal kit | $19.99 |
+
+Adafruit:
+
+| Item | Price |
+|---|---|
+| Triple LED Matrix Bonnet #6358 | $9.95 |
+| Mini USB microphone #3367 (S3 fallback path) | $5.95 |
+| VEML7700 lux sensor #4162 (S6 auto-brightness, mount facing the ceiling) | $4.95 |
+
+## Still to buy
+
+Now, cheap, and actually needed before the first pigtail:
+
+- Wire strippers, 10-22 AWG, about $10. Nothing ordered strips wire, and the
+  bench pigtail means stripping the cut IEC cord on day one.
+- Small pack of red 22-16 AWG rings or forks, about $7. The IEC cord
+  conductors are 18 AWG, below the blue 16-14 range everything else covers.
+  (Bench workaround: double the stripped conductor over to fatten it into a
+  blue barrel.)
+
+Before the wall build (S2):
+
+- SL22 10005 NTC inrush limiter. Mouser 995-SL22-10005, $5.50 plus shipping,
+  or a genuine Ametherm listing on Amazon. Sim says 275 A inrush bare, 15.8 A
+  with it. Wall box only, the bench supply does not need it.
+- Nylon M3 standoffs (Ladinka 580 pc kit or similar, about $9). Measure a
+  panel's rear clearance first, then order. Metal standoffs over a panel back
+  full of live joints is a short waiting to happen.
+- Possibly a second 14 AWG spool. Sketch the layout first, 25 ft covers three
+  feed pairs plus nine short drops only if the bus bar sits central.
+
+S3:
+
+- Behringer UCA202 line-in, about $30.
+
+S6, local:
+
+- 3 mm opal acrylic and 3 mm smoked ND acrylic, each cut 480x480 mm.
+- Hardwood for the frame, fasteners.
+- Optional: assorted heat shrink tubing kit, about $7.
+
+## Verify on arrival
+
+- ALBO kit: count the 1/4 inch rings, the listing is new with thin history.
+- Bus bar box: check whether the 24 included terminals are 16-14 AWG rings.
+  If so they cover all 18 panel-drop positions.
+- Panel boxes: confirm IDC ribbons and 4-pin power harnesses shipped with the
+  panels.
+- LRS-350-5: inspect for signs of a returned or used unit, commingled
+  inventory has shipped dented units to other buyers. Verify both supplies
+  read 5.0 to 5.1 V on the multimeter before anything connects to them.
+
+## Corrections carried over from the old list
+
+- The crimper is a ratcheting AWG 22-10 heat shrink type. The previously
+  listed SN-48BS is a 26-16 AWG open barrel tool and cannot do this job.
+- Per-panel fuses are 10 A. A 64-wide panel at full white draws 7.68 A, so
+  the once-considered 7.5 A blows under a white-heavy sleeve.
+- Panel standoffs must be nylon, not metal.
+- Mean Well on Amazon only through brand-verified listings. A "Generic" LRS-350-5
+  listing claiming 73 A is not a real Mean Well and its own spec table
+  contradicts its title.
