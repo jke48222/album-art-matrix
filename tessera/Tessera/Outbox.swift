@@ -56,10 +56,20 @@ final class Outbox {
 
     init() { load() }
 
+    private var saveQueued = false
+
     func add(patch p: [String: Any]) {
         for (k, v) in p { patch[k] = v }
         patchAt = Date()
-        save()
+        // a live rpm drag lands forty patches in four seconds; one disk
+        // write a second remembers them just as well
+        guard !saveQueued else { return }
+        saveQueued = true
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(1))
+            self?.saveQueued = false
+            self?.save()
+        }
     }
 
     func add(frame f: [UInt8]) {

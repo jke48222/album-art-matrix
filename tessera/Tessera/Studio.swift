@@ -212,7 +212,7 @@ final class Canvas64 {
             let w = PixelFont.textWidth(line, scale: scale)
             var x = (64 - w) / 2
             for ch in line {
-                let (rows, gw, adv) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6)
+                let (rows, gw, adv, gdy) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6, 0)
                 let glyphInk: (UInt8, UInt8, UInt8)
                 if ch != " " {
                     glyphInk = gi < colors.count ? colors[gi] : rgb
@@ -225,7 +225,7 @@ final class Canvas64 {
                         for sy in 0..<scale {
                             for sx in 0..<scale {
                                 let xx = x + rx * scale + sx
-                                let yy = y + ry * scale + sy
+                                let yy = y + (ry + gdy) * scale + sy
                                 guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
                                 let o = (yy * 64 + xx) * 3
                                 out[o] = glyphInk.0; out[o + 1] = glyphInk.1; out[o + 2] = glyphInk.2

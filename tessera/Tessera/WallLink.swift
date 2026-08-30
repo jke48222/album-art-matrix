@@ -176,6 +176,8 @@ final class WallSession {
     /// long on a metronome — the flight recorder caught eleven of them.
     @ObservationIgnored private var probing = false
     @ObservationIgnored private var pulling = false
+    @ObservationIgnored private var lastSendSig = ""
+    @ObservationIgnored private var lastSendAt = Date.distantPast
     @ObservationIgnored private var wasLive = false
     /// Keys written locally and not yet echoed back. A /state poll must not
     /// clobber them: the brain persists asynchronously, so between the tap and
@@ -412,12 +414,26 @@ final class WallSession {
     }
 
     private func tickStandIn() {
+        // each stage timed: the recorder saw ~350ms hiccups in spin mode
+        // and this names the stage next time instead of leaving a lineup
+        var mark = CACurrentMediaTime()
+        func lap(_ name: String) {
+            let now = CACurrentMediaTime()
+            if now - mark > 0.12 {
+                FlightLog.note("SLOW", String(format: "%@ %.0fms in %@",
+                                              name, (now - mark) * 1000, state.mode))
+            }
+            mark = now
+        }
         standIn.refreshNowPlaying()
+        lap("refresh")
         // frame() first: a sleep fade expiring inside it flips mode to off,
         // and the state published here must be the one that drew the frame.
         frame = standIn.frame()
+        lap("frame")
         state = standIn.state
         live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
+        lap("liveActivity")
     }
 
     private var linkIsSearching: Bool { if case .searching = link { true } else { false } }
@@ -559,6 +575,15 @@ final class WallSession {
     /// POST a partial state patch. Optimistic locally, honest on failure:
     /// the next poll re-syncs whatever the wall actually accepted.
     func send(_ patch: [String: Any]) {
+        // The colour well fired identical patches four times in 30ms; the
+        // wall needs to hear each intent once.
+        let sig = patch.keys.sorted().map { "\($0)=\(patch[$0] ?? "")" }
+            .joined(separator: "&")
+        if sig == lastSendSig, Date().timeIntervalSince(lastSendAt) < 0.15 {
+            return
+        }
+        lastSendSig = sig
+        lastSendAt = Date()
         FlightLog.note("SEND", patch.keys.sorted().joined(separator: ","))
         // optimistic merge so controls answer instantly
         var merged = patch

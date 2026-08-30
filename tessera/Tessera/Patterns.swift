@@ -209,13 +209,13 @@ enum PixelDraw {
         var cx = x
         for ch in text {
             // both scripts: ASCII 5 wide, Hangul 7 wide, unknown = the box
-            let (rows, gw, adv) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6)
+            let (rows, gw, adv, gdy) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6, 0)
             for (ry, mask) in rows.enumerated() {
                 for rx in 0..<gw where mask & (1 << (gw - 1 - rx)) != 0 {
                     for sy in 0..<scale {
                         for sx in 0..<scale {
                             let xx = cx + rx * scale + sx
-                            let yy = y + ry * scale + sy
+                            let yy = y + (ry + gdy) * scale + sy
                             guard xx >= 0, xx < width, yy >= 0, yy < height else { continue }
                             let o = (yy * width + xx) * 3
                             px[o] = rgb.0; px[o + 1] = rgb.1; px[o + 2] = rgb.2

@@ -150,9 +150,31 @@ enum PixelFont {
         return data
     }()
 
-    /// (rows, width, advance) for any letterable character, else nil.
-    static func cell(_ ch: Character) -> (rows: [UInt8], width: Int, advance: Int)? {
-        if let rows = glyphs[ch] { return (rows, 5, 6) }
+    /// The rest of the world: cp -> (advance, dy, rows), parsed once from
+    /// World7.bin. Baked by Tools/gen_worldfont.py from Galmuri7 and
+    /// Misaki; kanji, kana, Greek, Cyrillic, accented Latin, punctuation.
+    static let world: [UInt32: (advance: Int, dy: Int, rows: [UInt8])] = {
+        guard let url = Bundle.main.url(forResource: "World7", withExtension: "bin"),
+              let blob = try? Data(contentsOf: url) else { return [:] }
+        var table: [UInt32: (Int, Int, [UInt8])] = [:]
+        var i = blob.startIndex
+        while i + 7 <= blob.endIndex {
+            let cp = UInt32(blob[i]) << 24 | UInt32(blob[i + 1]) << 16
+                   | UInt32(blob[i + 2]) << 8 | UInt32(blob[i + 3])
+            let adv = Int(Int8(bitPattern: blob[i + 4]))
+            let dy = Int(Int8(bitPattern: blob[i + 5]))
+            let n = Int(blob[i + 6])
+            i += 7
+            guard i + n <= blob.endIndex else { break }
+            table[cp] = (adv, dy, Array(blob[i..<(i + n)]))
+            i += n
+        }
+        return table
+    }()
+
+    /// (rows, width, advance, dy) for any letterable character, else nil.
+    static func cell(_ ch: Character) -> (rows: [UInt8], width: Int, advance: Int, dy: Int)? {
+        if let rows = glyphs[ch] { return (rows, 5, 6, 0) }
         guard ch.unicodeScalars.count == 1,
               let scalar = ch.unicodeScalars.first else { return nil }
         let cp = Int(scalar.value)
@@ -162,10 +184,11 @@ enum PixelFont {
         } else if cp >= 0x3131, cp <= 0x3163 {
             off = (11172 + cp - 0x3131) * 7
         } else {
+            if let w = world[UInt32(cp)] { return (w.rows, 8, w.advance, w.dy) }
             return nil
         }
         guard hangul.count >= off + 7 else { return nil }
-        return (Array(hangul[off..<(off + 7)]), 7, 8)
+        return (Array(hangul[off..<(off + 7)]), 7, 8, 0)
     }
 
     /// Total width including the one-column gaps, both scripts.

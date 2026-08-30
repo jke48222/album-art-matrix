@@ -64,15 +64,25 @@ enum LocalJournal {
 
         let ts = Int(Date().timeIntervalSince1970)
         all.append(Row(ts: ts, title: t, artist: artist ?? "", album: album ?? ""))
-        if let url = frameURL(ts) { try? Data(frame).write(to: url, options: .atomic) }
-
+        var dead: [URL] = []
         while all.count > limit {
             let gone = all.removeFirst()
-            if let url = frameURL(gone.ts) { try? FileManager.default.removeItem(at: url) }
+            if let url = frameURL(gone.ts) { dead.append(url) }
         }
         rows = all
-        if let url = indexURL, let data = try? JSONEncoder().encode(all) {
-            try? data.write(to: url, options: .atomic)
+        // The disk work happens OFF the main thread: writing 12KB plus the
+        // index synchronously froze a Studio push for half a second, and
+        // the flight recorder has the receipt.
+        let frameData = Data(frame)
+        let frameDst = frameURL(ts)
+        let indexDst = indexURL
+        let indexData = try? JSONEncoder().encode(all)
+        Task.detached(priority: .utility) {
+            if let frameDst { try? frameData.write(to: frameDst, options: .atomic) }
+            for url in dead { try? FileManager.default.removeItem(at: url) }
+            if let indexDst, let indexData {
+                try? indexData.write(to: indexDst, options: .atomic)
+            }
         }
     }
 
