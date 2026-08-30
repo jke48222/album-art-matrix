@@ -106,18 +106,21 @@ class Clock:
         hh, mm = f"{hour:02d}", f"{now.tm_min:02d}"
 
         digits_w = text_width(hh, self.SCALE)
-        colon_w = 4 * self.SCALE
-        total = digits_w * 2 + colon_w + 4 * self.SCALE
+        # The colon carries the whole gap: hours, a breath, two dots, a
+        # breath, minutes. The old spread put 16px between the groups and
+        # the face read as two separate numbers; 10px reads as one time.
+        gap = 5 * self.SCALE
+        total = digits_w * 2 + gap
         x = (self.size - total) // 2
         y = (self.size - 7 * self.SCALE) // 2 - (4 if suffix else 0)
 
         draw_text(canvas, hh, x, y, self.color, self.SCALE)
         if now.tm_sec % 2 == 0:                      # blink
-            cx = x + digits_w + 2 * self.SCALE
+            cx = x + digits_w + gap // 2 - 1
             cy = y + 2 * self.SCALE
             canvas[cy:cy + 2, cx:cx + 2] = self.color
             canvas[cy + 6:cy + 8, cx:cx + 2] = self.color
-        draw_text(canvas, mm, x + digits_w + colon_w + 4 * self.SCALE, y,
+        draw_text(canvas, mm, x + digits_w + gap, y,
                   self.color, self.SCALE)
         if suffix:
             sw = text_width(suffix, 1)

@@ -7,7 +7,7 @@
         "key": "counting down",
         "location": {
           "startingColumn": 30,
-          "startingLine": 67
+          "startingLine": 72
         }
       },
       {
@@ -15,7 +15,7 @@
         "key": "stop",
         "location": {
           "startingColumn": 32,
-          "startingLine": 71
+          "startingLine": 76
         }
       },
       {
@@ -23,7 +23,7 @@
         "key": "TESSERA",
         "location": {
           "startingColumn": 18,
-          "startingLine": 103
+          "startingLine": 108
         }
       },
       {
@@ -31,7 +31,7 @@
         "key": "Setup. Link is %@.",
         "location": {
           "startingColumn": 33,
-          "startingLine": 117
+          "startingLine": 122
         }
       },
       {
@@ -39,7 +39,39 @@
         "key": "Take the album's colours",
         "location": {
           "startingColumn": 26,
-          "startingLine": 189
+          "startingLine": 198
+        }
+      },
+      {
+        "comment": "",
+        "key": "Previous track",
+        "location": {
+          "startingColumn": 46,
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "Next track",
+        "location": {
+          "startingColumn": 48,
+          "startingLine": 298
+        }
+      },
+      {
+        "comment": "",
+        "key": "Pause",
+        "location": {
+          "startingColumn": 41,
+          "startingLine": 299
+        }
+      },
+      {
+        "comment": "",
+        "key": "Play",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 299
         }
       }
     ]

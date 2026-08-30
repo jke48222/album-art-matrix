@@ -100,26 +100,10 @@
       },
       {
         "comment": "",
-        "key": "size",
-        "location": {
-          "startingColumn": 18,
-          "startingLine": 701
-        }
-      },
-      {
-        "comment": "",
-        "key": "%lld",
-        "location": {
-          "startingColumn": 18,
-          "startingLine": 706
-        }
-      },
-      {
-        "comment": "",
         "key": "On the wall",
         "location": {
           "startingColumn": 25,
-          "startingLine": 767
+          "startingLine": 757
         }
       },
       {
@@ -127,7 +111,7 @@
         "key": "Play it on the wall",
         "location": {
           "startingColumn": 43,
-          "startingLine": 768
+          "startingLine": 758
         }
       },
       {
@@ -135,7 +119,7 @@
         "key": "Put it on the wall",
         "location": {
           "startingColumn": 67,
-          "startingLine": 768
+          "startingLine": 758
         }
       },
       {
@@ -143,7 +127,7 @@
         "key": "made",
         "location": {
           "startingColumn": 18,
-          "startingLine": 785
+          "startingLine": 775
         }
       },
       {
@@ -151,7 +135,7 @@
         "key": "Something you made. Tap to load it back.",
         "location": {
           "startingColumn": 45,
-          "startingLine": 807
+          "startingLine": 797
         }
       },
       {
@@ -159,7 +143,7 @@
         "key": "Delete",
         "location": {
           "startingColumn": 36,
-          "startingLine": 805
+          "startingLine": 795
         }
       },
       {
@@ -167,7 +151,7 @@
         "key": "Wide brush",
         "location": {
           "startingColumn": 37,
-          "startingLine": 856
+          "startingLine": 846
         }
       },
       {
@@ -175,7 +159,7 @@
         "key": "Fine brush",
         "location": {
           "startingColumn": 52,
-          "startingLine": 856
+          "startingLine": 846
         }
       },
       {
@@ -183,7 +167,7 @@
         "key": "wide",
         "location": {
           "startingColumn": 30,
-          "startingLine": 849
+          "startingLine": 839
         }
       },
       {
@@ -191,7 +175,31 @@
         "key": "fine",
         "location": {
           "startingColumn": 39,
-          "startingLine": 849
+          "startingLine": 839
+        }
+      },
+      {
+        "comment": "",
+        "key": "Word size",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 977
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld of 4",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 978
+        }
+      },
+      {
+        "comment": "",
+        "key": "A",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 951
         }
       }
     ]

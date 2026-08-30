@@ -53,31 +53,32 @@ struct Room: View {
     var body: some View {
         ZStack {
             Ink.ground
-            // The picture, thrown soft across the whole room. The softness
-            // is baked in (the frame is box-reduced to ten pixels and
-            // bilinear upscaling melts it), and the image is given the
-            // room's exact size: a resizable fill-mode image with no frame
-            // proposes its own enormous one and detonates the layout around
-            // it, which is a lesson this file has now learned twice.
-            if light > 0.001, let cg = Room.bitmap(px) {
-                GeometryReader { geo in
-                    Image(decorative: cg, scale: 1)
-                        .resizable()
-                        .interpolation(.high)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                }
-                .opacity(min(0.60, 0.16 + light * 0.55 * (1 + surge)))
-                .ignoresSafeArea()
-                LinearGradient(
-                    colors: [.clear, Ink.ground.opacity(0.55), Ink.ground.opacity(0.9)],
-                    startPoint: .top, endPoint: .bottom
+            // The cover's own colours, arranged the way the cover arranges
+            // them. Twelve regions of the frame are sampled where the mesh's
+            // control points sit, pushed toward their saturated selves, and
+            // poured through the gradient: the room agrees with the artwork
+            // spatially, not just statistically, and a red-left blue-right
+            // sleeve makes a red-left blue-right room. Stretching the actual
+            // image here read as a smear; this reads as light.
+            if light > 0.001, let tones = Room.tones(px) {
+                MeshGradient(
+                    width: 3,
+                    height: 4,
+                    points: [
+                        .init(0, 0),    .init(0.5, 0),    .init(1, 0),
+                        .init(0, 0.34), .init(0.5, 0.30), .init(1, 0.34),
+                        .init(0, 0.68), .init(0.5, 0.72), .init(1, 0.68),
+                        .init(0, 1),    .init(0.5, 1),    .init(1, 1),
+                    ],
+                    colors: tones
                 )
+                .opacity(min(0.75, 0.22 + light * 0.60 * (1 + surge)))
+                .blur(radius: 24)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
-            }
-            if light > 0.001, !palette.isEmpty {
+            } else if light > 0.001, !palette.isEmpty {
                 mesh
-                    .opacity(min(0.30, light * 0.22 * (1 + surge)))
+                    .opacity(min(0.40, light * 0.30 * (1 + surge)))
                     .blur(radius: 44)
                     .ignoresSafeArea()
             }
@@ -97,47 +98,57 @@ struct Room: View {
         .animation(.easeOut(duration: 0.9), value: surge)
     }
 
-    /// The frame box-reduced to 10x10: the mean of each block IS the blur,
-    /// computed once per new frame instead of per composited screen.
+    /// Twelve tones, one per mesh point, sampled from the frame region under
+    /// each point and pushed toward the cover's saturated self. Cached per
+    /// frame: twelve averages and hue conversions, done once, not per eval.
     private static var cachedKey: Int = 0
-    private static var cachedImage: CGImage? = nil
-    static func bitmap(_ px: [UInt8]?) -> CGImage? {
+    private static var cachedTones: [Color]? = nil
+    static func tones(_ px: [UInt8]?) -> [Color]? {
         guard let px, px.count == 64 * 64 * 3 else { return nil }
         var h = 0
         for i in stride(from: 0, to: px.count, by: 97) { h = h &* 31 &+ Int(px[i]) }
-        if h == cachedKey, let cachedImage { return cachedImage }
-        let side = 10
-        var rgba = [UInt8](repeating: 255, count: side * side * 4)
-        let block = 64 / side
-        for ty in 0..<side {
-            for tx in 0..<side {
-                var r = 0, g = 0, b = 0, n = 0
-                let x1 = tx == side - 1 ? 64 : (tx + 1) * block
-                let y1 = ty == side - 1 ? 64 : (ty + 1) * block
-                for y in (ty * block)..<y1 {
-                    for x in (tx * block)..<x1 {
-                        let o = (y * 64 + x) * 3
-                        r += Int(px[o]); g += Int(px[o + 1]); b += Int(px[o + 2]); n += 1
-                    }
+        if h == cachedKey, let cachedTones { return cachedTones }
+
+        func region(_ cx: Double, _ cy: Double) -> (Double, Double, Double) {
+            let x0 = max(0, Int(cx * 63) - 10), x1 = min(64, Int(cx * 63) + 11)
+            let y0 = max(0, Int(cy * 63) - 8), y1 = min(64, Int(cy * 63) + 9)
+            var r = 0.0, g = 0.0, b = 0.0, n = 0.0
+            for y in y0..<y1 {
+                for x in x0..<x1 {
+                    let o = (y * 64 + x) * 3
+                    r += Double(px[o]); g += Double(px[o + 1]); b += Double(px[o + 2])
+                    n += 1
                 }
-                let o = (ty * side + tx) * 4
-                rgba[o] = UInt8(r / max(1, n))
-                rgba[o + 1] = UInt8(g / max(1, n))
-                rgba[o + 2] = UInt8(b / max(1, n))
             }
+            return (r / n / 255, g / n / 255, b / n / 255)
         }
-        let cg = rgba.withUnsafeMutableBytes { raw -> CGImage? in
-            guard let ctx = CGContext(
-                data: raw.baseAddress, width: side, height: side,
-                bitsPerComponent: 8, bytesPerRow: side * 4,
-                space: CGColorSpaceCreateDeviceRGB(),
-                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-            ) else { return nil }
-            return ctx.makeImage()
+
+        /// The pop: hold the hue, raise the chroma, lift the floor. A dim
+        /// region keeps its identity instead of averaging into brown.
+        func voiced(_ c: (Double, Double, Double), floorLift: Double) -> Color {
+            let ui = UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
+            var hue: CGFloat = 0, sat: CGFloat = 0, bri: CGFloat = 0, a: CGFloat = 0
+            ui.getHue(&hue, saturation: &sat, brightness: &bri, alpha: &a)
+            return Color(hue: hue,
+                         saturation: min(1, sat * 1.6 + 0.06),
+                         brightness: min(1, bri * 1.15 + floorLift))
         }
+
+        // Sample where the mesh points sit; the bottom row goes to ground so
+        // the floor of the screen stays a floor.
+        let spots: [(Double, Double)] = [
+            (0.08, 0.10), (0.50, 0.08), (0.92, 0.10),
+            (0.08, 0.42), (0.50, 0.38), (0.92, 0.42),
+            (0.08, 0.75), (0.50, 0.80), (0.92, 0.75),
+        ]
+        var out = spots.enumerated().map { (i, s) in
+            voiced(region(s.0, s.1), floorLift: i < 3 ? 0.10 : 0.05)
+        }
+        out.append(contentsOf: [Ink.ground, Ink.ground, Ink.ground])
+
         cachedKey = h
-        cachedImage = cg
-        return cg
+        cachedTones = out
+        return out
     }
 
     private var a: Color { palette.first ?? Ink.tile }

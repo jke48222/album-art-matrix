@@ -5,6 +5,7 @@
 // brightness row, because the object is the control. Everything else on
 // screen is lit by what the panel is showing.
 
+import MediaPlayer
 import SwiftUI
 
 struct WallScreen: View {
@@ -54,7 +55,11 @@ struct WallScreen: View {
 
                 Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 26)
+                    .padding(.bottom, 18)
+
+                MusicBar(accent: accent, litInk: litInk)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 24)
 
                 if wall.state.mode == "timer", let left = wall.state.timerRemaining {
                     // The running countdown is never more than one glance and
@@ -119,6 +124,9 @@ struct WallScreen: View {
         .padding(.top, 4)
     }
 
+    /// Five faces. Words left this row at the owner's request: making text
+    /// lives in the Studio now, and a ticker set some other way (Siri, the
+    /// web) still surfaces its controls below when it is running.
     private var modeRow: some View {
         VStack(spacing: 16) {
             HStack(spacing: 0) {
@@ -127,9 +135,10 @@ struct WallScreen: View {
                 glyph(.lamp, "lamp", mode: "ambient")
             }
             HStack(spacing: 0) {
-                glyph(.letters, "words", mode: "ticker")
+                Spacer().frame(maxWidth: .infinity)
                 glyph(.clock, "clock", mode: "clock")
                 glyph(.dark, "off", mode: "off")
+                Spacer().frame(maxWidth: .infinity)
             }
         }
     }
@@ -231,5 +240,62 @@ struct WallScreen: View {
 
     private var nearestRpm: Double {
         [7.5, 33.33, 45.0].min(by: { abs($0 - wall.state.rpm) < abs($1 - wall.state.rpm) }) ?? 7.5
+    }
+}
+
+
+// MARK: - Music
+
+/// The music this phone is playing, steered from the same screen that shows
+/// what it lands on. Three keys and nothing else: the queue, the library and
+/// the rest of it belong to the music app, but play, skip and back are wall
+/// gestures now, because the wall is where the song is showing.
+private struct MusicBar: View {
+    let accent: Color
+    let litInk: Color
+
+    @State private var playing =
+        MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+
+    private var music: MPMusicPlayerController { .systemMusicPlayer }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            key(.back, small: true) { music.skipToPreviousItem() }
+                .frame(maxWidth: .infinity)
+            key(playing ? .pause : .play, small: false) {
+                if playing { music.pause() } else {
+                    StandIn.requestMusicAccess { music.play() }
+                }
+                playing.toggle()
+            }
+            .frame(maxWidth: .infinity)
+            key(.skip, small: true) { music.skipToNextItem() }
+                .frame(maxWidth: .infinity)
+        }
+        .padding(.horizontal, 44)
+        .onAppear { music.beginGeneratingPlaybackNotifications() }
+        .onReceive(NotificationCenter.default.publisher(
+            for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
+            playing = music.playbackState == .playing
+        }
+    }
+
+    private func key(_ glyph: Glyph, small: Bool,
+                     _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            ZStack {
+                Circle().strokeBorder(small ? Ink.hairline : accent.opacity(0.7),
+                                      lineWidth: small ? 1 : 1.5)
+                GlyphShape(glyph: glyph, lineWidth: 1.6)
+                    .frame(width: small ? 15 : 20, height: small ? 15 : 20)
+                    .foregroundStyle(small ? Ink.dim : litInk)
+            }
+            .frame(width: small ? 44 : 56, height: small ? 44 : 56)
+        }
+        .buttonStyle(PressStyle(scale: 0.9))
+        .accessibilityLabel(glyph == .back ? "Previous track"
+                            : glyph == .skip ? "Next track"
+                            : playing ? "Pause" : "Play")
     }
 }

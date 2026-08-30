@@ -697,17 +697,7 @@ struct StudioScreen: View {
         }
         // The size is a choice, not a consequence of how much you typed;
         // the stamp still refuses to let it overflow the panel.
-        HStack(spacing: 12) {
-            Text("size")
-                .font(.ui(12, .medium))
-                .foregroundStyle(Ink.dim)
-            Slider(value: $wordScale, in: 1...4, step: 1)
-                .tint(inkColor)
-            Text("\(Int(wordScale))")
-                .font(.machine(12))
-                .foregroundStyle(Ink.dim)
-                .frame(width: 16)
-        }
+        SizeRail(value: wordSize, ink: inkColor) { wordScale = Double($0) }
 
         // The same inker the wall's words use: both buttons, one language.
         if words.contains(where: { $0 != " " }) {
@@ -942,6 +932,55 @@ enum Clip {
     }
 }
 
+
+/// Four letters that ARE their own sizes: the control shows the choice
+/// instead of describing it. Tap one, or drag across the rail.
+private struct SizeRail: View {
+    let value: Int
+    let ink: Color
+    var onPick: (Int) -> Void
+
+    var body: some View {
+        GeometryReader { geo in
+            let slot = geo.size.width / 4
+            HStack(spacing: 0) {
+                ForEach(1...4, id: \.self) { i in
+                    let on = i == value
+                    let size = CGFloat(9 + i * 4)
+                    VStack(spacing: 6) {
+                        Text("A")
+                            .font(.machine(size))
+                            .foregroundStyle(on ? ink : Ink.dim)
+                        Rectangle()
+                            .fill(on ? ink : Ink.hairline)
+                            .frame(width: on ? 16 : 10, height: on ? 2 : 1)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .frame(height: 44, alignment: .bottom)
+                }
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { g in
+                        let i = min(4, max(1, Int(g.location.x / slot) + 1))
+                        if i != value {
+                            Taps.detent(intensity: 0.25 + Double(i) * 0.12)
+                            onPick(i)
+                        }
+                    }
+            )
+        }
+        .frame(height: 44)
+        .animation(Motion.settle, value: value)
+        .accessibilityElement()
+        .accessibilityLabel("Word size")
+        .accessibilityValue("\(value) of 4")
+        .accessibilityAdjustableAction { dir in
+            onPick(min(4, max(1, value + (dir == .increment ? 1 : -1))))
+        }
+    }
+}
 
 /// Picked media on its way to the framing step.
 struct FramingJob: Identifiable {
