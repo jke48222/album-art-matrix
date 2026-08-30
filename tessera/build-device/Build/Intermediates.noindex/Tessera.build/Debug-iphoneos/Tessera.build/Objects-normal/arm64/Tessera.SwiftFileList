@@ -8,6 +8,7 @@
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Intents.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/LiveWall.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/LocalJournal.swift
+/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Lyrics.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/NowPlaying.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Outbox.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Patterns.swift
@@ -16,8 +17,6 @@
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/RootView.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/SettingsSheet.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Snake.swift
-/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallActivity.swift
-/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallIntents.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/StandIn.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Studio.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/TesseraApp.swift
@@ -26,4 +25,6 @@
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/WallScreen.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/WallSnapshot.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/WornStats.swift
+/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallActivity.swift
+/Users/jalenedusei/fun-project/album-art-matrix/tessera/Shared/WallIntents.swift
 /Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/DerivedSources/GeneratedAssetSymbols.swift

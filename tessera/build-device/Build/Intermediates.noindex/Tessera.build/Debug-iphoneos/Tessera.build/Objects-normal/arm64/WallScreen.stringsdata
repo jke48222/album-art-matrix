@@ -20,6 +20,22 @@
       },
       {
         "comment": "",
+        "key": "The last nine sleeves the wall has worn, newest first.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 234
+        }
+      },
+      {
+        "comment": "",
+        "key": "The words, over the sleeve, in time with the song. They come from LRCLIB, so a track it has never heard shows the sleeve alone.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 240
+        }
+      },
+      {
+        "comment": "",
         "key": "TESSERA",
         "location": {
           "startingColumn": 18,
@@ -39,7 +55,7 @@
         "key": "Take the album's colours",
         "location": {
           "startingColumn": 26,
-          "startingLine": 198
+          "startingLine": 200
         }
       },
       {
@@ -47,7 +63,7 @@
         "key": "Previous track",
         "location": {
           "startingColumn": 46,
-          "startingLine": 297
+          "startingLine": 311
         }
       },
       {
@@ -55,7 +71,7 @@
         "key": "Next track",
         "location": {
           "startingColumn": 48,
-          "startingLine": 298
+          "startingLine": 312
         }
       },
       {
@@ -63,7 +79,7 @@
         "key": "Pause",
         "location": {
           "startingColumn": 41,
-          "startingLine": 299
+          "startingLine": 313
         }
       },
       {
@@ -71,7 +87,7 @@
         "key": "Play",
         "location": {
           "startingColumn": 51,
-          "startingLine": 299
+          "startingLine": 313
         }
       }
     ]

@@ -15,7 +15,7 @@ enum Glyph: String, CaseIterable, Hashable {
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
     case make, erase, photo, letters, clock, snake, fill, pen, undo
-    case play, pause, skip, back
+    case play, pause, skip, back, nine, lyrics
 }
 
 struct GlyphShape: View {
@@ -100,6 +100,41 @@ struct GlyphShape: View {
                                                 y: box.maxY - dd - 0.4 * u,
                                                 width: dd, height: dd)),
                          with: .color(.white))
+
+            case .nine:
+                // the wall's memory: three by three, the newest lit
+                let gap = 1.3 * u
+                let cell = (box.width - gap * 2) / 3
+                for i in 0..<9 {
+                    let r = CGRect(
+                        x: box.minX + CGFloat(i % 3) * (cell + gap),
+                        y: box.minY + CGFloat(i / 3) * (cell + gap),
+                        width: cell, height: cell)
+                    let path = Path(roundedRect: r, cornerRadius: 0.8 * u)
+                    if i == 0 {
+                        ctx.fill(path, with: .color(.white))
+                    } else {
+                        ctx.stroke(path, with: .color(.white), lineWidth: lw * 0.7)
+                    }
+                }
+
+            case .lyrics:
+                // words leaving a mouth: a quote pair and the line below it
+                for x in [box.minX + 3.4 * u, box.minX + 7.6 * u] {
+                    var tick = Path()
+                    tick.move(to: CGPoint(x: x + 1.6 * u, y: box.minY + 1.6 * u))
+                    tick.addLine(to: CGPoint(x: x, y: box.minY + 5.6 * u))
+                    ctx.stroke(tick, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                }
+                for (i, w) in [(0, 0.62), (1, 0.40)].map({ ($0.0, $0.1) }) {
+                    var line = Path()
+                    let ly = box.midY + CGFloat(i) * 3.4 * u + 1.2 * u
+                    line.move(to: CGPoint(x: box.minX + 1.4 * u, y: ly))
+                    line.addLine(to: CGPoint(x: box.minX + 1.4 * u + box.width * w, y: ly))
+                    ctx.stroke(line, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                }
 
             case .play:
                 var p = Path()

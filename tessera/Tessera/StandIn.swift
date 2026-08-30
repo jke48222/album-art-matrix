@@ -29,6 +29,9 @@ final class StandIn {
     private var mover: TextMover? = nil
     private var moverKey = ""
     private var moverT0 = Date()
+    private var nineFrame: [UInt8]? = nil
+    private var nineBuiltFor: Int? = nil
+    private let lyricsBook = LyricsBook()
     private var art: [UInt8]?          // 64x64x3 of whatever is playing
     private var artColors: [String] = []
     private var lastArtKey = ""
@@ -183,6 +186,8 @@ final class StandIn {
         case "ambient": px = ambient(t)
         case "timer":   px = countdownFrame()
         case "ticker":  px = letteringFrame()
+        case "nine":    px = nineGrid()
+        case "lyrics":  px = lyricsFrame()
         case "frame":  px = pushed ?? art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         case "clip":
             if let c = clip, !c.frames.isEmpty {
@@ -321,6 +326,74 @@ final class StandIn {
             state.mode = "art"
         }
         return px
+    }
+
+    /// The last nine sleeves this app has worn, from its own journal: real
+    /// frames, reduced to tiles. Rebuilt only when the journal's head moves.
+    private func nineGrid() -> [UInt8] {
+        let entries = LocalJournal.entries()
+        let newest = entries.first?.ts
+        if newest == nineBuiltFor, let nineFrame { return nineFrame }
+
+        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        var seen = Set<String>()
+        var slot = 0
+        let tick: (UInt8, UInt8, UInt8) = (26, 24, 22)
+        func corner(_ x: Int, _ y: Int) {
+            for (cx, cy) in [(x, y), (x + 19, y), (x, y + 19), (x + 19, y + 19)] {
+                let o = (cy * 64 + cx) * 3
+                out[o] = tick.0; out[o + 1] = tick.1; out[o + 2] = tick.2
+            }
+        }
+        for e in entries where slot < 9 {
+            let key = "\(e.title)|\(e.artist)"
+            guard !seen.contains(key), let full = LocalJournal.frame(e.ts) else { continue }
+            seen.insert(key)
+            let x0 = 1 + (slot % 3) * 21, y0 = 1 + (slot / 3) * 21
+            // 64 -> 20 by 3x3 block means sampled on a 3.2 stride
+            for ty in 0..<20 {
+                for tx in 0..<20 {
+                    var r = 0, g = 0, b = 0
+                    let sx = Int(Double(tx) * 3.2), sy = Int(Double(ty) * 3.2)
+                    for dy in 0..<3 {
+                        for dx in 0..<3 {
+                            let o = (min(63, sy + dy) * 64 + min(63, sx + dx)) * 3
+                            r += Int(full[o]); g += Int(full[o + 1]); b += Int(full[o + 2])
+                        }
+                    }
+                    let o = ((y0 + ty) * 64 + x0 + tx) * 3
+                    out[o] = UInt8(r / 9); out[o + 1] = UInt8(g / 9); out[o + 2] = UInt8(b / 9)
+                }
+            }
+            slot += 1
+        }
+        for empty in slot..<9 {
+            corner(1 + (empty % 3) * 21, 1 + (empty / 3) * 21)
+        }
+        nineFrame = out
+        nineBuiltFor = newest
+        return out
+    }
+
+    /// The words over the sleeve, on this phone's own playhead, which is the
+    /// best clock in the whole system: zero network between it and the song.
+    private func lyricsFrame() -> [UInt8] {
+        guard let art else { return [UInt8](repeating: 0, count: 64 * 64 * 3) }
+        if let title = state.title {
+            lyricsBook.ask(track: lastArtKey, artist: state.artist ?? "",
+                           title: title, album: state.album ?? "")
+        }
+        guard let sheet = lyricsBook.sheet, lyricsBook.track == lastArtKey else {
+            return art       // nothing to sing yet: the sleeve, undimmed
+        }
+        let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime
+        let ink = (state.matchArt ? artColors.first : nil).flatMap { rgb($0) }
+        let inkB: (UInt8, UInt8, UInt8) = ink.map {
+            (UInt8(min(255, $0.0 * 255 * 1.2 + 40)),
+             UInt8(min(255, $0.1 * 255 * 1.2 + 40)),
+             UInt8(min(255, $0.2 * 255 * 1.2 + 40)))
+        } ?? (244, 241, 234)
+        return LyricsBook.render(sheet: sheet, at: t, over: art, ink: inkB)
     }
 
     private func countdownFrame() -> [UInt8] {

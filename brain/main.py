@@ -25,6 +25,8 @@ from PIL import Image
 from .art.disc import DiscAnimator
 from .art.effects import Ambient
 from .art.fetch import fetch_art
+from .art.lyrics import LyricBook, LyricCanvas
+from .art.nine import NineBuilder
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
@@ -140,6 +142,10 @@ def main():
     prog = None                      # (seconds_in, monotonic_at, playing, total)
     ticker, ticker_key, ticker_t0 = None, None, 0.0
     countdown, countdown_key = None, None
+    nine = NineBuilder(size)
+    nine_shown = None
+    lyric_book = LyricBook()
+    lyric_canvas, lyric_key = None, None
     woke_on = None                   # date the wake fade last fired
     sun_f, sun_at = 1.0, 0.0         # evening factor, refreshed each poll
     away_forced = None               # mode we left when the wall went away
@@ -427,6 +433,47 @@ def main():
                     f = ticker.frame_at(tick - ticker_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     pace(tick)
+                    continue
+
+                if mode == "nine":
+                    # what the wall has worn lately, three by three
+                    nine.ask(ctrl.journal_read(60))
+                    img = nine.frame
+                    if img is not None and (nine.built_for, s["brightness"]) != nine_shown:
+                        sink.show(white_balance(img, eff).tobytes(), pre_wb_img=img)
+                        nine_shown = (nine.built_for, s["brightness"])
+                    elif img is None and not blacked:
+                        sink.show(black)
+                    if ctrl.dirty.wait(0.5):
+                        ctrl.dirty.clear()
+                        nine_shown = None
+                    continue
+
+                if mode == "lyrics":
+                    # the words, over the sleeve, on the song's clock
+                    if lyric_book.state == "done" and last_pre is not None \
+                            and prog is not None:
+                        key = (lyric_book.track, ink)
+                        if lyric_canvas is None or key != lyric_key:
+                            lyric_canvas = LyricCanvas(size, last_pre,
+                                                       lyric_book.sheet,
+                                                       color=ink)
+                            lyric_key = key
+                        tick = time.monotonic()
+                        at = prog[0] + (tick - prog[1] if prog[2] else 0.0)
+                        f = lyric_canvas.frame_at(at)
+                        sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                        if ctrl.dirty.wait(0.08):
+                            ctrl.dirty.clear()
+                        continue
+                    # nothing to sing yet: the sleeve stands in, undimmed
+                    if need_show and last_pre is not None:
+                        f = apply_finish(last_pre, s["finish"])
+                        sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                        need_show = False
+                    if ctrl.dirty.wait(0.5):
+                        ctrl.dirty.clear()
+                        need_show = True
                     continue
 
                 if mode == "timer":

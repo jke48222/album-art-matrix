@@ -246,7 +246,7 @@ final class WallSession {
                 // itself, the stand-in becomes the display while the outbox
                 // holds the intent for the wall's return.
                 if case .offline = self.link,
-                   ["ambient", "ticker", "timer", "cd"].contains(self.state.mode) {
+                   ["ambient", "ticker", "timer", "cd", "nine", "lyrics"].contains(self.state.mode) {
                     self.renderLocally()
                 }
                 tick &+= 1

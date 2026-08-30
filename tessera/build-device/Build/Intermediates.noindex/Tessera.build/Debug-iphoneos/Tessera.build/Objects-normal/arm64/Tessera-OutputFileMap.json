@@ -126,6 +126,16 @@
     "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal.swiftdeps",
     "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/LocalJournal~partial.swiftmodule"
   },
+  "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/Lyrics.swift" : {
+    "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.swiftconstvalues",
+    "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.d",
+    "diagnostics" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.dia",
+    "index-unit-output-path" : "/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.o",
+    "llvm-bc" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.bc",
+    "object" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.o",
+    "swift-dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics.swiftdeps",
+    "swiftmodule" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/Lyrics~partial.swiftmodule"
+  },
   "/Users/jalenedusei/fun-project/album-art-matrix/tessera/Tessera/NowPlaying.swift" : {
     "const-values" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.swiftconstvalues",
     "dependencies" : "/Users/jalenedusei/fun-project/album-art-matrix/tessera/build-device/Build/Intermediates.noindex/Tessera.build/Debug-iphoneos/Tessera.build/Objects-normal/arm64/NowPlaying.d",
