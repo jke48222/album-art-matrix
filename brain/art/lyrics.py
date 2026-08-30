@@ -49,11 +49,37 @@ def parse_lrc(text: str) -> list[tuple[float, str]]:
     return merged
 
 
+def split_voices(lines):
+    """Two voices out of one sheet: a line living entirely in parentheses
+    is the second singer; a trailing parenthetical is an echo belonging to
+    its line's moment. Each ad-lib owns a window to the next event."""
+    mains, raw = [], []
+    for t, text in lines:
+        text = text.strip()
+        if text.startswith("(") and text.endswith(")") and len(text) > 2:
+            raw.append((t, text))
+            continue
+        if text.endswith(")") and "(" in text[1:]:
+            cut = text.rindex("(")
+            main, echo = text[:cut].strip(), text[cut:]
+            if main:
+                mains.append((t, main))
+                raw.append((t, echo))
+                continue
+        mains.append((t, text))
+    starts = sorted(t for t, _ in lines)
+    adlibs = []
+    for t, text in raw:
+        nxt = next((x for x in starts if x > t + 0.05), t + 4)
+        adlibs.append((t, min(nxt, t + 6), text))
+    return mains, adlibs
+
+
 class LyricSheet:
     """One track's synced lines, and where we are in them."""
 
     def __init__(self, lines: list[tuple[float, str]]):
-        self.lines = lines
+        self.lines, self.adlibs = split_voices(lines)
 
     def at(self, t: float):
         """(line_text, starts, ends) for time t; text may be "" between
@@ -198,10 +224,10 @@ class LyricCanvas:
         self._laid[key] = (rows, scale)
         return rows, scale
 
-    def _preview(self, canvas, text: str):
-        """The coming line, one small dim row at the panel's foot: you read
-        the future while singing the present, which is karaoke's whole
-        trick, and what stops fast sequences reading as skipped."""
+    def _foot(self, canvas, text: str):
+        """The second singer's row: one row at the panel's foot, never
+        more, parentheses kept because that is how the second voice
+        writes. Empty when nobody is answering."""
         tokens = self._tokens(text)
         if not tokens:
             return
@@ -214,26 +240,18 @@ class LyricCanvas:
         draw_text(u8, row, x + 1, y + 1, (255, 255, 255), 1)
         mask = u8.sum(axis=2) > 0
         canvas[mask] *= 0.35
-        dim_ink = tuple(int(c * 0.42) for c in self.ink)
+        foot_ink = tuple(int(c * 0.66) for c in self.ink)
         u8[:] = 0
-        draw_text(u8, row, x, y, dim_ink, 1)
+        draw_text(u8, row, x, y, foot_ink, 1)
         mask = u8.sum(axis=2) > 0
         canvas[mask] = u8[mask]
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
         text, t0, t1 = self.sheet.at(t)
-        # what comes next, for the preview row
-        nxt = ""
-        lines = self.sheet.lines
-        if lines:
-            if not text and t < lines[0][0]:
-                nxt = lines[0][1]
-            else:
-                for i, (lt, _) in enumerate(lines):
-                    if lt == t0 and i + 1 < len(lines):
-                        nxt = lines[i + 1][1]
-                        break
+        # the foot row's claimants: a live ad-lib outranks the preview
+        adlib = next((a[2] for a in self.sheet.adlibs
+                      if a[0] <= t < a[1]), None)
         tokens = self._tokens(text) if text else []
         if tokens:
             n = len(tokens)
@@ -275,6 +293,6 @@ class LyricCanvas:
                         mask = u8.sum(axis=2) > 0
                         canvas[mask] = u8[mask]
                     y += line_h
-        if nxt:
-            self._preview(canvas, nxt)
+        if adlib:
+            self._foot(canvas, adlib)
         return Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), "RGB")
