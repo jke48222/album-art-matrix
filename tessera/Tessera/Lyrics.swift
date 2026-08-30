@@ -70,10 +70,18 @@ final class SongClock {
     }
 }
 
+/// One synced line: its start, its text, and, when the sheet is Enhanced
+/// LRC, the actual moment each word is sung.
+struct LyricLine {
+    let t: Double
+    let text: String
+    let words: [(Double, String)]?
+}
+
 @MainActor
 final class LyricsBook {
     private(set) var track = ""
-    private(set) var sheet: [(Double, String)]? = nil
+    private(set) var sheet: [LyricLine]? = nil
     /// The second voice: ad-libs and echoes, each with the window it owns.
     private(set) var adlibs: [(start: Double, end: Double, text: String)] = []
     /// Supersession by generation, not a lock: the old design refused new
@@ -110,26 +118,26 @@ final class LyricsBook {
     /// echo that belongs to that line's moment. Each ad-lib owns a window
     /// from its stamp to the next event, so it plays under whatever the
     /// first voice is doing.
-    static func splitVoices(_ lines: [(Double, String)])
-        -> (mains: [(Double, String)], adlibs: [(Double, Double, String)]) {
-        var mains: [(Double, String)] = []
+    static func splitVoices(_ lines: [LyricLine])
+        -> (mains: [LyricLine], adlibs: [(Double, Double, String)]) {
+        var mains: [LyricLine] = []
         var raw: [(Double, String)] = []      // adlib starts, windows later
         let paren = /\([^()]*\)/
-        for (t, text) in lines {
-            let trimmed = text.trimmingCharacters(in: .whitespaces)
-            // parentheses are the second voice, wherever they sit in the
-            // line: leading, trailing, or right in the middle of it
+        for line in lines {
+            let trimmed = line.text.trimmingCharacters(in: .whitespaces)
             let groups = trimmed.matches(of: paren).map { String($0.output) }
             for g in groups where g.count > 2 {
-                raw.append((t, g))
+                raw.append((line.t, g))
             }
             let main = trimmed.replacing(paren, with: " ")
                 .split(separator: " ").joined(separator: " ")
             if !main.isEmpty {
-                mains.append((t, main))
+                // word stamps survive only if the line kept all its words
+                mains.append(LyricLine(t: line.t, text: main,
+                                       words: main == trimmed ? line.words : nil))
             }
         }
-        let everyStart = lines.map { $0.0 }.sorted()
+        let everyStart = lines.map { $0.t }.sorted()
         let adlibs = raw.map { (t, text) -> (Double, Double, String) in
             let next = everyStart.first { $0 > t + 0.05 } ?? (t + 4)
             return (t, min(next, t + 6), text)
@@ -140,7 +148,7 @@ final class LyricsBook {
     // MARK: fetch
 
     static func fetch(artist: String, title: String, album: String,
-                      duration: Double? = nil) async -> [(Double, String)]? {
+                      duration: Double? = nil) async -> [LyricLine]? {
         // nil = transport failed (worth retrying); [] = answered, no rows
         func request(_ path: String, _ items: [URLQueryItem]) async -> [[String: Any]]? {
             var comps = URLComponents(string: "https://lrclib.net/api/\(path)")!
@@ -204,30 +212,66 @@ final class LyricsBook {
         return nil
     }
 
-    static func parse(lrc: String) -> [(Double, String)] {
-        var out: [(Double, String)] = []
+    static func parse(lrc: String) -> [LyricLine] {
+        // The whole spec, because the spec is where the sync lives:
+        // [offset:±ms] is a shift baked in by whoever synced the file
+        // (positive = the lyrics belong EARLIER), and <mm:ss.xx> stamps are
+        // Enhanced LRC's real word times.
+        var off = 0.0
+        if let m = lrc.firstMatch(of: /\[offset:\s*([+-]?\d+)\s*\]/.ignoresCase()) {
+            off = (Double(m.output.1) ?? 0) / 1000.0
+        }
+        var out: [LyricLine] = []
         let stamp = /\[(\d+):(\d+(?:\.\d+)?)\]/
+        let wordStamp = /<(\d+):(\d+(?:\.\d+)?)>/
         for raw in lrc.split(separator: "\n", omittingEmptySubsequences: false) {
             let line = String(raw)
             let stamps = line.matches(of: stamp)
             guard !stamps.isEmpty else { continue }
-            let text = line.replacing(stamp, with: "").trimmingCharacters(in: .whitespaces)
+            var text = line.replacing(stamp, with: "").trimmingCharacters(in: .whitespaces)
+            var words: [(Double, String)]? = nil
+            let wstamps = text.matches(of: wordStamp)
+            if !wstamps.isEmpty {
+                var built: [(Double, String)] = []
+                var cursor = text.startIndex
+                var pendingT: Double? = nil
+                for m in wstamps {
+                    let chunk = String(text[cursor..<m.range.lowerBound])
+                        .trimmingCharacters(in: .whitespaces)
+                    if let pt = pendingT, !chunk.isEmpty {
+                        built.append((pt, chunk))
+                    }
+                    pendingT = (Double(m.output.1) ?? 0) * 60
+                        + (Double(m.output.2) ?? 0) - off
+                    cursor = m.range.upperBound
+                }
+                let tail = String(text[cursor...]).trimmingCharacters(in: .whitespaces)
+                if let pt = pendingT, !tail.isEmpty { built.append((pt, tail)) }
+                if !built.isEmpty {
+                    words = built
+                    text = built.map { $0.1 }.joined(separator: " ")
+                }
+            }
             for m in stamps {
-                let t = (Double(m.output.1) ?? 0) * 60 + (Double(m.output.2) ?? 0)
-                out.append((t, text))
+                let t = (Double(m.output.1) ?? 0) * 60 + (Double(m.output.2) ?? 0) - off
+                out.append(LyricLine(t: t, text: text, words: words))
             }
         }
-        out.sort { $0.0 < $1.0 }
-        // Lines sharing a timestamp (duets, ad-libs) collapse into one:
-        // otherwise only the later of the pair ever shows and the other is
-        // "skipped", which is exactly what it looked like.
-        var merged: [(Double, String)] = []
-        for (t, text) in out {
-            if let last = merged.last, t - last.0 < 0.05 {
-                merged[merged.count - 1].1 = last.1.isEmpty
-                    ? text : last.1 + " " + text
+        out.sort { $0.t < $1.t }
+        var merged: [LyricLine] = []
+        for line in out {
+            if let last = merged.last, line.t - last.t < 0.05 {
+                let joinedWords: [(Double, String)]? = {
+                    if last.words == nil && line.words == nil { return nil }
+                    return (last.words ?? []) + (line.words ?? [])
+                }()
+                merged[merged.count - 1] = LyricLine(
+                    t: last.t,
+                    text: (last.text + " " + line.text)
+                        .trimmingCharacters(in: .whitespaces),
+                    words: joinedWords)
             } else {
-                merged.append((t, text))
+                merged.append(line)
             }
         }
         return merged
@@ -255,7 +299,7 @@ final class LyricsBook {
     /// republish entirely.
     private static var frameMemo: (key: String, px: [UInt8])? = nil
 
-    static func render(sheet: [(Double, String)], at t: Double,
+    static func render(sheet: [LyricLine], at t: Double,
                        adlibs: [(start: Double, end: Double, text: String)] = [],
                        over art: [UInt8], artKey: String = "",
                        ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
@@ -283,8 +327,9 @@ final class LyricsBook {
             drawFoot(&px, footRows, at: footTop, ink: ink)
             return px
         }
-        let (t0, text) = sheet[idx]
-        let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
+        let line = sheet[idx]
+        let (t0, text) = (line.t, line.text)
+        let t1 = idx + 1 < sheet.count ? sheet[idx + 1].t : t0 + 6
         let tokens = letterableTokens(text)
         guard !tokens.isEmpty else {
             drawFoot(&px, footRows, at: footTop, ink: ink)
@@ -293,16 +338,12 @@ final class LyricsBook {
 
         // timing runs on the FULL line so sizes never change the rhythm
         let n = tokens.count
-        let span = min(2.4, max(0.6, (t1 - t0) * 0.55))
-        let step = span / Double(n)
+        let borns = birthTimes(tokens: tokens, t0: t0, t1: t1, words: line.words)
         var visible = 0
         var newestK = 1.0
-        for i in 0..<n {
-            let born = t0 + Double(i) * step
-            if t >= born {
-                visible = i + 1
-                newestK = min(1.0, (t - born) / ramp)
-            }
+        for i in 0..<n where t >= borns[i] {
+            visible = i + 1
+            newestK = min(1.0, (t - borns[i]) / ramp)
         }
         guard visible > 0 else { return px }
 
@@ -410,18 +451,44 @@ final class LyricsBook {
         return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(maxRows)), 1)
     }
 
+    /// When each token arrives: the sheet's own Enhanced-LRC stamps when it
+    /// has them, else a spread weighted by word length, because long words
+    /// take longer to sing and equal steps never felt like the song.
+    static func birthTimes(tokens: [String], t0: Double, t1: Double,
+                           words: [(Double, String)]?) -> [Double] {
+        if let words {
+            let stamped = words.compactMap { (wt, wtxt) -> Double? in
+                let kept = PixelFont.normalize(wtxt.lowercased())
+                    .filter { PixelFont.cell($0) != nil || $0 == " " }
+                    .trimmingCharacters(in: .whitespaces)
+                return kept.isEmpty ? nil : wt
+            }
+            if stamped.count == tokens.count { return stamped }
+        }
+        let span = min(2.4, max(0.6, (t1 - t0) * 0.55))
+        let weights = tokens.map { Double(max(2, $0.count)) }
+        let total = weights.reduce(0, +)
+        var borns: [Double] = []
+        var acc = 0.0
+        for w in weights {
+            borns.append(t0 + span * acc / total)
+            acc += w
+        }
+        return borns
+    }
+
     static func letterableTokens(_ text: String) -> [String] {
         PixelFont.normalize(text.lowercased())
             .filter { PixelFont.cell($0) != nil || $0 == " " }
             .split(separator: " ").map(String.init)
     }
 
-    private static func currentIndex(_ sheet: [(Double, String)], _ t: Double) -> Int? {
-        guard let first = sheet.first, t >= first.0 else { return nil }
+    private static func currentIndex(_ sheet: [LyricLine], _ t: Double) -> Int? {
+        guard let first = sheet.first, t >= first.t else { return nil }
         var lo = 0, hi = sheet.count - 1
         while lo < hi {
             let mid = (lo + hi + 1) / 2
-            if sheet[mid].0 <= t { lo = mid } else { hi = mid - 1 }
+            if sheet[mid].t <= t { lo = mid } else { hi = mid - 1 }
         }
         return lo
     }

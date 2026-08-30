@@ -461,7 +461,9 @@ def main():
                             lyric_key = key
                         tick = time.monotonic()
                         at = prog[0] + (tick - prog[1] if prog[2] else 0.0)
-                        f = lyric_canvas.frame_at(at)
+                        # the same anticipation the phone shows: a word is
+                        # readable AS it is sung, not a beat after
+                        f = lyric_canvas.frame_at(at + 0.20)
                         sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                         if ctrl.dirty.wait(0.08):
                             ctrl.dirty.clear()
