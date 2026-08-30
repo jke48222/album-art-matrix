@@ -169,6 +169,12 @@ final class WallSession {
     #endif
 
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
+    /// One probe or pull in flight at a time, and NEVER awaited inside the
+    /// render loop: an unreachable wall's connection timeout is three whole
+    /// seconds, and awaiting it inline froze rendering for exactly that
+    /// long on a metronome — the flight recorder caught eleven of them.
+    @ObservationIgnored private var probing = false
+    @ObservationIgnored private var pulling = false
     @ObservationIgnored private var wasLive = false
     /// Keys written locally and not yet echoed back. A /state poll must not
     /// clobber them: the brain persists asynchronously, so between the tap and
@@ -228,10 +234,15 @@ final class WallSession {
                 guard let self else { return }
                 if self.link.isStandIn {
                     self.tickStandIn()
-                    // Keep looking for a real wall: one quiet probe every 5s,
-                    // so a Pi that boots later takes over by itself instead
-                    // of waiting for someone to find Look again in Setup.
-                    if tick % 40 == 0 { await self.pollState() }
+                    // Keep looking for a real wall, but in the background:
+                    // the probe shares no fate with the frame clock.
+                    if tick % 90 == 0, !self.probing {
+                        self.probing = true
+                        Task { [weak self] in
+                            await self?.pollState()
+                            self?.probing = false
+                        }
+                    }
                     tick &+= 1
                     // words pop on the song's clock; everything else is
                     // happy at ten frames a second
@@ -240,8 +251,20 @@ final class WallSession {
                     continue
                 }
                 let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
-                if tick % 16 == 0 { await self.pollState() }          // 2s
-                if animating || tick % 2 == 0 { await self.pullFrame() }
+                if tick % 16 == 0, !self.probing {                    // ~2s
+                    self.probing = true
+                    Task { [weak self] in
+                        await self?.pollState()
+                        self?.probing = false
+                    }
+                }
+                if animating || tick % 2 == 0, !self.pulling {
+                    self.pulling = true
+                    Task { [weak self] in
+                        await self?.pullFrame()
+                        self?.pulling = false
+                    }
+                }
                 // An away wall keeps its last sleeve on screen, which is
                 // honest for art and a lie for everything animated: choose
                 // the lamp with no wall answering and a frozen sleeve says

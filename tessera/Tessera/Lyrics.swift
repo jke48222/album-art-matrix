@@ -26,11 +26,13 @@ final class SongClock {
     private var anchorTime: Double = 0
     private var anchorHost: Double = 0
     private var lastRaw: Double = -1
+    private var lastCorrect: Double = 0
+    private var highWater: Double = 0
     private var stateAt: Double = 0
     private var statePlaying = true
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
-    func hardReset() { lastRaw = -1; stateAt = 0 }
+    func hardReset() { lastRaw = -1; stateAt = 0; highWater = 0 }
 
     func now() -> Double {
         let raw = music.currentPlaybackTime
@@ -54,8 +56,12 @@ final class SongClock {
             return raw
         }
         let predicted = anchorTime + (host - anchorHost)
-        if raw != lastRaw {
+        // corrections at most four times a second: on devices where the raw
+        // value is fresh every call, chasing it at frame rate would make
+        // the clock as jittery as the thing it exists to smooth
+        if raw != lastRaw, host - lastCorrect > 0.25 {
             lastRaw = raw
+            lastCorrect = host
             let diff = raw - predicted
             if abs(diff) > 0.25 {
                 // wrong by more than a word: follow the player at once. The
@@ -71,7 +77,13 @@ final class SongClock {
                 anchorTime += diff * 0.5
             }
         }
-        return anchorTime + (host - anchorHost)
+        // display time never walks backwards inside a track: a jittery raw
+        // must not un-sing words. A real backward seek exceeds the guard
+        // and resets the high-water mark through the jump above.
+        let out = anchorTime + (host - anchorHost)
+        if out + 0.3 < highWater { highWater = out }     // a genuine seek back
+        highWater = max(highWater, out)
+        return highWater
     }
 }
 
@@ -304,6 +316,26 @@ final class LyricsBook {
     /// republish entirely.
     private static var frameMemo: (key: String, px: [UInt8])? = nil
 
+    /// A flight recorder for the sync itself: every rendered lyric frame
+    /// appends one line. Pulled off the device to see what actually
+    /// happened instead of theorizing about it.
+    static var diag: [String] = []
+    static var diagWall: Double = 0
+    static func diagNote(raw: Double, clock: Double, idx: Int, visible: Int) {
+        let now = CACurrentMediaTime()
+        diag.append(String(format: "%.3f raw=%.3f clk=%.3f idx=%d vis=%d",
+                           now, raw, clock, idx, visible))
+        if diag.count > 3000 { diag.removeFirst(1000) }
+        if now - diagWall > 5 {
+            diagWall = now
+            let url = FileManager.default.urls(
+                for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("lyrlog.txt")
+            try? diag.joined(separator: "\n").write(
+                to: url, atomically: true, encoding: .utf8)
+        }
+    }
+
     static func render(sheet: [LyricLine], at t: Double,
                        adlibs: [(start: Double, end: Double, text: String)] = [],
                        over art: [UInt8], artKey: String = "",
@@ -350,6 +382,8 @@ final class LyricsBook {
             visible = i + 1
             newestK = min(1.0, (t - borns[i]) / ramp)
         }
+        diagNote(raw: MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime,
+                 clock: t, idx: idx, visible: visible)
         guard visible > 0 else {
             drawFoot(&px, footRows, at: footTop, ink: ink)
             return px

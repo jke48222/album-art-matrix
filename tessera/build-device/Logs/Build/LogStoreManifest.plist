@@ -6,7 +6,7 @@
 	<integer>13</integer>
 	<key>logs</key>
 	<dict>
-		<key>39920CCD-6B45-488A-8411-6EC9611F5EFD</key>
+		<key>56DB2100-3E29-49AD-AF46-F48B0EF14417</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>39920CCD-6B45-488A-8411-6EC9611F5EFD.xcactivitylog</string>
+			<string>56DB2100-3E29-49AD-AF46-F48B0EF14417.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -40,15 +40,15 @@
 			<key>signature</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>timeStartedRecording</key>
-			<real>809821530.75654399</real>
+			<real>809822574.93536603</real>
 			<key>timeStoppedRecording</key>
-			<real>809821543.15148795</real>
+			<real>809822586.78213203</real>
 			<key>title</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>uniqueIdentifier</key>
-			<string>39920CCD-6B45-488A-8411-6EC9611F5EFD</string>
+			<string>56DB2100-3E29-49AD-AF46-F48B0EF14417</string>
 		</dict>
-		<key>804D0D54-8553-4339-B06A-C4AD5466B4EF</key>
+		<key>6F09F627-1B7E-484C-905D-559870BD3C8B</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -57,7 +57,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>804D0D54-8553-4339-B06A-C4AD5466B4EF.xcactivitylog</string>
+			<string>6F09F627-1B7E-484C-905D-559870BD3C8B.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -82,13 +82,13 @@
 			<key>signature</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>timeStartedRecording</key>
-			<real>809821838.99582005</real>
+			<real>809823252.54237401</real>
 			<key>timeStoppedRecording</key>
-			<real>809821850.34034801</real>
+			<real>809823265.37927699</real>
 			<key>title</key>
 			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>uniqueIdentifier</key>
-			<string>804D0D54-8553-4339-B06A-C4AD5466B4EF</string>
+			<string>6F09F627-1B7E-484C-905D-559870BD3C8B</string>
 		</dict>
 	</dict>
 </dict>
