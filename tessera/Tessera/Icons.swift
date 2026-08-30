@@ -53,45 +53,34 @@ struct GlyphShape: View {
                 ctx.fill(head, with: .color(.white))
 
             case .pen:
-                // a fountain nib at its angle: the kite, the slit, the
-                // breather, and the line it is mid-way through making
-                let tip = CGPoint(x: box.minX + 2.4 * u, y: box.maxY - 3.4 * u)
-                let ax = 0.7071, ay = -0.7071          // the nib's axis, 45 up
-                func along(_ d: CGFloat, _ side: CGFloat) -> CGPoint {
+                // a pencil, simply: body, collar, tip, lead
+                let tip = CGPoint(x: box.minX + 2.2 * u, y: box.maxY - 2.2 * u)
+                let ax = 0.7071, ay = -0.7071
+                func at(_ d: CGFloat, _ side: CGFloat) -> CGPoint {
                     CGPoint(x: tip.x + d * ax - side * ay,
                             y: tip.y + d * ay + side * ax)
                 }
-                let joint = along(7.2 * u, 0)
-                var nib = Path()
-                nib.move(to: tip)
-                nib.addQuadCurve(to: along(5.4 * u, 2.5 * u),
-                                 control: along(1.8 * u, 2.2 * u))
-                nib.addQuadCurve(to: joint, control: along(7.0 * u, 1.4 * u))
-                nib.addQuadCurve(to: along(5.4 * u, -2.5 * u),
-                                 control: along(7.0 * u, -1.4 * u))
-                nib.addQuadCurve(to: tip, control: along(1.8 * u, -2.2 * u))
-                ctx.stroke(nib, with: .color(.white),
+                var point = Path()
+                point.move(to: tip)
+                point.addLine(to: at(4.2 * u, 2.0 * u))
+                point.addLine(to: at(4.2 * u, -2.0 * u))
+                point.closeSubpath()
+                ctx.stroke(point, with: .color(.white),
                            style: StrokeStyle(lineWidth: lw * 0.9, lineJoin: .round))
-                var slit = Path()
-                slit.move(to: tip)
-                slit.addLine(to: along(3.4 * u, 0))
-                ctx.stroke(slit, with: .color(.white), lineWidth: lw * 0.7)
-                let vent = 1.5 * u
-                ctx.fill(Path(ellipseIn: CGRect(x: along(4.4 * u, 0).x - vent / 2,
-                                                y: along(4.4 * u, 0).y - vent / 2,
-                                                width: vent, height: vent)),
+                let lead = 1.3 * u
+                ctx.fill(Path(ellipseIn: CGRect(x: tip.x - lead * 0.35,
+                                                y: tip.y - lead * 0.65,
+                                                width: lead, height: lead)),
                          with: .color(.white))
-                var barrel = Path()
-                barrel.move(to: along(8.2 * u, 0))
-                barrel.addLine(to: along(11.6 * u, 0))
-                ctx.stroke(barrel, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 2.1, lineCap: .round))
-                var written = Path()
-                written.move(to: CGPoint(x: tip.x - 1.2 * u, y: tip.y + 2.2 * u))
-                written.addQuadCurve(
-                    to: CGPoint(x: tip.x + 7.4 * u, y: tip.y + 2.2 * u),
-                    control: CGPoint(x: tip.x + 3.0 * u, y: tip.y + 3.4 * u))
-                ctx.stroke(written, with: .color(.white),
+                var body = Path()
+                body.move(to: at(5.2 * u, 0))
+                body.addLine(to: at(12.0 * u, 0))
+                ctx.stroke(body, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 2.4, lineCap: .round))
+                var collar = Path()
+                collar.move(to: at(5.2 * u, 1.8 * u))
+                collar.addLine(to: at(5.2 * u, -1.8 * u))
+                ctx.stroke(collar, with: .color(.white),
                            style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
 
             case .fill:
@@ -380,11 +369,20 @@ struct GlyphShape: View {
                     ctx.stroke(serif, with: .color(.white),
                                style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
                 }
-                var cursor = Path()
-                cursor.move(to: CGPoint(x: box.maxX - 1.6 * u, y: box.midY + 0.4 * u))
-                cursor.addLine(to: CGPoint(x: box.maxX - 1.6 * u, y: box.maxY - 1.4 * u))
-                ctx.stroke(cursor, with: .color(.white),
+                // the caret as it actually looks: an I-beam, caps and all
+                let cx2 = box.maxX - 1.8 * u
+                var beam = Path()
+                beam.move(to: CGPoint(x: cx2, y: box.midY - 0.2 * u))
+                beam.addLine(to: CGPoint(x: cx2, y: box.maxY - 1.2 * u))
+                ctx.stroke(beam, with: .color(.white),
                            style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
+                for capY in [box.midY - 0.2 * u, box.maxY - 1.2 * u] {
+                    var cap = Path()
+                    cap.move(to: CGPoint(x: cx2 - 1.2 * u, y: capY))
+                    cap.addLine(to: CGPoint(x: cx2 + 1.2 * u, y: capY))
+                    ctx.stroke(cap, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
+                }
             }
         }
         .accessibilityHidden(true)

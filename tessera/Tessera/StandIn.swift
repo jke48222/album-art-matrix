@@ -400,7 +400,8 @@ final class StandIn {
         // the person singing along can hear by how much.
         let nudge = UserDefaults.standard.double(forKey: "lyrics.nudge")
         let t = MPMusicPlayerController.systemMusicPlayer.currentPlaybackTime + 0.35 + nudge
-        return LyricsBook.render(sheet: sheet, at: t, over: art, ink: (244, 241, 234))
+        return LyricsBook.render(sheet: sheet, at: t, over: art,
+                                 artKey: lastArtKey, ink: (244, 241, 234))
     }
 
     /// The finishes, phone-side, so choosing one changes the wall you are

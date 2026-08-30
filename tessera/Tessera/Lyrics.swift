@@ -126,11 +126,28 @@ final class LyricsBook {
     static let dim: Float = 0.26
 
     private static var layoutCache: [String: ([String], Int)] = [:]
+    /// The dimmed sleeve, computed once per track instead of 12k multiplies
+    /// per tick.
+    private static var dimCache: (key: String, px: [UInt8])? = nil
+    /// Whole frames memoized on their visual state. Between word pops the
+    /// picture does not change, and rendering an identical frame ten times a
+    /// second was the lyric lag: every tick re-lettered, re-published, and
+    /// dragged a full SwiftUI pass behind it. Now a tick that changes
+    /// nothing costs a dictionary lookup, and equality upstream stops the
+    /// republish entirely.
+    private static var frameMemo: (key: String, px: [UInt8])? = nil
 
     static func render(sheet: [(Double, String)], at t: Double,
-                       over art: [UInt8],
+                       over art: [UInt8], artKey: String = "",
                        ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
-        var px = art.map { UInt8(Float($0) * dim) }
+        let base: [UInt8]
+        if let c = dimCache, c.key == artKey, !artKey.isEmpty {
+            base = c.px
+        } else {
+            base = art.map { UInt8(Float($0) * dim) }
+            if !artKey.isEmpty { dimCache = (artKey, base) }
+        }
+        var px = base
 
         guard let idx = currentIndex(sheet, t) else { return px }
         let (t0, text) = sheet[idx]
@@ -152,6 +169,12 @@ final class LyricsBook {
             }
         }
         guard visible > 0 else { return px }
+
+        // the frame's whole visual identity: line, words shown, and the
+        // newest word's ramp bucketed to its handful of distinct steps
+        let kBucket = newestK >= 1 ? 9 : Int(newestK * 8)
+        let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)"
+        if let memo = frameMemo, memo.key == frameKey { return memo.px }
 
         let key = "\(t0)|\(visible)|\(text.hashValue)"
         let (rows, scale): ([String], Int)
@@ -198,6 +221,7 @@ final class LyricsBook {
             }
             y += lineH
         }
+        frameMemo = (frameKey, px)
         return px
     }
 

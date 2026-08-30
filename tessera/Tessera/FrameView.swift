@@ -441,7 +441,10 @@ struct WallHero: View {
                             // was the bug that felt so wrong.
                             let fling = abs(g.predictedEndTranslation.width - dx) > 60
                             if back == 0, abs(dx) > 36, abs(dx) < stride, fling {
-                                if dx < 0 { onFlickPrev() } else { onFlickNext() }
+                                // the phone convention: push the song away to
+                                // the left for the NEXT one, pull from the
+                                // left for the previous
+                                if dx < 0 { onFlickNext() } else { onFlickPrev() }
                                 Taps.commit()
                             } else if back > 0, let run = scrubbed {
                                 onWear(run.entry)
