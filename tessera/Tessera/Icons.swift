@@ -14,7 +14,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
-    case make, erase, photo, letters, clock, snake, fill
+    case make, erase, photo, letters, clock, snake, fill, pen, undo
 }
 
 struct GlyphShape: View {
@@ -30,6 +30,46 @@ struct GlyphShape: View {
             let lw = lineWidth * max(1, u)
 
             switch glyph {
+            case .undo:
+                // back the way it came: an arc returning, arrowhead first
+                let c = CGPoint(x: box.midX, y: box.midY + 0.8 * u)
+                let r = box.width * 0.34
+                var arc = Path()
+                arc.addArc(center: c, radius: r,
+                           startAngle: .degrees(10), endAngle: .degrees(215),
+                           clockwise: false)
+                ctx.stroke(arc, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                let tip = CGPoint(x: c.x + r * cos(.pi * 215 / 180),
+                                  y: c.y + r * sin(.pi * 215 / 180))
+                var head = Path()
+                head.move(to: CGPoint(x: tip.x - 2.0 * u, y: tip.y - 0.4 * u))
+                head.addLine(to: tip)
+                head.addLine(to: CGPoint(x: tip.x + 0.5 * u, y: tip.y - 2.4 * u))
+                ctx.stroke(head, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round, lineJoin: .round))
+
+            case .pen:
+                // a nib mid-stroke: shaft to the corner, tip filled, and the
+                // mark it just made
+                let tip = CGPoint(x: box.minX + 3.0 * u, y: box.maxY - 4.6 * u)
+                var shaft = Path()
+                shaft.move(to: CGPoint(x: tip.x + 2.0 * u, y: tip.y - 2.0 * u))
+                shaft.addLine(to: CGPoint(x: box.maxX - 1.2 * u, y: box.minY + 2.6 * u))
+                ctx.stroke(shaft, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                var nib = Path()
+                nib.move(to: tip)
+                nib.addLine(to: CGPoint(x: tip.x + 2.6 * u, y: tip.y - 0.6 * u))
+                nib.addLine(to: CGPoint(x: tip.x + 0.6 * u, y: tip.y - 2.6 * u))
+                nib.closeSubpath()
+                ctx.fill(nib, with: .color(.white))
+                var mark = Path()
+                mark.move(to: CGPoint(x: tip.x - 1.6 * u, y: tip.y + 1.8 * u))
+                mark.addLine(to: CGPoint(x: tip.x + 3.4 * u, y: tip.y + 1.8 * u))
+                ctx.stroke(mark, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
+
             case .fill:
                 // a drop about to land: fill is what it does when it does
                 let cx = box.midX

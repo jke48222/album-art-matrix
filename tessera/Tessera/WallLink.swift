@@ -214,18 +214,12 @@ final class WallSession {
     func start() {
         UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
         push.start()
-        // A cold launch away from the wall should show the last wall we saw,
-        // stamped, rather than a dark rectangle pretending to be the truth.
+        // Launch is this phone's music, immediately: the stand-in starts at
+        // once, and a real wall that answers the background probe takes over
+        // by itself within seconds. Nobody waits on a network to see a song.
         if frame == nil {
-            let cached = WallSnapshot.read()
-            if let px = cached.px {
-                frame = Data(px)
-                state.title = cached.title
-                state.artist = cached.artist
-                state.mode = cached.mode
-                link = .offline(since: cached.updated ?? Date())
-                hadSnapshot = true
-            }
+            hadSnapshot = WallSnapshot.read().px != nil
+            enterStandIn()
         }
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
@@ -538,6 +532,19 @@ final class WallSession {
         if let v = merged["ticker_loop"] as? Bool { state.tickerLoop = v }
         if let v = merged["ticker_style"] as? String { state.tickerStyle = v }
         if let v = merged["ticker_colors"] as? [String] { state.tickerColors = v }
+        // Commands read optimistically too: a timer starts counting on the
+        // screen the moment it is asked for, not a round-trip later.
+        if let v = merged["timer_min"] as? Double {
+            if v > 0 {
+                state.mode = "timer"
+                state.timerTotal = Int(v * 60)
+                state.timerRemaining = Int(v * 60)
+            } else if state.mode == "timer" {
+                state.mode = "clock"
+                state.timerRemaining = nil
+                state.timerTotal = nil
+            }
+        }
         if let v = merged["clock_24h"] as? Bool { state.clock24h = v }
         if let v = merged["idle"] as? String { state.idle = v }
         if let v = merged["away"] as? String { state.away = v }
@@ -559,6 +566,10 @@ final class WallSession {
             state = standIn.state
             return
         }
+        // An away wall still answers locally: the stand-in mirrors commands
+        // like timers so what renders matches what was asked, and the outbox
+        // still carries the intent to the wall when it returns.
+        if !link.isLive { standIn.apply(merged) }
 
         Task { [weak self] in
             guard let self else { return }

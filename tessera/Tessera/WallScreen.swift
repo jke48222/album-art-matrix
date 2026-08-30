@@ -56,6 +56,27 @@ struct WallScreen: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 26)
 
+                if wall.state.mode == "timer", let left = wall.state.timerRemaining {
+                    // The running countdown is never more than one glance and
+                    // one tap away, whatever else is selected.
+                    HStack(spacing: 12) {
+                        Text(String(format: "%02d:%02d", left / 60, left % 60))
+                            .font(.machine(18))
+                            .foregroundStyle(accent)
+                            .contentTransition(.numericText(countsDown: true))
+                        Text("counting down")
+                            .font(.ui(13))
+                            .foregroundStyle(litDim)
+                        Spacer()
+                        Button("stop") { wall.send(["timer_min": 0.0]) }
+                            .buttonStyle(PressStyle(scale: 0.95))
+                            .font(.ui(14, .semibold))
+                            .foregroundStyle(Ink.signal)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+                }
+
                 modeRow
                     .padding(.horizontal, 12)
                     .padding(.bottom, isOff ? 8 : 24)
