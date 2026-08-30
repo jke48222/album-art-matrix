@@ -153,22 +153,54 @@ def _hangul() -> bytes:
     return _HANGUL
 
 
+_WORLD: dict | None = None
+
+
+def _world() -> dict:
+    """The rest of the world, lazily: cp -> (advance, dy, rows). Baked by
+    Tools/gen_worldfont.py from Galmuri7 and Misaki; see that file for the
+    format and the reasoning."""
+    global _WORLD
+    if _WORLD is None:
+        import os
+        import struct
+        table = {}
+        path = os.path.join(os.path.dirname(__file__), "world7.bin")
+        try:
+            blob = open(path, "rb").read()
+            i = 0
+            while i + 7 <= len(blob):
+                cp, adv, dy, n = struct.unpack_from(">IbbB", blob, i)
+                i += 7
+                table[cp] = (adv, dy, blob[i:i + n])
+                i += n
+        except OSError:
+            pass
+        _WORLD = table
+    return _WORLD
+
+
 def cell(ch: str):
-    """(rows, width, advance) for any letterable character, else None.
-    ASCII is 5 wide advance 6; Hangul is 7 wide advance 8."""
+    """(rows, width, advance, dy) for any letterable character, else None.
+    ASCII is 5 wide advance 6; Hangul 7 wide advance 8; the world table is
+    MSB-packed 8 wide with its own advance and vertical offset."""
     if ch in FONT and ch != "_BOX":
-        return FONT[ch], 5, 6
+        return FONT[ch], 5, 6, 0
     cp = ord(ch)
     if 0xAC00 <= cp <= 0xD7A3:
         off = (cp - 0xAC00) * 7
     elif 0x3131 <= cp <= 0x3163:
         off = (11172 + cp - 0x3131) * 7
     else:
-        return None
+        w = _world().get(cp)
+        if w is None:
+            return None
+        adv, dy, rows = w
+        return rows, 8, adv, dy
     blob = _hangul()
     if len(blob) < off + 7:
         return None
-    return blob[off:off + 7], 7, 8
+    return blob[off:off + 7], 7, 8, 0
 
 
 def text_width(text: str, scale: int = 1) -> int:
@@ -187,13 +219,13 @@ def draw_text(canvas: np.ndarray, text: str, x: int, y: int,
     cx = x
     for ch in text:
         c = cell(ch)
-        rows, width, advance = c if c else (FONT["_BOX"], 5, 6)
+        rows, width, advance, dy = c if c else (FONT["_BOX"], 5, 6, 0)
         for ry, mask in enumerate(rows):
             for rx in range(width):
                 if not mask & (1 << (width - 1 - rx)):
                     continue
                 px = cx + rx * scale
-                py = y + ry * scale
+                py = y + (ry + dy) * scale
                 for sy in range(scale):
                     for sx in range(scale):
                         xx, yy = px + sx, py + sy
