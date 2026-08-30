@@ -75,38 +75,48 @@ class LyricSheet:
 
 def fetch_sheet(artist: str, title: str, album: str,
                 duration_s: float | None) -> LyricSheet | None:
-    """One exact lookup, then one search. None means none exist, which the
-    caller shows as the plain sleeve rather than as a failure."""
+    """Exact lookup, distrusted when its edit's length disagrees with the
+    song, then a duration-ranked search. Transport errors retry with a
+    breath between attempts, so a hiccup is never remembered forever as
+    'this song has no words'. None means none exist."""
+    import time as _time
+
     import requests
     base = "https://lrclib.net/api"
-    try:
-        params = {"artist_name": artist, "track_name": title}
-        if album:
-            params["album_name"] = album
-        if duration_s:
-            params["duration"] = int(duration_s)
-        resp = requests.get(base + "/get", params=params, timeout=10)
-        data = resp.json() if resp.status_code == 200 else None
-        if not (data and data.get("syncedLyrics")):
-            resp = requests.get(base + "/search",
-                                params={"artist_name": artist,
-                                        "track_name": title},
-                                timeout=10)
-            hits = resp.json() if resp.status_code == 200 else []
-            synced = [h for h in hits if h.get("syncedLyrics")]
-            # the candidate whose length matches the song is the one whose
-            # timestamps match the song
-            if duration_s and synced:
-                data = min(synced, key=lambda h: abs(
-                    (h.get("duration") or 1e9) - duration_s))
-            else:
-                data = synced[0] if synced else None
-        if not (data and data.get("syncedLyrics")):
-            return None
-        lines = parse_lrc(data["syncedLyrics"])
-        return LyricSheet(lines) if lines else None
-    except Exception:
-        return None
+    for attempt in range(3):
+        if attempt:
+            _time.sleep(2 * attempt)
+        try:
+            params = {"artist_name": artist, "track_name": title}
+            if album:
+                params["album_name"] = album
+            if duration_s:
+                params["duration"] = int(duration_s)
+            resp = requests.get(base + "/get", params=params, timeout=10)
+            data = resp.json() if resp.status_code == 200 else None
+            if data and data.get("syncedLyrics") and duration_s \
+                    and abs((data.get("duration") or duration_s)
+                            - duration_s) > 4:
+                data = None          # right song, wrong edit: keep looking
+            if not (data and data.get("syncedLyrics")):
+                resp = requests.get(base + "/search",
+                                    params={"artist_name": artist,
+                                            "track_name": title},
+                                    timeout=10)
+                hits = resp.json() if resp.status_code == 200 else []
+                synced = [h for h in hits if h.get("syncedLyrics")]
+                if duration_s and synced:
+                    data = min(synced, key=lambda h: abs(
+                        (h.get("duration") or 1e9) - duration_s))
+                else:
+                    data = synced[0] if synced else None
+            if not (data and data.get("syncedLyrics")):
+                return None
+            lines = parse_lrc(data["syncedLyrics"])
+            return LyricSheet(lines) if lines else None
+        except Exception:
+            continue
+    return None
 
 
 class LyricBook:
@@ -177,20 +187,53 @@ class LyricCanvas:
         if rows is None:
             for s_ in (3, 2, 1):
                 cand = wrap_text(joined, self.size - 4, s_)
-                if (len(cand) * (7 * s_ + 2) - 2 <= self.size - 4
+                if (len(cand) * (7 * s_ + 2) - 2 <= self.size - 14
                         and " ".join(cand) == joined):
                     rows, scale = cand, s_
                     break
         if rows is None:
-            rows, scale = wrap_text(joined, self.size - 4, 1)[-6:], 1
+            rows, scale = wrap_text(joined, self.size - 4, 1)[-5:], 1
         if len(self._laid) > 256:
             self._laid.clear()
         self._laid[key] = (rows, scale)
         return rows, scale
 
+    def _preview(self, canvas, text: str):
+        """The coming line, one small dim row at the panel's foot: you read
+        the future while singing the present, which is karaoke's whole
+        trick, and what stops fast sequences reading as skipped."""
+        tokens = self._tokens(text)
+        if not tokens:
+            return
+        joined = " ".join(tokens)
+        rows = wrap_text(joined, self.size - 4, 1)
+        row = rows[0] if rows else joined
+        x = (self.size - min(self.size - 4, text_width(row, 1))) // 2
+        y = self.size - 9
+        u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+        draw_text(u8, row, x + 1, y + 1, (255, 255, 255), 1)
+        mask = u8.sum(axis=2) > 0
+        canvas[mask] *= 0.35
+        dim_ink = tuple(int(c * 0.42) for c in self.ink)
+        u8[:] = 0
+        draw_text(u8, row, x, y, dim_ink, 1)
+        mask = u8.sum(axis=2) > 0
+        canvas[mask] = u8[mask]
+
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
         text, t0, t1 = self.sheet.at(t)
+        # what comes next, for the preview row
+        nxt = ""
+        lines = self.sheet.lines
+        if lines:
+            if not text and t < lines[0][0]:
+                nxt = lines[0][1]
+            else:
+                for i, (lt, _) in enumerate(lines):
+                    if lt == t0 and i + 1 < len(lines):
+                        nxt = lines[i + 1][1]
+                        break
         tokens = self._tokens(text) if text else []
         if tokens:
             n = len(tokens)
@@ -205,7 +248,7 @@ class LyricCanvas:
             if visible:
                 rows, scale = self._layout((t0, visible), tokens[:visible])
                 line_h = 7 * scale + 2
-                y = (self.size - (len(rows) * line_h - 2)) // 2
+                y = max(1, (self.size - 12 - (len(rows) * line_h - 2)) // 2)
                 drawn = 0
                 for row in rows:
                     words = row.split()
@@ -232,4 +275,6 @@ class LyricCanvas:
                         mask = u8.sum(axis=2) > 0
                         canvas[mask] = u8[mask]
                     y += line_h
+        if nxt:
+            self._preview(canvas, nxt)
         return Image.fromarray(np.clip(canvas, 0, 255).astype(np.uint8), "RGB")

@@ -233,7 +233,10 @@ final class WallSession {
                     // of waiting for someone to find Look again in Setup.
                     if tick % 40 == 0 { await self.pollState() }
                     tick &+= 1
-                    try? await Task.sleep(for: .milliseconds(100))
+                    // words pop on the song's clock; everything else is
+                    // happy at ten frames a second
+                    let pace = self.state.mode == "lyrics" ? 66 : 100
+                    try? await Task.sleep(for: .milliseconds(pace))
                     continue
                 }
                 let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
@@ -250,7 +253,8 @@ final class WallSession {
                     self.renderLocally()
                 }
                 tick &+= 1
-                try? await Task.sleep(for: .milliseconds(125))
+                try? await Task.sleep(for: .milliseconds(
+                    self.state.mode == "lyrics" ? 66 : 125))
             }
         }
     }

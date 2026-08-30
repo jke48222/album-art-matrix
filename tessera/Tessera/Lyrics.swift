@@ -92,14 +92,17 @@ final class LyricsBook {
 
     static func fetch(artist: String, title: String, album: String,
                       duration: Double? = nil) async -> [(Double, String)]? {
-        func request(_ path: String, _ items: [URLQueryItem]) async -> [[String: Any]] {
+        // nil = transport failed (worth retrying); [] = answered, no rows
+        func request(_ path: String, _ items: [URLQueryItem]) async -> [[String: Any]]? {
             var comps = URLComponents(string: "https://lrclib.net/api/\(path)")!
             comps.queryItems = items
             guard let url = comps.url else { return [] }
             var req = URLRequest(url: url)
             req.timeoutInterval = 10
-            guard let (data, resp) = try? await URLSession.shared.data(for: req),
-                  (resp as? HTTPURLResponse)?.statusCode == 200 else { return [] }
+            guard let (data, resp) = try? await URLSession.shared.data(for: req) else {
+                return nil
+            }
+            guard (resp as? HTTPURLResponse)?.statusCode == 200 else { return [] }
             if let one = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                 return [one]
             }
@@ -109,33 +112,47 @@ final class LyricsBook {
             return []
         }
 
-        var items: [URLQueryItem] = [
-            .init(name: "artist_name", value: artist),
-            .init(name: "track_name", value: title),
-            .init(name: "album_name", value: album),
-        ]
-        if let duration { items.append(.init(name: "duration", value: String(Int(duration)))) }
-        var hits = await request("get", items)
-        if !(hits.first?["syncedLyrics"] is String) {
-            hits = await request("search", [
+        // A network hiccup must not be remembered forever as "this song has
+        // no words": transport errors retry with a breath between attempts.
+        for attempt in 0..<3 {
+            if attempt > 0 { try? await Task.sleep(for: .seconds(2 * attempt)) }
+
+            var items: [URLQueryItem] = [
                 .init(name: "artist_name", value: artist),
                 .init(name: "track_name", value: title),
-            ])
-        }
-        // Among candidates, the one whose length matches the song is the one
-        // whose TIMESTAMPS match the song: an album cut synced to a radio
-        // edit drifts a little more every chorus.
-        let synced = hits.filter { $0["syncedLyrics"] is String }
-        let best: [String: Any]? = duration.flatMap { d in
-            synced.min { a, b in
-                let da = abs((a["duration"] as? Double ?? 1e9) - d)
-                let db = abs((b["duration"] as? Double ?? 1e9) - d)
-                return da < db
+                .init(name: "album_name", value: album),
+            ]
+            if let duration { items.append(.init(name: "duration", value: String(Int(duration)))) }
+            guard let direct = await request("get", items) else { continue }
+
+            var candidates = direct.filter { $0["syncedLyrics"] is String }
+            // The direct answer can still be the WRONG EDIT: a sheet synced
+            // to the radio cut drifts a little more every chorus. When its
+            // length disagrees with the song by more than a few seconds,
+            // distrust it and search for a better one.
+            if let d = duration, let hit = candidates.first,
+               let hd = hit["duration"] as? Double, abs(hd - d) > 4 {
+                candidates = []
             }
-        } ?? synced.first
-        guard let raw = best?["syncedLyrics"] as? String else { return nil }
-        let lines = parse(lrc: raw)
-        return lines.isEmpty ? nil : lines
+            if candidates.isEmpty {
+                guard let found = await request("search", [
+                    .init(name: "artist_name", value: artist),
+                    .init(name: "track_name", value: title),
+                ]) else { continue }
+                candidates = found.filter { $0["syncedLyrics"] is String }
+            }
+            let best: [String: Any]? = duration.flatMap { d in
+                candidates.min { a, b in
+                    let da = abs((a["duration"] as? Double ?? 1e9) - d)
+                    let db = abs((b["duration"] as? Double ?? 1e9) - d)
+                    return da < db
+                }
+            } ?? candidates.first
+            guard let raw = best?["syncedLyrics"] as? String else { return nil }
+            let lines = parse(lrc: raw)
+            return lines.isEmpty ? nil : lines
+        }
+        return nil
     }
 
     static func parse(lrc: String) -> [(Double, String)] {
@@ -201,11 +218,23 @@ final class LyricsBook {
         }
         var px = base
 
-        guard let idx = currentIndex(sheet, t) else { return px }
+        guard let idx = currentIndex(sheet, t) else {
+            // before the first vocal: the opening line waits, dim, so the
+            // start of the song is never a surprise
+            if let first = sheet.first {
+                drawPreview(&px, first.1, ink: ink)
+            }
+            return px
+        }
         let (t0, text) = sheet[idx]
         let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
+        let nextText = idx + 1 < sheet.count ? sheet[idx + 1].1 : ""
         let tokens = letterableTokens(text)
-        guard !tokens.isEmpty else { return px }
+        guard !tokens.isEmpty else {
+            // an instrumental bar: only the coming line, waiting
+            if !nextText.isEmpty { drawPreview(&px, nextText, ink: ink) }
+            return px
+        }
 
         // timing runs on the FULL line so sizes never change the rhythm
         let n = tokens.count
@@ -225,7 +254,7 @@ final class LyricsBook {
         // the frame's whole visual identity: line, words shown, and the
         // newest word's ramp bucketed to its handful of distinct steps
         let kBucket = newestK >= 1 ? 9 : Int(newestK * 8)
-        let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)"
+        let frameKey = "\(artKey)|\(idx)|\(visible)|\(kBucket)|\(nextText.hashValue)"
         if let memo = frameMemo, memo.key == frameKey { return memo.px }
 
         let key = "\(t0)|\(visible)|\(text.hashValue)"
@@ -273,8 +302,36 @@ final class LyricsBook {
             }
             y += lineH
         }
+        // the NEXT line rides beneath, dim and whole: fast sequences stop
+        // reading as skipped because every line is on screen before its
+        // moment arrives
+        if !nextText.isEmpty { drawPreview(&px, nextText, ink: ink) }
         frameMemo = (frameKey, px)
         return px
+    }
+
+    /// The coming line, one small dim row at the panel's foot. Karaoke's
+    /// whole trick, at 64 pixels: you read the future while singing the
+    /// present.
+    private static func drawPreview(_ px: inout [UInt8], _ text: String,
+                                    ink: (UInt8, UInt8, UInt8)) {
+        let tokens = letterableTokens(text)
+        guard !tokens.isEmpty else { return }
+        let joined = tokens.joined(separator: " ")
+        let row = PixelFont.wrap(joined, maxWidth: 60, scale: 1).first ?? joined
+        let x = (64 - min(60, PixelFont.textWidth(row, scale: 1))) / 2
+        let y = 55
+        var mask = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        PixelDraw.text(&mask, row, x: x + 1, y: y + 1, rgb: (255, 255, 255), scale: 1)
+        for i in stride(from: 0, to: mask.count, by: 3) where mask[i] > 0 {
+            px[i] = UInt8(Float(px[i]) * 0.35)
+            px[i + 1] = UInt8(Float(px[i + 1]) * 0.35)
+            px[i + 2] = UInt8(Float(px[i + 2]) * 0.35)
+        }
+        let dimInk = (UInt8(Float(ink.0) * 0.42),
+                      UInt8(Float(ink.1) * 0.42),
+                      UInt8(Float(ink.2) * 0.42))
+        PixelDraw.text(&px, row, x: x, y: y, rgb: dimInk, scale: 1)
     }
 
     /// Biggest type the visible words allow: one line if any size holds it,
@@ -287,12 +344,12 @@ final class LyricsBook {
         }
         for scale in [3, 2, 1] {
             let rows = PixelFont.wrap(joined, maxWidth: 60, scale: scale)
-            if rows.count * (7 * scale + 2) - 2 <= 60,
+            if rows.count * (7 * scale + 2) - 2 <= 50,
                rows.joined(separator: " ") == joined {
                 return (rows, scale)
             }
         }
-        return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(6)), 1)
+        return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(5)), 1)
     }
 
     static func letterableTokens(_ text: String) -> [String] {
