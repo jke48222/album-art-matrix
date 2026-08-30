@@ -14,7 +14,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
-    case make, erase, photo, letters, clock, snake
+    case make, erase, photo, letters, clock, snake, fill
 }
 
 struct GlyphShape: View {
@@ -30,6 +30,23 @@ struct GlyphShape: View {
             let lw = lineWidth * max(1, u)
 
             switch glyph {
+            case .fill:
+                // a drop about to land: fill is what it does when it does
+                let cx = box.midX
+                let r = box.width * 0.30
+                let cy = box.maxY - r - 1.2 * u
+                let top = CGPoint(x: cx, y: box.minY + 1.2 * u)
+                var drop = Path()
+                drop.move(to: top)
+                drop.addQuadCurve(to: CGPoint(x: cx + r, y: cy),
+                                  control: CGPoint(x: cx + r * 0.9, y: cy - r * 1.7))
+                drop.addArc(center: CGPoint(x: cx, y: cy), radius: r,
+                            startAngle: .degrees(0), endAngle: .degrees(180),
+                            clockwise: false)
+                drop.addQuadCurve(to: top,
+                                  control: CGPoint(x: cx - r * 0.9, y: cy - r * 1.7))
+                ctx.fill(drop, with: .color(.white))
+
             case .snake:
                 // A serpentine chasing its meal: the body is three arcs of a
                 // wave, the head is the fat end, the food sits where it is

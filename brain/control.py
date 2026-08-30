@@ -48,7 +48,8 @@ DEFAULTS = {
     "finish": "clean",       # art downscale finish: clean | dither | poster
     "ticker_text": "HELLO",  # ticker mode message (<= 120 chars)
     "ticker_loop": True,
-    "ticker_style": "across",  # across (slide) | up (prompter) | tilt (crawl)     # loop, or scroll once then back to art
+    "ticker_style": "across",  # across (slide) | up (prompter) | tilt (crawl)
+    "ticker_colors": [],       # per-glyph inks, in glyph order; [] = one ink     # loop, or scroll once then back to art
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
     "idle": "black",         # silence: black | hold | dim | ambient
     "away": "stay",          # phone gone >15 min: stay | off
@@ -148,6 +149,13 @@ class ControlState:
                     self._s[k] = bool(v)
                 elif k == "ticker_style" and v in ("across", "up", "tilt"):
                     self._s[k] = v
+                elif k == "ticker_colors" and isinstance(v, list) \
+                        and len(v) <= 200 \
+                        and all(isinstance(c, str) and len(c) == 7
+                                and c.startswith("#")
+                                and all(ch in "0123456789abcdefABCDEF"
+                                        for ch in c[1:]) for c in v):
+                    self._s[k] = [c.lower() for c in v]
                 elif k == "ticker_text" and isinstance(v, str):
                     clean = "".join(c for c in v if c.isprintable())[:120]
                     self._s[k] = clean or "?"

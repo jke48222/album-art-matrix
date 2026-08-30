@@ -289,6 +289,10 @@ final class TextMover {
     private let style: Style
     private let text: String
     private let color: (UInt8, UInt8, UInt8)
+    /// Per-glyph inks, consumed by visible glyphs in order; spaces take
+    /// nothing, so the array means the same thing in every style and
+    /// survives wrapping. Glyphs past the end wear the base ink.
+    private let colors: [(UInt8, UInt8, UInt8)]
     private let loop: Bool
     private let pxPerS: Double
 
@@ -304,9 +308,11 @@ final class TextMover {
     private var fade = [Double](repeating: 1, count: 64)
 
     init(text raw: String, style: Style, color: (UInt8, UInt8, UInt8),
-         loop: Bool, speed: Double = 1.0) {
+         loop: Bool, speed: Double = 1.0,
+         colors: [(UInt8, UInt8, UInt8)] = []) {
         self.style = style
         self.color = color
+        self.colors = colors
         self.loop = loop
         let clean = PixelFont.normalize(raw)
         self.text = clean.isEmpty ? "?" : clean
@@ -327,13 +333,24 @@ final class TextMover {
         let lineH = 9
         maskH = lines.count * lineH + 1
         var rgb = [UInt8](repeating: 0, count: maskH * 64 * 3)
+        // Inks are baked into the plane; the resampler then only moves and
+        // fades what is already the right colour. The glyph counter runs
+        // across lines so a wrapped word keeps its inks.
+        var gi = 0
         for (i, ln) in lines.enumerated() {
-            let x = (64 - PixelFont.textWidth(ln, scale: 1)) / 2
-            PixelDraw.text(&rgb, ln, x: x, y: i * lineH,
-                           rgb: (255, 255, 255), scale: 1,
-                           width: 64, height: maskH)
+            var x = (64 - PixelFont.textWidth(ln, scale: 1)) / 2
+            for ch in ln {
+                if ch != " " {
+                    let ink = gi < colors.count ? colors[gi] : color
+                    PixelDraw.text(&rgb, String(ch), x: x, y: i * lineH,
+                                   rgb: ink, scale: 1,
+                                   width: 64, height: maskH)
+                    gi += 1
+                }
+                x += PixelFont.advance
+            }
         }
-        mask = (0..<(maskH * 64)).map { Float(rgb[$0 * 3]) / 255.0 }
+        mask = rgb.map { Float($0) / 255.0 }
     }
 
     private func buildRows() {
@@ -378,8 +395,22 @@ final class TextMover {
         let travel = Double(lineWidth + 64 + 4)
         let dist = t * pxPerS
         let off = loop ? dist.truncatingRemainder(dividingBy: travel) : min(dist, travel)
-        PixelDraw.text(&px, text, x: 64 - Int(off), y: (64 - 14) / 2,
-                       rgb: color, scale: 2)
+        if colors.isEmpty {
+            PixelDraw.text(&px, text, x: 64 - Int(off), y: (64 - 14) / 2,
+                           rgb: color, scale: 2)
+        } else {
+            var x = 64 - Int(off)
+            var gi = 0
+            for ch in text {
+                if ch != " " {
+                    let ink = gi < colors.count ? colors[gi] : color
+                    PixelDraw.text(&px, String(ch), x: x, y: (64 - 14) / 2,
+                                   rgb: ink, scale: 2)
+                    gi += 1
+                }
+                x += PixelFont.advance * 2
+            }
+        }
         return (px, !loop && dist > travel)
     }
 
@@ -397,15 +428,20 @@ final class TextMover {
             guard f > 0.001 else { continue }
             for x in 0..<64 where xok[y][x] {
                 let sx = xi[y][x]
-                var v: Float = 0
-                if lo >= 0, lo < maskH { v += mask[lo * 64 + sx] * (1 - frac) }
-                if lo + 1 >= 0, lo + 1 < maskH { v += mask[(lo + 1) * 64 + sx] * frac }
-                guard v > 0.004 else { continue }
-                let k = v * f
+                var r: Float = 0, g: Float = 0, b: Float = 0
+                if lo >= 0, lo < maskH {
+                    let o = (lo * 64 + sx) * 3
+                    r += mask[o] * (1 - frac); g += mask[o + 1] * (1 - frac); b += mask[o + 2] * (1 - frac)
+                }
+                if lo + 1 >= 0, lo + 1 < maskH {
+                    let o = ((lo + 1) * 64 + sx) * 3
+                    r += mask[o] * frac; g += mask[o + 1] * frac; b += mask[o + 2] * frac
+                }
+                guard r + g + b > 0.01 else { continue }
                 let o = (y * 64 + x) * 3
-                px[o] = UInt8(Float(color.0) * k)
-                px[o + 1] = UInt8(Float(color.1) * k)
-                px[o + 2] = UInt8(Float(color.2) * k)
+                px[o] = UInt8(min(255, r * f * 255))
+                px[o + 1] = UInt8(min(255, g * f * 255))
+                px[o + 2] = UInt8(min(255, b * f * 255))
             }
         }
         return (px, !loop && dist > travel)

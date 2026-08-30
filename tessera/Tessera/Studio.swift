@@ -43,6 +43,36 @@ final class Canvas64 {
     /// A fast drag delivers points far apart; without interpolation the
     /// stroke comes out as dots.
 
+    /// The bucket. Fills the connected region under the tap with the ink,
+    /// where "connected" means neighbouring tiles near the tapped tile's
+    /// colour. The tolerance exists for imported photos, whose regions are
+    /// never exactly one value; drawings fill exactly.
+    func fill(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8)) {
+        let o = (y * 64 + x) * 3
+        let t = (Int(px[o]), Int(px[o + 1]), Int(px[o + 2]))
+        // pouring a colour onto itself is a no-op, not a 4,096-tile walk
+        if abs(t.0 - Int(rgb.0)) < 4, abs(t.1 - Int(rgb.1)) < 4,
+           abs(t.2 - Int(rgb.2)) < 4 { return }
+        let tol = 14
+        var seen = [Bool](repeating: false, count: 64 * 64)
+        var stack = [(x, y)]
+        seen[y * 64 + x] = true
+        while let (cx, cy) = stack.popLast() {
+            let ci = (cy * 64 + cx) * 3
+            guard abs(Int(px[ci]) - t.0) <= tol,
+                  abs(Int(px[ci + 1]) - t.1) <= tol,
+                  abs(Int(px[ci + 2]) - t.2) <= tol else { continue }
+            px[ci] = rgb.0; px[ci + 1] = rgb.1; px[ci + 2] = rgb.2
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let nx = cx + dx, ny = cy + dy
+                guard nx >= 0, nx < 64, ny >= 0, ny < 64,
+                      !seen[ny * 64 + nx] else { continue }
+                seen[ny * 64 + nx] = true
+                stack.append((nx, ny))
+            }
+        }
+    }
+
     /// A stroke segment between two FLOAT cell positions, stamped every 0.4
     /// cells along the way. Bresenham between quantised endpoints put every
     /// stamp on whole cells, which reads as chatter on a slow diagonal; this
@@ -90,7 +120,8 @@ final class Canvas64 {
     /// Words are the third way of filling the canvas. Laid out in the wall's
     /// own font at the largest scale that fits, wrapped and centred, over
     /// whatever `base` already held so typing never destroys a drawing.
-    func stamp(text: String, over base: [UInt8], rgb: (UInt8, UInt8, UInt8)) {
+    func stamp(text: String, over base: [UInt8], rgb: (UInt8, UInt8, UInt8),
+               size: Int? = nil) {
         var out = base
         let words = PixelFont.normalize(text)
         guard !words.trimmingCharacters(in: .whitespaces).isEmpty else {
@@ -98,11 +129,14 @@ final class Canvas64 {
             return
         }
 
-        // biggest scale whose wrapped block still fits the panel
-        var scale = 4
+        // A chosen size is obeyed even when the block overflows the panel:
+        // the bottom clips, which is visible and honest, and choosing is the
+        // point. Auto keeps the old behaviour: biggest scale that fits.
+        var scale = size ?? 4
         var lines: [String] = []
         while scale >= 1 {
             lines = PixelFont.wrap(words, maxWidth: 62, scale: scale)
+            if size != nil { break }
             let blockHeight = lines.count * (PixelFont.height * scale + scale) - scale
             let widest = lines.map { PixelFont.textWidth($0, scale: scale) }.max() ?? 0
             if blockHeight <= 62 && widest <= 62 { break }
@@ -112,7 +146,7 @@ final class Canvas64 {
 
         let lineStep = PixelFont.height * scale + scale
         let blockHeight = lines.count * lineStep - scale
-        var y = (64 - blockHeight) / 2
+        var y = max(1, (64 - blockHeight) / 2)
 
         for line in lines {
             let w = PixelFont.textWidth(line, scale: scale)
@@ -205,6 +239,7 @@ struct StudioScreen: View {
     /// custom colour survives switching away and back.
     @State private var custom: Color = .white
     @State private var erasing = false
+    @State private var filling = false
     @State private var thick = false
     /// The stroke's position in CELLS, kept as floats. Quantising each touch
     /// sample to a cell before joining them is what made lines wobble: a
@@ -227,6 +262,9 @@ struct StudioScreen: View {
     @State private var sent = false
     @State private var words = ""
     @State private var writing = false
+    /// Chosen glyph size for words; nil lets the canvas pick the biggest
+    /// that fits.
+    @State private var wordScale: Int? = nil
     /// What the canvas held before words started, so typing composes over a
     /// drawing instead of replacing it.
     @State private var beneath: [UInt8] = []
@@ -291,6 +329,7 @@ struct StudioScreen: View {
             guard let item else { return }
             loadingMedia = true
             clip = []
+            leaveWords()
             Task {
                 defer { loadingMedia = false }
                 // A movie first: if it transfers as one, it is one.
@@ -350,6 +389,8 @@ struct StudioScreen: View {
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
                         if lastF == nil { Taps.warm() }
+                        if writing { leaveWords() }
+                        guard !filling else { return }   // the bucket pours on release
                         let cell = geo.size.width / 64
                         let fx = min(63.49, max(0.0, g.location.x / cell - 0.5))
                         let fy = min(63.49, max(0.0, g.location.y / cell - 0.5))
@@ -366,9 +407,17 @@ struct StudioScreen: View {
                         }
                         lastF = (fx, fy)
                     }
-                    .onEnded { _ in
+                    .onEnded { g in
                         lastF = nil
-                        Taps.detent(intensity: 0.3)
+                        if filling {
+                            let cell = geo.size.width / 64
+                            let x = min(63, max(0, Int(g.location.x / cell)))
+                            let y = min(63, max(0, Int(g.location.y / cell)))
+                            canvas.fill(x: x, y: y, rgb: erasing ? (0, 0, 0) : ink)
+                            Taps.commit()
+                        } else {
+                            Taps.detent(intensity: 0.3)
+                        }
                     }
             )
             .accessibilityLabel("Canvas, 64 by 64 tiles. Draw with one finger.")
@@ -462,15 +511,32 @@ struct StudioScreen: View {
         HStack(spacing: 0) {
             GlyphButton(glyph: .erase, label: "erase", active: erasing,
                         accent: accent, lit: 0.6, diameter: 54) {
+                leaveWords()
                 erasing.toggle()
+                if erasing { filling = false }
             }
             .frame(maxWidth: .infinity)
 
-            BrushButton(thick: thick, accent: erasing ? Ink.dim : inkColor) { thick.toggle() }
-                .frame(maxWidth: .infinity)
+            BrushButton(thick: thick, accent: erasing ? Ink.dim : inkColor) {
+                leaveWords()
+                thick.toggle()
+            }
+            .frame(maxWidth: .infinity)
+
+            // The bucket: tap a region and it takes the ink, the way paint
+            // finds the edges of a shape. On 4,096 tiles this is how a
+            // background happens in one gesture instead of four hundred.
+            GlyphButton(glyph: .fill, label: "fill", active: filling,
+                        accent: accent, lit: 0.6, diameter: 54) {
+                leaveWords()
+                filling.toggle()
+                if filling { erasing = false }
+            }
+            .frame(maxWidth: .infinity)
 
             GlyphButton(glyph: .letters, label: "words", active: writing,
                         accent: accent, lit: 0.6, diameter: 54) {
+                filling = false
                 if writing {
                     writing = false
                     typing = false
@@ -506,11 +572,12 @@ struct StudioScreen: View {
 
     /// The wall's own font, so what you type here is what it letters.
     private var compose: some View {
+        VStack(alignment: .leading, spacing: 10) {
         HStack(spacing: 12) {
             TextField("say something", text: $words)
                 .font(.machine(14))
                 .foregroundStyle(Ink.ink)
-                .textInputAutocapitalization(.sentences)
+                .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($typing)
                 .submitLabel(.done)
@@ -529,10 +596,48 @@ struct StudioScreen: View {
             }
             .buttonStyle(.plain)
         }
-        .onChange(of: words) { _, new in
-            canvas.stamp(text: new, over: beneath, rgb: erasing ? (255, 255, 255) : ink)
+        // The size is a choice, not a consequence of how much you typed.
+        HStack(spacing: 8) {
+            ForEach([("fit", nil), ("small", 1), ("mid", 2), ("big", 3)],
+                    id: \.0) { (label, value) in
+                let on = wordScale == value
+                Button {
+                    wordScale = value
+                } label: {
+                    Text(label)
+                        .font(.machine(11))
+                        .foregroundStyle(on ? Ink.ground : Ink.dim)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 13)
+                        .background(on ? inkColor : Ink.sunk,
+                                    in: Capsule())
+                        .overlay { if !on { Capsule().strokeBorder(Ink.hairline, lineWidth: 1) } }
+                }
+                .buttonStyle(PressStyle(scale: 0.95))
+            }
         }
+        }
+        .onChange(of: words) { _, new in
+            canvas.stamp(text: new, over: beneath, rgb: erasing ? (255, 255, 255) : ink,
+                         size: wordScale)
+        }
+        .onChange(of: wordScale) { _, _ in
+            canvas.stamp(text: words, over: beneath, rgb: erasing ? (255, 255, 255) : ink,
+                         size: wordScale)
+        }
+        // The return key is finishing, not hiding: the words are part of the
+        // drawing now and every other tool is a tap away again.
+        .onSubmit { leaveWords() }
         .transition(.opacity)
+    }
+
+    /// Words mode ends the moment you reach for anything else. What was
+    /// typed stays on the canvas as tiles; only the re-stamping stops, so a
+    /// later brushstroke can never be wiped by an old text field.
+    private func leaveWords() {
+        guard writing else { return }
+        writing = false
+        typing = false
     }
 
     // MARK: Send

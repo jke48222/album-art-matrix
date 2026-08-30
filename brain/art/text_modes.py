@@ -40,15 +40,21 @@ class Ticker:
 
     speed is the control-state multiplier (0.1-3.0); 1.0 ≈ 18 px/s,
     which reads comfortably at 64 px wide.
+
+    colors, when given, ink the visible glyphs one by one in order; spaces
+    consume nothing, so the same array means the same thing in every style
+    and survives any wrapping. Glyphs past the end wear the base ink.
     """
 
     SCALE = 2
 
     def __init__(self, size: int, text: str, color: str = "#f4f1ea",
-                 speed: float = 1.0, loop: bool = True):
+                 speed: float = 1.0, loop: bool = True,
+                 colors: list | None = None):
         self.size = size
         self.text = normalize(text) or "?"
         self.color = _hex_rgb(color)
+        self.colors = [_hex_rgb(c) for c in (colors or [])]
         self.px_per_s = 18.0 * max(0.1, speed)
         self.loop = loop
         self.width = text_width(self.text, self.SCALE)
@@ -65,7 +71,16 @@ class Ticker:
             else min(t * self.px_per_s, travel)
         x = self.size - int(offset)
         y = (self.size - 7 * self.SCALE) // 2
-        draw_text(canvas, self.text, x, y, self.color, self.SCALE)
+        if not self.colors:
+            draw_text(canvas, self.text, x, y, self.color, self.SCALE)
+        else:
+            gi = 0
+            for ch in self.text:
+                if ch != " ":
+                    ink = self.colors[gi] if gi < len(self.colors) else self.color
+                    draw_text(canvas, ch, x, y, ink, self.SCALE)
+                    gi += 1
+                x += 6 * self.SCALE
         return Image.fromarray(canvas, "RGB")
 
 
@@ -202,21 +217,32 @@ class Crawl:
     """
 
     def __init__(self, size: int, text: str, color: str = "#f4f1ea",
-                 speed: float = 1.0, loop: bool = True, tilt: bool = False):
+                 speed: float = 1.0, loop: bool = True, tilt: bool = False,
+                 colors: list | None = None):
         self.size = size
-        self.color = np.array(_hex_rgb(color), dtype=np.float32)
         self.loop = loop
         # Reading several lines is slower work than watching one slide by.
         self.px_per_s = 5.5 * max(0.1, speed)
 
+        base = _hex_rgb(color)
+        inks = [_hex_rgb(c) for c in (colors or [])]
         lines = wrap_text(normalize(text) or "?", size - 4, 1)
         line_h = 9                      # 7 px of glyph, 2 of leading
         h = len(lines) * line_h + 1
         rgb = np.zeros((h, size, 3), dtype=np.uint8)
+        # Glyph inks are baked into the plane itself; the resampler then
+        # only ever moves and fades what is already the right colour. The
+        # glyph counter runs across lines, so a wrapped word keeps its inks.
+        gi = 0
         for i, ln in enumerate(lines):
             x = (size - text_width(ln, 1)) // 2
-            draw_text(rgb, ln, x, i * line_h, (255, 255, 255), 1)
-        self.mask = rgb[:, :, 0].astype(np.float32) / 255.0
+            for ch in ln:
+                if ch != " ":
+                    ink = inks[gi] if gi < len(inks) else base
+                    draw_text(rgb, ch, x, i * line_h, ink, 1)
+                    gi += 1
+                x += 6
+        self.mask = rgb.astype(np.float32) / 255.0
         self.h = h
 
         ys = np.arange(size, dtype=np.float32)
@@ -263,13 +289,13 @@ class Crawl:
         for y in range(self.size):
             lo = int(np.floor(src[y]))
             frac = src[y] - lo
-            row = np.zeros(self.size, dtype=np.float32)
+            row = np.zeros((self.size, 3), dtype=np.float32)
             if 0 <= lo < self.h:
                 row += self.mask[lo] * (1.0 - frac)
             if 0 <= lo + 1 < self.h:
                 row += self.mask[lo + 1] * frac
             if not row.any():
                 continue
-            vals = np.where(self.xok[y], row[self.xi[y]], 0.0) * self.fade[y]
-            out[y] = vals[:, None] * self.color
+            vals = np.where(self.xok[y][:, None], row[self.xi[y]], 0.0)
+            out[y] = vals * self.fade[y] * 255.0
         return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGB")
