@@ -114,27 +114,20 @@ final class LyricsBook {
         -> (mains: [(Double, String)], adlibs: [(Double, Double, String)]) {
         var mains: [(Double, String)] = []
         var raw: [(Double, String)] = []      // adlib starts, windows later
+        let paren = /\([^()]*\)/
         for (t, text) in lines {
             let trimmed = text.trimmingCharacters(in: .whitespaces)
-            if trimmed.hasPrefix("("), trimmed.hasSuffix(")"),
-               trimmed.count > 2 {
-                raw.append((t, trimmed))
-                continue
+            // parentheses are the second voice, wherever they sit in the
+            // line: leading, trailing, or right in the middle of it
+            let groups = trimmed.matches(of: paren).map { String($0.output) }
+            for g in groups where g.count > 2 {
+                raw.append((t, g))
             }
-            // a trailing echo: "line of song (yeah)"
-            if trimmed.hasSuffix(")"),
-               let open = trimmed.lastIndex(of: "("),
-               open > trimmed.startIndex {
-                let main = String(trimmed[..<open])
-                    .trimmingCharacters(in: .whitespaces)
-                let echo = String(trimmed[open...])
-                if !main.isEmpty {
-                    mains.append((t, main))
-                    raw.append((t, echo))
-                    continue
-                }
+            let main = trimmed.replacing(paren, with: " ")
+                .split(separator: " ").joined(separator: " ")
+            if !main.isEmpty {
+                mains.append((t, main))
             }
-            mains.append((t, trimmed))
         }
         let everyStart = lines.map { $0.0 }.sorted()
         let adlibs = raw.map { (t, text) -> (Double, Double, String) in
