@@ -146,6 +146,7 @@ final class StandIn {
         guard key != lastArtKey else { return }
         lastArtKey = key
         songClock.hardReset()        // a new track is a new zero
+        FlightLog.note("TRACK", "\(item.artist ?? "?") - \(item.title ?? "?")")
 
         if let image = item.artwork?.image(at: CGSize(width: 256, height: 256)),
            let cg = image.cgImage, let px = Clip.square64(cg) {

@@ -4,6 +4,7 @@
 // is carrying.
 
 import Foundation
+import QuartzCore
 import SwiftUI
 
 // MARK: - Models
@@ -230,8 +231,17 @@ final class WallSession {
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
             var tick = 0
+            var lastBeat = CACurrentMediaTime()
             while !Task.isCancelled {
                 guard let self else { return }
+                // the watchdog that caught the probe stall, kept on duty:
+                // any freeze of the render loop names itself and its mode
+                let beat = CACurrentMediaTime()
+                if beat - lastBeat > 0.3 {
+                    FlightLog.note("STALL", String(format: "%.0fms in mode %@",
+                        (beat - lastBeat) * 1000, self.state.mode))
+                }
+                lastBeat = beat
                 if self.link.isStandIn {
                     self.tickStandIn()
                     // Keep looking for a real wall, but in the background:
@@ -332,7 +342,10 @@ final class WallSession {
 
             state = fresh
             lastSync = Date()
-            if reconnected { Taps.found() }   // the lamp switched on
+            if reconnected {
+                Taps.found()                      // the lamp switched on
+                FlightLog.note("LINK", "wall answered at \(host)")
+            }
             wasLive = true
             link = .live
             if reconnected { flushOutbox() }
@@ -360,6 +373,7 @@ final class WallSession {
 
     private func enterStandIn() {
         guard !link.isStandIn else { return }
+        FlightLog.note("LINK", "stand-in takes over")
         standIn.refreshNowPlaying()
         state = standIn.state
         link = .standIn
@@ -545,6 +559,7 @@ final class WallSession {
     /// POST a partial state patch. Optimistic locally, honest on failure:
     /// the next poll re-syncs whatever the wall actually accepted.
     func send(_ patch: [String: Any]) {
+        FlightLog.note("SEND", patch.keys.sorted().joined(separator: ","))
         // optimistic merge so controls answer instantly
         var merged = patch
         if let m = merged["mode"] as? String { state.mode = m }
@@ -603,6 +618,7 @@ final class WallSession {
             if !(await self.postJSON("/state", merged)) {
                 // Intent survives the network. It goes out when the wall
                 // answers again, and the UI says so in the meantime.
+                FlightLog.note("SEND", "wall away; queued \(merged.keys.sorted().joined(separator: ","))")
                 self.outbox.add(patch: merged)
                 Taps.error()
             }
