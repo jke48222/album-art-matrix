@@ -6,7 +6,7 @@
 	<integer>13</integer>
 	<key>logs</key>
 	<dict>
-		<key>68E0EC80-C68C-4F7A-BD87-51F5A312B998</key>
+		<key>972B1DED-542E-4F6E-9BB7-A7647E4C7166</key>
 		<dict>
 			<key>className</key>
 			<string>IDECommandLineBuildLog</string>
@@ -15,7 +15,7 @@
 			<key>domainType</key>
 			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
 			<key>fileName</key>
-			<string>68E0EC80-C68C-4F7A-BD87-51F5A312B998.xcactivitylog</string>
+			<string>972B1DED-542E-4F6E-9BB7-A7647E4C7166.xcactivitylog</string>
 			<key>hasPrimaryLog</key>
 			<true/>
 			<key>primaryObservable</key>
@@ -29,7 +29,7 @@
 				<key>totalNumberOfTestFailures</key>
 				<integer>0</integer>
 				<key>totalNumberOfWarnings</key>
-				<integer>6</integer>
+				<integer>5</integer>
 			</dict>
 			<key>schemeIdentifier-containerName</key>
 			<string>Tessera project</string>
@@ -38,15 +38,15 @@
 			<key>schemeIdentifier-sharedScheme</key>
 			<integer>1</integer>
 			<key>signature</key>
-			<string>Building project Tessera with scheme Tessera</string>
+			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>timeStartedRecording</key>
-			<real>809805124.607759</real>
+			<real>809807965.04007006</real>
 			<key>timeStoppedRecording</key>
-			<real>809805127.84780097</real>
+			<real>809807980.14855003</real>
 			<key>title</key>
-			<string>Building project Tessera with scheme Tessera</string>
+			<string>Building project Tessera with scheme Tessera and configuration Release</string>
 			<key>uniqueIdentifier</key>
-			<string>68E0EC80-C68C-4F7A-BD87-51F5A312B998</string>
+			<string>972B1DED-542E-4F6E-9BB7-A7647E4C7166</string>
 		</dict>
 		<key>DBB4A1CC-185E-4490-A5D8-43D24B918B92</key>
 		<dict>
