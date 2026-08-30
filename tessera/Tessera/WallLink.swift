@@ -233,7 +233,7 @@ final class WallSession {
                     // of waiting for someone to find Look again in Setup.
                     if tick % 40 == 0 { await self.pollState() }
                     tick &+= 1
-                    try? await Task.sleep(for: .milliseconds(125))
+                    try? await Task.sleep(for: .milliseconds(100))
                     continue
                 }
                 let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)

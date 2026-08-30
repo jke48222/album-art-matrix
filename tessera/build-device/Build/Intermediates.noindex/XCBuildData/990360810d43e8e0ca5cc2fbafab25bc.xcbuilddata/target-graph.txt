@@ -1,4 +1,0 @@
-Target dependency graph (2 targets)
-Target 'Tessera' in project 'Tessera'
-➜ Explicit dependency on target 'TesseraWidgets' in project 'Tessera'
-Target 'TesseraWidgets' in project 'Tessera' (no dependencies)

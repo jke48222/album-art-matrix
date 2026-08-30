@@ -14,23 +14,24 @@ import MediaPlayer
 final class LyricsBook {
     private(set) var track = ""
     private(set) var sheet: [(Double, String)]? = nil
-    private var loading = false
+    /// Supersession by generation, not a lock: the old design refused new
+    /// asks while one was in flight, and a fetch that lost its race left the
+    /// flag stuck forever — every later track then showed no words at all.
+    private var generation = 0
 
     func ask(track id: String, artist: String, title: String, album: String,
              duration: Double? = nil) {
-        guard id != track, !loading else { return }
-        loading = true
-        let old = track
+        guard id != track else { return }
         track = id
         sheet = nil
+        generation += 1
+        let gen = generation
         Task { [weak self] in
             let found = await Self.fetch(artist: artist, title: title,
                                          album: album, duration: duration)
             await MainActor.run {
-                guard let self, self.track == id else { return }
+                guard let self, self.generation == gen else { return }
                 self.sheet = found
-                self.loading = false
-                _ = old
             }
         }
     }
@@ -98,96 +99,130 @@ final class LyricsBook {
                 out.append((t, text))
             }
         }
-        return out.sorted { $0.0 < $1.0 }
+        out.sort { $0.0 < $1.0 }
+        // Lines sharing a timestamp (duets, ad-libs) collapse into one:
+        // otherwise only the later of the pair ever shows and the other is
+        // "skipped", which is exactly what it looked like.
+        var merged: [(Double, String)] = []
+        for (t, text) in out {
+            if let last = merged.last, t - last.0 < 0.05 {
+                merged[merged.count - 1].1 = last.1.isEmpty
+                    ? text : last.1 + " " + text
+            } else {
+                merged.append((t, text))
+            }
+        }
+        return merged
     }
 
     // MARK: render
 
-    /// The brat look: a flat field in the album's loudest voice, the line
-    /// in lowercase filling from the left, black or white by what the field
-    /// needs, words popping in one at a time. Big where the line is short.
+    /// The brat behaviour on the sleeve: the line starts huge and steps
+    /// down in size as words arrive and crowd it, lowercase, left-anchored,
+    /// lettered over the cover dimmed to a quarter with its own shadow.
+    /// Layout is recomputed for exactly the words visible so far, which is
+    /// what makes the shrink happen live instead of being pre-decided.
     static let ramp = 0.12
+    static let dim: Float = 0.26
+
+    private static var layoutCache: [String: ([String], Int)] = [:]
 
     static func render(sheet: [(Double, String)], at t: Double,
-                       bg voice: (Double, Double, Double),
-                       ink chosen: (UInt8, UInt8, UInt8)? = nil) -> [UInt8] {
-        // push the field toward its loudest self
-        let ui = UIColor(red: voice.0, green: voice.1, blue: voice.2, alpha: 1)
-        var h: CGFloat = 0, sat: CGFloat = 0, bri: CGFloat = 0, a: CGFloat = 0
-        ui.getHue(&h, saturation: &sat, brightness: &bri, alpha: &a)
-        let loud = UIColor(hue: h, saturation: min(1, sat * 1.5 + 0.12),
-                           brightness: min(1, bri * 1.25 + 0.18), alpha: 1)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-        loud.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let bg = (UInt8(r * 255), UInt8(g * 255), UInt8(b * 255))
-        let lum = 0.2126 * r + 0.7152 * g + 0.0722 * b
-        let ink: (UInt8, UInt8, UInt8) = chosen
-            ?? (lum > 0.45 ? (12, 12, 10) : (244, 241, 234))
-
-        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in stride(from: 0, to: px.count, by: 3) {
-            px[i] = bg.0; px[i + 1] = bg.1; px[i + 2] = bg.2
-        }
+                       over art: [UInt8],
+                       ink: (UInt8, UInt8, UInt8)) -> [UInt8] {
+        var px = art.map { UInt8(Float($0) * dim) }
 
         guard let idx = currentIndex(sheet, t) else { return px }
         let (t0, text) = sheet[idx]
         let t1 = idx + 1 < sheet.count ? sheet[idx + 1].0 : t0 + 6
-        let (rows, scale) = layout(text)
-        guard !rows.isEmpty else { return px }
+        let tokens = letterableTokens(text)
+        guard !tokens.isEmpty else { return px }
 
-        let tokens = rows.flatMap { $0.split(separator: " ") }
-        let n = max(1, tokens.count)
+        // timing runs on the FULL line so sizes never change the rhythm
+        let n = tokens.count
         let span = min(2.4, max(0.6, (t1 - t0) * 0.55))
         let step = span / Double(n)
+        var visible = 0
+        var newestK = 1.0
+        for i in 0..<n {
+            let born = t0 + Double(i) * step
+            if t >= born {
+                visible = i + 1
+                newestK = min(1.0, (t - born) / ramp)
+            }
+        }
+        guard visible > 0 else { return px }
+
+        let key = "\(t0)|\(visible)|\(text.hashValue)"
+        let (rows, scale): ([String], Int)
+        if let hit = layoutCache[key] {
+            (rows, scale) = hit
+        } else {
+            let laid = layout(tokens: Array(tokens.prefix(visible)))
+            if layoutCache.count > 256 { layoutCache.removeAll() }
+            layoutCache[key] = laid
+            (rows, scale) = laid
+        }
+        guard !rows.isEmpty else { return px }
 
         let lineH = 7 * scale + 2
-        var shown = 0
         var y = (64 - (rows.count * lineH - 2)) / 2
+        var drawn = 0
         for row in rows {
             let words = row.split(separator: " ").map(String.init)
-            var visible = 0
-            var newestK = 1.0
-            for i in 0..<words.count {
-                let born = t0 + Double(shown + i) * step
-                if t >= born {
-                    visible = i + 1
-                    newestK = min(1.0, (t - born) / ramp)
-                }
-            }
-            shown += words.count
-            guard visible > 0 else { y += lineH; continue }
             let x = 2
-            let settled = words.prefix(visible - 1).joined(separator: " ")
+            // shadow: the row's own footprint, darkened
+            var mask = [UInt8](repeating: 0, count: 64 * 64 * 3)
+            PixelDraw.text(&mask, row, x: x + 1, y: y + 1,
+                           rgb: (255, 255, 255), scale: scale)
+            for i in stride(from: 0, to: mask.count, by: 3) where mask[i] > 0 {
+                px[i] = UInt8(Float(px[i]) * 0.3)
+                px[i + 1] = UInt8(Float(px[i + 1]) * 0.3)
+                px[i + 2] = UInt8(Float(px[i + 2]) * 0.3)
+            }
+            drawn += words.count
+            let isLastRow = drawn >= visible
+            let settled = isLastRow && words.count > 0
+                ? words.dropLast().joined(separator: " ") : row
             if !settled.isEmpty {
                 PixelDraw.text(&px, settled, x: x, y: y, rgb: ink, scale: scale)
             }
-            let last = words[visible - 1]
-            let lx = x + (settled.isEmpty ? 0
-                : PixelFont.textWidth(settled, scale: scale) + 6 * scale)
-            let k = visible == words.count ? newestK : 1.0
-            let mixed = (UInt8(Double(ink.0) * k + Double(bg.0) * (1 - k)),
-                         UInt8(Double(ink.1) * k + Double(bg.1) * (1 - k)),
-                         UInt8(Double(ink.2) * k + Double(bg.2) * (1 - k)))
-            PixelDraw.text(&px, last, x: lx, y: y, rgb: mixed, scale: scale)
+            if isLastRow, let last = words.last {
+                let lx = x + (settled.isEmpty ? 0
+                    : PixelFont.textWidth(settled, scale: scale) + 6 * scale)
+                let k = Float(newestK)
+                let voiced = (UInt8(Float(ink.0) * max(0.3, k)),
+                              UInt8(Float(ink.1) * max(0.3, k)),
+                              UInt8(Float(ink.2) * max(0.3, k)))
+                PixelDraw.text(&px, last, x: lx, y: y, rgb: voiced, scale: scale)
+            }
             y += lineH
         }
         return px
     }
 
-    /// Wrapped rows of the letterable, lowercased line, at the biggest scale
-    /// whose block still fits the panel.
-    static func layout(_ text: String) -> (rows: [String], scale: Int) {
-        let kept = PixelFont.normalize(text.lowercased())
-            .filter { PixelFont.cell($0) != nil || $0 == " " }
-            .split(separator: " ").joined(separator: " ")
-        guard !kept.isEmpty else { return ([], 1) }
-        for scale in [2, 1] {
-            let rows = PixelFont.wrap(kept, maxWidth: 60, scale: scale)
-            if rows.count * (7 * scale + 2) - 2 <= 60 {
+    /// Biggest type the visible words allow: one line if any size holds it,
+    /// then whole-word wraps, then the small hard-wrapped truth.
+    static func layout(tokens: [String]) -> ([String], Int) {
+        let joined = tokens.joined(separator: " ")
+        for scale in [4, 3, 2, 1]
+        where PixelFont.textWidth(joined, scale: scale) <= 60 {
+            return ([joined], scale)
+        }
+        for scale in [3, 2, 1] {
+            let rows = PixelFont.wrap(joined, maxWidth: 60, scale: scale)
+            if rows.count * (7 * scale + 2) - 2 <= 60,
+               rows.joined(separator: " ") == joined {
                 return (rows, scale)
             }
         }
-        return (Array(PixelFont.wrap(kept, maxWidth: 60, scale: 1).suffix(6)), 1)
+        return (Array(PixelFont.wrap(joined, maxWidth: 60, scale: 1).suffix(6)), 1)
+    }
+
+    static func letterableTokens(_ text: String) -> [String] {
+        PixelFont.normalize(text.lowercased())
+            .filter { PixelFont.cell($0) != nil || $0 == " " }
+            .split(separator: " ").map(String.init)
     }
 
     private static func currentIndex(_ sheet: [(Double, String)], _ t: Double) -> Int? {

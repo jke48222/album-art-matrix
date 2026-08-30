@@ -18,6 +18,7 @@ struct WallScreen: View {
     @Binding var dragLight: Double?
     /// Passed up so the pager can step aside; see RootView.
     @Binding var onPanel: Bool
+    @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     var onSetup: () -> Void
     var onStudio: () -> Void
 
@@ -36,7 +37,9 @@ struct WallScreen: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 20)
 
-                // The panel bleeds past the gutter: it is the object, not a card.
+                // Full bleed, exactly to the screen's edges and no further:
+                // an earlier negative padding pushed the square wider than
+                // the glass and cropped the outer emitter columns.
                 WallHero(
                     reading: reading,
                     confirmed: isOff ? 0.05 : wall.state.brightness,
@@ -52,7 +55,6 @@ struct WallScreen: View {
                     onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
                     onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
                 )
-                .padding(.horizontal, -4)
                 .padding(.bottom, 26)
 
                 Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
@@ -241,10 +243,21 @@ struct WallScreen: View {
                 .fixedSize(horizontal: false, vertical: true)
 
         case "lyrics":
-            Text("The words, over the sleeve, in time with the song. They come from LRCLIB, so a track it has never heard shows the sleeve alone.")
-                .font(.ui(13))
-                .foregroundStyle(litDim)
-                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .leading, spacing: 14) {
+                // The one knob syncing genuinely needs: the words files in
+                // the wild are themselves early or late, and only the person
+                // singing along can hear by how much.
+                PillRow(
+                    label: "timing",
+                    options: [("sooner", -0.4), ("on time", 0.0), ("later", 0.4)],
+                    selected: lyricsNudge,
+                    accent: accent
+                ) { lyricsNudge = $0 }
+                Text("Words come from LRCLIB; a track it has never heard shows the sleeve alone.")
+                    .font(.ui(12))
+                    .foregroundStyle(litDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
         default:
             FinishRow(

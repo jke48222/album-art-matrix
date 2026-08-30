@@ -390,15 +390,19 @@ struct WallHero: View {
                         // slightly diagonal pull from doing both jobs badly.
                         if axis == nil {
                             let dx = abs(g.translation.width), dy = abs(g.translation.height)
-                            if dy > 6, dy >= dx {
+                            // an axis is claimed only by clear dominance, so a
+                            // diagonal wobble cannot latch the wrong gesture
+                            if dy > 8, dy > dx * 1.3 {
                                 axis = .light; moved = true; cancelHold()
-                            } else if dx > 10, !history.isEmpty {
+                            } else if dx > 12, dx > dy * 1.3 {
                                 axis = .back; cancelHold(); Taps.warm()
                             }
                         }
 
                         if axis == .back {
-                            // Left goes backwards, the way a tape does.
+                            // Left goes backwards, the way a tape does; the
+                            // deep scrub exists only when there is a past.
+                            guard !history.isEmpty else { return }
                             let steps = Int(max(0, -g.translation.width) / stride)
                             let want = min(steps, history.count - 1)
                             if want != back {
@@ -430,8 +434,13 @@ struct WallHero: View {
                         touching = false
                         if axis == .back {
                             let dx = g.translation.width
-                            if back == 0, abs(dx) > 40 {
-                                // never pulled far enough for history: a flick
+                            // A flick is FAST and SHORT: real momentum, and
+                            // the finger never travelled a full stride. A
+                            // slow medium drag is someone peeking at history
+                            // and letting go, and skipping their song for it
+                            // was the bug that felt so wrong.
+                            let fling = abs(g.predictedEndTranslation.width - dx) > 60
+                            if back == 0, abs(dx) > 36, abs(dx) < stride, fling {
                                 if dx < 0 { onFlickPrev() } else { onFlickNext() }
                                 Taps.commit()
                             } else if back > 0, let run = scrubbed {
