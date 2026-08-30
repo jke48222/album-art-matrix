@@ -53,37 +53,45 @@ struct GlyphShape: View {
                 ctx.fill(head, with: .color(.white))
 
             case .pen:
-                // a paintbrush mid-stroke: handle, ferrule, bristles coming
-                // to their point, and the mark they are leaving
-                let tip = CGPoint(x: box.minX + 2.6 * u, y: box.maxY - 3.6 * u)
-                let ax = 0.7071, ay = -0.7071
-                func at(_ d: CGFloat, _ side: CGFloat) -> CGPoint {
+                // a fountain nib at its angle: the kite, the slit, the
+                // breather, and the line it is mid-way through making
+                let tip = CGPoint(x: box.minX + 2.4 * u, y: box.maxY - 3.4 * u)
+                let ax = 0.7071, ay = -0.7071          // the nib's axis, 45 up
+                func along(_ d: CGFloat, _ side: CGFloat) -> CGPoint {
                     CGPoint(x: tip.x + d * ax - side * ay,
                             y: tip.y + d * ay + side * ax)
                 }
-                var bristles = Path()
-                bristles.move(to: tip)
-                bristles.addQuadCurve(to: at(5.0 * u, 1.9 * u),
-                                      control: at(1.6 * u, 1.7 * u))
-                bristles.addLine(to: at(5.0 * u, -1.9 * u))
-                bristles.addQuadCurve(to: tip, control: at(1.6 * u, -1.7 * u))
-                ctx.fill(bristles, with: .color(.white))
-                var ferrule = Path()
-                ferrule.move(to: at(5.6 * u, 2.0 * u))
-                ferrule.addLine(to: at(5.6 * u, -2.0 * u))
-                ctx.stroke(ferrule, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round))
-                var handle = Path()
-                handle.move(to: at(7.0 * u, 0))
-                handle.addLine(to: at(12.2 * u, 0))
-                ctx.stroke(handle, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.9, lineCap: .round))
-                var mark = Path()
-                mark.move(to: CGPoint(x: tip.x - 1.4 * u, y: tip.y + 2.4 * u))
-                mark.addQuadCurve(
-                    to: CGPoint(x: tip.x + 6.6 * u, y: tip.y + 2.6 * u),
-                    control: CGPoint(x: tip.x + 2.4 * u, y: tip.y + 3.6 * u))
-                ctx.stroke(mark, with: .color(.white),
+                let joint = along(7.2 * u, 0)
+                var nib = Path()
+                nib.move(to: tip)
+                nib.addQuadCurve(to: along(5.4 * u, 2.5 * u),
+                                 control: along(1.8 * u, 2.2 * u))
+                nib.addQuadCurve(to: joint, control: along(7.0 * u, 1.4 * u))
+                nib.addQuadCurve(to: along(5.4 * u, -2.5 * u),
+                                 control: along(7.0 * u, -1.4 * u))
+                nib.addQuadCurve(to: tip, control: along(1.8 * u, -2.2 * u))
+                ctx.stroke(nib, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 0.9, lineJoin: .round))
+                var slit = Path()
+                slit.move(to: tip)
+                slit.addLine(to: along(3.4 * u, 0))
+                ctx.stroke(slit, with: .color(.white), lineWidth: lw * 0.7)
+                let vent = 1.5 * u
+                ctx.fill(Path(ellipseIn: CGRect(x: along(4.4 * u, 0).x - vent / 2,
+                                                y: along(4.4 * u, 0).y - vent / 2,
+                                                width: vent, height: vent)),
+                         with: .color(.white))
+                var barrel = Path()
+                barrel.move(to: along(8.2 * u, 0))
+                barrel.addLine(to: along(11.6 * u, 0))
+                ctx.stroke(barrel, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 2.1, lineCap: .round))
+                var written = Path()
+                written.move(to: CGPoint(x: tip.x - 1.2 * u, y: tip.y + 2.2 * u))
+                written.addQuadCurve(
+                    to: CGPoint(x: tip.x + 7.4 * u, y: tip.y + 2.2 * u),
+                    control: CGPoint(x: tip.x + 3.0 * u, y: tip.y + 3.4 * u))
+                ctx.stroke(written, with: .color(.white),
                            style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
 
             case .fill:
