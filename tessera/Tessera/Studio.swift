@@ -164,12 +164,37 @@ final class Canvas64 {
             return
         }
 
-        // The size is a wish with a ceiling: start at what was asked and
-        // come down until the wrapped block fits the panel, so letters are
-        // aware of the edges and never walk off them.
-        var scale = min(4, max(1, size ?? 4))
+        // Overflow is answered by getting SMALLER, not by wrapping: the
+        // whole text on one line at the biggest size that holds it. Only
+        // when even the smallest type cannot hold the line does it wrap,
+        // whole words first, and a word is broken only when no size and no
+        // wrap can save it. "tesse / ra" is never the right rendering of a
+        // word that fits smaller.
+        let chosen = min(4, max(1, size ?? 4))
+        var scale = chosen
         var lines: [String] = []
-        while scale >= 1 {
+        var settled = false
+        for s in stride(from: chosen, through: 1, by: -1)
+        where PixelFont.textWidth(words, scale: s) <= 62 {
+            lines = [words]
+            scale = s
+            settled = true
+            break
+        }
+        if !settled {
+            for s in stride(from: chosen, through: 1, by: -1) {
+                let rows = PixelFont.wrap(words, maxWidth: 62, scale: s)
+                let blockH = rows.count * (PixelFont.height * s + s) - s
+                let unbroken = rows.joined(separator: " ") == words
+                if blockH <= 62, unbroken {
+                    lines = rows
+                    scale = s
+                    settled = true
+                    break
+                }
+            }
+        }
+        while !settled && scale >= 1 {
             lines = PixelFont.wrap(words, maxWidth: 62, scale: scale)
             let blockHeight = lines.count * (PixelFont.height * scale + scale) - scale
             let widest = lines.map { PixelFont.textWidth($0, scale: scale) }.max() ?? 0
