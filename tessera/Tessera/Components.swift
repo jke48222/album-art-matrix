@@ -251,7 +251,7 @@ enum Finishes {
 
     static func thumb(_ data: Data?, finish: String, duty: Double) -> UIImage? {
         guard let data, data.count == 64 * 64 * 3 else { return nil }
-        let key = "\(data.hashValue):\(finish):\(Int(duty * 10))"
+        let key = "\(EmitterTile.digest([UInt8](data))):\(finish):\(Int(duty * 10))"
         if let hit = cache[key] { return hit }
         let processed = apply(data, finish: finish)
         guard let img = EmitterTile.render(processed, cell: 3, duty: duty)
