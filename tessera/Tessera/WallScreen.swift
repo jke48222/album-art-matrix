@@ -19,6 +19,9 @@ struct WallScreen: View {
     /// Passed up so the pager can step aside; see RootView.
     @Binding var onPanel: Bool
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
+    @AppStorage("spin.beat") private var beatOn = false
+    @State private var beats = BeatBook()
+    @Environment(\.scenePhase) private var scenePhase
     var onSetup: () -> Void
     var onStudio: () -> Void
 
@@ -173,7 +176,15 @@ struct WallScreen: View {
     @ViewBuilder private var contextRow: some View {
         switch wall.state.mode {
         case "cd":
-            SpeedTicker(rpm: nearestRpm, accent: accent) { wall.send(["rpm": $0]) }
+            VStack(alignment: .leading, spacing: 16) {
+                // The rail shows the true rate, not the nearest preset: a
+                // free or beat-locked value must not read as 33 1/3.
+                SpeedTicker(rpm: wall.state.rpm, accent: accent) {
+                    beatOn = false          // a hand on the rail outranks the meter
+                    wall.send(["rpm": $0])
+                }
+                beatRow
+            }
 
         case "ambient":
             VStack(alignment: .leading, spacing: 18) {
@@ -266,8 +277,76 @@ struct WallScreen: View {
         }
     }
 
-    private var nearestRpm: Double {
-        [7.5, 33.33, 45.0].min(by: { abs($0 - wall.state.rpm) < abs($1 - wall.state.rpm) }) ?? 7.5
+    /// The record turning at the song's own rate: one revolution per bar.
+    /// The chip owns nothing but the choice; the measured value still lands
+    /// in state.rpm like any other, so the wall and the rail agree.
+    private var beatRow: some View {
+        HStack(spacing: 10) {
+            Button {
+                if beatOn {
+                    beatOn = false
+                } else {
+                    beatOn = true
+                    Taps.detent()
+                    beats.measure(title: wall.state.title, artist: wall.state.artist)
+                }
+            } label: {
+                Text("BEAT")
+                    .font(.ui(12, .medium))
+                    .foregroundStyle(beatOn ? Ink.ground : Ink.dim)
+                    .padding(.vertical, 9)
+                    .padding(.horizontal, 18)
+                    .background { Capsule().fill(beatOn ? accent : Color.clear) }
+                    .overlay { Capsule().strokeBorder(beatOn ? .clear : Ink.hairline, lineWidth: 1) }
+            }
+            .buttonStyle(PressStyle(scale: 0.95))
+            .accessibilityLabel("Spin on the song's beat")
+
+            Group {
+                switch beats.phase {
+                case .listening:
+                    Text("listening...")
+                        .foregroundStyle(Ink.dim)
+                case .locked(let r) where beatOn:
+                    Text("\(Int(r.bpm.rounded())) bpm")
+                        .foregroundStyle(accent)
+                        .contentTransition(.numericText())
+                case .missed where beatOn:
+                    Text("couldn't hear it")
+                        .foregroundStyle(Ink.faint)
+                default:
+                    Text("spin to the song")
+                        .foregroundStyle(Ink.faint)
+                }
+            }
+            .font(.machine(11))
+            Spacer()
+        }
+        .animation(Motion.settle, value: beats.phase)
+        .animation(Motion.settle, value: beatOn)
+        .onAppear {
+            // Track changes that happened while this row was off screen.
+            beats.retune(title: wall.state.title, artist: wall.state.artist)
+            if case .locked(let r) = beats.phase, beatOn { wall.send(["rpm": r.rpm]) }
+        }
+        .onChange(of: beats.phase) {
+            // Every road to a reading converges here: chip tap, cache hit on
+            // a track change, or a listen finishing. One sender, no races.
+            if case .locked(let r) = beats.phase, beatOn, wall.state.mode == "cd" {
+                wall.send(["rpm": r.rpm])
+            }
+        }
+        .onChange(of: wall.state.title) {
+            beats.retune(title: wall.state.title, artist: wall.state.artist)
+            guard beatOn, wall.state.mode == "cd", scenePhase == .active else { return }
+            if case .locked = beats.phase { return }
+            Task {
+                // Let the intro actually start before listening to it.
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard beatOn, wall.state.mode == "cd", scenePhase == .active else { return }
+                beats.measure(title: wall.state.title, artist: wall.state.artist)
+            }
+        }
     }
 }
 

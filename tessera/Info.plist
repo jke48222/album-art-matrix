@@ -8,6 +8,8 @@
 	<string>Read once so the wall knows when your sunset is. It goes to the wall and nowhere else.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Photographs the wall so Tessera can read its colour cast and correct it.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tessera listens for a few seconds to find the song's tempo, so the wall can spin on the beat.</string>
 	<key>NSAppleMusicUsageDescription</key>
 	<string>Shows what you are playing, so there is something real on the wall.</string>
 	<key>NSLocalNetworkUsageDescription</key>
