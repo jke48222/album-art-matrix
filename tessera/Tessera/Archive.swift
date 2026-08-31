@@ -172,37 +172,107 @@ final class ArchiveStore {
 /// Small shared emitter rasteriser, so a tile anywhere in the app is drawn
 /// with the same rules as the wall.
 enum EmitterTile {
+    /// Finished tiles by content digest. The raster below is quick, but the
+    /// studio's kept strip and the archive grid ask for the same frames on
+    /// every body evaluation; the second ask should cost a hash, not a
+    /// drawing. NSCache so the system can shed them under pressure.
+    private static let done: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.totalCostLimit = 24 * 1024 * 1024
+        return c
+    }()
+
+    /// FNV-1a over the whole buffer. Data.hashValue only reads a prefix,
+    /// and dark-topped frames taught us exactly what that costs.
+    static func digest(_ px: [UInt8]) -> UInt64 {
+        var h: UInt64 = 0xcbf29ce484222325
+        for b in px { h = (h ^ UInt64(b)) &* 0x100000001b3 }
+        return h
+    }
+
+    /// Circle coverage across one cell, supersampled once per cell size and
+    /// shared by all 4,096 emitters of every tile at that size.
+    private static var masks: [Int: [Double]] = [:]
+    private static func mask(_ cell: Int) -> [Double] {
+        if let m = masks[cell] { return m }
+        let r = Double(cell) * 0.35
+        let mid = Double(cell) / 2
+        let ss = 4
+        var m = [Double](repeating: 0, count: cell * cell)
+        for y in 0..<cell {
+            for x in 0..<cell {
+                var hit = 0
+                for sy in 0..<ss {
+                    for sx in 0..<ss {
+                        let dx = Double(x) + (Double(sx) + 0.5) / Double(ss) - mid
+                        let dy = Double(y) + (Double(sy) + 0.5) / Double(ss) - mid
+                        if dx * dx + dy * dy <= r * r { hit += 1 }
+                    }
+                }
+                m[y * cell + x] = Double(hit) / Double(ss * ss)
+            }
+        }
+        masks[cell] = m
+        return m
+    }
+
     /// duty dims the lit emitters the way the wall's brightness would; the
     /// unlit lattice stays put. One rasteriser, so the finish thumbnails and
     /// the archive tiles cannot drift apart again.
+    ///
+    /// Rastered by hand into a byte buffer rather than drawn: the old body
+    /// issued 4,096 CGContext ellipse fills with a fresh CGColor each, and
+    /// with the kept strip re-rendering per body evaluation that held the
+    /// main thread at 60 percent CPU until the watchdog shot the app.
     static func render(_ px: [UInt8], cell: CGFloat, duty: Double = 1) -> UIImage? {
-        let side = 64 * cell
-        let fmt = UIGraphicsImageRendererFormat.default()
-        fmt.scale = 1
-        fmt.opaque = true
-        let d = CGFloat(max(0.05, min(1.0, duty)))
-        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: fmt).image { rctx in
-            let ctx = rctx.cgContext
-            ctx.setFillColor(UIColor.black.cgColor)
-            ctx.fill(CGRect(x: 0, y: 0, width: side, height: side))
-            let r = cell * 0.35
-            let unlit = UIColor(white: 0.05, alpha: 1).cgColor
-            for i in 0..<(64 * 64) {
-                let o = i * 3
-                let cx = CGFloat(i % 64) * cell + cell / 2
-                let cy = CGFloat(i / 64) * cell + cell / 2
-                let box = CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)
-                if px[o] < 8 && px[o + 1] < 8 && px[o + 2] < 8 {
-                    ctx.setFillColor(unlit)
-                } else {
-                    ctx.setFillColor(UIColor(red: CGFloat(px[o]) / 255 * d,
-                                             green: CGFloat(px[o + 1]) / 255 * d,
-                                             blue: CGFloat(px[o + 2]) / 255 * d,
-                                             alpha: 1).cgColor)
+        guard px.count == 64 * 64 * 3 else { return nil }
+        let cellI = max(1, Int(cell.rounded()))
+        let d = max(0.05, min(1.0, duty))
+
+        let key = "\(digest(px))|\(cellI)|\(Int(d * 100))" as NSString
+        if let hit = done.object(forKey: key) { return hit }
+
+        let side = 64 * cellI
+        let m = mask(cellI)
+        var buf = [UInt8](repeating: 0, count: side * side * 4)
+        buf.withUnsafeMutableBufferPointer { out in
+            px.withUnsafeBufferPointer { pin in
+                for i in 0..<(64 * 64) {
+                    let o = i * 3
+                    let lit = pin[o] >= 8 || pin[o + 1] >= 8 || pin[o + 2] >= 8
+                    let er = lit ? Double(pin[o]) * d : 12.75
+                    let eg = lit ? Double(pin[o + 1]) * d : 12.75
+                    let eb = lit ? Double(pin[o + 2]) * d : 12.75
+                    let x0 = (i % 64) * cellI
+                    let y0 = (i / 64) * cellI
+                    for yy in 0..<cellI {
+                        var at = ((y0 + yy) * side + x0) * 4
+                        let mrow = yy * cellI
+                        for xx in 0..<cellI {
+                            let cov = m[mrow + xx]
+                            out[at] = UInt8(min(255, er * cov))
+                            out[at + 1] = UInt8(min(255, eg * cov))
+                            out[at + 2] = UInt8(min(255, eb * cov))
+                            out[at + 3] = 255
+                            at += 4
+                        }
+                    }
                 }
-                ctx.fillEllipse(in: box)
             }
         }
+
+        guard let provider = CGDataProvider(data: Data(buf) as CFData),
+              let cg = CGImage(width: side, height: side,
+                               bitsPerComponent: 8, bitsPerPixel: 32,
+                               bytesPerRow: side * 4,
+                               space: CGColorSpaceCreateDeviceRGB(),
+                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                               provider: provider, decode: nil,
+                               shouldInterpolate: false, intent: .defaultIntent)
+        else { return nil }
+        let img = UIImage(cgImage: cg)
+        done.setObject(img, forKey: key, cost: side * side * 4)
+        return img
     }
 
     /// A panel with nothing on it: the lattice, unlit.
