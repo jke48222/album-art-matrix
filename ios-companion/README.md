@@ -46,8 +46,8 @@ Two jobs:
 ## Wire protocol (for future me)
 
 `POST /push` to the reporter: `{track, artist, album, id?, playing,
-progress_ms, duration_ms}` — no art field; the reporter runs its own
-MusicKit/iTunes art ladder. 40s TTL, 15s heartbeat while playing.
+progress_ms, duration_ms, art?}`. Without `art` the reporter runs its own
+MusicKit/iTunes ladder. 40s TTL, 15s heartbeat while playing.
 
 `GET|POST /state` on the Pi: `{mode, brightness, rpm, effect, color,
 color2, speed}` + read-only `now_showing`. Partial POSTs fine; invalid keys

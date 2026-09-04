@@ -20,21 +20,58 @@ unsharp_radius = 1.0
 unsharp_percent = 60    # light unsharp after Lanczos; 0 disables
 
 [nowplaying]
-adapters = ["applemusic"]   # priority order; add "spotify" to resurrect it
+# Order of preference, first answer wins. "phone" is what the app posts
+# straight to the wall (no Mac). On the Pi, "applemusic" is the account view
+# read with the MusicKit credentials deploy.sh copies over. Any adapter left
+# out of this list still runs, after these: a service connected from the
+# phone always has somewhere to be.
+adapters = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "acoustid"]
+
+# Every key and username in the sections below can be set from the phone
+# instead (Tessera > Settings > Services). What the phone sets is kept in
+# ~/.config/album-art-matrix/services.json on the wall and wins over this
+# file, so nobody needs a computer to connect a service.
 poll_seconds = 5.0
 
 [applemusic]
 # "" = brain runs on this Mac and reads Music/MusicKit directly.
 # On the Pi, point at the reporter running on the Mac:
 #   endpoint = "http://Jalens-MacBook-Pro.local:8787"
+# On the Mac (here or in the reporter), everything else the Mac plays is read
+# as well once `brew install media-control` is done: Spotify's app, TIDAL, a
+# browser tab on YouTube Music, SoundCloud or Amazon Music. No settings.
 endpoint = ""
 
 [spotify]
-# Dormant adapter, kept for the day it's wanted: create an app at
-# developer.spotify.com/dashboard with redirect URI
-# http://127.0.0.1:8888/callback and paste the Client ID here.
+# Create an app at developer.spotify.com/dashboard. Add BOTH redirect URIs:
+#   tessera://spotify               (the phone signs in and hands the wall its tokens)
+#   http://127.0.0.1:8888/callback  (signing in from a Mac terminal instead)
+# Paste the Client ID here. No secret is needed anywhere (PKCE).
 client_id = ""
 redirect_port = 8888
+
+[lastfm]
+# Spotify, Tidal and Deezer can all report through one Last.fm account.
+# Key: last.fm/api/account/create. User: your Last.fm username.
+# Spotify: link it at last.fm/settings/applications (no developer app needed).
+# Tidal: Settings > Connect to Last.fm (desktop, web, iPhone; not Android).
+# Deezer: deezer.com/account/share in a browser (covers the phone too).
+api_key = ""
+user = ""
+
+[listenbrainz]
+# The open ledger. Reading it needs no key, only the username; anything a
+# scrobbler can post there (Web Scrobbler in a browser covers YouTube Music,
+# SoundCloud, Amazon Music and more) reaches the wall this way.
+user = ""
+
+[acoustid]
+# The wall's own microphone. Key: acoustid.org/new-application (or from the
+# phone). The Pi's bootstrap installs the tools (libchromaprint-tools,
+# alsa-utils). "auto" picks the first USB microphone `arecord -l` lists;
+# name one instead if there are several (plughw:1,0 is usual).
+api_key = ""
+device = "auto"
 
 [sink]
 type = "preview"                 # "preview" on the Mac, "pi" on the Pi

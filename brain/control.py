@@ -9,6 +9,17 @@ is on — no Mac required.
   POST /replay  -> {"ts": <journal ts>} re-show that sleeve until next track
   POST /frame   -> {"px": base64 raw RGB, 64*64*3 bytes} — doodles and photos;
                    switches mode to "frame" so the push is visible immediately
+  POST /push    -> what the phone is playing: {track, artist, album, id?,
+                   playing, progress_ms, duration_ms, art?}; 40 s TTL
+  GET  /nowplaying -> what the chain currently answers, or 204
+  GET  /services   -> which music services the wall can use, and their state
+  POST /spotify/tokens -> {access_token, refresh_token, expires_in} from the
+                   phone's PKCE sign-in; the wall polls Spotify from then on
+  POST /spotify/unlink -> forget the Spotify account
+  POST /services   -> {spotify: {client_id}, lastfm: {api_key, user},
+                   listenbrainz: {user}, acoustid: {api_key, device}}: any
+                   subset; kept in services.json, applied at once. This is
+                   how every service gets connected from the phone alone.
 
 State persists to ~/.config/album-art-matrix/control.json so the wall comes
 back the way you left it. Every accepted POST sets `dirty` (a threading.Event)
@@ -23,6 +34,7 @@ import json
 import os
 import threading
 import time
+from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 
@@ -96,6 +108,16 @@ class ControlState:
         self.timer = None            # {"end": monotonic, "total": s, "ret": mode}
         self.fps_last = 0.0          # main loop's sustained rate, for /health
         self.last_client = None      # monotonic of the app's last request
+        # The adapters, set by build_sources. Every one exists whether or
+        # not it has its details yet, so the phone can hand them over later.
+        self.pushed = None           # PushedSource
+        self.spotify = None          # SpotifySource
+        self.lastfm = None           # LastfmSource
+        self.listenbrainz = None     # ListenBrainzSource
+        self.acoustid = None         # AcoustidSource
+        self.apple = None            # AppleMusicSource (remote mode knows the Mac)
+        self.services_store = None   # services.Services: what the phone set
+        self.source = None           # the whole chain, for /nowplaying
         # Bumps whenever new content lands (track change, replay, pushed frame
         # or clip) — never on a settings change. Clients key their arrival
         # animations on this instead of guessing from title strings.
@@ -226,6 +248,51 @@ class ControlState:
             out["timer_total_s"] = int(tm["total"])
         return out
 
+    # ---- services -------------------------------------------------------
+    def services(self) -> dict:
+        """What the app shows on its Services page. No secrets: the Spotify
+        client id is public by design (PKCE); keys come back as yes/no."""
+        sp, lf, lb, ac, ap = (self.spotify, self.lastfm, self.listenbrainz,
+                              self.acoustid, self.apple)
+        ears = ac.status() if ac else {
+            "key_set": False, "device": "", "mic": None, "tools": False,
+            "listening": False, "heard_s": None, "problem": None}
+        return {
+            "spotify": {"client_id": sp.client_id if sp else "",
+                        "linked": bool(sp and sp.linked)},
+            "lastfm": {"user": lf.user if lf else "",
+                       "key_set": bool(lf and lf.api_key)},
+            "listenbrainz": {"user": lb.user if lb else ""},
+            "acoustid": ears,
+            "phone": {"age_s": (self.pushed.phone_age if self.pushed else None)},
+            "mac": {"endpoint": (ap.endpoint if ap else ""),
+                    "answering": (ap.answering if ap else None)},
+            "ears": bool(ears["key_set"] and ears["tools"]),
+        }
+
+    def apply_services(self, patch: dict) -> dict:
+        """Details from the phone: keep them, hand them to the adapters
+        now. Returns what was rejected (bad shape, bad value)."""
+        store = self.services_store
+        if store is None:
+            return {"services": "not available"}
+        changed, rejected = store.update(patch)
+        if "spotify" in changed and self.spotify:
+            self.spotify.set_client_id(store.get("spotify", "client_id"))
+        if "lastfm" in changed and self.lastfm:
+            self.lastfm.configure(store.get("lastfm", "api_key"),
+                                  store.get("lastfm", "user"))
+        if "listenbrainz" in changed and self.listenbrainz:
+            self.listenbrainz.configure(store.get("listenbrainz", "user"))
+        if "acoustid" in changed and self.acoustid:
+            self.acoustid.configure(store.get("acoustid", "api_key"),
+                                    store.get("acoustid", "device"))
+        if changed:
+            print(f"[control] services set from the phone: "
+                  f"{', '.join(changed)}")
+            self.dirty.set()
+        return rejected
+
     # ---- health ---------------------------------------------------------
     def health(self) -> dict:
         """The Pi lives sealed behind panels; this is how you find out it is
@@ -301,6 +368,13 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self.end_headers()
             self.wfile.write(body)
 
+        def _empty(self, code: int, extra=()):
+            self.send_response(code)
+            self.send_header("Access-Control-Allow-Origin", "*")
+            for k, v in extra:
+                self.send_header(k, v)
+            self.end_headers()
+
         def do_OPTIONS(self):
             # Preflight for browser POSTs (application/json).
             self.send_response(204)
@@ -347,6 +421,30 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             if u.path.startswith("/state"):
                 ctrl.last_client = time.monotonic()
                 self._json(200, ctrl.public_state())
+                return
+            if u.path.startswith("/services"):
+                self._json(200, ctrl.services())
+                return
+            if u.path.startswith("/nowplaying"):
+                try:
+                    now = ctrl.source.get_current() if ctrl.source else None
+                except Exception as exc:
+                    self._json(500, {"error": str(exc)[:200]})
+                    return
+                age = ctrl.pushed.phone_age if ctrl.pushed else None
+                hdr = [("X-Phone-Age", f"{age:.0f}")] if age is not None else []
+                if now is None:
+                    self._empty(204, hdr)
+                    return
+                self.send_response(200)
+                body = json.dumps(asdict(now)).encode()
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(body)))
+                self.send_header("Access-Control-Allow-Origin", "*")
+                for k, v in hdr:
+                    self.send_header(k, v)
+                self.end_headers()
+                self.wfile.write(body)
                 return
             self._json(404, {"error": "not found"})
 
@@ -422,6 +520,62 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if rejected:
                     resp["rejected"] = rejected
                 self._json(200, resp)
+                return
+
+            if self.path.startswith("/push"):
+                # What the phone is playing. Trusted for a short while, then
+                # forgotten, so a dead phone cannot pin the wall to a song.
+                data = self._body()
+                if data is None:
+                    return
+                if ctrl.pushed is None:
+                    self._json(404, {"error": "phone push is not in the chain"})
+                    return
+                ctrl.pushed.push(data)
+                ctrl.last_client = time.monotonic()
+                ctrl.dirty.set()          # show the new song now, not next poll
+                self._empty(204)
+                return
+
+            if self.path.startswith("/services"):
+                patch = self._body()
+                if patch is None:
+                    return
+                rejected = ctrl.apply_services(patch)
+                resp = ctrl.services()
+                if rejected:
+                    resp["rejected"] = sorted(rejected)   # names only, never values
+                self._json(200, resp)
+                return
+
+            if self.path.startswith("/spotify/tokens"):
+                tokens = self._body()
+                if tokens is None:
+                    return
+                # The phone sends the app id the tokens belong to; a wall
+                # that has none (or another) takes it first, since refresh
+                # only works with the id that issued them.
+                cid = tokens.pop("client_id", None)
+                if isinstance(cid, str) and cid.strip() and ctrl.spotify is not None \
+                        and cid.strip() != ctrl.spotify.client_id:
+                    ctrl.apply_services({"spotify": {"client_id": cid.strip()}})
+                if ctrl.spotify is None or not ctrl.spotify.client_id:
+                    self._json(409, {"error": "the wall has no Spotify app id yet"})
+                    return
+                if not tokens.get("access_token") or not tokens.get("refresh_token"):
+                    self._json(400, {"error": "access_token and refresh_token needed"})
+                    return
+                ctrl.spotify.accept_tokens(tokens)
+                ctrl.dirty.set()
+                print("[control] Spotify linked from the phone")
+                self._json(200, ctrl.services())
+                return
+
+            if self.path.startswith("/spotify/unlink"):
+                if ctrl.spotify is not None:
+                    ctrl.spotify.unlink()
+                    print("[control] Spotify unlinked from the phone")
+                self._json(200, ctrl.services())
                 return
 
             self._json(404, {"error": "not found"})

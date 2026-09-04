@@ -74,6 +74,8 @@ private struct NeedleRule: View {
 private struct Placard: View {
     let state: WallAttributes.ContentState
     var compact = false
+    /// The app has stopped speaking for the wall; say when it last did.
+    var stale = false
 
     private var tint: Color {
         // The brightest tile is the wall's own colour; taking it from the
@@ -100,7 +102,12 @@ private struct Placard: View {
                     .foregroundStyle(.white.opacity(0.55))
                     .lineLimit(1)
             }
-            if let f = state.fraction {
+            if stale {
+                Text("as of \(state.stamped.formatted(date: .omitted, time: .shortened))")
+                    .font(.system(size: compact ? 10 : 11))
+                    .foregroundStyle(.white.opacity(0.4))
+                    .padding(.top, compact ? 2 : 4)
+            } else if let f = state.fraction {
                 NeedleRule(fraction: f, tint: tint)
                     .padding(.top, compact ? 3 : 6)
             }
@@ -125,7 +132,8 @@ struct WallLiveActivity: Widget {
             HStack(spacing: 14) {
                 TileField(state: context.state)
                     .frame(width: 62, height: 62)
-                Placard(state: context.state)
+                    .opacity(context.isStale ? 0.55 : 1)
+                Placard(state: context.state, stale: context.isStale)
                 Spacer(minLength: 0)
             }
             .padding(16)

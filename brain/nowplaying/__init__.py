@@ -1,13 +1,16 @@
 """Now-playing sources behind one interface (research 19.3).
 
-Four adapters planned, ranked by robustness:
-  1. acoustid    — Chromaprint -> AcoustID -> MusicBrainz -> Cover Art Archive.
-                   The bulletproof floor: hears the room. Stage S3.
-  2. spotify     — OAuth /me/player/currently-playing. Implemented (S1).
-  3. lastfm      — scrobble fallback across many players. Stage S3.
-  4. localplayer — MPRIS/playerctl. Stage S3.
+The chain, first answer wins (config [nowplaying] adapters):
+  phone          what the app posts straight to the wall (pushed.py)
+  applemusic     Music.app, then anything else the Mac plays (macmedia.py:
+                 Spotify's app, TIDAL, a browser on YouTube Music...), then
+                 the account's view across devices (applemusic_account.py)
+  spotify        the Web API, any device the account plays on (spotify.py)
+  lastfm         one account Spotify, Tidal and Deezer report to (lastfm.py)
+  listenbrainz   the open equivalent; reading it needs no key (listenbrainz.py)
+  acoustid       the wall's own microphone, for anything out loud (acoustid.py)
 
-When Spotify changes the rules again, you change one file.
+When a service changes the rules again, you change one file.
 """
 from dataclasses import dataclass
 from typing import Optional

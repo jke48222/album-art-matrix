@@ -120,6 +120,28 @@ enum FrameRenderer {
                              blue: Double(min(255, c.b * k) / 255)))
             if out.count == 3 { break }
         }
+        if out.isEmpty {
+            // A black-and-white sleeve has no colour to lend, and the room
+            // used to fall back to the app's amber for it, which lit a grey
+            // record brown. Its own tone is the honest answer: the mean of
+            // what is lit, with whatever faint cast it has, brought up to a
+            // light. A white sleeve lights the room white.
+            var n: Float = 0, r: Float = 0, g: Float = 0, b: Float = 0
+            data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
+                let p = raw.bindMemory(to: UInt8.self)
+                for i in 0..<(64 * 64) where lum[i] >= 24 {
+                    let o = i * 3
+                    n += 1; r += Float(p[o]); g += Float(p[o + 1]); b += Float(p[o + 2])
+                }
+            }
+            if n > 0 {
+                let mr = r / n, mg = g / n, mb = b / n
+                let k = (255 / max(mr, mg, mb, 1)) * 0.92        // to a light, as above
+                out.append(Color(red: Double(min(255, mr * k) / 255),
+                                 green: Double(min(255, mg * k) / 255),
+                                 blue: Double(min(255, mb * k) / 255)))
+            }
+        }
         return out
     }
 
@@ -156,7 +178,7 @@ struct PanelCanvas: View {
             guard let px, px.count == 64 * 64 * 3 else { return }
 
             let cell = size.width / 64
-            let r = cell * 0.34
+            let r = cell * 0.40
             let d = max(0.05, min(1.0, duty))
             // Dimming an LED goes warm, not grey.
             let warm = 0.18 * (1 - d)
@@ -184,10 +206,10 @@ struct PanelCanvas: View {
                 // The halo is what merges neighbours into a picture. Shrink it
                 // with duty and the tiles separate.
                 let n = CGFloat(lum / 255)
-                let hr = r + cell * 0.55 * n * CGFloat(d)
+                let hr = r + cell * 0.72 * n * CGFloat(d)
                 ctx.fill(
                     Path(ellipseIn: CGRect(x: cx - hr, y: cy - hr, width: hr * 2, height: hr * 2)),
-                    with: .color(colour.opacity(0.20 * Double(n) * pow(d, 1.4)))
+                    with: .color(colour.opacity(0.28 * Double(n) * pow(d, 1.4)))
                 )
                 ctx.fill(
                     Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)),

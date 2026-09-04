@@ -54,19 +54,55 @@ class _CallbackHandler(BaseHTTPRequestHandler):
 class SpotifySource(NowPlayingSource):
     name = "spotify"
 
-    def __init__(self, client_id: str, redirect_port: int = 8888):
+    def __init__(self, client_id: str = "", redirect_port: int = 8888):
+        # No app id yet is fine: the phone posts one (POST /services) and
+        # this adapter answers None until then.
         if not client_id or client_id.startswith("PASTE"):
-            raise ValueError(
-                "spotify.client_id missing — create an app at "
-                "developer.spotify.com/dashboard with redirect URI "
-                f"http://127.0.0.1:{redirect_port}/callback and paste the "
-                "Client ID into config.toml"
-            )
+            client_id = ""
         self.client_id = client_id
         self.redirect_uri = f"http://127.0.0.1:{redirect_port}/callback"
         self.redirect_port = redirect_port
         self._tokens = self._load_tokens()
+        self._token_mtime = self._mtime()
         self._backoff_until = 0.0
+
+    def _mtime(self):
+        try:
+            return os.path.getmtime(TOKEN_PATH)
+        except OSError:
+            return None
+
+    def accept_tokens(self, tokens: dict):
+        """Tokens the phone obtained with PKCE and posted to the wall."""
+        self._save_tokens(dict(tokens))
+        self._token_mtime = self._mtime()
+        self._backoff_until = 0.0
+
+    def set_client_id(self, client_id: str):
+        """A new app id from the phone. Tokens belong to the app id they
+        were issued for, so a different id starts the sign-in over."""
+        client_id = (client_id or "").strip()
+        if client_id != self.client_id and self._tokens:
+            self.unlink()
+        self.client_id = client_id
+        self._backoff_until = 0.0
+
+    def unlink(self):
+        """Forget the account. The phone's Disconnect."""
+        self._tokens = None
+        try:
+            os.remove(TOKEN_PATH)
+        except OSError:
+            pass
+        self._token_mtime = self._mtime()
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.client_id)
+
+    @property
+    def linked(self) -> bool:
+        return bool(self._tokens and self._tokens.get("refresh_token"))
 
     # ---- token storage -------------------------------------------------
     def _load_tokens(self):
@@ -89,7 +125,7 @@ class SpotifySource(NowPlayingSource):
         """True when we hold usable tokens; runs the PKCE dance if allowed."""
         if self._tokens:
             return True
-        if not interactive:
+        if not interactive or not self.client_id:
             return False
 
         verifier = secrets.token_urlsafe(64)
@@ -178,8 +214,11 @@ class SpotifySource(NowPlayingSource):
 
     # ---- polling -------------------------------------------------------
     def get_current(self):
-        if time.time() < self._backoff_until:
+        if not self.client_id or time.time() < self._backoff_until:
             return None
+        if self._mtime() != self._token_mtime:      # deploy.sh or the phone wrote new ones
+            self._tokens = self._load_tokens()
+            self._token_mtime = self._mtime()
         token = self._access_token()
         if token is None:
             return None
@@ -199,6 +238,15 @@ class SpotifySource(NowPlayingSource):
             wait = float(resp.headers.get("Retry-After", 30))
             self._backoff_until = time.time() + wait
             print(f"[spotify] rate limited — backing off {wait:.0f}s")
+            return None
+        if resp.status_code == 403:
+            # Spotify's rule since February 2026: a Development Mode app
+            # is refused the Web API unless the account is Premium. Not a
+            # fault to retry every poll; Last.fm or ListenBrainz cover the
+            # account for free instead.
+            self._backoff_until = time.time() + 600
+            print("[spotify] refused (403): the account needs Spotify Premium "
+                  "for this route; link Spotify to Last.fm or ListenBrainz instead")
             return None
         resp.raise_for_status()
 

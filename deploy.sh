@@ -60,3 +60,13 @@ else
     || echo ">>> renderer build failed — run ./deploy.sh --bootstrap first"
 fi
 echo ">>> done"
+
+# The Apple Music account view on the Pi reads the same MusicKit credentials
+# the Mac's widgets use. Copied, never moved; the helper on the Mac is untouched.
+WS="$HOME/.config/widgetsuite"
+if [ -f "$WS/musickit.p8" ] && [ -f "$WS/musickit.json" ] && [ -f "$WS/musickit-user-token.txt" ]; then
+  ssh "$HOST" 'mkdir -p ~/.config/album-art-matrix/musickit && chmod 700 ~/.config/album-art-matrix/musickit'
+  scp -q "$WS/musickit.p8" "$WS/musickit.json" "$WS/musickit-user-token.txt" \
+      "$HOST":.config/album-art-matrix/musickit/
+  echo ">>> MusicKit credentials on the Pi"
+fi

@@ -22,6 +22,15 @@ struct Lighting {
     var room: Double { isOff ? 0 : reading.lit * duty }
     /// The accent, also held steady, so nothing tinted by it can strobe.
     var steadyAccent: Color { palette.first ?? accent }
+    /// How bright the room reads: the lead colour's luminance times how much
+    /// light is in the room. Past a threshold, ink on the room goes dark.
+    var roomBright: Bool {
+        guard room > 0.45, let c = UIColor(steadyAccent).cgColor.components, c.count >= 3 else { return false }
+        let lum = 0.2126 * Double(c[0]) + 0.7152 * Double(c[1]) + 0.0722 * Double(c[2])
+        return lum * room > 0.42
+    }
+    var chrome: Color { roomBright ? Ink.ground : litInk }
+    var chromeDim: Color { roomBright ? Ink.ground.opacity(0.62) : litDim }
     var litInk: Color { Ink.ink.lit(by: accent, 0.20 * room) }
     var litDim: Color { Ink.dim.lit(by: accent, 0.16 * room) }
 }
@@ -38,10 +47,14 @@ struct RootView: View {
     /// A finger is on the panel. The pager stops listening while that is
     /// true, because a sideways pull on the wall is aimed at the wall.
     @State private var onPanel = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
     @State private var showSetup = false
     @State private var showStudio = false
+    @AppStorage("onboarded") private var onboarded = false
+    @AppStorage("onboarding.again") private var onboardingAgain = false
+    @State private var showOnboarding = false
     /// The room's colours, held steady. Reading them straight from the frame
     /// meant rainbow and the pattern modes strobed the whole interface: the
     /// swatches, the glyph rings and the background all chased the hue. The
@@ -56,7 +69,9 @@ struct RootView: View {
         let reading = FrameRenderer.read(wall.frame)
         let accent: Color = {
             if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
-            return reading.glow
+            // the sleeve's own palette before the app's amber: a grey sleeve
+            // lends grey, and only a dark wall lends nothing
+            return reading.palette.first ?? reading.glow
         }()
         return Lighting(reading: reading, accent: accent, duty: duty, isOff: isOff,
                         palette: stablePalette.isEmpty ? reading.palette : stablePalette)
@@ -83,7 +98,8 @@ struct RootView: View {
                         dragLight: $dragLight,
                         onPanel: $onPanel,
                         onSetup: { showSetup = true },
-                        onStudio: { showStudio = true }
+                        onStudio: { showStudio = true },
+                        onArchive: { withAnimation(Motion.scene) { page = 1 } }
                     )
                     .containerRelativeFrame(.horizontal)
                     .id(0)
@@ -99,23 +115,44 @@ struct RootView: View {
             .scrollDisabled(onPanel)
             .ignoresSafeArea(edges: .horizontal)
 
-            PageTesserae(page: page ?? 0, accent: light.steadyAccent, lit: light.room)
+            PageTesserae(page: page ?? 0, accent: light.roomBright ? Ink.ground : light.steadyAccent, lit: light.room)
                 .padding(.bottom, 8)
         }
         .environment(worn)
         .preferredColorScheme(.dark)
         .task { await worn.load(host: wall.host) }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .background: wall.live.appSleeps(canStayAwake: wall.push.keepAlive)
+            case .active: wall.live.appWakes()
+            default: break
+            }
+        }
         .sheet(isPresented: $showSetup) {
             SettingsSheet(accent: light.steadyAccent).environment(wall)
         }
         // The studio is a place you go into and come back from, not a third
         // page: drawing needs the whole surface, and a horizontal stroke must
         // not turn into a page swipe.
+        .fullScreenCover(isPresented: $showOnboarding) {
+            OnboardingFlow().environment(wall)
+        }
+        .onChange(of: onboardingAgain) { _, again in
+            if again { onboardingAgain = false; showOnboarding = true }
+        }
         .fullScreenCover(isPresented: $showStudio) {
             StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
                 .environment(wall)
         }
-        .onAppear { wall.start() }
+        .onAppear {
+            wall.start()
+            if !onboarded && !CommandLine.arguments.contains("-nointro") { showOnboarding = true }
+            #if DEBUG
+            // `-settings` on the launch line opens Setup straight away, so a
+            // simulator run can be looked at without a tap nobody can make.
+            if CommandLine.arguments.contains("-settings") { showSetup = true }
+            #endif
+        }
         // The lock screen's three keys land here. Only modes: anything that
         // needs a choice made about it needs the app open to make it in.
         .onOpenURL { url in

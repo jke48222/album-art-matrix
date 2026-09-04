@@ -4,21 +4,6 @@
 <dict>
 	<key>CFBundleDisplayName</key>
 	<string>Tessera</string>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Read once so the wall knows when your sunset is. It goes to the wall and nowhere else.</string>
-	<key>NSCameraUsageDescription</key>
-	<string>Photographs the wall so Tessera can read its colour cast and correct it.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Tessera listens for a few seconds to find the song's tempo, so the wall can spin on the beat.</string>
-	<key>NSAppleMusicUsageDescription</key>
-	<string>Shows what you are playing, so there is something real on the wall.</string>
-	<key>NSLocalNetworkUsageDescription</key>
-	<string>Tessera talks to the LED wall and the Mac reporter on your network. Nothing leaves it.</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsLocalNetworking</key>
-		<true/>
-	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -30,18 +15,33 @@
 			</array>
 		</dict>
 	</array>
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>audio</string>
-	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSAppleMusicUsageDescription</key>
+	<string>Shows what you are playing, so there is something real on the wall.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Photographs the wall so Tessera can read its colour cast and correct it.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Tessera talks to the LED wall and the Mac reporter on your network. Nothing leaves it.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Read once so the wall knows when your sunset is. It goes to the wall and nowhere else.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Tessera listens for a few seconds to find the song's tempo, so the wall can spin on the beat.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
-		<string></string>
+		<string>LaunchGround</string>
 	</dict>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
