@@ -107,15 +107,15 @@ def grooves():
         for x in range(T):
             d = math.hypot(x - T / 2, y - T / 2) / (T / 2)
             if d > 1.0: v = 0.5
-            elif d > 0.975: v = 0.20          # the lip, glossy
-            elif d > 0.93: v = 0.24           # the lead-in
+            elif d > 0.975: v = 0.14          # the lip, glossy
+            elif d > 0.93: v = 0.17           # the lead-in, smooth and bright
             elif d < 0.35: v = 0.5            # under the label
-            elif d < 0.40: v = 0.25           # the run-out
+            elif d < 0.40: v = 0.18           # the run-out
             else:
-                v = 0.24                      # the space between two tracks
+                v = 0.15                      # the space between two tracks: the shine
                 for outer, inner in bands:
                     if inner <= d <= outer:
-                        v = 0.31 if (int(d * 1200) % 2 == 0) else 0.45
+                        v = 0.36 if (int(d * 1200) % 2 == 0) else 0.52
                         break
             o = (y * T + x) * 4; buf[o] = buf[o + 1] = buf[o + 2] = v; buf[o + 3] = 1
     img.pixels = buf
@@ -127,7 +127,7 @@ def grooves():
     try:
         tan = nt.nodes.new("ShaderNodeTangent"); tan.direction_type = 'RADIAL'; tan.axis = 'Z'
         nt.links.new(tan.outputs["Tangent"], bsdf.inputs["Tangent"])
-        bsdf.inputs["Anisotropic"].default_value = 0.65
+        bsdf.inputs["Anisotropic"].default_value = 0.8
     except Exception as e:
         print("no anisotropy:", e)
 grooves()
