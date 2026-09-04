@@ -102,4 +102,16 @@ def dominant_colors(img: Image.Image, n: int = 2) -> list[str]:
 
     scored.sort(reverse=True)
     out = [f"#{r:02x}{g:02x}{b:02x}" for _, r, g, b in scored[:n]]
-    return out or ["#4060ff", "#ff2080"][:n]
+    if not out:
+        # A black-and-white sleeve has no colour to lend. It used to get blue
+        # and pink, and the app lit its room with them; its own tone is the
+        # honest answer: the mean of what is lit, brought up to a light, and
+        # a shade of the same for the second colour.
+        lit = [px for px in small.getdata() if max(px) >= 40]
+        if lit:
+            mr, mg, mb = (sum(c) / len(lit) for c in zip(*lit))
+            k = 235 / max(mr, mg, mb, 1)
+            r, g, b = (min(255, int(c * k)) for c in (mr, mg, mb))
+            out = [f"#{r:02x}{g:02x}{b:02x}",
+                   f"#{int(r * 0.72):02x}{int(g * 0.72):02x}{int(b * 0.72):02x}"]
+    return (out or ["#d8d8d8", "#9a9a9a"])[:n]

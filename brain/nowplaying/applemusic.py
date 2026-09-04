@@ -7,6 +7,9 @@ Apple has no server-side currently-playing API, so this layers three sources
      used when present and playing.
   1. osascript against Music.app — real-time local playback (incl. AirPlay
      FROM the Mac), playing or paused. Never launches Music.
+  1.5 anything else this Mac is playing (Spotify's app, TIDAL, a browser tab
+     on YouTube Music or SoundCloud...) through macOS's own Now Playing, via
+     media-control — see nowplaying/macmedia.py. Only when it is installed.
   2. musickit-fetch.py --nowplaying — the account's most-recently-played
      track across ALL devices (this is what catches the iPhone), using the
      MusicKit credentials already set up in ~/.config/widgetsuite/.
@@ -126,8 +129,10 @@ class AppleMusicSource(NowPlayingSource):
 
     phone_age = None                 # seconds since the phone's last push
 
-    def __init__(self, endpoint: str = ""):
+    def __init__(self, endpoint: str = "", mac=None):
         self.endpoint = (endpoint or "").rstrip("/")
+        self.mac = mac              # MacMediaSource, when media-control exists
+        self.answering = None       # remote mode: did the reporter answer last time
         self._art_key = None
         self._art_url_cached = None
         self._warned = False
@@ -202,6 +207,11 @@ class AppleMusicSource(NowPlayingSource):
         now, (mac_track, mac_artist) = self._tier1_mac()
         if now and now.is_playing:
             return now
+        # Music idle or paused: is any other app on this Mac playing?
+        if self.mac is not None:
+            other = self.mac.get_current()
+            if other is not None:
+                return other
         # Mac idle or paused: the account view catches iPhone playback; the
         # helper stays silent when the account track is just the Mac's paused
         # one, so the paused sleeve keeps the wall.
@@ -213,6 +223,7 @@ class AppleMusicSource(NowPlayingSource):
             resp = requests.get(self.endpoint + "/nowplaying", timeout=8)
         except requests.RequestException as exc:
             self.phone_age = None
+            self.answering = False
             if not self._warned:
                 print(f"[applemusic] reporter unreachable at {self.endpoint} "
                       f"({exc.__class__.__name__}) — start "
@@ -220,6 +231,7 @@ class AppleMusicSource(NowPlayingSource):
                 self._warned = True
             return None
         self._warned = False
+        self.answering = True
         # How long since the owner's phone last spoke to the reporter.
         # Presence, not music: the away behaviour reads this.
         age = resp.headers.get("X-Phone-Age")

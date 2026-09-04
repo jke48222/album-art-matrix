@@ -382,9 +382,8 @@ struct StudioScreen: View {
                         Button {
                             canvas.redo()
                         } label: {
-                            GlyphShape(glyph: .undo, lineWidth: 1.7)
+                            GlyphShape(glyph: .redo, lineWidth: 1.7)
                                 .frame(width: 19, height: 19)
-                                .scaleEffect(x: -1)
                                 .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
                         }
                         .buttonStyle(PressStyle(scale: 0.88))

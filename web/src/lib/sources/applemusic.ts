@@ -4,7 +4,9 @@ import { fetchJson, status, TransportError } from "./base";
 export const DEFAULT_BRIDGE_URL = "http://localhost:8787/nowplaying";
 
 /** Which side of the Mac reporter answered - the values it actually sends
- * (scripts/mac_reporter.py): a live phone push, or the Mac tier ladder. */
+ * (scripts/mac_reporter.py): a live phone push, the Mac tier ladder, or
+ * "Mac: <app>" when another app on the Mac (Spotify, a browser tab on
+ * YouTube Music...) was read through its Now Playing. */
 export const TIERS: Record<string, string> = {
   "iphone push": "iPhone push (live from the phone)",
   "mac tiers": "Mac tiers (state file, Music.app, MusicKit)",
@@ -12,7 +14,9 @@ export const TIERS: Record<string, string> = {
 
 function tierLabel(v: unknown): string {
   if (v == null) return "unreported tier";
-  return TIERS[String(v).toLowerCase()] ?? String(v);
+  const s = String(v);
+  if (s.toLowerCase().startsWith("mac: ")) return `${s} (read from the Mac's Now Playing)`;
+  return TIERS[s.toLowerCase()] ?? s;
 }
 
 export const appleMusicSource: NowPlayingSource = {

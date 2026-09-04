@@ -6,8 +6,9 @@
 // beat you press play rather than a minute later. This is the reason a phone
 // app exists at all, and it was the largest thing Tessera was missing.
 //
-// It posts to the Mac reporter, not to the wall: the reporter owns the
-// now-playing chain and outranks its other tiers with what arrives here.
+// It posts to the wall itself, which runs the now-playing chain and takes
+// what arrives here over everything else. A Mac reporter, if one is set,
+// gets the same post: optional, for a wall that is not on yet.
 //
 // Nothing is invented. With no permission or nothing playing, it posts
 // nothing at all rather than a guess.
@@ -24,10 +25,21 @@ final class NowPlayingPush {
     private(set) var lastTitle: String?
     private(set) var running = false
 
-    /// The reporter, not the wall. Different machine, different port, and
-    /// conflating them is the obvious way to get this silently wrong.
+    /// The wall. Set by WallSession, which owns the address.
+    @ObservationIgnored var wallHost = ""
+    /// A Mac reporter, optional. Kept for a wall that is not built yet.
     @ObservationIgnored @AppStorage("reporter.host") var host = "" {
-        didSet { if host.isEmpty { stop() } }
+        didSet { Self.share(host: host) }
+    }
+
+    private var targets: [String] {
+        [wallHost, host].filter { !$0.isEmpty }
+    }
+
+    /// The broadcast extension (TesseraEars) runs as its own process and
+    /// reads the reporter's address from the app group, so it goes there too.
+    static func share(host: String) {
+        UserDefaults(suiteName: "group.com.jalenedusei.tessera")?.set(host, forKey: "reporter.host")
     }
     /// Holding a silent audio session keeps the observers alive when the app
     /// is backgrounded. It costs a little battery, so it is a choice.
@@ -45,7 +57,9 @@ final class NowPlayingPush {
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
     func start() {
-        guard !host.isEmpty, !running else { return }
+        guard !targets.isEmpty else { return }
+        Self.share(host: host)
+        guard !running else { return }
         guard MPMediaLibrary.authorizationStatus() == .authorized else { return }
         running = true
         music.beginGeneratingPlaybackNotificationsIfNeeded()
@@ -87,7 +101,7 @@ final class NowPlayingPush {
     // MARK: - The post
 
     private func post(force: Bool) {
-        guard running, !host.isEmpty else { return }
+        guard running, !targets.isEmpty else { return }
         guard let item = music.nowPlayingItem else { return }
         let playing = music.playbackState == .playing
         // Only a playing track is worth sending: the reporter's job is to know
@@ -111,20 +125,21 @@ final class NowPlayingPush {
         if !cid.isEmpty { body["id"] = cid }
         if item.playbackDuration > 0 { body["duration_ms"] = Int(item.playbackDuration * 1000) }
 
-        guard let url = URL(string: "http://\(host)/push"),
-              let data = try? JSONSerialization.data(withJSONObject: body) else { return }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = data
-        req.timeoutInterval = 4
-
+        guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
         let title = item.title
-        Task {
-            if (try? await URLSession.shared.data(for: req)) != nil {
-                await MainActor.run {
-                    self.lastSent = Date()
-                    self.lastTitle = title
+        for target in targets {
+            guard let url = URL(string: "http://\(target)/push") else { continue }
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = data
+            req.timeoutInterval = 4
+            Task {
+                if (try? await URLSession.shared.data(for: req)) != nil {
+                    await MainActor.run {
+                        self.lastSent = Date()
+                        self.lastTitle = title
+                    }
                 }
             }
         }
@@ -168,5 +183,19 @@ private extension MPMusicPlayerController {
     /// Idempotent: calling begin twice is harmless but this reads better.
     func beginGeneratingPlaybackNotificationsIfNeeded() {
         beginGeneratingPlaybackNotifications()
+    }
+}
+
+extension NowPlayingPush {
+    /// Is the reporter answering at all? nil means there is no address to try.
+    /// Setup shows this in words, because "Not answering" is the whole reason
+    /// a wall changes late and nobody should have to guess it.
+    func probe() async -> Bool? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/nowplaying") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 4
+        guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
+        let code = (resp as? HTTPURLResponse)?.statusCode ?? 0
+        return code == 200 || code == 204
     }
 }

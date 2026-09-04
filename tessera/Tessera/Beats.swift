@@ -156,7 +156,7 @@ enum BeatListener {
         let session = AVAudioSession.sharedInstance()
         do {
             try session.setCategory(.playAndRecord, mode: .measurement,
-                                    options: [.mixWithOthers, .defaultToSpeaker])
+                                    options: [.mixWithOthers, .defaultToSpeaker, .allowBluetoothA2DP])
             try session.setActive(true)
         } catch { return nil }
         defer {

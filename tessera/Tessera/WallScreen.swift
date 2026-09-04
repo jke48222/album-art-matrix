@@ -1,14 +1,11 @@
-// The Wall.
+// The Wall, second design: the iPod.
 //
-// The panel owns the screen and the primary parameter lives on the panel:
-// drag it to dim, and the picture dissolves into its tiles. There is no
-// brightness row, because the object is the control. Everything else on
-// screen is lit by what the panel is showing.
+// Everything lives in the iPod body; the room's light sits behind it.
 
 import MediaPlayer
 import SwiftUI
 
-struct WallScreen: View {
+struct IPodWallScreen: View {
     @Environment(WallSession.self) private var wall
     @Environment(ArchiveStore.self) private var worn
 
@@ -24,6 +21,7 @@ struct WallScreen: View {
     @Environment(\.scenePhase) private var scenePhase
     var onSetup: () -> Void
     var onStudio: () -> Void
+    var onArchive: () -> Void = {}
 
     private var duty: Double { light.duty }
     private var isOff: Bool { light.isOff }
@@ -33,76 +31,106 @@ struct WallScreen: View {
     private var litInk: Color { light.litInk }
     private var litDim: Color { light.litDim }
 
+    @State private var zoomed = false
+    /// The opening film plays once per launch, over the spot the iPod
+    /// lands on. `-nointro` on the launch line skips it.
+    @State private var introDone = !IntroFlip.available || CommandLine.arguments.contains("-nointro")
+    @AppStorage("intro.replay") private var replay = false
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
+        GeometryReader { geo in
+            VStack(spacing: 0) {
                 header
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
-
-                // Full bleed, exactly to the screen's edges and no further:
-                // an earlier negative padding pushed the square wider than
-                // the glass and cropped the outer emitter columns.
-                WallHero(
-                    reading: reading,
-                    confirmed: isOff ? 0.05 : wall.state.brightness,
-                    dragging: $dragLight,
-                    link: wall.link,
-                    arrivalKey: wall.arrivalKey,
-                    touching: $onPanel,
-                    onCommit: { wall.send(["brightness": $0]) },
-                    onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
-                    onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
-                    onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
-                )
-                .padding(.bottom, 26)
-
-                Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
-
-                MusicBar(accent: accent, litInk: litInk)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
-
+                    .padding(.top, 4)
+                Spacer(minLength: 8)
+                ZStack {
+                    IPodView(
+                        light: light,
+                        dragLight: $dragLight,
+                        touching: $onPanel,
+                        onSetup: onSetup,
+                        onStudio: onStudio,
+                        onArchive: onArchive,
+                        onZoom: { zoomed = true }
+                    )
+                    .opacity(introDone ? 1 : 0)
+                    if !introDone {
+                        IntroFlip { withAnimation(.easeOut(duration: 0.25)) { introDone = true } }
+                            .frame(width: IPodMetrics.bodyW, height: IPodMetrics.bodyH)
+                            .shadow(color: .black.opacity(0.55), radius: 30, y: 18)
+                            .allowsHitTesting(false)
+                    }
+                }
+                // A body wider than the phone would clip; on the narrowest
+                // phones it scales down and keeps its proportions.
+                .scaleEffect(min(1, (geo.size.width - 24) / IPodMetrics.bodyW), anchor: .top)
+                .frame(height: IPodMetrics.bodyH * min(1, (geo.size.width - 24) / IPodMetrics.bodyW))
                 if wall.state.mode == "timer", let left = wall.state.timerRemaining {
-                    // The running countdown is never more than one glance and
-                    // one tap away, whatever else is selected.
                     HStack(spacing: 12) {
                         Text(String(format: "%02d:%02d", left / 60, left % 60))
-                            .font(.machine(18))
-                            .foregroundStyle(accent)
+                            .font(.machine(16))
+                            .foregroundStyle(chrome)
                             .contentTransition(.numericText(countsDown: true))
-                        Text("counting down")
-                            .font(.ui(13))
-                            .foregroundStyle(litDim)
+                        Text("counting down").font(.ui(13)).foregroundStyle(chromeDim)
                         Spacer()
                         Button("stop") { wall.send(["timer_min": 0.0]) }
                             .buttonStyle(PressStyle(scale: 0.95))
                             .font(.ui(14, .semibold))
                             .foregroundStyle(Ink.signal)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 14)
                 }
-
-                modeRow
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, isOff ? 8 : 24)
-
-                if !isOff {
-                    contextRow
-                        .padding(.horizontal, 20)
-                        .transition(.opacity)
-                }
-
-                Spacer(minLength: 56)
+                Spacer(minLength: 40)
             }
-            .padding(.top, 6)
-            .animation(Motion.settle, value: isOff)
+            .frame(width: geo.size.width)
         }
-        .scrollIndicators(.hidden)
+        .onChange(of: replay) { _, on in
+            if on, IntroFlip.available { replay = false; introDone = false }
+        }
+        .fullScreenCover(isPresented: $zoomed) {
+            ZStack(alignment: .topTrailing) {
+                Color.black.ignoresSafeArea()
+                VStack(spacing: 24) {
+                    Spacer()
+                    WallHero(
+                        reading: reading,
+                        confirmed: isOff ? 0.05 : wall.state.brightness,
+                        dragging: $dragLight,
+                        link: wall.link,
+                        arrivalKey: wall.arrivalKey,
+                        touching: $onPanel,
+                        onCommit: { wall.send(["brightness": $0]) },
+                        onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
+                        onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
+                        onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
+                    )
+                    .aspectRatio(1, contentMode: .fit)
+                    Placard(state: wall.state, link: wall.link, litInk: Ink.ink, litDim: Ink.dim)
+                        .padding(.horizontal, 24)
+                    Spacer()
+                }
+                Button { zoomed = false } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Ink.ink)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Ink.plaster))
+                }
+                .buttonStyle(PressStyle(scale: 0.94))
+                .padding(20)
+                .accessibilityLabel("Close")
+            }
+            .preferredColorScheme(.dark)
+        }
     }
+
+    /// Ink for anything that sits on the room rather than on the iPod. The
+    /// room is lit by the sleeve, and a pale sleeve makes a pale room, on
+    /// which pale ink vanishes. So the ink flips.
+    private var chrome: Color { light.chrome }
+    private var chromeDim: Color { light.chromeDim }
 
     // MARK: - Pieces
 
@@ -112,7 +140,7 @@ struct WallScreen: View {
             Text("TESSERA")
                 .font(.display(18))
                 .kerning(3.0)
-                .foregroundStyle(litInk)
+                .foregroundStyle(chrome)
             Spacer()
             MiniGlyphButton(glyph: .make,
                             label: "Make something for the wall") { onStudio() }
@@ -126,155 +154,6 @@ struct WallScreen: View {
             .accessibilityLabel("Setup. Link is \(wall.link.isLive ? "live" : "not answering").")
         }
         .padding(.top, 4)
-    }
-
-    /// Seven faces. Words left this row at the owner's request (text is made
-    /// in the Studio); nine and lyrics joined it because both are things the
-    /// wall IS for a while, not things you do to it.
-    private var modeRow: some View {
-        VStack(spacing: 16) {
-            // Grouped by what they are: the song's faces on the top row,
-            // the room's faces below.
-            HStack(spacing: 0) {
-                glyph(.art, "art", mode: "art")
-                glyph(.spin, "spin", mode: "cd")
-                glyph(.lyrics, "lyrics", mode: "lyrics")
-                glyph(.nine, "nine", mode: "nine")
-            }
-            HStack(spacing: 0) {
-                Spacer().frame(maxWidth: .infinity)
-                glyph(.lamp, "lamp", mode: "ambient")
-                glyph(.clock, "clock", mode: "clock")
-                glyph(.dark, "off", mode: "off")
-                Spacer().frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    private func glyph(_ g: Glyph, _ label: String, mode: String) -> some View {
-        GlyphButton(
-            glyph: g,
-            label: label,
-            active: normalizedMode == mode,
-            accent: accent,
-            lit: roomLight
-        ) {
-            wall.send(["mode": mode])
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    /// The wall may be in a mode this row does not offer (ticker, clip, frame).
-    /// Show Art rather than lying with nothing selected.
-    private var normalizedMode: String {
-        let m = wall.state.mode
-        if m == "timer" { return "clock" }   // a countdown is the clock, busy
-        return ["art", "cd", "ambient", "off", "ticker", "clock", "nine", "lyrics"].contains(m)
-            ? m : "art"
-    }
-
-    @ViewBuilder private var contextRow: some View {
-        switch wall.state.mode {
-        case "cd":
-            VStack(alignment: .leading, spacing: 16) {
-                // The rail shows the true rate, not the nearest preset: a
-                // free or beat-locked value must not read as 33 1/3.
-                SpeedTicker(rpm: wall.state.rpm, accent: accent) {
-                    beatOn = false          // a hand on the rail outranks the meter
-                    wall.send(["rpm": $0])
-                }
-                beatRow
-            }
-
-        case "ambient":
-            VStack(alignment: .leading, spacing: 18) {
-                PillRow(
-                    label: "light",
-                    options: [("plaid", "plaid"), ("weave", "weave"), ("deco", "deco"),
-                              ("snake", "snake"), ("solid", "solid"), ("breathe", "breathe"),
-                              ("pulse", "pulse"), ("rainbow", "rainbow"), ("fade", "gradient")],
-                    selected: wall.state.effect,
-                    accent: accent
-                ) { wall.send(["effect": $0]) }
-
-                LampInks(
-                    color: wall.state.color,
-                    color2: wall.state.color2,
-                    matchArt: wall.state.matchArt,
-                    effect: wall.state.effect,
-                    accent: accent
-                ) { key, hex in
-                    wall.send([key: hex])
-                }
-
-                Toggle(isOn: Binding(
-                    get: { wall.state.matchArt },
-                    set: { wall.send(["match_art": $0]) }
-                )) {
-                    Text("Take the album's colours")
-                        .font(.ui(15))
-                        .foregroundStyle(litInk)
-                }
-                .tint(accent)
-            }
-
-        case "ticker":
-            TickerRow(
-                text: wall.state.tickerText,
-                loop: wall.state.tickerLoop,
-                style: wall.state.tickerStyle,
-                colors: wall.state.tickerColors,
-                accent: accent
-            ) { key, value in wall.send([key: value]) }
-
-        case "clock":
-            VStack(alignment: .leading, spacing: 18) {
-                WallTimerRow(
-                    remaining: wall.state.mode == "timer" ? (wall.state.timerRemaining ?? 0) : nil,
-                    total: wall.state.timerTotal,
-                    accent: accent
-                ) { wall.send(["timer_min": $0]) }
-                if wall.state.mode != "timer" {
-                    PillRow(
-                        label: "clock",
-                        options: [("24 hour", true), ("12 hour", false)],
-                        selected: wall.state.clock24h,
-                        accent: accent
-                    ) { wall.send(["clock_24h": $0]) }
-                }
-            }
-
-        case "nine":
-            Text("The last nine sleeves the wall has worn, newest first.")
-                .font(.ui(13))
-                .foregroundStyle(litDim)
-                .fixedSize(horizontal: false, vertical: true)
-
-        case "lyrics":
-            VStack(alignment: .leading, spacing: 14) {
-                // The one knob syncing genuinely needs: the words files in
-                // the wild are themselves early or late, and only the person
-                // singing along can hear by how much.
-                PillRow(
-                    label: "timing",
-                    options: [("sooner", -0.4), ("on time", 0.0), ("later", 0.4)],
-                    selected: lyricsNudge,
-                    accent: accent
-                ) { lyricsNudge = $0 }
-                Text("Words come from LRCLIB; a track it has never heard shows the sleeve alone.")
-                    .font(.ui(12))
-                    .foregroundStyle(litDim)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-        default:
-            FinishRow(
-                frame: wall.frame,
-                duty: duty,
-                selected: wall.state.finish,
-                accent: accent
-            ) { wall.send(["finish": $0]) }
-        }
     }
 
     /// The record turning at the song's own rate: one revolution per bar.
@@ -351,58 +230,41 @@ struct WallScreen: View {
 }
 
 
-// MARK: - Music
+// MARK: - Which design
 
-/// The music this phone is playing, steered from the same screen that shows
-/// what it lands on. Three keys and nothing else: the queue, the library and
-/// the rest of it belong to the music app, but play, skip and back are wall
-/// gestures now, because the wall is where the song is showing.
-private struct MusicBar: View {
-    let accent: Color
-    let litInk: Color
-
-    @State private var playing =
-        MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
-
-    private var music: MPMusicPlayerController { .systemMusicPlayer }
-
-    var body: some View {
-        HStack(spacing: 0) {
-            key(.back, small: true) { music.skipToPreviousItem() }
-                .frame(maxWidth: .infinity)
-            key(playing ? .pause : .play, small: false) {
-                if playing { music.pause() } else {
-                    StandIn.requestMusicAccess { music.play() }
-                }
-                playing.toggle()
-            }
-            .frame(maxWidth: .infinity)
-            key(.skip, small: true) { music.skipToNextItem() }
-                .frame(maxWidth: .infinity)
-        }
-        .padding(.horizontal, 44)
-        .onAppear { music.beginGeneratingPlaybackNotifications() }
-        .onReceive(NotificationCenter.default.publisher(
-            for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
-            playing = music.playbackState == .playing
+/// Three designs of the same room, one at a time: the panel (2D), the iPod,
+/// and the room itself in 3D. Chosen in Settings; nothing else changes.
+enum Design: String, CaseIterable {
+    case classic, ipod, room
+    var name: String {
+        switch self {
+        case .classic: "Panel"
+        case .ipod: "iPod"
+        case .room: "Room"
         }
     }
+}
 
-    private func key(_ glyph: Glyph, small: Bool,
-                     _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                Circle().strokeBorder(small ? Ink.hairline : accent.opacity(0.7),
-                                      lineWidth: small ? 1 : 1.5)
-                GlyphShape(glyph: glyph, lineWidth: 1.6)
-                    .frame(width: small ? 15 : 20, height: small ? 15 : 20)
-                    .foregroundStyle(small ? Ink.dim : litInk)
-            }
-            .frame(width: small ? 44 : 56, height: small ? 44 : 56)
+struct WallScreen: View {
+    @AppStorage("design") private var design = Design.ipod.rawValue
+    let light: Lighting
+    @Binding var dragLight: Double?
+    @Binding var onPanel: Bool
+    var onSetup: () -> Void
+    var onStudio: () -> Void
+    var onArchive: () -> Void = {}
+
+    var body: some View {
+        switch Design(rawValue: design) ?? .ipod {
+        case .classic:
+            ClassicWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                              onSetup: onSetup, onStudio: onStudio)
+        case .room:
+            RoomWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                           onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
+        case .ipod:
+            IPodWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                           onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
         }
-        .buttonStyle(PressStyle(scale: 0.9))
-        .accessibilityLabel(glyph == .back ? "Previous track"
-                            : glyph == .skip ? "Next track"
-                            : playing ? "Pause" : "Play")
     }
 }

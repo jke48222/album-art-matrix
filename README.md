@@ -20,12 +20,15 @@ been ordered; no panel has arrived. The section below is exact about what exists
 | Wall control API (`brain/control.py`) | Built, 335 lines. Serves mode, brightness, spin rate, ambient settings, finishes, ticker and clock text, a sleep fade, a journal with replay, and raw frame and clip pushes on port 8788. Has run on the real Pi and answered the apps over the network; has never had a panel behind it. |
 | Display modes (`brain/art/disc.py`, `effects.py`, `text_modes.py`) | Built. Spinning disc, eight ambient light effects (solid, breathe, pulse, rainbow, gradient, plaid, weave, deco), clock and ticker over a generated pixel font, plus pushed frames and clips. All verified as PNGs, none on an LED. |
 | iOS companion, first app (`ios-companion/`) | Built, 4,406 lines of Swift. Reads the on device now playing state and pushes it to the reporter, and remote controls the wall. Runs on device. **The simulator cannot exercise it**, because MediaPlayer is stubbed there. Superseded by Tessera for daily use; still installs and works. |
-| Tessera (`tessera/`) | The current iOS app, 6,257 lines of Swift. Wall screen fed by the wall's own frames, Studio (draw, photo, words, video on one 64x64 canvas), Archive, Settings, widgets and a Live Activity, an offline outbox, and a stand-in wall the phone runs when no hardware answers. Verified in the simulator against a local brain and installed on a phone; never against a panel. |
+| Tessera (`tessera/`) | The current iOS app. Three designs of the same room (a panel, an iPod with a click wheel, and a rendered room with a record player whose arm follows the song), Studio (draw, photo, words, video on one 64x64 canvas), Archive, Settings with every service set up from the phone, widgets and a Live Activity, an offline outbox, and a stand-in wall the phone runs when no hardware answers. The room's renders come from `tessera/Tools/room/room.py` (Blender, headless). Verified in the simulator against a local brain and installed on a phone; never against a panel. |
 | Web app (`web/`) | Built and runs (TanStack Start + React). The whole pipeline reimplemented in TypeScript (Lanczos-3, Pillow-semantics unsharp, gamma 2.2, WB in linear light), plus a seven-source now-playing chain, an LED wall simulator, history, WB profiles, a wiring calculator, and push-to-wall. Verified live against `scripts/mac_reporter.py`; the brain push matches `brain/control.py`'s contract but has not been fired at the real Pi yet. |
 | Panel intake QA (`scripts/panel_qa.py`) | Test pattern generator and procedure written, 271 reference frames rendered in `qa_preview/`. `qa/QA-SHEET.md` is an **empty template**. No panel has been through it. |
-| Now playing, Apple Music (`brain/nowplaying/applemusic.py`) | Built, 232 lines. |
-| Now playing, Spotify (`brain/nowplaying/spotify.py`) | Built, 223 lines, dormant behind a config flag. |
-| Now playing, Last.fm / AcoustID / local player | **Not built.** The config reserves the adapter names; no code exists for them. |
+| Now playing, Apple Music (`brain/nowplaying/applemusic.py`, `applemusic_account.py`, `pushed.py`) | Built. On the Mac: the phone's push, then Music.app, then anything else the Mac plays (next row), then the account view through the MusicKit helper. On the Pi: the phone's push and the account view straight from MusicKit. The phone push and the Mac path have both answered live. |
+| Now playing, anything the Mac plays (`brain/nowplaying/macmedia.py`) | Built. Reads macOS's own Now Playing through `media-control`, so Spotify's app, TIDAL, or a browser tab on YouTube Music, SoundCloud or Amazon Music reach the wall with their own artwork, which the reporter serves to the Pi. Verified live on this Mac: a YouTube Music tab reached the reporter with its title, progress and thumbnail, and the brain rendered it. |
+| Now playing, Spotify (`brain/nowplaying/spotify.py`) | Built. The app id is pasted in Tessera and handed to the wall, the PKCE sign-in runs on the phone (`tessera://spotify`), and the wall polls from then on. Under the February 2026 rules the app id needs a Premium account, one client ID per developer and five users. **Not linked yet.** |
+| Now playing, Last.fm and ListenBrainz (`lastfm.py`, `listenbrainz.py`) | Built. Last.fm needs an API key and a username; ListenBrainz needs only a username. Both are typed in Tessera and kept on the wall. Spotify, Tidal and Deezer report to Last.fm on their own; a browser scrobbler covers YouTube Music, SoundCloud and Amazon Music on a computer. **No account entered yet**, so neither has answered live. |
+| Now playing, AcoustID (`brain/nowplaying/acoustid.py`) | Built, **untested**: the Pi has no microphone yet and no key is set. The key is typed in Tessera; the wall finds a USB microphone on its own and reports what it has. |
+| Service settings from the phone (`brain/services.py`, `tessera/Tessera/Services.swift`) | Built and exercised against a brain on the Mac: every key and username above is set from Tessera's Services pages, kept in `services.json` on the wall, and applied to the running adapters without a restart. No config file is edited by hand once the wall is deployed. |
 | Renderer (`renderer/art_display.c`) | 202 lines of C. Compiled and run on the Pi 5; frames flow through the FIFO and the map-rate cap. It has never had a panel on the other side. |
 | Pi provisioning (`pi/`) | Executed on the real Pi: bootstrap, venv, renderer build, systemd units for brain and renderer. The wall boots headless and answers the network. |
 | Parts | **Panels arrived**: ten Waveshare P2.5 64x64, driver confirmed FM6124HJ (conventional, no init sequence needed). Pi 5, card, cooler and sundries on hand. First light is blocked on the HUB75 bonnet and 5V supplies still on order. `PARTS-TRACKER.xlsx` carries prices actually paid; `PARTS.md` remains the list. |
@@ -356,6 +359,28 @@ Apple Music adapter's highest tier shells out to a MusicKit helper at
 here; its lower tier uses `osascript` against Music.app, which triggers a one time macOS automation
 prompt. Add `--once` to poll a single time and exit.
 
+To have the Mac report every other app it plays as well (Spotify's app, TIDAL, a browser tab on
+YouTube Music), install `media-control` once; both the brain on a Mac and `scripts/mac_reporter.py`
+pick it up on their next start, with no setting to flip:
+
+```bash
+brew install media-control
+```
+
+Connecting a service needs no computer at all. Tessera's Settings > Services pages take the Spotify
+app id, the Last.fm key and username, the ListenBrainz username and the AcoustID key, hand them to
+the wall (`POST /services`), and the wall keeps them in `~/.config/album-art-matrix/services.json`
+and starts using them at once. The Spotify sign-in itself runs on the phone. The values in
+`config.toml` are only seeds; anything set from the phone wins. What still needs a computer is the
+one-time `./deploy.sh` that puts the software on the Pi.
+
+The developer's own keys live in `tessera/Tessera/DeveloperKeys.swift`: the Spotify app id, the
+Last.fm API key and the AcoustID key, made once by whoever builds the app, the way every app with a
+"Sign in with Spotify" button was registered once by its developer. With them filled in, the app
+hands them to any wall it meets that is missing them, and a person only ever signs in to Spotify or
+types a Last.fm or ListenBrainz username. With them empty, the Services pages walk through making
+them by hand.
+
 To re-run the circuit simulations, you need `ngspice` on your PATH plus numpy and matplotlib:
 
 ```bash
@@ -387,17 +412,26 @@ displayed anything.
 ## Project layout
 
 ```
-brain/                  2,275 lines of Python: the now playing control plane
+brain/                  4238 lines of Python: the now playing control plane
 ├── main.py             Poll loop, render loop, journal writes. A dirty event
 │                       from the API wakes it instead of waiting out the poll.
+├── services.py         Keys and usernames the phone hands the wall; kept in
+│                       services.json, applied to the adapters live
 ├── control.py          HTTP state API on 8788. Mode, brightness, spin rate,
 │                       ambient, finishes, ticker and clock, sleep fade,
 │                       journal + replay, raw frame and clip pushes. State
 │                       persists to control.json; plays go to journal.jsonl.
 ├── nowplaying/
-│   ├── applemusic.py   Built (232 lines). Tiered: a state file, then osascript
-│   │                   against Music.app, then a MusicKit account query.
-│   └── spotify.py      Built (223 lines), PKCE OAuth. Dormant, needs a client id.
+│   ├── pushed.py       What the phone posts straight to the wall
+│   ├── applemusic.py   Tiered: a state file, Music.app over osascript, any
+│   │                   other app the Mac plays (macmedia), the account view
+│   ├── applemusic_account.py  The account view from the Pi, no Mac in the path
+│   ├── macmedia.py     macOS Now Playing via media-control: Spotify's app,
+│   │                   TIDAL, browser tabs, with their artwork
+│   ├── spotify.py      PKCE OAuth from the phone or a Mac; the wall polls
+│   ├── lastfm.py       One account Spotify, Tidal and Deezer report to
+│   ├── listenbrainz.py The open ledger; reading it needs no key
+│   └── acoustid.py     The wall's microphone: Chromaprint, then AcoustID
 ├── art/
 │   ├── fetch.py        Cover URL to cached image (decode before cache)
 │   ├── pipeline.py     The colour work
@@ -470,8 +504,14 @@ Stated plainly, because the value of everything above depends on this list being
   is an empty table.
 - **The renderer's output has never reached an LED.** It compiles and runs on the Pi, but with no
   panel attached everything it maps goes into the library and stops there.
-- **The acoustid, lastfm and localplayer adapters do not exist.** Only the names are reserved in
-  the config.
+- **No streaming account is linked yet.** The Spotify, Last.fm, ListenBrainz and AcoustID
+  adapters are written, but every credential in `config.toml` is still empty, so none of them has
+  answered live. Only Apple Music (phone push, Music.app, account view) and the Mac's own Now
+  Playing have.
+- **Nothing on an iPhone other than Apple Music can be read by an app.** iOS gives an app only the
+  Music player; Spotify, Tidal and Deezer reach the wall through their own accounts (Spotify's
+  API, or Last.fm), and SoundCloud, YouTube Music and Amazon Music reach it only from a Mac or
+  out loud.
 - **Panel performance is unmeasured.** The software side is measured (`scripts/bench_frames.py`
   bounds the producer, the brain prints its sustained fps, and the 60 Hz map cap came out of a
   measured black-flashing regression), but refresh on real LEDs, CPU under a real load, and power

@@ -15,13 +15,15 @@ enum WallSnapshot {
     private static var defaults: UserDefaults? { UserDefaults(suiteName: group) }
 
     /// The app writes what it knows; the widget reads it and says when.
+    /// An empty host means "no wall answered this" — it never erases the
+    /// address of a wall that did, so the widget can still dial it.
     static func write(px: [UInt8]?, title: String?, artist: String?, mode: String, host: String) {
         guard let d = defaults else { return }
         if let px, px.count == 64 * 64 * 3 { d.set(Data(px), forKey: "frame") }
         d.set(title, forKey: "title")
         d.set(artist, forKey: "artist")
         d.set(mode, forKey: "mode")
-        d.set(host, forKey: "host")
+        if !host.isEmpty { d.set(host, forKey: "host") }
         d.set(Date(), forKey: "updated")
     }
 

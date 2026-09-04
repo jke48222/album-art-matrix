@@ -6,6 +6,7 @@
 import Foundation
 import QuartzCore
 import SwiftUI
+import WidgetKit
 
 // MARK: - Models
 
@@ -165,9 +166,22 @@ final class WallSession {
             // The widget's keys dial the wall themselves; they read the
             // address from the shared group, so it has to live there too.
             UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
+            push.wallHost = host
+            push.restart()
         }
     }
     #endif
+
+    /// A widget key or Siri lands in this process; give it the running
+    /// session instead of a bare socket, so "Lamp" works on the stand-in
+    /// and an away wall gets the intent queued rather than an error.
+    init() {
+        WallAddress.localRoute = { [weak self] patch in
+            guard let self, !self.link.isLive else { return false }
+            self.send(patch)
+            return true
+        }
+    }
 
     @ObservationIgnored private var pollTask: Task<Void, Never>? = nil
     /// One probe or pull in flight at a time, and NEVER awaited inside the
@@ -222,6 +236,7 @@ final class WallSession {
     /// sleeve does not need even that.
     func start() {
         UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
+        push.wallHost = host
         push.start()
         // Launch is this phone's music, immediately: the stand-in starts at
         // once, and a real wall that answers the background probe takes over
@@ -354,9 +369,9 @@ final class WallSession {
             }
             wasLive = true
             link = .live
+            seedWall()
             if reconnected { flushOutbox() }
-            WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
-                               artist: state.artist, mode: state.mode, host: host)
+            syncWidget()
             live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: host)
         } catch {
             misses += 1
@@ -415,6 +430,7 @@ final class WallSession {
         // a finished non-looping run hands back to art, wall or no wall
         if standIn.state.mode != state.mode { state.mode = standIn.state.mode }
         if px != frame { frame = px }
+        syncWidget()
     }
 
     private func tickStandIn() {
@@ -438,6 +454,8 @@ final class WallSession {
         state = standIn.state
         live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
         lap("liveActivity")
+        syncWidget()
+        lap("widget")
     }
 
     private var linkIsSearching: Bool { if case .searching = link { true } else { false } }
@@ -449,6 +467,38 @@ final class WallSession {
     /// to the title; the stand-in mints its own seq.
     var arrivalKey: String {
         state.shownSeq > 0 ? "seq-\(state.shownSeq)" : (state.title ?? "")
+    }
+
+    // MARK: - The widget's copy of the truth
+
+    @ObservationIgnored private var snapKey = ""
+    @ObservationIgnored private var snapAt = Date.distantPast
+
+    /// The widget can only show what somebody wrote down. Writing happened
+    /// only on a successful live poll, so a phone that had never reached a
+    /// wall — which is every phone until the wall is built — left the shared
+    /// snapshot empty and the widget sat on an unlit lattice saying nothing
+    /// was playing. Now every path that produces frames writes: new content
+    /// immediately, a moving frame at most once a minute, and the timelines
+    /// are nudged so the home screen follows the app instead of a 5-minute
+    /// clock. The host is only stamped by a wall that answered; the widget
+    /// uses it to dial direct, and a stand-in is not dialable.
+    private func syncWidget() {
+        let carrier = link.isLive ? "live" : (link.isStandIn ? "standin" : "away")
+        let key = "\(arrivalKey)|\(state.mode)|\(state.effect)|\(state.title ?? "")|\(carrier)"
+        let changed = key != snapKey
+        guard changed || Date().timeIntervalSince(snapAt) > 60 else { return }
+        snapKey = key
+        snapAt = Date()
+        WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
+                           artist: state.artist, mode: state.mode,
+                           host: link.isLive ? host : "")
+        // Redraw only when the picture MEANS something new. The minute write
+        // keeps the snapshot fresh for whenever WidgetKit next asks on its
+        // own; a reload per write would spend the whole background budget on
+        // frames nobody asked for, and the widget would then sit stale on
+        // the one reload that mattered, the track change.
+        if changed { WidgetCenter.shared.reloadAllTimelines() }
     }
 
     /// The one JSON POST every endpoint shares: request shape, status check,
@@ -635,12 +685,14 @@ final class WallSession {
         if link.isStandIn {
             standIn.apply(merged)
             state = standIn.state
+            syncWidget()
             return
         }
         // An away wall still answers locally: the stand-in mirrors commands
         // like timers so what renders matches what was asked, and the outbox
         // still carries the intent to the wall when it returns.
         if !link.isLive { standIn.apply(merged) }
+        syncWidget()
 
         Task { [weak self] in
             guard let self else { return }

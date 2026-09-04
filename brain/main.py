@@ -32,8 +32,15 @@ from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .sun import sun_factor
+from .nowplaying.acoustid import AcoustidSource
 from .nowplaying.applemusic import AppleMusicSource
+from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
+from .nowplaying.lastfm import LastfmSource
+from .nowplaying.listenbrainz import ListenBrainzSource
+from .nowplaying.macmedia import MacMediaSource
+from .nowplaying.pushed import PushedSource
 from .nowplaying.spotify import SpotifySource
+from .services import Services
 from .sinks.mac_preview import MacPreviewSink
 from .sinks.pi_renderer import PiRendererSink
 
@@ -52,27 +59,80 @@ def make_sink(cfg: dict, override: str | None = None):
     raise ValueError(f"unknown sink type: {kind}")
 
 
-def build_sources(cfg: dict):
-    order = cfg.get("nowplaying", {}).get("adapters", ["applemusic"])
+DEFAULT_ORDER = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "acoustid"]
+
+
+def build_sources(cfg: dict, ctrl):
+    """The chain, first answer wins:
+      phone        what the app posts to /push (no Mac needed)
+      applemusic   on a Mac: Music.app, then anything else the Mac plays
+                   (media-control), then the account view via the helper;
+                   on the Pi: the account view straight from MusicKit
+      spotify      the API, for any device; tokens arrive from the phone
+      lastfm       Spotify, Tidal and Deezer reporting through one account
+      listenbrainz the open ledger; reading it needs no key at all
+      acoustid     the wall's own microphone, for anything out loud
+    Every adapter is built whether or not it has its details yet: the phone
+    hands them over later (POST /services) and the adapter starts answering
+    with no restart. config.toml's list is the order of preference; anything
+    it leaves out still comes after, so a service connected from the phone
+    always has somewhere to be."""
+    store = Services(cfg)
+    ctrl.services_store = store
+    order = [str(n) for n in cfg.get("nowplaying", {}).get("adapters", DEFAULT_ORDER)]
+    order += [n for n in DEFAULT_ORDER if n not in order]
     sources = []
     for name in order:
-        if name == "applemusic":
-            sources.append(AppleMusicSource(
-                cfg.get("applemusic", {}).get("endpoint", "")))
-        elif name == "spotify":
-            cid = cfg.get("spotify", {}).get("client_id", "")
-            if not cid or cid.startswith("PASTE"):
-                print("[main] spotify listed but no client_id — skipping")
-                continue
-            sp = SpotifySource(cid,
-                               int(cfg["spotify"].get("redirect_port", 8888)))
-            if sp.ensure_auth(interactive=sys.stdin.isatty()):
-                sources.append(sp)
+        if name == "phone":
+            ctrl.pushed = PushedSource()
+            sources.append(ctrl.pushed)
+        elif name == "applemusic":
+            endpoint = cfg.get("applemusic", {}).get("endpoint", "")
+            if endpoint:
+                ctrl.apple = AppleMusicSource(endpoint)
+                sources.append(ctrl.apple)
+            elif sys.platform == "darwin":
+                mac = None
+                if MacMediaSource.available():
+                    mac = MacMediaSource()
+                    print("[main] mac: anything this Mac plays is read too "
+                          "(media-control)")
+                else:
+                    print("[main] mac: only Music.app is read on this Mac; "
+                          "`brew install media-control` adds every other app")
+                ctrl.apple = AppleMusicSource("", mac=mac)
+                sources.append(ctrl.apple)
+            elif account_configured():
+                sources.append(AppleMusicAccountSource())
             else:
-                print("[main] spotify: no tokens — skipping")
+                print("[main] applemusic: no MusicKit credentials on this machine "
+                      "(deploy.sh copies them) — skipping")
+        elif name == "spotify":
+            sp = SpotifySource(store.get("spotify", "client_id"),
+                               int(cfg.get("spotify", {}).get("redirect_port", 8888)))
+            ctrl.spotify = sp
+            sources.append(sp)
+            print("[main] spotify: " + ("signed in" if sp.linked else
+                                        "app id set, not signed in yet" if sp.client_id
+                                        else "no app id yet; set one from the phone"))
+        elif name == "lastfm":
+            lf = LastfmSource(store.get("lastfm", "api_key"), store.get("lastfm", "user"))
+            ctrl.lastfm = lf
+            sources.append(lf)
+            print(f"[main] lastfm: {'following ' + lf.user if lf.configured else 'not set up'}")
+        elif name == "listenbrainz":
+            lb = ListenBrainzSource(store.get("listenbrainz", "user"))
+            ctrl.listenbrainz = lb
+            sources.append(lb)
+            print(f"[main] listenbrainz: {'following ' + lb.user if lb.configured else 'not set up'}")
+        elif name == "acoustid":
+            ac = AcoustidSource(store.get("acoustid", "api_key"),
+                                store.get("acoustid", "device") or "auto")
+            ctrl.acoustid = ac
+            sources.append(ac)
+            print(f"[main] acoustid: {'listening' if ac.status()['listening'] else 'key set, waiting for a microphone' if ac.configured else 'no key yet'}")
         else:
-            print(f"[main] adapter {name!r} not available yet "
-                  "(acoustid/lastfm/localplayer land at S3) — skipping")
+            print(f"[main] adapter {name!r} unknown — skipping")
     if not sources:
         sys.exit("[main] no now-playing sources configured")
     return sources
@@ -121,9 +181,9 @@ def main():
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
     }, frame_len=size * size * 3)
+    source = SourceChain(build_sources(cfg, ctrl))
+    ctrl.source = source
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
-
-    source = SourceChain(build_sources(cfg))
     sink = _FrameTee(make_sink(cfg, args.sink), ctrl, size)
 
     print(f"[main] adapters: {[s.name for s in source.sources]}, "

@@ -6,7 +6,8 @@ set -euo pipefail
 echo ">>> apt dependencies (bitslip6 build deps + python)"
 sudo apt-get update
 sudo apt-get install -y build-essential gcc make git python3-venv python3-dev \
-  libgles2-mesa-dev libgbm-dev libegl1-mesa-dev libavformat-dev libswscale-dev
+  libgles2-mesa-dev libgbm-dev libegl1-mesa-dev libavformat-dev libswscale-dev \
+  libchromaprint-tools alsa-utils
 
 echo ">>> zram swap (keeps the 1-2 GB boards comfortable; harmless on bigger ones)"
 if grep -q '^/dev/zram' /proc/swaps; then

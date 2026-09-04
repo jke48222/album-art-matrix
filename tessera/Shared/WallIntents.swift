@@ -50,7 +50,20 @@ enum WallAddress {
             ?? "album-matrix.local:8788"
     }
 
+    /// Registered by the app's WallSession (this file cannot name it: it also
+    /// compiles into the widget extension, where the session does not exist).
+    /// The mode intent runs in the app's process, so when a session is there
+    /// it should take the patch: it knows whether the wall is live, away, or
+    /// being stood in for, and a widget key must work in all three worlds.
+    /// Returning false means "the wall is live, dial it yourself".
+    @MainActor static var localRoute: (([String: Any]) -> Bool)?
+
     static func send(_ patch: [String: Any]) async throws {
+        let routed = await MainActor.run { localRoute?(patch) ?? false }
+        if routed {
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         guard let url = URL(string: "http://\(host)/state"),
               let body = try? JSONSerialization.data(withJSONObject: patch) else {
             throw WallError.noWall

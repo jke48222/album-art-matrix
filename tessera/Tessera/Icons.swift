@@ -14,8 +14,9 @@ enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
     // Utility glyphs. Deliberately not part of the mode row: that set is four
     // states of one object and it stays four.
-    case make, erase, photo, letters, clock, snake, fill, pen, undo
-    case play, pause, skip, back, nine, lyrics
+    case make, erase, photo, letters, clock, snake, fill, pen, undo, redo
+    case palette, crate, gear
+    case play, pause, skip, back, nine, lyrics, rewind, forward
 }
 
 struct GlyphShape: View {
@@ -23,6 +24,18 @@ struct GlyphShape: View {
     var lineWidth: CGFloat = 1.6
 
     var body: some View {
+        // The drawing is a mask, and whatever foreground style the caller
+        // sets shows through it. The Canvas draws in white so the mask is
+        // solid where the glyph is. Before this, every glyph in the app was
+        // white no matter what colour it was given: a Canvas paints its own
+        // colours and ignores foregroundStyle entirely.
+        Rectangle()
+            .fill(.foreground)
+            .mask { drawing }
+            .accessibilityHidden(true)
+    }
+
+    private var drawing: some View {
         Canvas { ctx, size in
             let s = min(size.width, size.height)
             let u = s / 24.0                       // one unit of the 24pt grid
@@ -31,26 +44,93 @@ struct GlyphShape: View {
             let lw = lineWidth * max(1, u)
 
             switch glyph {
-            case .undo:
-                // back the way it came: one confident arc, a solid head
-                let c = CGPoint(x: box.midX, y: box.midY + 0.6 * u)
-                let r = box.width * 0.33
-                var arc = Path()
-                arc.addArc(center: c, radius: r,
-                           startAngle: .degrees(20), endAngle: .degrees(205),
-                           clockwise: false)
-                ctx.stroke(arc, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.1, lineCap: .round))
-                let a = 205.0 * .pi / 180
-                let tip = CGPoint(x: c.x + r * cos(a), y: c.y + r * sin(a))
-                // tangent at the arc's end, for a head that belongs to it
-                let tx = -sin(a), ty = cos(a)
+            case .undo, .redo:
+                // The undo arrow editors have drawn for thirty years: a solid
+                // head pointing back, and a tail that runs out of its base
+                // and hooks down and away. Redo is the same figure mirrored,
+                // so the pair read as one motion in two directions.
+                var g = ctx
+                if glyph == .redo {
+                    g.translateBy(x: size.width, y: 0)
+                    g.scaleBy(x: -1, y: 1)
+                }
+                let hy = box.minY + 6.0 * u                 // the head's centre line
                 var head = Path()
-                head.move(to: CGPoint(x: tip.x + tx * 3.0 * u, y: tip.y + ty * 3.0 * u))
-                head.addLine(to: CGPoint(x: tip.x - ty * 2.0 * u, y: tip.y + tx * 2.0 * u))
-                head.addLine(to: CGPoint(x: tip.x + ty * 2.0 * u, y: tip.y - tx * 2.0 * u))
+                head.move(to: CGPoint(x: box.minX, y: hy))
+                head.addLine(to: CGPoint(x: box.minX + 7.0 * u, y: hy - 5.2 * u))
+                head.addLine(to: CGPoint(x: box.minX + 7.0 * u, y: hy + 5.2 * u))
                 head.closeSubpath()
-                ctx.fill(head, with: .color(.white))
+                g.fill(head, with: .color(.white))
+                // The tail: straight out of the head, then a quarter turn
+                // down and a touch more, so it finishes heading down rather
+                // than out. Points, not addArc, so the sweep is unambiguous.
+                let cx = box.minX + 9.5 * u, rr = 7.0 * u
+                var tail = Path()
+                tail.move(to: CGPoint(x: box.minX + 6.2 * u, y: hy))
+                tail.addLine(to: CGPoint(x: cx, y: hy))
+                var deg = -90.0
+                while deg < 15 {
+                    deg += 5
+                    let a = deg * .pi / 180
+                    tail.addLine(to: CGPoint(x: cx + rr * cos(a), y: hy + rr + rr * sin(a)))
+                }
+                g.stroke(tail, with: .color(.white),
+                         style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round, lineJoin: .round))
+
+            case .palette:
+                // The studio as a painter's palette: the board, its thumb
+                // hole low on the right, three wells of paint along the top.
+                let board = CGRect(x: box.minX, y: box.minY + 1.5 * u,
+                                   width: box.width, height: box.height - 3.0 * u)
+                ctx.stroke(Path(ellipseIn: board), with: .color(.white), lineWidth: lw)
+                let hole = CGRect(x: board.maxX - 6.6 * u, y: board.midY + 0.2 * u,
+                                  width: 3.2 * u, height: 3.2 * u)
+                ctx.stroke(Path(ellipseIn: hole), with: .color(.white), lineWidth: lw)
+                for (dx, dy) in [(4.2, 4.6), (7.6, 3.0), (11.4, 3.6)] {
+                    let well = CGRect(x: board.minX + dx * u - 1.2 * u, y: board.minY + dy * u - 1.2 * u,
+                                      width: 2.4 * u, height: 2.4 * u)
+                    ctx.fill(Path(ellipseIn: well), with: .color(.white))
+                }
+
+            case .crate:
+                // The archive as the box it lives in: a lid a shade wider
+                // than the body, and the slot you lift it by.
+                let lid = CGRect(x: box.minX, y: box.minY + 1.0 * u, width: box.width, height: 4.0 * u)
+                ctx.stroke(Path(roundedRect: lid, cornerRadius: 1.0 * u), with: .color(.white), lineWidth: lw)
+                let body = CGRect(x: box.minX + 1.4 * u, y: lid.maxY, width: box.width - 2.8 * u,
+                                  height: box.maxY - lid.maxY - 0.5 * u)
+                var walls = Path()
+                walls.move(to: CGPoint(x: body.minX, y: body.minY))
+                walls.addLine(to: CGPoint(x: body.minX, y: body.maxY - 1.5 * u))
+                walls.addQuadCurve(to: CGPoint(x: body.minX + 1.5 * u, y: body.maxY),
+                                   control: CGPoint(x: body.minX, y: body.maxY))
+                walls.addLine(to: CGPoint(x: body.maxX - 1.5 * u, y: body.maxY))
+                walls.addQuadCurve(to: CGPoint(x: body.maxX, y: body.maxY - 1.5 * u),
+                                   control: CGPoint(x: body.maxX, y: body.maxY))
+                walls.addLine(to: CGPoint(x: body.maxX, y: body.minY))
+                ctx.stroke(walls, with: .color(.white), style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                var slot = Path()
+                slot.move(to: CGPoint(x: body.midX - 2.4 * u, y: body.minY + 3.4 * u))
+                slot.addLine(to: CGPoint(x: body.midX + 2.4 * u, y: body.minY + 3.4 * u))
+                ctx.stroke(slot, with: .color(.white), style: StrokeStyle(lineWidth: lw * 1.2, lineCap: .round))
+
+            case .gear:
+                // Settings as the gear everyone knows: a ring, eight teeth
+                // out of it, the shaft hole in the middle.
+                let c = CGPoint(x: box.midX, y: box.midY)
+                let ring = 5.2 * u, tooth = 8.3 * u
+                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - ring, y: c.y - ring, width: ring * 2, height: ring * 2)),
+                           with: .color(.white), lineWidth: lw * 1.1)
+                var teeth = Path()
+                for i in 0..<8 {
+                    let a = Double(i) * .pi / 4
+                    teeth.move(to: CGPoint(x: c.x + (ring - 0.3 * u) * cos(a), y: c.y + (ring - 0.3 * u) * sin(a)))
+                    teeth.addLine(to: CGPoint(x: c.x + tooth * cos(a), y: c.y + tooth * sin(a)))
+                }
+                ctx.stroke(teeth, with: .color(.white), style: StrokeStyle(lineWidth: lw * 2.1, lineCap: .round))
+                let hole = 2.0 * u
+                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - hole, y: c.y - hole, width: hole * 2, height: hole * 2)),
+                           with: .color(.white), lineWidth: lw)
 
             case .pen:
                 // a pencil, simply: body, collar, tip, lead
@@ -122,32 +202,59 @@ struct GlyphShape: View {
                 }
 
             case .lyrics:
-                // an eighth note, and the two lines it is singing
-                let headR = 2.0 * u
-                let headC = CGPoint(x: box.minX + 3.6 * u, y: box.maxY - 3.0 * u)
-                ctx.fill(Path(ellipseIn: CGRect(x: headC.x - headR, y: headC.y - headR * 0.8,
-                                                width: headR * 2, height: headR * 1.6)),
-                         with: .color(.white))
+                // Words being sung: a quaver, and three lines of text that
+                // shorten as they go, the way a lyric sheet reads.
+                let headR = 2.1 * u
+                let headC = CGPoint(x: box.minX + 4.2 * u, y: box.maxY - 2.6 * u)
+                var head = Path()
+                head.addEllipse(in: CGRect(x: headC.x - headR * 1.15, y: headC.y - headR * 0.8,
+                                           width: headR * 2.3, height: headR * 1.6))
+                var h = ctx
+                h.translateBy(x: headC.x, y: headC.y)
+                h.rotate(by: .degrees(-22))
+                h.translateBy(x: -headC.x, y: -headC.y)
+                h.fill(head, with: .color(.white))
+                let stemX = headC.x + headR * 1.0
+                let stemTop = CGPoint(x: stemX, y: box.minY + 1.4 * u)
                 var stem = Path()
-                let stemTop = CGPoint(x: headC.x + headR - lw * 0.4, y: box.minY + 2.2 * u)
-                stem.move(to: CGPoint(x: headC.x + headR - lw * 0.4, y: headC.y))
+                stem.move(to: CGPoint(x: stemX, y: headC.y - 0.4 * u))
                 stem.addLine(to: stemTop)
                 ctx.stroke(stem, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
                 var flag = Path()
                 flag.move(to: stemTop)
-                flag.addQuadCurve(
-                    to: CGPoint(x: stemTop.x + 3.6 * u, y: stemTop.y + 4.6 * u),
-                    control: CGPoint(x: stemTop.x + 3.8 * u, y: stemTop.y + 0.8 * u))
+                flag.addCurve(to: CGPoint(x: stemTop.x + 3.2 * u, y: stemTop.y + 5.2 * u),
+                              control1: CGPoint(x: stemTop.x + 3.6 * u, y: stemTop.y + 0.6 * u),
+                              control2: CGPoint(x: stemTop.x + 3.4 * u, y: stemTop.y + 3.0 * u))
                 ctx.stroke(flag, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
-                for (i, w) in [(0, 5.4), (1, 3.6)] as [(Int, CGFloat)] {
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                for (i, w) in [(0, 6.0), (1, 4.6), (2, 5.4)] as [(Int, CGFloat)] {
                     var line = Path()
-                    let ly = box.midY + CGFloat(i) * 3.0 * u + 0.4 * u
+                    let ly = box.minY + 7.6 * u + CGFloat(i) * 3.4 * u
                     line.move(to: CGPoint(x: box.maxX - w * u, y: ly))
-                    line.addLine(to: CGPoint(x: box.maxX - 1.0 * u, y: ly))
+                    line.addLine(to: CGPoint(x: box.maxX - 0.6 * u, y: ly))
                     ctx.stroke(line, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
+                               style: StrokeStyle(lineWidth: lw * 0.95, lineCap: .round))
+                }
+
+            case .rewind, .forward:
+                // two solid triangles, nose to tail: the double arrow of a
+                // transport key. Forward is the same figure mirrored.
+                var g = ctx
+                if glyph == .rewind {
+                    g.translateBy(x: size.width, y: 0)
+                    g.scaleBy(x: -1, y: 1)
+                }
+                let h = box.height * 0.62
+                let w = box.width * 0.46
+                let y0 = box.midY - h / 2, y1 = box.midY + h / 2
+                for x in [box.minX + 0.4 * u, box.minX + w - 0.6 * u] {
+                    var tri = Path()
+                    tri.move(to: CGPoint(x: x, y: y0))
+                    tri.addLine(to: CGPoint(x: x + w, y: box.midY))
+                    tri.addLine(to: CGPoint(x: x, y: y1))
+                    tri.closeSubpath()
+                    g.fill(tri, with: .color(.white))
                 }
 
             case .play:
@@ -271,18 +378,22 @@ struct GlyphShape: View {
                 ctx.stroke(sheen, with: .color(.white), style: StrokeStyle(lineWidth: lw, lineCap: .round))
 
             case .lamp:
-                // one lit tile throwing light: a filled square and three rays
-                let side = box.width * 0.46
+                // Light with no picture in it: one lit tile, and the glow it
+                // throws as a ring of short rays all round. Eight rays, not
+                // three: a lamp lights the whole room.
+                let side = box.width * 0.40
                 let r = CGRect(x: box.midX - side / 2, y: box.midY - side / 2, width: side, height: side)
-                ctx.fill(Path(roundedRect: r, cornerRadius: 1 * u), with: .color(.white))
-                for angle in stride(from: -90.0, through: 150.0, by: 120.0) {
-                    let a = angle * .pi / 180
+                ctx.fill(Path(roundedRect: r, cornerRadius: 1.2 * u), with: .color(.white))
+                for i in 0..<8 {
+                    let a = (Double(i) * 45.0 - 90.0) * .pi / 180
+                    let long = i % 2 == 0
+                    let r0 = side * (long ? 0.80 : 0.86)
+                    let r1 = box.width * (long ? 0.56 : 0.50)
                     var ray = Path()
-                    ray.move(to: CGPoint(x: box.midX + cos(a) * side * 0.86,
-                                         y: box.midY + sin(a) * side * 0.86))
-                    ray.addLine(to: CGPoint(x: box.midX + cos(a) * box.width * 0.56,
-                                            y: box.midY + sin(a) * box.width * 0.56))
-                    ctx.stroke(ray, with: .color(.white), style: StrokeStyle(lineWidth: lw, lineCap: .round))
+                    ray.move(to: CGPoint(x: box.midX + cos(a) * r0, y: box.midY + sin(a) * r0))
+                    ray.addLine(to: CGPoint(x: box.midX + cos(a) * r1, y: box.midY + sin(a) * r1))
+                    ctx.stroke(ray, with: .color(.white),
+                               style: StrokeStyle(lineWidth: lw * (long ? 1.0 : 0.8), lineCap: .round))
                 }
 
             case .dark:
@@ -291,14 +402,30 @@ struct GlyphShape: View {
                            with: .color(.white), lineWidth: lw)
 
             case .make:
-                // the panel, with a stroke being drawn across it
+                // The studio: the panel with a stroke laid across it and the
+                // brush still on the tile, mid-mark. The tile it just filled
+                // is solid; the rest of the panel is the outline.
                 ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
                            with: .color(.white), lineWidth: lw)
-                var nib = Path()
-                nib.move(to: CGPoint(x: box.minX + box.width * 0.24, y: box.maxY - box.height * 0.24))
-                nib.addLine(to: CGPoint(x: box.maxX - box.width * 0.20, y: box.minY + box.height * 0.20))
-                ctx.stroke(nib, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round))
+                let cell = box.width / 4
+                let lit = CGRect(x: box.minX + cell * 0.55, y: box.maxY - cell * 1.55,
+                                 width: cell, height: cell)
+                ctx.fill(Path(roundedRect: lit, cornerRadius: 0.5 * u), with: .color(.white))
+                var stroke = Path()
+                stroke.move(to: CGPoint(x: lit.midX + 0.6 * u, y: lit.midY - 0.6 * u))
+                stroke.addCurve(to: CGPoint(x: box.maxX - 2.6 * u, y: box.minY + 3.2 * u),
+                                control1: CGPoint(x: box.midX + 1.0 * u, y: box.midY + 2.4 * u),
+                                control2: CGPoint(x: box.midX + 2.0 * u, y: box.minY + 4.0 * u))
+                ctx.stroke(stroke, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw * 1.3, lineCap: .round))
+                // the brush tip, a small solid wedge at the far end
+                let tip = CGPoint(x: box.maxX - 2.6 * u, y: box.minY + 3.2 * u)
+                var wedge = Path()
+                wedge.move(to: CGPoint(x: tip.x + 1.4 * u, y: tip.y - 1.4 * u))
+                wedge.addLine(to: CGPoint(x: tip.x - 0.4 * u, y: tip.y - 1.6 * u))
+                wedge.addLine(to: CGPoint(x: tip.x + 1.6 * u, y: tip.y + 0.4 * u))
+                wedge.closeSubpath()
+                ctx.fill(wedge, with: .color(.white))
 
             case .erase:
                 // the eraser itself, tilted mid-swipe, its two-tone seam,
@@ -385,7 +512,6 @@ struct GlyphShape: View {
                 }
             }
         }
-        .accessibilityHidden(true)
     }
 }
 

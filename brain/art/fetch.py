@@ -1,8 +1,10 @@
 """Fetch and cache cover art (Spotify 640x640 now; Cover Art Archive up to
 1200x1200 at S3 — same cache, keyed by URL)."""
+import base64
 import hashlib
 import io
 import os
+import urllib.parse
 
 import requests
 from PIL import Image
@@ -17,6 +19,13 @@ def _decode(data: bytes) -> Image.Image:
 
 
 def fetch_art(url: str, timeout: float = 15.0) -> Image.Image:
+    if url.startswith("data:"):
+        # The Mac's Now Playing hands over artwork as bytes, not a link. No
+        # disk cache: the bytes are already in hand.
+        head, _, payload = url.partition(",")
+        data = (base64.b64decode(payload) if head.endswith(";base64")
+                else urllib.parse.unquote_to_bytes(payload))
+        return _decode(data)
     os.makedirs(CACHE_DIR, exist_ok=True)
     key = hashlib.sha256(url.encode()).hexdigest()[:24]
     path = os.path.join(CACHE_DIR, key + ".img")
