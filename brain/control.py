@@ -196,7 +196,14 @@ class ControlState:
                 elif k == "wake_fade_min":
                     self._s[k] = _clamp(v, 1, 90)
                 elif k in ("wb_r", "wb_g", "wb_b"):
-                    self._s[k] = _clamp(v, 0.3, 1.0)
+                    # Above 1.0 as well as below. config.toml's gains are a
+                    # guess until a panel is measured, and if the guess
+                    # over-corrects (green and blue pulled down too far,
+                    # which reads warm and orange on everything) a cap of
+                    # 1.0 leaves no way to dial it back from the phone. The
+                    # colour is capped where it is applied, so nothing
+                    # clips.
+                    self._s[k] = _clamp(v, 0.3, 3.0)
                 elif k == "sun" and v in ("off", "on"):
                     self._s[k] = v
                 elif k == "sun_night":
