@@ -149,7 +149,7 @@ final class StandIn {
         FlightLog.note("TRACK", "\(item.artist ?? "?") - \(item.title ?? "?")")
 
         if let image = item.artwork?.image(at: CGSize(width: 256, height: 256)),
-           let cg = image.cgImage, let px = Clip.square64(cg) {
+           let cg = image.cgImage, let px = Clip.squareFrame(cg, side: 64) {
             art = px
             artColors = Self.chroma(px)
             state.artColors = artColors

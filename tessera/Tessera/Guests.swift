@@ -19,7 +19,7 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 enum QRForge {
-    /// The payload as 64x64 RGB, or nil when it cannot be made scannable.
+    /// The payload as one wall of RGB, or nil when it cannot be scanned.
     static func frame(_ payload: String) -> [UInt8]? {
         let filter = CIFilter.qrCodeGenerator()
         filter.message = Data(payload.utf8)
@@ -29,7 +29,9 @@ enum QRForge {
         guard let out = filter.outputImage else { return nil }
 
         let modules = Int(out.extent.width)
-        let scale = (64 - 4) / modules          // insist on a 2px quiet zone
+        let panel = Panel.side
+        // Four LEDs of quiet zone, two each side, whatever the wall's size.
+        let scale = (panel - 4) / modules
         guard scale >= 2 else { return nil }    // under 2px a module, it fails
 
         let ctx = CIContext(options: [.useSoftwareRenderer: true])
@@ -48,9 +50,9 @@ enum QRForge {
         bctx.interpolationQuality = .none
         bctx.draw(cg, in: CGRect(x: 0, y: 0, width: modules, height: modules))
 
-        var px = [UInt8](repeating: 245, count: 64 * 64 * 3)   // the lit field
+        var px = Panel.blank(245)              // the lit field
         let side = modules * scale
-        let off = (64 - side) / 2
+        let off = (panel - side) / 2
         for my in 0..<modules {
             for mx in 0..<modules {
                 // CIQRCodeGenerator draws dark modules dark; anything below
@@ -58,7 +60,7 @@ enum QRForge {
                 guard raw[(my * modules + mx) * 4] < 128 else { continue }
                 for sy in 0..<scale {
                     for sx in 0..<scale {
-                        let o = ((off + my * scale + sy) * 64 + off + mx * scale + sx) * 3
+                        let o = ((off + my * scale + sy) * panel + off + mx * scale + sx) * 3
                         px[o] = 0; px[o + 1] = 0; px[o + 2] = 0
                     }
                 }

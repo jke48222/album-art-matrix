@@ -14,7 +14,7 @@ import SwiftUI
 import UIKit
 
 struct FinishSwatch: View {
-    /// The wall's live frame, 64 x 64 RGB: the fallback when there is no art.
+    /// The wall's live frame: the fallback when there is no art.
     let px: [UInt8]?
     /// The sleeve. What a finish is actually for.
     var sleeve: UIImage? = nil
@@ -49,28 +49,29 @@ struct FinishSwatch: View {
         return image
     }
 
-    /// 64 x 64 RGB. The SLEEVE first: the wall's own frame already carries
+    /// One wall of RGB. The SLEEVE first: the wall's own frame already carries
     /// whichever finish is on, and in a face like the clock it is not art at
     /// all, so previewing from it showed three versions of a countdown.
     private static func source(px: [UInt8]?, sleeve: UIImage?) -> [UInt8]? {
         guard let cg = sleeve?.cgImage else {
-            if let px, px.count == 64 * 64 * 3 { return px }
+            if let px, Panel.square(px.count) != nil { return px }
             return nil
         }
-        var raw = [UInt8](repeating: 0, count: 64 * 64 * 4)
+        let n = Panel.side
+        var raw = [UInt8](repeating: 0, count: n * n * 4)
         let ok: Bool = raw.withUnsafeMutableBytes { buf -> Bool in
-            guard let ctx = CGContext(data: buf.baseAddress, width: 64, height: 64,
-                                      bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            guard let ctx = CGContext(data: buf.baseAddress, width: n, height: n,
+                                      bitsPerComponent: 8, bytesPerRow: n * 4,
                                       space: CGColorSpaceCreateDeviceRGB(),
                                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
             else { return false }
             ctx.interpolationQuality = .medium
-            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 64, height: 64))
+            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: n, height: n))
             return true
         }
         guard ok else { return nil }
-        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
+        var out = [UInt8](repeating: 0, count: n * n * 3)
+        for i in 0..<(n * n) {
             out[i * 3] = raw[i * 4]; out[i * 3 + 1] = raw[i * 4 + 1]; out[i * 3 + 2] = raw[i * 4 + 2]
         }
         return out
@@ -97,17 +98,18 @@ struct FinishSwatch: View {
             }
             return best
         }
-        for y in 0..<64 {
-            for x in 0..<64 {
-                let i = (y * 64 + x) * 3
+        let n = Panel.square(rgb.count) ?? 64
+        for y in 0..<n {
+            for x in 0..<n {
+                let i = (y * n + x) * 3
                 let old = (work[i], work[i + 1], work[i + 2])
                 let new = nearest(old.0, old.1, old.2)
                 work[i] = new.0; work[i + 1] = new.1; work[i + 2] = new.2
                 let err = (old.0 - new.0, old.1 - new.1, old.2 - new.2)
                 func spread(_ dx: Int, _ dy: Int, _ w: Double) {
                     let nx = x + dx, ny = y + dy
-                    guard nx >= 0, nx < 64, ny < 64 else { return }
-                    let j = (ny * 64 + nx) * 3
+                    guard nx >= 0, nx < n, ny < n else { return }
+                    let j = (ny * n + nx) * 3
                     work[j] += err.0 * w; work[j + 1] += err.1 * w; work[j + 2] += err.2 * w
                 }
                 spread(1, 0, 7.0 / 16); spread(-1, 1, 3.0 / 16)
@@ -162,13 +164,14 @@ struct FinishSwatch: View {
     }
 
     static func bitmap(_ rgb: [UInt8]) -> UIImage? {
-        var raw = [UInt8](repeating: 255, count: 64 * 64 * 4)
-        for i in 0..<(64 * 64) {
+        guard let n = Panel.square(rgb.count) else { return nil }
+        var raw = [UInt8](repeating: 255, count: n * n * 4)
+        for i in 0..<(n * n) {
             raw[i * 4] = rgb[i * 3]; raw[i * 4 + 1] = rgb[i * 3 + 1]; raw[i * 4 + 2] = rgb[i * 3 + 2]
         }
         return raw.withUnsafeMutableBytes { buf -> UIImage? in
-            guard let ctx = CGContext(data: buf.baseAddress, width: 64, height: 64,
-                                      bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            guard let ctx = CGContext(data: buf.baseAddress, width: n, height: n,
+                                      bitsPerComponent: 8, bytesPerRow: n * 4,
                                       space: CGColorSpaceCreateDeviceRGB(),
                                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue),
                   let cg = ctx.makeImage() else { return nil }

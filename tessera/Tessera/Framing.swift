@@ -42,7 +42,7 @@ struct Framing: View {
     @State private var zoomBase: CGFloat = 1
     @State private var pan: CGSize = .zero
     @State private var panBase: CGSize = .zero
-    @State private var preview: [UInt8] = [UInt8](repeating: 0, count: 64 * 64 * 3)
+    @State private var preview: [UInt8] = Panel.blank()
     @State private var playhead = 0
     @State private var working = false
     // @State so the publisher survives body re-evaluation; inline it and any
@@ -214,20 +214,22 @@ struct Framing: View {
         onUse(frames)
     }
 
-    /// One 64×64 RGB frame, taken from a rect of a CGImage.
+    /// One frame of the wall's own size, taken from a rect of a CGImage.
     static func sample(_ src: CGImage, rect: CGRect) -> [UInt8]? {
-        let count = 64 * 64 * 4
+        let n = Panel.side
+        let fn = CGFloat(n)
+        let count = n * n * 4
         let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
         raw.initialize(repeating: 0, count: count)
         defer { raw.deallocate() }
         guard let ctx = CGContext(
-            data: raw, width: 64, height: 64, bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            data: raw, width: n, height: n, bitsPerComponent: 8, bytesPerRow: n * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         ) else { return nil }
         ctx.interpolationQuality = .high
 
-        // Draw the whole image scaled so that `rect` lands on the 64 square.
+        // Draw the whole image scaled so that `rect` lands on the square.
         // Cropping first and drawing second would be one allocation per
         // gesture tick; this is none.
         //
@@ -236,13 +238,13 @@ struct Framing: View {
         // bottom, so the vertical offset is measured from the rect's far
         // edge. Getting this backwards puts the window an equal distance the
         // wrong side of centre, which looks plausible and is not.
-        let k = 64 / rect.width
+        let k = fn / rect.width
         let h = CGFloat(src.height)
         ctx.translateBy(x: -rect.origin.x * k, y: -(h - rect.maxY) * k)
         ctx.draw(src, in: CGRect(x: 0, y: 0, width: CGFloat(src.width) * k, height: h * k))
 
-        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
+        var px = [UInt8](repeating: 0, count: n * n * 3)
+        for i in 0..<(n * n) {
             px[i * 3] = raw[i * 4]
             px[i * 3 + 1] = raw[i * 4 + 1]
             px[i * 3 + 2] = raw[i * 4 + 2]

@@ -1148,7 +1148,7 @@ struct AboutPage: View {
 
     var body: some View {
         SetupPage("Tessera",
-                  blurb: "A remote for a wall of 4,096 lights. The app talks to the wall directly. There is no account and nothing leaves your network.") {
+                  blurb: "A remote for a wall of \(Panel.lights) lights. The app talks to the wall directly. There is no account and nothing leaves your network.") {
             SetupGroup("Design", note: "Three ways of showing the same room. Pick one.") {
                 ForEach(Array(Design.allCases.enumerated()), id: \.offset) { i, d in
                     if i > 0 { Rule() }

@@ -250,7 +250,7 @@ enum Finishes {
     private static var cache: [String: UIImage] = [:]
 
     static func thumb(_ data: Data?, finish: String, duty: Double) -> UIImage? {
-        guard let data, data.count == 64 * 64 * 3 else { return nil }
+        guard let data, Panel.square(data.count) != nil else { return nil }
         let key = "\(EmitterTile.digest([UInt8](data))):\(finish):\(Int(duty * 10))"
         if let hit = cache[key] { return hit }
         let processed = apply(data, finish: finish)
@@ -270,9 +270,10 @@ enum Finishes {
         case "dither":
             // Floyd-Steinberg onto a 3-3-2 palette.
             var buf = px.map { Float($0) }
-            for y in 0..<64 {
-                for x in 0..<64 {
-                    let i = (y * 64 + x) * 3
+            let n = Panel.square(px.count) ?? 64
+            for y in 0..<n {
+                for x in 0..<n {
+                    let i = (y * n + x) * 3
                     for c in 0..<3 {
                         let old = buf[i + c]
                         let levels: Float = c == 2 ? 3 : 7
@@ -281,8 +282,8 @@ enum Finishes {
                         let err = old - quant
                         func spread(_ dx: Int, _ dy: Int, _ f: Float) {
                             let nx = x + dx, ny = y + dy
-                            guard nx >= 0, nx < 64, ny < 64 else { return }
-                            buf[(ny * 64 + nx) * 3 + c] += err * f
+                            guard nx >= 0, nx < n, ny < n else { return }
+                            buf[(ny * n + nx) * 3 + c] += err * f
                         }
                         spread(1, 0, 7.0 / 16); spread(-1, 1, 3.0 / 16)
                         spread(0, 1, 5.0 / 16); spread(1, 1, 1.0 / 16)

@@ -1,6 +1,7 @@
 // The hero. Not a picture of the wall: the wall.
 //
-// 64x64 RGB888 from /frame.raw, drawn as 4,096 discrete emitters on black,
+// A square of RGB888 from /frame.raw, drawn as one discrete emitter per LED
+// on black (4,096 of them for one panel, 36,864 for the nine panel wall),
 // each with its own halo. Brightness is a DUTY CYCLE multiplied into every
 // emitter, never an alpha over the whole image, which is what makes the
 // signature behaviour possible: above roughly 60% duty the halos overlap and
@@ -38,7 +39,8 @@ enum FrameRenderer {
     /// continuous parameter rather than a cache key: rasterising per duty step
     /// is what made the brightness drag move in visible jumps.
     static func read(_ data: Data?) -> FrameReading {
-        guard let data, data.count == 64 * 64 * 3 else { return .dark }
+        guard let data, let side = Panel.square(data.count) else { return .dark }
+        let n = side * side
         // Compare the WHOLE buffer, never Data.hashValue: Foundation hashes
         // only a short prefix of a Data, and any mode whose top rows stay
         // dark (the ticker letters at mid-height) produced identical hashes
@@ -46,12 +48,12 @@ enum FrameRenderer {
         // forever and the panel looked broken while the model was fine.
         if data == cachedData { return cached }
 
-        var lum = [Float](repeating: 0, count: 64 * 64)
+        var lum = [Float](repeating: 0, count: n)
         var total: Float = 0
         var digest: UInt64 = 0xcbf2_9ce4_8422_2325     // FNV-1a, whole frame
         data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
             let p = raw.bindMemory(to: UInt8.self)
-            for i in 0..<(64 * 64) {
+            for i in 0..<n {
                 let o = i * 3
                 let l = 0.2126 * Float(p[o]) + 0.7152 * Float(p[o + 1]) + 0.0722 * Float(p[o + 2])
                 lum[i] = l
@@ -62,7 +64,7 @@ enum FrameRenderer {
             }
         }
         let key = String(digest, radix: 36)
-        let lit = min(1.0, pow(Double(total) / Double(64 * 64) / 255.0 * 3.2, 0.8))
+        let lit = min(1.0, pow(Double(total) / Double(n) / 255.0 * 3.2, 0.8))
 
         let reading = FrameReading(
             px: [UInt8](data),
@@ -87,7 +89,7 @@ enum FrameRenderer {
         buckets.reserveCapacity(256)
         data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
             let p = raw.bindMemory(to: UInt8.self)
-            for i in 0..<(64 * 64) where lum[i] >= 24 {
+            for i in 0..<lum.count where lum[i] >= 24 {
                 let o = i * 3
                 let r = Float(p[o]), g = Float(p[o + 1]), b = Float(p[o + 2])
                 let mx = max(r, g, b), mn = min(r, g, b)
@@ -129,7 +131,7 @@ enum FrameRenderer {
             var n: Float = 0, r: Float = 0, g: Float = 0, b: Float = 0
             data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) in
                 let p = raw.bindMemory(to: UInt8.self)
-                for i in 0..<(64 * 64) where lum[i] >= 24 {
+                for i in 0..<lum.count where lum[i] >= 24 {
                     let o = i * 3
                     n += 1; r += Float(p[o]); g += Float(p[o + 1]); b += Float(p[o + 2])
                 }
@@ -168,16 +170,34 @@ enum FrameRenderer {
 /// now applied while drawing rather than baked into a cached raster. That is
 /// what lets the drag be continuous: there is no bucket to quantise to, so the
 /// picture dissolves into its tiles smoothly instead of in 4% steps.
+///
+/// One panel is 4,096 emitters and SwiftUI will draw them live all day. Nine
+/// panels are 36,864, which is about a hundred thousand path fills per
+/// repaint, and the hero polls several times a second: past a threshold the
+/// same picture is rastered by hand into a bitmap instead (PanelRaster),
+/// which costs a few milliseconds and looks identical. The duty is then
+/// quantised to 1%, which is the step the drag itself moves in.
 struct PanelCanvas: View {
     let px: [UInt8]?
     let duty: Double
 
+    /// Above this many LEDs a side, hand rastering wins by a wide margin.
+    private static let liveLimit = 96
+
     var body: some View {
+        if let px, let side = Panel.square(px.count), side > Self.liveLimit {
+            PanelRaster.view(px, side: side, duty: duty)
+        } else {
+            live
+        }
+    }
+
+    private var live: some View {
         Canvas(rendersAsynchronously: false) { ctx, size in
             ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black))
-            guard let px, px.count == 64 * 64 * 3 else { return }
+            guard let px, let side = Panel.square(px.count) else { return }
 
-            let cell = size.width / 64
+            let cell = size.width / CGFloat(side)
             let r = cell * 0.40
             let d = max(0.05, min(1.0, duty))
             // Dimming an LED goes warm, not grey.
@@ -186,10 +206,10 @@ struct PanelCanvas: View {
             let bK = 1 - warm
             let unlit = Color(white: 0.055)
 
-            for i in 0..<(64 * 64) {
+            for i in 0..<(side * side) {
                 let o = i * 3
-                let cx = CGFloat(i % 64) * cell + cell / 2
-                let cy = CGFloat(i / 64) * cell + cell / 2
+                let cx = CGFloat(i % side) * cell + cell / 2
+                let cy = CGFloat(i / side) * cell + cell / 2
                 let R = Double(px[o]), G = Double(px[o + 1]), B = Double(px[o + 2])
                 let lum = 0.2126 * R + 0.7152 * G + 0.0722 * B
 
@@ -218,6 +238,123 @@ struct PanelCanvas: View {
             }
         }
         .drawingGroup()
+    }
+}
+
+/// The same emitters, rastered by hand.
+///
+/// Used for a wall too big to draw live. One pass adds every lit emitter's
+/// halo, a second lays the cores over the top, and the result is cached by
+/// (frame, duty percent). It is the same arithmetic as the Canvas above, in
+/// the same order, so the wall does not change character when it grows: the
+/// halo is what merges neighbours into a picture, and it still shrinks with
+/// the duty until the tiles come apart.
+enum PanelRaster {
+    /// Roughly how many pixels wide the raster should be. Four device pixels
+    /// per LED at 192 is enough for the halo to have a shape, and small
+    /// enough that a drag re-renders inside a frame.
+    private static let target = 768
+    private static let cache: NSCache<NSString, UIImage> = {
+        let c = NSCache<NSString, UIImage>()
+        c.totalCostLimit = 24 * 1024 * 1024
+        return c
+    }()
+
+    static func view(_ px: [UInt8], side: Int, duty: Double) -> some View {
+        ZStack {
+            Color.black
+            if let img = image(px, side: side, duty: duty) {
+                Image(uiImage: img).resizable().interpolation(.medium)
+            }
+        }
+    }
+
+    static func image(_ px: [UInt8], side: Int, duty: Double) -> UIImage? {
+        guard px.count == side * side * 3 else { return nil }
+        let cell = max(2, target / side)
+        let d = max(0.05, min(1.0, duty))
+        let key = "\(digest(px))|\(side)|\(cell)|\(Int(d * 100))" as NSString
+        if let hit = cache.object(forKey: key) { return hit }
+
+        let w = side * cell
+        let r = Double(cell) * 0.40
+        // Dimming an LED goes warm, not grey. Same constants as the live path.
+        let warm = 0.18 * (1 - d)
+        let gK = 1 - warm * 0.34
+        let bK = 1 - warm
+        let unlit = 14.0                      // Color(white: 0.055) in bytes
+
+        var buf = [UInt8](repeating: 0, count: w * w * 4)
+        buf.withUnsafeMutableBufferPointer { out in
+            px.withUnsafeBufferPointer { pin in
+                for i in 0..<(side * side) {
+                    let o = i * 3
+                    let R = Double(pin[o]), G = Double(pin[o + 1]), B = Double(pin[o + 2])
+                    let lum = 0.2126 * R + 0.7152 * G + 0.0722 * B
+                    let cx = Double(i % side) * Double(cell) + Double(cell) / 2
+                    let cy = Double(i / side) * Double(cell) + Double(cell) / 2
+                    if lum < 8 {
+                        splat(out, w, cx, cy, r, unlit, unlit, unlit, add: false)
+                        continue
+                    }
+                    let cr = R * d, cg = G * d * gK, cb = B * d * bK
+                    let n = lum / 255
+                    let hr = r + Double(cell) * 0.72 * n * d
+                    let a = 0.28 * n * pow(d, 1.4)
+                    splat(out, w, cx, cy, hr, cr * a, cg * a, cb * a, add: true)
+                    splat(out, w, cx, cy, r, cr, cg, cb, add: false)
+                }
+            }
+            for i in stride(from: 3, to: w * w * 4, by: 4) { out[i] = 255 }
+        }
+
+        guard let provider = CGDataProvider(data: Data(buf) as CFData),
+              let cg = CGImage(width: w, height: w, bitsPerComponent: 8, bitsPerPixel: 32,
+                               bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                               provider: provider, decode: nil, shouldInterpolate: false,
+                               intent: .defaultIntent)
+        else { return nil }
+        let img = UIImage(cgImage: cg)
+        cache.setObject(img, forKey: key, cost: w * w * 4)
+        return img
+    }
+
+    /// One disc, antialiased at its edge by coverage. `add` is the halo pass.
+    private static func splat(_ out: UnsafeMutableBufferPointer<UInt8>, _ w: Int,
+                              _ cx: Double, _ cy: Double, _ rad: Double,
+                              _ r: Double, _ g: Double, _ b: Double, add: Bool) {
+        let x0 = max(0, Int(cx - rad)), x1 = min(w - 1, Int(cx + rad) + 1)
+        let y0 = max(0, Int(cy - rad)), y1 = min(w - 1, Int(cy + rad) + 1)
+        guard x0 <= x1, y0 <= y1 else { return }
+        for y in y0...y1 {
+            let dy = Double(y) + 0.5 - cy
+            var at = (y * w + x0) * 4
+            for x in x0...x1 {
+                let dx = Double(x) + 0.5 - cx
+                let cov = min(1.0, max(0.0, rad + 0.5 - (dx * dx + dy * dy).squareRoot()))
+                if cov > 0 {
+                    if add {
+                        out[at] = UInt8(min(255.0, Double(out[at]) + r * cov))
+                        out[at + 1] = UInt8(min(255.0, Double(out[at + 1]) + g * cov))
+                        out[at + 2] = UInt8(min(255.0, Double(out[at + 2]) + b * cov))
+                    } else if cov > 0.5 || Double(out[at]) < r * cov {
+                        out[at] = UInt8(min(255.0, r * cov + Double(out[at]) * (1 - cov)))
+                        out[at + 1] = UInt8(min(255.0, g * cov + Double(out[at + 1]) * (1 - cov)))
+                        out[at + 2] = UInt8(min(255.0, b * cov + Double(out[at + 2]) * (1 - cov)))
+                    }
+                }
+                at += 4
+            }
+        }
+    }
+
+    private static func digest(_ px: [UInt8]) -> String {
+        var h: UInt64 = 0xcbf2_9ce4_8422_2325
+        px.withUnsafeBufferPointer { p in
+            for i in 0..<p.count { h = (h ^ UInt64(p[i])) &* 0x1000_0000_01b3 }
+        }
+        return String(h, radix: 36)
     }
 }
 

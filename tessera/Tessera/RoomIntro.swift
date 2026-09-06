@@ -222,7 +222,9 @@ struct WarpedPanel: View {
 
     var body: some View {
         Canvas(rendersAsynchronously: false) { ctx, size in
-            guard let px, px.count == 64 * 64 * 3, let h = Homography.unitSquare(to: quad) else { return }
+            guard let px, let n = Panel.square(px.count),
+                  let h = Homography.unitSquare(to: quad) else { return }
+            let fn = Double(n)
             let d = max(0.05, min(1.0, duty))
             let warm = 0.18 * (1 - d)
             let gK = 1 - warm * 0.34, bK = 1 - warm
@@ -232,16 +234,23 @@ struct WarpedPanel: View {
             glass.closeSubpath()
             ctx.fill(glass, with: .color(.black))
             let unlit = Color(white: 0.06)
-            for j in 0..<64 {
-                let v = (Double(j) + 0.5) / 64
+            // A wall seen in perspective across a phone screen is a few
+            // hundred points wide, so past a point there is nothing to gain
+            // from drawing every LED of it: the nine panel wall is sampled
+            // every third one and draws the same picture for a ninth of the
+            // work. The wall itself is never sampled, only this miniature.
+            let step = max(1, n / 64)
+            let fs = Double(step)
+            for j in stride(from: 0, to: n, by: step) {
+                let v = (Double(j) + 0.5) / fn
                 // the cell's size on screen along this row, for the dot's radius
-                let p0 = Homography.map(h, 0.5 / 64, v), p1 = Homography.map(h, 1.5 / 64, v)
-                let q0 = Homography.map(h, 0.5 / 64, v + 1.0 / 64)
+                let p0 = Homography.map(h, 0.5 / fn, v), p1 = Homography.map(h, (0.5 + fs) / fn, v)
+                let q0 = Homography.map(h, 0.5 / fn, v + fs / fn)
                 let cell = min(hypot(p1.x - p0.x, p1.y - p0.y), hypot(q0.x - p0.x, q0.y - p0.y))
                 let r = cell * 0.40
-                for i in 0..<64 {
-                    let o = (j * 64 + i) * 3
-                    let c = Homography.map(h, (Double(i) + 0.5) / 64, v)
+                for i in stride(from: 0, to: n, by: step) {
+                    let o = (j * n + i) * 3
+                    let c = Homography.map(h, (Double(i) + 0.5) / fn, v)
                     let R = Double(px[o]), G = Double(px[o + 1]), B = Double(px[o + 2])
                     let lum = 0.2126 * R + 0.7152 * G + 0.0722 * B
                     if lum < 8 {
@@ -420,14 +429,13 @@ struct LabelArt: View {
     /// The frame as a plain picture, one square per emitter, for wherever
     /// the sleeve is wanted as a sleeve and not as a wall.
     static func flat(_ px: [UInt8]) -> UIImage? {
-        guard px.count == 64 * 64 * 3 else { return nil }
+        guard let side = Panel.square(px.count) else { return nil }
         let key = px.withUnsafeBufferPointer { buf -> Int in
             var h = 5381
             for i in stride(from: 0, to: buf.count, by: 7) { h = (h &* 33) &+ Int(buf[i]) }
             return h
         }
         if let c = cache, c.key == key { return c.image }
-        let side = 64
         var bytes = [UInt8](repeating: 255, count: side * side * 4)
         for i in 0..<(side * side) {
             bytes[i * 4] = px[i * 3]; bytes[i * 4 + 1] = px[i * 3 + 1]; bytes[i * 4 + 2] = px[i * 3 + 2]

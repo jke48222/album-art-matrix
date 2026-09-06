@@ -93,7 +93,7 @@ struct LiveFinishRow: View {
             else { return }
             var out: [String: UIImage] = [:]
             for (k, v) in obj {
-                if let d = Data(base64Encoded: v), d.count == 64 * 64 * 3,
+                if let d = Data(base64Encoded: v), Panel.square(d.count) != nil,
                    let img = FinishSwatch.bitmap([UInt8](d)) { out[k] = img }
             }
             let ready = out

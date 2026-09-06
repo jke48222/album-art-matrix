@@ -138,6 +138,12 @@ struct WallState: Equatable {
         sleepRemaining = json["sleep_remaining_s"] as? Int
         shownSeq = json["shown_seq"] as? Int ?? 0
         if let v = json["video"] as? [String: Any] { video = WallVideo(json: v) }
+        // How many LEDs the wall has. Everything the app draws is built at
+        // this size, so a nine panel wall gets a 192 pixel doodle and a bench
+        // panel gets a 64 pixel one, without a rebuild for either.
+        if let w = json["wall"] as? [String: Any], let px = w["width"] as? Int {
+            Panel.learn(px)
+        }
     }
 }
 
@@ -158,7 +164,7 @@ enum LinkState: Equatable {
 @Observable
 final class WallSession {
     var state = WallState()
-    var frame: Data? = nil            // 64*64*3 RGB888, pre-white-balance
+    var frame: Data? = nil            // square RGB888, pre-white-balance
     var link: LinkState = .searching
     var lastSync: Date? = nil
     /// What you asked for while the wall was not listening.
@@ -561,7 +567,7 @@ final class WallSession {
         guard let frameURL = url("/frame.raw") else { return }
         if let (data, resp) = try? await http.data(from: frameURL),
            (resp as? HTTPURLResponse)?.statusCode == 200,
-           data.count == 64 * 64 * 3 {
+           Panel.square(data.count) != nil {
             // Only publish when the bytes actually changed. Two identical
             // frames must leave the screen perfectly still.
             if data != frame { frame = data }
@@ -573,7 +579,7 @@ final class WallSession {
     /// Same rules as every other send: the stand-in plays it, and a wall
     /// that is away gets it queued instead of dropped after a success face.
     func pushClip(_ frames: [[UInt8]], fps: Double) {
-        let valid = Array(frames.filter { $0.count == 64 * 64 * 3 }.prefix(240))
+        let valid = Array(frames.filter { Panel.square($0.count) != nil }.prefix(240))
         guard !valid.isEmpty else { return }
         if link.isStandIn {
             standIn.push(clip: valid, fps: fps)
@@ -617,9 +623,9 @@ final class WallSession {
     }
 
     /// Put a flat field on the wall for a panel check, through the brain's
-    /// own /frame endpoint (base64 of 64*64*3 raw RGB, mode becomes "frame").
+    /// own /frame endpoint (base64 of one wall of raw RGB, mode becomes "frame").
     func pushFlat(r: UInt8, g: UInt8, b: UInt8) {
-        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        var px = Panel.blank()
         for i in stride(from: 0, to: px.count, by: 3) {
             px[i] = r; px[i + 1] = g; px[i + 2] = b
         }
@@ -646,31 +652,32 @@ final class WallSession {
         }
     }
 
-    /// A picture as the panel's own 64 x 64 bytes.
+    /// A picture as the wall's own bytes, at the wall's own size.
     private static func square(_ image: UIImage) -> [UInt8]? {
         guard let cg = image.cgImage else { return nil }
-        var raw = [UInt8](repeating: 0, count: 64 * 64 * 4)
+        let side = Panel.side
+        var raw = [UInt8](repeating: 0, count: side * side * 4)
         let ok: Bool = raw.withUnsafeMutableBytes { buf -> Bool in
-            guard let ctx = CGContext(data: buf.baseAddress, width: 64, height: 64,
-                                      bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            guard let ctx = CGContext(data: buf.baseAddress, width: side, height: side,
+                                      bitsPerComponent: 8, bytesPerRow: side * 4,
                                       space: CGColorSpaceCreateDeviceRGB(),
                                       bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
             else { return false }
             ctx.interpolationQuality = .high
-            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 64, height: 64))
+            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
             return true
         }
         guard ok else { return nil }
-        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
+        var out = [UInt8](repeating: 0, count: side * side * 3)
+        for i in 0..<(side * side) {
             out[i * 3] = raw[i * 4]; out[i * 3 + 1] = raw[i * 4 + 1]; out[i * 3 + 2] = raw[i * 4 + 2]
         }
         return out
     }
 
-    /// Put an exact 64x64 frame on the wall. What you drew is what it lights.
+    /// Put an exact frame on the wall. What you drew is what it lights.
     func pushFrame(_ px: [UInt8]) {
-        guard px.count == 64 * 64 * 3 else { return }
+        guard Panel.square(px.count) != nil else { return }
         if link.isStandIn {
             // It lands on the stand-in wall the way it lands on the real one:
             // as content, in mode "frame", held until something else is
@@ -698,7 +705,7 @@ final class WallSession {
     /// a missed one like a lost drawing would queue garbage and buzz the
     /// whole time the wall was slow.
     func beam(_ px: [UInt8]) {
-        guard px.count == 64 * 64 * 3 else { return }
+        guard Panel.square(px.count) != nil else { return }
         if link.isStandIn {
             standIn.push(frame: px)
             state = standIn.state

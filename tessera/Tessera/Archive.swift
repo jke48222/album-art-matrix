@@ -166,9 +166,9 @@ final class ArchiveStore {
         // once is not fetched again
         guard let (data, _) = try? await session.data(from: url),
               let src = UIImage(data: data)?.cgImage else { return nil }
-        // Clip.square64 is the app's one image-to-64px path; the local copy
+        // Clip.squareFrame is the app's one image-to-panel path; the copy
         // this replaced STRETCHED non-square art where everything else crops.
-        guard let px = Clip.square64(src) else { return nil }
+        guard let px = Clip.squareFrame(src, side: 64) else { return nil }
         return EmitterTile.render(px, cell: 4)
     }
 }
@@ -233,26 +233,29 @@ enum EmitterTile {
     /// with the kept strip re-rendering per body evaluation that held the
     /// main thread at 60 percent CPU until the watchdog shot the app.
     static func render(_ px: [UInt8], cell: CGFloat, duty: Double = 1) -> UIImage? {
-        guard px.count == 64 * 64 * 3 else { return nil }
-        let cellI = max(1, Int(cell.rounded()))
+        guard let n = Panel.square(px.count) else { return nil }
+        // The emitter shrinks as the wall grows: a tile in a dense grid is
+        // the same size on screen whether it holds 4,096 emitters or 36,864,
+        // and a 768 pixel raster is more than that tile can show either way.
+        let cellI = max(1, min(Int(cell.rounded()), 768 / n))
         let d = max(0.05, min(1.0, duty))
 
         let key = "\(digest(px))|\(cellI)|\(Int(d * 100))" as NSString
         if let hit = done.object(forKey: key) { return hit }
 
-        let side = 64 * cellI
+        let side = n * cellI
         let m = mask(cellI)
         var buf = [UInt8](repeating: 0, count: side * side * 4)
         buf.withUnsafeMutableBufferPointer { out in
             px.withUnsafeBufferPointer { pin in
-                for i in 0..<(64 * 64) {
+                for i in 0..<(n * n) {
                     let o = i * 3
                     let lit = pin[o] >= 8 || pin[o + 1] >= 8 || pin[o + 2] >= 8
                     let er = lit ? Double(pin[o]) * d : 12.75
                     let eg = lit ? Double(pin[o + 1]) * d : 12.75
                     let eb = lit ? Double(pin[o + 2]) * d : 12.75
-                    let x0 = (i % 64) * cellI
-                    let y0 = (i / 64) * cellI
+                    let x0 = (i % n) * cellI
+                    let y0 = (i / n) * cellI
                     for yy in 0..<cellI {
                         var at = ((y0 + yy) * side + x0) * 4
                         let mrow = yy * cellI
@@ -285,7 +288,7 @@ enum EmitterTile {
 
     /// A panel with nothing on it: the lattice, unlit.
     static var empty: UIImage? = {
-        render([UInt8](repeating: 0, count: 64 * 64 * 3), cell: 4)
+        render(Panel.blank(), cell: 4)
     }()
 }
 
