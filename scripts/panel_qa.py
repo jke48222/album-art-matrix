@@ -374,7 +374,10 @@ def sweep(args):
                     if not animated:
                         time.sleep(dwell if getattr(args, "dwell", None) is None
                                    else args.dwell)
-                    results[key] = "pass"
+                    # Nobody looked, so nothing passed. The pattern was shown,
+                    # and the sheet says so, but the verdict stays partial
+                    # until a person runs the prompted sweep.
+                    results[key] = "unjudged"
                     break
                 ans = input("        enter=pass  f=fail  r=repeat  n=note  "
                             "s=skip  q=quit > ").strip().lower()
@@ -449,7 +452,7 @@ def write_sheet():
             except json.JSONDecodeError:
                 continue
     keys = [p[0] for p in PATTERNS]
-    mark = {"pass": "ok", "fail": "FAIL", "skip": "."}
+    mark = {"pass": "ok", "fail": "FAIL", "skip": ".", "unjudged": "seen"}
     lines = [
         "# Panel QA sheet",
         "",
@@ -605,7 +608,8 @@ def main():
     s = sub.add_parser("sweep", help="run the full QA sweep on one panel")
     common(s)
     s.add_argument("--auto", action="store_true",
-                   help="no prompts, just cycle the patterns for photographing")
+                   help="no prompts, just cycle the patterns for photographing; "
+                        "records them as seen, not passed")
     s.add_argument("--dwell", type=float, default=None,
                    help="override seconds per static pattern in --auto")
     s.add_argument("--only", help="comma separated pattern keys")

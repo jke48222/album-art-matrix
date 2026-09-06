@@ -38,7 +38,7 @@ struct ClassicWallScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 20)
+                    .padding(.bottom, 14)
 
                 // Full bleed, exactly to the screen's edges and no further:
                 // an earlier negative padding pushed the square wider than
@@ -55,15 +55,17 @@ struct ClassicWallScreen: View {
                     onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
                     onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
                 )
-                .padding(.bottom, 26)
+                .padding(.bottom, 18)
 
+                // a little tighter than before, so the second row of faces
+                // rests above the page marks at the foot of the screen
                 Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
+                    .padding(.bottom, 12)
 
                 MusicBar(accent: accent, litInk: litInk)
                     .padding(.horizontal, 20)
-                    .padding(.bottom, 24)
+                    .padding(.bottom, 14)
 
                 if wall.state.mode == "timer", let left = wall.state.timerRemaining {
                     // The running countdown is never more than one glance and
@@ -132,7 +134,7 @@ struct ClassicWallScreen: View {
     /// in the Studio); nine and lyrics joined it because both are things the
     /// wall IS for a while, not things you do to it.
     private var modeRow: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 10) {
             // Grouped by what they are: the song's faces on the top row,
             // the room's faces below.
             HStack(spacing: 0) {
@@ -361,8 +363,9 @@ private struct MusicBar: View {
     let accent: Color
     let litInk: Color
 
-    @State private var playing =
-        MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+    // Read on appear: the bar is remade on every evaluation of the screen,
+    // and a system player read is an XPC call, not a property.
+    @State private var playing = false
 
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
@@ -381,7 +384,10 @@ private struct MusicBar: View {
                 .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 44)
-        .onAppear { music.beginGeneratingPlaybackNotifications() }
+        .onAppear {
+            music.beginGeneratingPlaybackNotifications()
+            playing = music.playbackState == .playing
+        }
         .onReceive(NotificationCenter.default.publisher(
             for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
             playing = music.playbackState == .playing

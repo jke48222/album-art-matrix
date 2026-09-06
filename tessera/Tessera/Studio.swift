@@ -298,6 +298,10 @@ struct StudioScreen: View {
     /// The palette the album currently on the wall is making.
     let roomPalette: [Color]
     let accent: Color
+    /// Laid into the wall's own controls rather than presented over them:
+    /// no navigation chrome, no page background, and its own row of undo,
+    /// redo and clear where the toolbar would have been.
+    var inline: Bool = false
 
     @State private var canvas = Canvas64()
     @State private var kept = MadeStore()
@@ -344,6 +348,104 @@ struct StudioScreen: View {
     @FocusState private var typing: Bool
 
     var body: some View {
+        if inline { surface } else { screen }
+    }
+
+    /// The studio itself, with nothing around it.
+    private var surface: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 22) {
+                Button { canvas.undo() } label: {
+                    GlyphShape(glyph: .undo, lineWidth: 1.7).frame(width: 18, height: 18)
+                        .foregroundStyle(canvas.canUndo ? Ink.ink : Ink.faint)
+                }
+                .buttonStyle(PressStyle(scale: 0.88)).disabled(!canvas.canUndo)
+                .accessibilityLabel("Undo")
+                Button { canvas.redo() } label: {
+                    GlyphShape(glyph: .redo, lineWidth: 1.7).frame(width: 18, height: 18)
+                        .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
+                }
+                .buttonStyle(PressStyle(scale: 0.88)).disabled(!canvas.canRedo)
+                .accessibilityLabel("Redo")
+                Spacer()
+                Button {
+                    canvas.checkpoint(); clip = []; canvas.clear()
+                } label: {
+                    Text("Clear").font(.ui(14, .medium))
+                        .foregroundStyle(canvas.isEmpty ? Ink.faint : accent)
+                }
+                .disabled(canvas.isEmpty)
+            }
+            board
+            if writing { compose }
+            inks
+            tools
+            penOptions
+            send
+            if !kept.made.isEmpty { keptStrip }
+        }
+        .onAppear {
+            kept.load()
+            // the album's colours, minus any that are already on the row: the
+            // stand-in's amber is the tile amber, and it showed up twice
+            var row: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
+            for c in roomPalette.prefix(3).map({ Self.rgb(of: $0) })
+            where !row.contains(where: { Self.near($0, c) }) { row.append(c) }
+            frozen = row
+        }
+        // Aiming happens on its own surface: it needs the whole screen and it
+        // is a decision, not an adjustment you leave half-made.
+        .fullScreenCover(item: $framing) { job in
+            Framing(source: job.source, accent: accent) {
+                framing = nil
+                media = nil
+            } onUse: { frames in
+                framing = nil
+                media = nil
+                canvas.checkpoint()
+                if frames.count > 1 {
+                    clip = frames
+                    clipFrame = 0
+                    canvas.load(frames[0])
+                } else if let one = frames.first {
+                    clip = []
+                    canvas.load(one)
+                }
+            }
+        }
+        .onChange(of: media) { _, item in
+            guard let item else { return }
+            loadingMedia = true
+            clip = []
+            leaveWords()
+            Task {
+                defer { loadingMedia = false }
+                // A movie first: if it transfers as one, it is one.
+                if let movie = try? await item.loadTransferable(type: Movie.self) {
+                    let frames = await Clip.frames(from: movie.url)
+                    try? FileManager.default.removeItem(at: movie.url)
+                    if !frames.isEmpty {
+                        framing = FramingJob(source: frames)
+                        Taps.detent(intensity: 0.5)
+                        return
+                    }
+                }
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let img = UIImage(data: data), let cg = Clip.upright(img) {
+                    framing = FramingJob(source: [cg])
+                    Taps.detent(intensity: 0.5)
+                }
+            }
+        }
+        // Play the clip on the canvas so the preview is the thing itself.
+        .onReceive(clipTimer) { _ in
+            guard clip.count > 1, !writing else { return }
+            clipFrame = (clipFrame + 1) % clip.count
+            canvas.load(clip[clipFrame])
+        }
+    }
+
+    private var screen: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
@@ -407,8 +509,12 @@ struct StudioScreen: View {
         .presentationBackground(Ink.ground)
         .onAppear {
             kept.load()
-            frozen = [(255, 255, 255), (232, 176, 75)]
-                + roomPalette.prefix(3).map { Self.rgb(of: $0) }
+            // the album's colours, minus any that are already on the row: the
+            // stand-in's amber is the tile amber, and it showed up twice
+            var row: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
+            for c in roomPalette.prefix(3).map({ Self.rgb(of: $0) })
+            where !row.contains(where: { Self.near($0, c) }) { row.append(c) }
+            frozen = row
         }
         // Aiming happens on its own surface: it needs the whole screen and it
         // is a decision, not an adjustment you leave half-made.
@@ -477,13 +583,18 @@ struct StudioScreen: View {
                     let cx = CGFloat(i % 64) * cell + cell / 2
                     let cy = CGFloat(i / 64) * cell + cell / 2
                     let dot = Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
-                    if canvas.px[o] < 8 && canvas.px[o + 1] < 8 && canvas.px[o + 2] < 8 {
+                    // drawn as the wall will light it: below 16 is off, 16 up
+                    // to 64 is lifted to 64, the panel's lowest steady level,
+                    // the colour kept; from 64 up, as it is
+                    let peak = max(canvas.px[o], canvas.px[o + 1], canvas.px[o + 2])
+                    if peak < 16 {
                         ctx.fill(dot, with: .color(Color(white: 0.055)))
                     } else {
+                        let lift = peak < 64 ? 64.0 / Double(peak) : 1.0
                         ctx.fill(dot, with: .color(Color(
-                            red: Double(canvas.px[o]) / 255,
-                            green: Double(canvas.px[o + 1]) / 255,
-                            blue: Double(canvas.px[o + 2]) / 255
+                            red: min(1, Double(canvas.px[o]) * lift / 255),
+                            green: min(1, Double(canvas.px[o + 1]) * lift / 255),
+                            blue: min(1, Double(canvas.px[o + 2]) * lift / 255)
                         )))
                     }
                 }
@@ -532,6 +643,20 @@ struct StudioScreen: View {
             .accessibilityLabel("Canvas, 64 by 64 tiles. Draw with one finger.")
         }
         .aspectRatio(1, contentMode: .fit)
+        // The canvas IS the wall, so it is framed and lit like the wall: a
+        // pale surround, a dark bezel, and the drawing's own colour thrown
+        // onto the room behind it.
+        .padding(7)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(LinearGradient(colors: [Color(hex: 0x8C877E), Color(hex: 0x5E5A54)],
+                                     startPoint: .top, endPoint: .bottom))
+        )
+        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+            .strokeBorder(.white.opacity(0.12), lineWidth: 1))
+        .shadow(color: inkColor.opacity(0.34), radius: 26)
+        .shadow(color: .black.opacity(0.45), radius: 12, y: 6)
+        .padding(.vertical, 4)
     }
 
     // MARK: Inks
@@ -555,42 +680,28 @@ struct StudioScreen: View {
     }
 
     private var inks: some View {
-        HStack(spacing: 12) {
-            ForEach(Array(swatches.enumerated()), id: \.offset) { (_, rgb) in
-                swatch(rgb)
-            }
-
-            // The mixer.
-            //
-            // This was a ColorPicker hidden at 2% opacity under a drawn
-            // circle, which looked right and did not reliably take a tap on
-            // device: an all-but-invisible system control is not something to
-            // rely on for hit testing. The system swatch IS the control now,
-            // sized to match its neighbours and ringed so it reads as one
-            // more ink rather than as a settings widget.
-            ColorPicker(selection: $custom, supportsOpacity: false) { EmptyView() }
-                .labelsHidden()
-                .scaleEffect(1.25)
-                .frame(width: 34, height: 34)
-                .overlay {
-                    Circle()
-                        .strokeBorder(
-                            AngularGradient(colors: [.red, .yellow, .green, .cyan, .blue, .purple, .red],
-                                            center: .center),
-                            lineWidth: 2
-                        )
-                        .padding(-4)
-                        .allowsHitTesting(false)
-                }
-                .onChange(of: custom) { _, c in
-                    ink = Self.rgb(of: c)
-                    if tool == .erase { tool = .pen }
-                    Taps.detent(intensity: 0.5)
-                }
-            .accessibilityLabel("Mix a colour")
-
-            Spacer()
-        }
+        // One bar, split into the inks. Touching one picks it; touching the
+        // one already picked opens the mixer, so a colour is chosen and
+        // changed in the same place.
+        let cols = swatches
+        return ColourBar(
+            colours: cols.indices.map { i in
+                Binding(
+                    get: { Color(red: Double(cols[i].0) / 255,
+                                 green: Double(cols[i].1) / 255,
+                                 blue: Double(cols[i].2) / 255) },
+                    set: { c in
+                        ink = Self.rgb(of: c)
+                        custom = c
+                        if tool == .erase { tool = .pen }
+                    })
+            },
+            height: 42, radius: 14, stroke: Ink.hairline,
+            selected: cols.firstIndex(where: { $0 == ink }),
+            onPick: { i in
+                ink = cols[i]
+                if tool == .erase { tool = .pen }
+            })
     }
 
     private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
@@ -621,6 +732,12 @@ struct StudioScreen: View {
         return (UInt8(max(0, min(255, r * 255))),
                 UInt8(max(0, min(255, g * 255))),
                 UInt8(max(0, min(255, b * 255))))
+    }
+
+    /// Close enough to be the same swatch: two inks a few steps apart are
+    /// one choice, not two.
+    static func near(_ a: (UInt8, UInt8, UInt8), _ b: (UInt8, UInt8, UInt8)) -> Bool {
+        abs(Int(a.0) - Int(b.0)) < 14 && abs(Int(a.1) - Int(b.1)) < 14 && abs(Int(a.2) - Int(b.2)) < 14
     }
 
     // MARK: Tools
@@ -987,6 +1104,8 @@ enum Clip {
         let dw = w * scale, dh = h * scale
         ctx.draw(src, in: CGRect(x: (64 - dw) / 2, y: (64 - dh) / 2, width: dw, height: dh))
 
+        // The picture as it is: the wall does its own levels on a pushed
+        // design, and the preview draws them the same way (see wallLift).
         var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
         for i in 0..<(64 * 64) {
             px[i * 3] = raw[i * 4]

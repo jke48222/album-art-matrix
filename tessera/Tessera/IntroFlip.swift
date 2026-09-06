@@ -15,7 +15,8 @@ struct IntroFlip: UIViewRepresentable {
     var resource: String = "ipod-intro"
     var onDone: () -> Void
 
-    static var available: Bool { available(named: "ipod-intro") }
+    /// Looked up once: the iPod screen asks on every body evaluation.
+    static let available: Bool = available(named: "ipod-intro")
     static func available(named name: String) -> Bool {
         Bundle.main.url(forResource: name, withExtension: "mov") != nil
     }

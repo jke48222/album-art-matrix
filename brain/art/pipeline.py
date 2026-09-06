@@ -29,6 +29,15 @@ def prepare(img: Image.Image, size: int,
     return img
 
 
+BLACK_POINT = 12.0       # sRGB byte value at and below which a pixel is off
+# The panel holds a level steadily from about a quarter of the way up; below
+# that the renderer's temporal dither turns a dim field into LEDs blinking in
+# and out. Anything dimmer than FLOOR, but not black, is lifted to FLOOR with
+# its colour kept, so a dim grey reads as a dim grey.
+NOISE = 16.0             # below this a pixel is a photograph's noise: off
+FLOOR = 64.0             # the lowest level the panel is steady at
+
+
 @lru_cache(maxsize=8)
 def _wb_lut(gains: tuple) -> np.ndarray:
     """3x256 uint8 table for white_balance. The mapping depends only on the
@@ -36,7 +45,13 @@ def _wb_lut(gains: tuple) -> np.ndarray:
     values, so bit-identical to the direct formula) — and this runs per frame
     at animation rate on a Pi, where two full-array pow() calls were most of
     the frame budget."""
-    v = np.arange(256, dtype=np.float32) / 255.0
+    # A black point first. A photo's "black" is noise, values of one to a
+    # dozen, invisible on a screen; the renderer decodes them to linear and
+    # dithers them in time, and each becomes an LED that flashes now and
+    # then, red or green by whichever channel the noise favoured. Below the
+    # point is off; above it, the range is stretched back to white.
+    v = np.arange(256, dtype=np.float32)
+    v = np.clip((v - BLACK_POINT) / (255.0 - BLACK_POINT), 0.0, 1.0)
     linear = np.power(v, 2.2)[None, :] \
         * np.asarray(gains, dtype=np.float32)[:, None]
     np.clip(linear, 0.0, 1.0, out=linear)
@@ -44,10 +59,34 @@ def _wb_lut(gains: tuple) -> np.ndarray:
     return (encoded + 0.5).astype(np.uint8)
 
 
-def white_balance(img: Image.Image, gains) -> np.ndarray:
-    """Steps 3-5: linear decode, per-channel gains, re-encode. uint8 HxWx3."""
+def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
+    """Dim tones raised to where the panel can hold them. See FLOOR.
+
+    Two shapes. `hard` lifts every dim tone to FLOOR outright: right for a
+    design, where a dim grey is a flat tone drawn on purpose. The default is
+    a curve, sqrt-shaped, that raises the dark end while keeping its order:
+    a sleeve's shadows stay shadows instead of becoming one grey, which is
+    what the hard lift did to nearly half the pixels of a dark cover.
+    """
+    a = arr.astype(np.float32)
+    peak = a.max(axis=2, keepdims=True)
+    safe = np.maximum(peak, 1.0)
+    if hard:
+        lift = np.where(peak < NOISE, 0.0,
+                        np.where(peak < FLOOR, FLOOR / safe, 1.0))
+    else:
+        eased = FLOOR * np.sqrt(safe / FLOOR)          # 16 -> 32, 32 -> 45, 48 -> 55
+        lift = np.where(peak < NOISE, 0.0,
+                        np.where(peak < FLOOR, eased / safe, 1.0))
+    return np.clip(a * lift, 0, 255).astype(np.uint8)
+
+
+def white_balance(img: Image.Image, gains, hard: bool = False) -> np.ndarray:
+    """Steps 3-5: dim tones lifted, linear decode, per-channel gains,
+    re-encode. uint8 HxWx3. Everything the wall lights comes through here,
+    so this is where the panel's own floor belongs."""
     lut = _wb_lut((float(gains[0]), float(gains[1]), float(gains[2])))
-    arr = np.asarray(img)
+    arr = steady(np.asarray(img), hard=hard)
     out = np.empty_like(arr)
     for c in range(3):
         out[..., c] = lut[c][arr[..., c]]
@@ -70,8 +109,14 @@ def apply_finish(img: Image.Image, finish: str) -> Image.Image:
     poster — 3 bits/channel posterization; flat print-like fields
     """
     if finish == "dither":
-        return img.quantize(colors=16,
-                            dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")
+        src = np.asarray(img.convert("RGB"))
+        out = np.asarray(img.quantize(colors=16,
+                                      dither=Image.Dither.FLOYDSTEINBERG).convert("RGB")).copy()
+        # the palette rarely holds a true black, so error diffusion sprinkles
+        # its colours across black fields: off pixels lit red and green at
+        # random. What was black stays off.
+        out[src.max(axis=2) < 12] = 0
+        return Image.fromarray(out)
     if finish == "poster":
         from PIL import ImageOps
         return ImageOps.posterize(img, 3)

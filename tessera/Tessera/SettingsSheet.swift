@@ -1138,6 +1138,7 @@ struct AboutPage: View {
     @AppStorage("design") private var design = Design.ipod.rawValue
     @AppStorage("onboarding.again") private var onboardingAgain = false
     @AppStorage("intro.replay") private var replay = false
+    @AppStorage("intro.style") private var introStyle = "film"
 
     var body: some View {
         SetupPage("Tessera",
@@ -1160,6 +1161,13 @@ struct AboutPage: View {
                 Rule()
                 SetupRow(title: "Play the opening", subtitle: "The iPod or room opening, again.") {
                     ActionPill(title: "Play") { replay = true }
+                }
+                Rule()
+                SetupRow(title: "Room opening", subtitle: introStyle == "mark" ? "The mark builds on the wall and becomes the panel." : "The film: the cover, the badge, the pull back.") {
+                    HStack(spacing: 6) {
+                        ActionPill(title: "Film", filled: introStyle != "mark") { introStyle = "film" }
+                        ActionPill(title: "Mark", filled: introStyle == "mark") { introStyle = "mark" }
+                    }
                 }
             }
         }

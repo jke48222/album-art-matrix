@@ -16,11 +16,22 @@ import os
 from . import FrameSink
 
 
+MAGIC = b"TSRA"
+
+
 class PiRendererSink(FrameSink):
+    """Every frame goes out behind an eight-byte header: the magic, the
+    panel's brightness cap (1-254), three bytes spare. The renderer scans for
+    the magic, so a renderer that comes up mid-frame, or a pipe that kept
+    half a frame across a restart, lines itself back up on the next one
+    instead of showing every frame after it shifted. And the cap rides on
+    every frame, so it changes without restarting anything."""
+
     def __init__(self, fifo: str = "/tmp/album-frame.fifo"):
         self.fifo = fifo
         self._fd = None
         self._warned = False
+        self.brightness = 160
 
     def _connect(self) -> bool:
         if self._fd is not None:
@@ -57,7 +68,8 @@ class PiRendererSink(FrameSink):
             # A frame exceeds PIPE_BUF, so a signal landing mid-write can
             # return a short count; anything short would shift every later
             # frame boundary (the protocol has no resync marker) — write all.
-            view = memoryview(rgb888)
+            head = MAGIC + bytes((max(1, min(254, int(self.brightness))), 0, 0, 0))
+            view = memoryview(head + bytes(rgb888))
             sent = 0
             while sent < len(view):
                 sent += os.write(self._fd, view[sent:])

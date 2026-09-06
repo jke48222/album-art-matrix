@@ -38,7 +38,12 @@ class DiscAnimator:
     still, and that is what sells the spin.
     """
 
-    def __init__(self, art: Image.Image, size: int, rpm: float = 7.5):
+    def __init__(self, art: Image.Image, size: int, rpm: float = 7.5,
+                 pressed: bool = False):
+        """`pressed` means the picture already IS a record's face — the
+        pressing the phone drew for this song, label and all. Then the
+        grooves and the paper label stay out of its way and only the light,
+        the hole and the rim are added."""
         self.size = size
         self.rpm = rpm
         big = size * SUPER
@@ -59,33 +64,44 @@ class DiscAnimator:
         period = 2.2 * SUPER
         groove = np.sin(rad * r / period * 2 * math.pi) * 0.5 + 0.5
         play = np.clip((rad - LABEL) * 14, 0, 1) * np.clip((LEAD_IN - rad) * 14, 0, 1)
-        arr *= (1.0 - 0.17 * groove * play)[:, :, None]
+        # Grooves used to take a fifth of the light out of the play area and
+        # the outer bands took more, so a record made of a dark sleeve went
+        # black at the rim and lost its edge against the wall. They are a
+        # texture now, not a dimmer, and the art is lifted under them.
+        arr = np.clip(arr * 1.12 + 14.0, 0, 255)
+        arr *= (1.0 - (0.05 if pressed else 0.10) * groove * play)[:, :, None]
 
         # A darker lead-in band between label and grooves, and a lead-out at
         # the rim: real records have smooth land there and it frames the art.
         band = np.clip(1 - np.abs(rad - LABEL) * 26, 0, 1)
         band += np.clip(1 - np.abs(rad - LEAD_IN) * 22, 0, 1)
-        arr *= (1.0 - 0.26 * np.clip(band, 0, 1))[:, :, None]
+        arr *= (1.0 - (0.08 if pressed else 0.14) * np.clip(band, 0, 1))[:, :, None]
 
         # --- the label ----------------------------------------------------
         # The art continues onto it, lifted and slightly desaturated, so it
         # reads as printed paper rather than as more vinyl.
-        lbl = np.clip((LABEL - rad) * 18, 0, 1)[:, :, None]
-        grey = arr.mean(axis=2, keepdims=True)
-        paper = np.clip(arr * 0.72 + grey * 0.22 + 30.0, 0, 255)
-        arr = arr * (1 - lbl) + paper * lbl
-        # the ring where paper meets vinyl
-        edge = np.clip(1 - np.abs(rad - LABEL) * 40, 0, 1)
-        arr = np.clip(arr + (edge * 26)[:, :, None], 0, 255)
+        if not pressed:
+            lbl = np.clip((LABEL - rad) * 18, 0, 1)[:, :, None]
+            grey = arr.mean(axis=2, keepdims=True)
+            paper = np.clip(arr * 0.72 + grey * 0.22 + 30.0, 0, 255)
+            arr = arr * (1 - lbl) + paper * lbl
+            # the ring where paper meets vinyl
+            edge = np.clip(1 - np.abs(rad - LABEL) * 40, 0, 1)
+            arr = np.clip(arr + (edge * 26)[:, :, None], 0, 255)
 
         # --- the rim ------------------------------------------------------
+        # the lead-out land at the rim, as a record has
         rim = np.clip(1 - np.abs(rad - RIM) * 28, 0, 1)
         arr = np.clip(arr + (rim * 40)[:, :, None], 0, 255)
 
         self._art = Image.fromarray(arr.astype(np.uint8), "RGB")
 
         # --- mask: the disc, with the spindle hole punched ----------------
-        mask = np.clip((1.0 - rad) * r * 3.0, 0, 255)
+        # The edge is a feather of a couple of pixels, not a fade across the
+        # whole record: at 3 per pixel the disc was only fully opaque inside
+        # its middle third and dissolved into the wall from there out, which
+        # is why a record made of a dark sleeve had no edge at all.
+        mask = np.clip((1.0 - rad) * r * 128.0, 0, 255)
         mask *= np.clip((rad - hole) * r * 1.2, 0, 1)
         self._mask = Image.fromarray(mask.astype(np.uint8), "L")
 
@@ -99,7 +115,17 @@ class DiscAnimator:
         sweep *= 0.55 + 0.45 * groove
         self._sheen = (np.clip(sweep, 0, 1) * 78).astype(np.uint8)
 
-        self._bg = Image.new("RGB", (big, big), (0, 0, 0))
+        # Baked at four times the panel for the groove detail, then halved
+        # for the part that runs every frame. A 256 px rotate per frame left
+        # the Pi with no idle time at all: the wall kept its 60 fps and its
+        # own web server got a slice only between frames, so the phone's
+        # requests took a second each and the app looked disconnected.
+        mid = size * 2
+        self._art = self._art.resize((mid, mid), Image.LANCZOS)
+        self._mask = self._mask.resize((mid, mid), Image.LANCZOS)
+        self._sheen = np.asarray(
+            Image.fromarray(self._sheen).resize((mid, mid), Image.LANCZOS))
+        self._bg = Image.new("RGB", (mid, mid), (0, 0, 0))
 
         # Final-size polar coordinates, for the needle. Built once: it is the
         # only thing that changes per frame that cannot be baked.

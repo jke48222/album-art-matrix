@@ -79,7 +79,7 @@ final class NowPlayingPush {
         timer = Task { [weak self] in
             while !Task.isCancelled {
                 await MainActor.run { self?.post(force: false) }
-                try? await Task.sleep(for: .seconds(15))
+                try? await Task.sleep(for: .seconds(5))
             }
         }
 
@@ -104,19 +104,18 @@ final class NowPlayingPush {
         guard running, !targets.isEmpty else { return }
         guard let item = music.nowPlayingItem else { return }
         let playing = music.playbackState == .playing
-        // Only a playing track is worth sending: the reporter's job is to know
-        // what is on, and a paused one is what the last push already said.
-        guard playing else { return }
-
-        let key = "\(item.persistentID)"
-        guard force || key != lastKey || Date().timeIntervalSince(lastSent ?? .distantPast) > 12 else { return }
+        // A pause is news. It used to be swallowed here, so the wall kept the
+        // last "playing" for its whole forty seconds and the room's arm went
+        // on tracking a song that had stopped.
+        let key = "\(item.persistentID)|\(playing)"
+        guard force || key != lastKey || Date().timeIntervalSince(lastSent ?? .distantPast) > 4 else { return }
         lastKey = key
 
         var body: [String: Any] = [
             "track": item.title ?? "",
             "artist": item.artist ?? "",
             "album": item.albumTitle ?? "",
-            "playing": true,
+            "playing": playing,
             "progress_ms": Int(music.currentPlaybackTime * 1000),
         ]
         // The catalog id is what lets the reporter find real artwork rather

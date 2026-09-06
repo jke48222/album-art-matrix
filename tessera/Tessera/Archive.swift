@@ -67,7 +67,11 @@ final class ArchiveStore {
             return
         }
         do {
-            let (data, _) = try await URLSession.shared.data(from: u)
+            // fresh, and not for long: the shared session's minute-long
+            // timeout left the grid on "loading" for as long as a wall that
+            // is not there took to not answer
+            let req = URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+            let (data, _) = try await URLSession.shared.data(for: req)
             guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let raw = root["entries"] as? [[String: Any]] else {
                 throw URLError(.cannotParseResponse)
@@ -193,7 +197,11 @@ enum EmitterTile {
     /// Circle coverage across one cell, supersampled once per cell size and
     /// shared by all 4,096 emitters of every tile at that size.
     private static var masks: [Int: [Double]] = [:]
+    /// The shelf renders off the main thread while the archive renders on
+    /// it; the dictionary is not safe to share without this.
+    private static let maskLock = NSLock()
     private static func mask(_ cell: Int) -> [Double] {
+        maskLock.lock(); defer { maskLock.unlock() }
         if let m = masks[cell] { return m }
         let r = Double(cell) * 0.35
         let mid = Double(cell) / 2

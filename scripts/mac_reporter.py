@@ -35,7 +35,7 @@ from dataclasses import asdict, replace
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from brain.nowplaying import NowPlaying
-from brain.nowplaying.applemusic import AppleMusicSource
+from brain.nowplaying.applemusic import AppleMusicSource, _itunes_lookup_art
 from brain.nowplaying.macmedia import MacMediaSource, app_name, bundle_of
 
 MAC = MacMediaSource() if MacMediaSource.available() else None
@@ -59,25 +59,28 @@ def _pushed_now():
     if _push["data"] is None or time.monotonic() - _push["at"] > PUSH_TTL:
         return None
     d = _push["data"]
-    if not d.get("playing") or not d.get("track"):
+    if not d.get("track"):
         return None
-    art = d.get("art") or SOURCE._art_url(d["track"], d.get("artist", "?"),
-                                          d.get("album", "?"))
+    playing = bool(d.get("playing", True))
+    art = (d.get("art") or _itunes_lookup_art(d.get("id"))
+           or SOURCE._art_url(d["track"], d.get("artist", "?"),
+                              d.get("album", "?")))
     # The phone heartbeats every ~15s; replaying its progress frozen at push
     # time would make the brain's extrapolated needle (and the locked record
     # rotation) sawtooth between heartbeats. Age it by the time since push.
     prog = d.get("progress_ms")
     if prog is not None:
-        prog = int(prog + (time.monotonic() - _push["at"]) * 1000)
+        if playing:
+            prog = int(prog + (time.monotonic() - _push["at"]) * 1000)
         if d.get("duration_ms"):
-            prog = min(prog, int(d["duration_ms"]))
+            prog = min(int(prog), int(d["duration_ms"]))
     return NowPlaying(
         track_id="applemusic:" + (d.get("id")
                                   or f"{d.get('artist')}|{d.get('track')}"),
         title=d["track"], artist=d.get("artist", "?"),
         album=d.get("album", "?"), art_url=art,
         progress_ms=prog, duration_ms=d.get("duration_ms"),
-        is_playing=True,
+        is_playing=playing,
     )
 
 

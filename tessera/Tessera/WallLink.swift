@@ -27,6 +27,15 @@ struct WallState: Equatable {
     /// One ink per visible glyph, in order; empty means one ink for all.
     var tickerColors: [String] = []
     var clock24h: Bool = true
+    /// Seconds the wall's words run ahead of the song.
+    var lyricOffset: Double = 0.2
+    /// What the spinning record shows: the song's pressing, or its sleeve.
+    var spinFace: String = "pressing"
+    /// The song the wall is holding a pressing for, if any.
+    var pressingFor: String? = nil
+    /// The panel's own brightness cap, 1-254. Changing it restarts the
+    /// renderer, so it is a setting, not a thing to drag continuously.
+    var panelBrightness: Double = 160
     var idle: String = "black"
     var away: String = "stay"
     var wakeEnabled: Bool = false
@@ -88,6 +97,10 @@ struct WallState: Equatable {
         tickerStyle = json["ticker_style"] as? String ?? "across"
         tickerColors = json["ticker_colors"] as? [String] ?? []
         clock24h = json["clock_24h"] as? Bool ?? true
+        lyricOffset = json["lyric_offset"] as? Double ?? 0.2
+        spinFace = json["spin_face"] as? String ?? "pressing"
+        pressingFor = json["pressing_for"] as? String
+        panelBrightness = json["panel_brightness"] as? Double ?? 160
         idle = json["idle"] as? String ?? "black"
         away = json["away"] as? String ?? "stay"
         wakeEnabled = json["wake_enabled"] as? Bool ?? false
@@ -242,7 +255,12 @@ final class WallSession {
         // once, and a real wall that answers the background probe takes over
         // by itself within seconds. Nobody waits on a network to see a song.
         if frame == nil {
-            hadSnapshot = WallSnapshot.read().px != nil
+            // A wall has been met when the snapshot carries its address: the
+            // host is stamped only by a wall that answered. The frame alone
+            // says nothing, since the stand-in writes frames too, and taking
+            // its own snapshot for a wall kept a wall-less phone in "away"
+            // after every look for one.
+            hadSnapshot = !WallSnapshot.read().host.isEmpty
             enterStandIn()
         }
         guard pollTask == nil else { return }
@@ -281,14 +299,16 @@ final class WallSession {
                     try? await Task.sleep(for: .milliseconds(pace))
                     continue
                 }
-                let animating = ["cd", "ambient", "ticker", "clip"].contains(self.state.mode)
-                if tick % 16 == 0, !self.probing {                    // ~2s
+                let animating = ["cd", "ambient", "ticker", "clip", "lyrics"].contains(self.state.mode)
+                if tick % 10 == 0, !self.probing {                    // ~1s
                     self.probing = true
                     Task { [weak self] in
                         await self?.pollState()
                         self?.probing = false
                     }
                 }
+                // an animated face every tick, a still one at five a second:
+                // each pull is 12 KB the wall has to serialise between frames
                 if animating || tick % 2 == 0, !self.pulling {
                     self.pulling = true
                     Task { [weak self] in
@@ -308,7 +328,7 @@ final class WallSession {
                 }
                 tick &+= 1
                 try? await Task.sleep(for: .milliseconds(
-                    self.state.mode == "lyrics" ? 66 : 125))
+                    self.state.mode == "lyrics" ? 50 : 100))
             }
         }
     }
@@ -368,6 +388,7 @@ final class WallSession {
                 FlightLog.note("LINK", "wall answered at \(host)")
             }
             wasLive = true
+            lookedFromStandIn = false
             link = .live
             seedWall()
             if reconnected { flushOutbox() }
@@ -381,7 +402,12 @@ final class WallSession {
             // and a cached snapshot counts as seen: an owner opening the app
             // away from home keeps their wall's last frame, stamped, rather
             // than having it painted over by a phone-made one.
-            if lastSync == nil, misses >= 3, !hadSnapshot, !link.isStandIn {
+            // A look that set out from the stand-in goes straight back to it
+            // on the first miss: it was already the honest state, whatever
+            // wall this phone may have met on some other day. Launch enters
+            // the stand-in the same way, so a look must not end elsewhere.
+            if lastSync == nil, !link.isStandIn, lookedFromStandIn || (misses >= 3 && !hadSnapshot) {
+                lookedFromStandIn = false
                 enterStandIn()
             } else if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
@@ -389,6 +415,8 @@ final class WallSession {
             wasLive = false
         }
     }
+
+    @ObservationIgnored private var lookedFromStandIn = false
 
     // MARK: - Stand-in
 
@@ -404,6 +432,7 @@ final class WallSession {
     /// takes over completely.
     func lookForWallAgain() {
         misses = 0
+        lookedFromStandIn = link.isStandIn
         link = .searching
         Task { await pollState() }
     }
@@ -584,6 +613,48 @@ final class WallSession {
         pushFrame(px)
     }
 
+    /// The record the room is turning, for the wall's spin face. Sent once
+    /// per song, so both surfaces play the same pressing.
+    func pushPressing(_ image: UIImage, track: String, stamp: String) {
+        // Sent when the record itself changes (a new song, or the same song
+        // reshaped: the stamp carries the choice), and again whenever the
+        // wall says it is holding a different song's pressing, or none,
+        // since it keeps them in memory only and a restart loses them.
+        guard !link.isStandIn, !track.isEmpty,
+              lastPressing != stamp || state.pressingFor != track else { return }
+        lastPressing = stamp
+        guard let px = Self.square(image) else { return }
+        Task { [weak self] in
+            guard let self else { return }
+            if !(await self.postJSON("/pressing", ["px": Data(px).base64EncodedString(),
+                                                   "track": track])) {
+                await MainActor.run { self.lastPressing = "" }   // try again next song
+            }
+        }
+    }
+
+    /// A picture as the panel's own 64 x 64 bytes.
+    private static func square(_ image: UIImage) -> [UInt8]? {
+        guard let cg = image.cgImage else { return nil }
+        var raw = [UInt8](repeating: 0, count: 64 * 64 * 4)
+        let ok: Bool = raw.withUnsafeMutableBytes { buf -> Bool in
+            guard let ctx = CGContext(data: buf.baseAddress, width: 64, height: 64,
+                                      bitsPerComponent: 8, bytesPerRow: 64 * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            else { return false }
+            ctx.interpolationQuality = .high
+            ctx.draw(cg, in: CGRect(x: 0, y: 0, width: 64, height: 64))
+            return true
+        }
+        guard ok else { return nil }
+        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        for i in 0..<(64 * 64) {
+            out[i * 3] = raw[i * 4]; out[i * 3 + 1] = raw[i * 4 + 1]; out[i * 3 + 2] = raw[i * 4 + 2]
+        }
+        return out
+    }
+
     /// Put an exact 64x64 frame on the wall. What you drew is what it lights.
     func pushFrame(_ px: [UInt8]) {
         guard px.count == 64 * 64 * 3 else { return }
@@ -628,6 +699,9 @@ final class WallSession {
 
     /// POST a partial state patch. Optimistic locally, honest on failure:
     /// the next poll re-syncs whatever the wall actually accepted.
+    /// The song whose pressing the wall already has.
+    @ObservationIgnored private var lastPressing = ""
+
     func send(_ patch: [String: Any]) {
         // The colour well fired identical patches four times in 30ms; the
         // wall needs to hear each intent once.

@@ -78,7 +78,9 @@ struct IPodView: View {
     @State private var scrub: Scrub = .light
     @State private var scrubbing: Double? = nil
     @State private var scrubShownUntil: Date = .distantPast
-    @State private var playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+    // Read on appear, never here: this view is made on every evaluation of
+    // the screen above it, and a system player read is an XPC call.
+    @State private var playing = false
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     @AppStorage("spin.beat") private var beatOn = false
 
@@ -120,7 +122,10 @@ struct IPodView: View {
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
             playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
         }
-        .onAppear { MPMusicPlayerController.systemMusicPlayer.beginGeneratingPlaybackNotifications() }
+        .onAppear {
+            MPMusicPlayerController.systemMusicPlayer.beginGeneratingPlaybackNotifications()
+            playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+        }
     }
 
     // MARK: - Screen

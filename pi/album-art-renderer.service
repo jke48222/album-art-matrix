@@ -14,6 +14,13 @@ RestartSec=5
 # gpio/video/render come from bootstrap.sh. Listed again so a fresh install
 # that skipped the re-login still gets the device access.
 SupplementaryGroups=gpio video render
+# The driver pins its buffers with mlockall() and asks for SCHED_FIFO on the
+# isolated core. A plain user gets 8 MB of lockable memory and no real-time
+# priority, and the library die()s on the first of those ("mlockall failed",
+# exit 1, found at first light 2026-09-06). Raise both for the unit here;
+# bootstrap.sh does the same for interactive logins via limits.d.
+LimitMEMLOCK=infinity
+LimitRTPRIO=99
 
 [Install]
 WantedBy=multi-user.target

@@ -20,6 +20,7 @@ if sys.version_info < (3, 11):
              + ".".join(map(str, sys.version_info[:3])))
 import tomllib
 
+import numpy as np
 from PIL import Image
 
 from .art.disc import DiscAnimator
@@ -148,6 +149,7 @@ class _FrameTee:
     def show(self, rgb888: bytes, pre_wb_img=None):
         self._ctrl.last_frame = (pre_wb_img.tobytes()
                                  if pre_wb_img is not None else rgb888)
+        self._sink.brightness = self._ctrl.get()["panel_brightness"]
         self._sink.show(rgb888, pre_wb_img=pre_wb_img)
 
 
@@ -213,6 +215,7 @@ def main():
     clip_i, clip_next = 0, 0.0
     black = bytes(size * size * 3)
     idle_prev = None                 # which idle override is currently applied
+    disc_key = None                  # (pressing, sleeve) the disc was built from
 
     def show_sleeve(art_url):
         """The one path that puts a sleeve on the wall: fetch, prepare, arm
@@ -224,10 +227,38 @@ def main():
             unsharp_percent=int(pipe.get("unsharp_percent", 60)),
         )
         last_pre = pre
-        animator = DiscAnimator(pre, size, rpm=ctrl.get()["rpm"])
+        animator = build_disc(pre)
+        # what each finish would do to this sleeve, for the phone to show
+        ctrl.finish_base = pre
         t0 = time.monotonic()
         need_show = True
         ctrl.art_colors = dominant_colors(pre)
+
+    def song_key(np_):
+        """The name the phone knows a song by: artist and title, folded the
+        same way on both sides. The phone cannot know this wall's track id
+        (an adapter's own string), so a pressing arrives keyed by name."""
+        if np_ is None:
+            return ""
+        def fold(t):
+            return " ".join((t or "").lower().split())
+        return fold(np_.artist) + "|" + fold(np_.title)
+
+    def build_disc(pre):
+        """The record for the spin face. The phone sends the pressing it drew
+        for this song; when it is for the song that is on, the wall turns
+        that, so the wall and the room's deck play the same record."""
+        p = ctrl.pressing
+        key = song_key(now)
+        if ctrl.get()["spin_face"] == "pressing" \
+                and p is not None and (not p[0] or not key or p[0] == key):
+            try:
+                img = Image.frombytes("RGB", (size, size), p[1])
+                print(f"[main] spin: the phone's pressing for {p[0] or 'this song'}")
+                return DiscAnimator(img, size, rpm=ctrl.get()["rpm"], pressed=True)
+            except Exception:
+                pass
+        return DiscAnimator(pre, size, rpm=ctrl.get()["rpm"])
 
     def pace(tick):
         """Frame pacing + fps meter shared by the animated modes. The absolute
@@ -327,6 +358,13 @@ def main():
             prog = None
             ctrl.progress = {}
 
+        # the words: asked for once per track, the moment it is known, so
+        # the lyrics face has them ready when it is chosen. The book fetches
+        # off the loop and says "none" for a song nobody has synced.
+        if now is not None and now.track_id:
+            lyric_book.ask(now.track_id, now.artist, now.title, now.album,
+                           (now.duration_ms or 0) / 1000.0 or None)
+
         if now and now.track_id != last_track \
                 and time.monotonic() >= hold_until:
             # the old track's clock must not survive onto the new one when
@@ -363,7 +401,12 @@ def main():
             break
 
         # ---- render until the next poll, reacting live to control ------
-        poll_end = time.monotonic() + poll_s
+        # At least a breath of rendering between polls, whatever the poll
+        # interval says. A poll can cost a second or two (a helper process,
+        # a lookup over the network); with a shorter interval than that the
+        # loop never rested, the Pi sat at a pegged core, and the phone's
+        # own requests started timing out behind it.
+        poll_end = time.monotonic() + max(1.5, poll_s)
         try:
             # a pending replay bails out of the render loop immediately
             while time.monotonic() < poll_end and ctrl.replay is None:
@@ -447,13 +490,19 @@ def main():
                 blacked = False
 
                 if mode == "frame" and ctrl.frame_override is not None:
-                    if frame_shown is not ctrl.frame_override \
+                    if frame_shown != (id(ctrl.frame_override), s["finish"]) \
                             or sl is not None:
                         f = Image.frombytes("RGB", (size, size),
                                             ctrl.frame_override)
-                        sink.show(white_balance(f, eff).tobytes(),
+                        # (the panel's floor is applied to everything, in
+                        # white_balance, so a design needs nothing special)
+                        ctrl.finish_base = f
+                        # a pushed picture takes the finish too, as a sleeve does
+                        f = apply_finish(f, s["finish"])
+                        # a design's dim greys are flat tones on purpose: the hard lift
+                        sink.show(white_balance(f, eff, hard=True).tobytes(),
                                   pre_wb_img=f)
-                        frame_shown = ctrl.frame_override
+                        frame_shown = (id(ctrl.frame_override), s["finish"])
                     wait_s = poll_end - time.monotonic()
                     if sl is not None:           # keep fading a held frame
                         wait_s = min(wait_s, 1.0)
@@ -499,9 +548,12 @@ def main():
                     # what the wall has worn lately, three by three
                     nine.ask(ctrl.journal_read(60))
                     img = nine.frame
-                    if img is not None and (nine.built_for, s["brightness"]) != nine_shown:
-                        sink.show(white_balance(img, eff).tobytes(), pre_wb_img=img)
-                        nine_shown = (nine.built_for, s["brightness"])
+                    if img is not None:
+                        ctrl.finish_base = img
+                    if img is not None and (nine.built_for, s["brightness"], s["finish"]) != nine_shown:
+                        shown = apply_finish(img, s["finish"])
+                        sink.show(white_balance(shown, eff).tobytes(), pre_wb_img=shown)
+                        nine_shown = (nine.built_for, s["brightness"], s["finish"])
                     elif img is None and not blacked:
                         sink.show(black)
                     if ctrl.dirty.wait(0.5):
@@ -521,9 +573,11 @@ def main():
                             lyric_key = key
                         tick = time.monotonic()
                         at = prog[0] + (tick - prog[1] if prog[2] else 0.0)
-                        # the same anticipation the phone shows: a word is
-                        # readable AS it is sung, not a beat after
-                        f = lyric_canvas.frame_at(at + 0.20)
+                        # a word should be readable AS it is sung, not a beat
+                        # after; how far ahead is yours to set
+                        f = lyric_canvas.frame_at(at + s["lyric_offset"])
+                        ctrl.finish_base = f
+                        f = apply_finish(f, s["finish"])
                         sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                         if ctrl.dirty.wait(0.08):
                             ctrl.dirty.clear()
@@ -570,6 +624,8 @@ def main():
                                       twenty_four=s["clock_24h"])
                         clock_key = key
                     f = clock.frame_at(0.0)
+                    ctrl.finish_base = f
+                    f = apply_finish(f, s["finish"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     if ctrl.dirty.wait(0.5):
                         ctrl.dirty.clear()
@@ -581,6 +637,8 @@ def main():
                     if tick >= clip_next:
                         frame = c["frames"][clip_i % len(c["frames"])]
                         f = Image.frombytes("RGB", (size, size), frame)
+                        ctrl.finish_base = f
+                        f = apply_finish(f, s["finish"])
                         sink.show(white_balance(f, eff).tobytes(),
                                   pre_wb_img=f)
                         clip_i += 1
@@ -605,6 +663,10 @@ def main():
                     continue
 
                 if mode == "cd" and animator is not None:
+                    if disc_key != (id(ctrl.pressing), id(last_pre), s["spin_face"]) \
+                            and last_pre is not None:
+                        animator = build_disc(last_pre)
+                        disc_key = (id(ctrl.pressing), id(last_pre), s["spin_face"])
                     if animator.rpm != s["rpm"]:
                         animator.rpm = s["rpm"]
                     tick = time.monotonic()
@@ -616,11 +678,19 @@ def main():
                         if prog[3] > 0:
                             frac = min(1.0, at / prog[3])
                     f = animator.frame_at(tick - t0, progress_s=at, fraction=frac)
+                    ctrl.finish_base = f
+                    f = apply_finish(f, s["finish"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     pace(tick)
                     continue
 
                 # static sleeve ("art", or "cd" before any art has arrived)
+                # The preview the phone asks for is of the face that is up, so
+                # it is named here, on every pass. Naming it only when a sleeve
+                # loaded left the previews showing whichever face had rendered
+                # last, which is to say always one behind.
+                if last_pre is not None:
+                    ctrl.finish_base = last_pre
                 if need_show and last_pre is not None:
                     if (id(last_pre), s["finish"]) != fin_key:
                         fin_img = apply_finish(last_pre, s["finish"])

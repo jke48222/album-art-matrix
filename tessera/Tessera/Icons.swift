@@ -78,19 +78,37 @@ struct GlyphShape: View {
                          style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round, lineJoin: .round))
 
             case .palette:
-                // The studio as a painter's palette: the board, its thumb
-                // hole low on the right, three wells of paint along the top.
-                let board = CGRect(x: box.minX, y: box.minY + 1.5 * u,
-                                   width: box.width, height: box.height - 3.0 * u)
-                ctx.stroke(Path(ellipseIn: board), with: .color(.white), lineWidth: lw)
-                let hole = CGRect(x: board.maxX - 6.6 * u, y: board.midY + 0.2 * u,
-                                  width: 3.2 * u, height: 3.2 * u)
-                ctx.stroke(Path(ellipseIn: hole), with: .color(.white), lineWidth: lw)
-                for (dx, dy) in [(4.2, 4.6), (7.6, 3.0), (11.4, 3.6)] {
-                    let well = CGRect(x: board.minX + dx * u - 1.2 * u, y: board.minY + dy * u - 1.2 * u,
-                                      width: 2.4 * u, height: 2.4 * u)
-                    ctx.fill(Path(ellipseIn: well), with: .color(.white))
+                // The studio as the pencil you draw with. A palette's board,
+                // hole and three wells came to about forty pixels on a key
+                // this size and read as a smudge; a pencil is four strokes
+                // and unmistakable.
+                let tip = CGPoint(x: box.minX + 1.4 * u, y: box.maxY - 1.4 * u)
+                let d = CGPoint(x: 0.7071, y: -0.7071)          // along the pencil
+                let n = CGPoint(x: 0.7071, y: 0.7071)           // across it
+                let half = 2.35 * u
+                func at(_ along: CGFloat, _ across: CGFloat) -> CGPoint {
+                    CGPoint(x: tip.x + d.x * along + n.x * across,
+                            y: tip.y + d.y * along + n.y * across)
                 }
+                let collar: CGFloat = 4.0 * u, end: CGFloat = 14.4 * u
+                var body = Path()
+                body.move(to: at(collar, half))
+                body.addLine(to: at(end, half))
+                body.addLine(to: at(end, -half))
+                body.addLine(to: at(collar, -half))
+                body.closeSubpath()
+                ctx.stroke(body, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineJoin: .round))
+                var point = Path()                               // the sharpened end
+                point.move(to: at(collar, half))
+                point.addLine(to: tip)
+                point.addLine(to: at(collar, -half))
+                ctx.fill(point, with: .color(.white))
+                var band = Path()                                // the metal band
+                band.move(to: at(collar + 2.1 * u, half))
+                band.addLine(to: at(collar + 2.1 * u, -half))
+                ctx.stroke(band, with: .color(.white),
+                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
 
             case .crate:
                 // The archive as the box it lives in: a lid a shade wider
