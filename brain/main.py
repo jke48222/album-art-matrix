@@ -42,6 +42,7 @@ from .nowplaying.macmedia import MacMediaSource
 from .nowplaying.pushed import PushedSource
 from .nowplaying.spotify import SpotifySource
 from .services import Services
+from .video.player import VideoPlayer
 from .sinks.mac_preview import MacPreviewSink
 from .sinks.pi_renderer import PiRendererSink
 
@@ -185,6 +186,8 @@ def main():
     }, frame_len=size * size * 3)
     source = SourceChain(build_sources(cfg, ctrl))
     ctrl.source = source
+    # a link from the phone: fetched and decoded on its own threads
+    ctrl.video = VideoPlayer(size, ctrl.dirty, on_media=ctrl.video_media)
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
     sink = _FrameTee(make_sink(cfg, args.sink), ctrl, size)
 
@@ -213,6 +216,7 @@ def main():
     away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
     clip_i, clip_next = 0, 0.0
+    now, video_shown = None, None
     black = bytes(size * size * 3)
     idle_prev = None                 # which idle override is currently applied
     disc_key = None                  # (pressing, sleeve) the disc was built from
@@ -298,7 +302,12 @@ def main():
                 print(f"[main] replay failed: {exc}")
 
         # ---- poll now-playing; rebuild art state on track change --------
-        now = source.get_current()
+        # Not while a video is on: a poll can cost two seconds, and a
+        # picture that freezes for two seconds every five is not a video.
+        # The song is still there when the video ends.
+        if not (ctrl.video is not None and ctrl.video.busy
+                and ctrl.get()["mode"] == "video"):
+            now = source.get_current()
 
         # Silence is a state worth having an opinion about. A wall left on a
         # frozen sleeve all night is a different object from one that quietly
@@ -629,6 +638,24 @@ def main():
                     f = apply_finish(f, s["finish"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     if ctrl.dirty.wait(0.5):
+                        ctrl.dirty.clear()
+                    continue
+
+                if mode == "video" and ctrl.video is not None:
+                    img, wait_s = ctrl.video.frame_at()
+                    if img is None:
+                        # over, or it never started: back to the face before
+                        why = ctrl.video.error
+                        ctrl.video_stop(error=why)
+                        print("[video] " + (f"failed: {why}" if why else "over; back to "
+                                            + ctrl.get()["mode"]))
+                        continue
+                    if img is not video_shown or sl is not None:
+                        ctrl.finish_base = img
+                        f = apply_finish(img, s["finish"])
+                        sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                        video_shown = img
+                    if ctrl.dirty.wait(max(0.0, min(wait_s, 0.5))):
                         ctrl.dirty.clear()
                     continue
 

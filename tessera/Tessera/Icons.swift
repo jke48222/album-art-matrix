@@ -17,6 +17,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case make, erase, photo, letters, clock, snake, fill, pen, undo, redo
     case palette, crate, gear
     case play, pause, skip, back, nine, lyrics, rewind, forward
+    case video
 }
 
 struct GlyphShape: View {
@@ -280,6 +281,19 @@ struct GlyphShape: View {
                 p.move(to: CGPoint(x: box.minX + 2.4 * u, y: box.minY + 1.6 * u))
                 p.addLine(to: CGPoint(x: box.maxX - 1.4 * u, y: box.midY))
                 p.addLine(to: CGPoint(x: box.minX + 2.4 * u, y: box.maxY - 1.6 * u))
+                p.closeSubpath()
+                ctx.fill(p, with: .color(.white))
+
+            case .video:
+                // a screen with a play mark in it
+                let screen = CGRect(x: box.minX + 0.6 * u, y: box.minY + 2.0 * u,
+                                    width: box.width - 1.2 * u, height: box.height - 4.0 * u)
+                ctx.stroke(Path(roundedRect: screen, cornerRadius: 2.2 * u),
+                           with: .color(.white), lineWidth: lw)
+                var p = Path()
+                p.move(to: CGPoint(x: screen.midX - 2.2 * u, y: screen.midY - 3.0 * u))
+                p.addLine(to: CGPoint(x: screen.midX + 3.2 * u, y: screen.midY))
+                p.addLine(to: CGPoint(x: screen.midX - 2.2 * u, y: screen.midY + 3.0 * u))
                 p.closeSubpath()
                 ctx.fill(p, with: .color(.white))
 

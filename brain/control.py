@@ -20,6 +20,16 @@ is on — no Mac required.
                    listenbrainz: {user}, acoustid: {api_key, device}}: any
                    subset; kept in services.json, applied at once. This is
                    how every service gets connected from the phone alone.
+  POST /video    -> {url, sound?, loop?}: a YouTube link, or any link ffmpeg
+                   can read; the wall fetches it and plays it (mode "video").
+                   With sound on, the wall makes an audio file for the phone
+                   and waits for the phone's clock before it plays.
+  GET  /video    -> where the video is: status, title, position, buffered
+  GET  /video/audio -> the sound, as an m4a with byte ranges, for AVPlayer
+  POST /video/clock -> {t, playing}: the phone's player says where it is;
+                   the wall shows the frame for that moment
+  POST /video/control -> {action: play|pause|seek, t?}: the wall's own clock
+  POST /video/stop -> the video is over; back to what the wall was doing
 
 State persists to ~/.config/album-art-matrix/control.json so the wall comes
 back the way you left it. Every accepted POST sets `dirty` (a threading.Event)
@@ -42,7 +52,7 @@ STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
-MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics")
+MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
 IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
@@ -133,6 +143,9 @@ class ControlState:
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
         self.source = None           # the whole chain, for /nowplaying
+        self.video = None            # video.player.VideoPlayer, set by main
+        self.video_ret = None        # the mode a video interrupted
+        self._showing_before = None  # now_showing from before the video
         # Bumps whenever new content lands (track change, replay, pushed frame
         # or clip) — never on a settings change. Clients key their arrival
         # animations on this instead of guessing from title strings.
@@ -143,7 +156,7 @@ class ControlState:
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             if seed:
                 self._merge(seed, persist=False)
-        if self._s["mode"] in ("frame", "clip"):   # overrides die with restart
+        if self._s["mode"] in ("frame", "clip", "video"):   # overrides die with restart
             self._s["mode"] = "art"
 
     def get(self) -> dict:
@@ -258,7 +271,7 @@ class ControlState:
             if minutes > 0:
                 here = self.get()["mode"]
                 ret = self.timer["ret"] if self.timer else \
-                    (here if here not in ("timer", "frame", "clip") else "clock")
+                    (here if here not in ("timer", "frame", "clip", "video") else "clock")
                 self.timer = {"end": time.monotonic() + minutes * 60,
                               "total": minutes * 60, "ret": ret}
                 patch["mode"] = "timer"
@@ -271,6 +284,12 @@ class ControlState:
         if patch.get("panel_type") is not None:
             want = True
         rejected = self._merge(patch)
+        # Choosing any other face ends a video: nothing keeps decoding for a
+        # picture nobody is looking at.
+        if "mode" in patch and self._s["mode"] != "video" \
+                and self.video is not None and self.video.busy:
+            self.video.stop()
+            self.video_ret = None
         # The cap rides on every frame's header now (see sinks/pi_renderer),
         # so a change reaches the panel on the next frame. It is still written
         # down for the renderer's launch, so a reboot starts at the same level.
@@ -306,6 +325,8 @@ class ControlState:
         if tm:
             out["timer_remaining_s"] = max(0, int(tm["end"] - time.monotonic()))
             out["timer_total_s"] = int(tm["total"])
+        if self.video is not None and (self.video.status != "idle" or self.video.error):
+            out["video"] = self.video.public()
         return out
 
     # ---- services -------------------------------------------------------
@@ -352,6 +373,42 @@ class ControlState:
                   f"{', '.join(changed)}")
             self.dirty.set()
         return rejected
+
+    # ---- video ----------------------------------------------------------
+    def video_start(self, url: str, sound: bool, loop: bool):
+        """A link from the phone. Remembers the face that was up so the
+        wall can go back to it when the video is over."""
+        if self.video is None:
+            return "video is not available on this wall"
+        here = self.get()["mode"]
+        if here != "video":
+            self.video_ret = here if here not in ("frame", "clip", "timer") else "art"
+            self._showing_before = self.now_showing
+        self.video.start(url, sound=sound, loop=loop)
+        self.shown_seq += 1
+        self.apply({"mode": "video"})
+        return None
+
+    def video_stop(self, error: str | None = None):
+        """Over, stopped, or failed: back to what the wall was doing, and
+        to the song that was showing."""
+        if self.video is not None:
+            self.video.stop(error=error)
+        if self._showing_before is not None:
+            self.now_showing, self._showing_before = self._showing_before, None
+            self.shown_seq += 1
+        ret, self.video_ret = (self.video_ret or "art"), None
+        if self.get()["mode"] == "video":
+            self.apply({"mode": ret})
+        else:
+            self.dirty.set()
+
+    def video_media(self, media):
+        """The player resolved the link: the wall now shows a title."""
+        self.now_showing = {"title": media.title, "artist": media.author,
+                            "album": "YouTube" if "youtu" in (self.video.url if self.video else "") else "Video"}
+        self.shown_seq += 1
+        self.dirty.set()
 
     # ---- health ---------------------------------------------------------
     def health(self) -> dict:
@@ -465,8 +522,77 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(400, {"error": "body must be a JSON object"})
                 return None
 
+        def _send_file(self, path, ctype: str, head: bool = False):
+            """A file with byte ranges, which is how AVPlayer reads sound:
+            a few bytes first, then pieces, then wherever a scrub lands."""
+            try:
+                size = os.path.getsize(path)
+            except OSError:
+                self._json(404, {"error": "no sound yet"})
+                return
+            start, end, code = 0, size - 1, 200
+            rng = self.headers.get("Range", "")
+            if rng.startswith("bytes="):
+                a, _, b = rng[6:].partition("-")
+                try:
+                    if a:
+                        start, end = int(a), (int(b) if b else size - 1)
+                    else:
+                        start = max(0, size - int(b))
+                except ValueError:
+                    start, end = 0, size - 1
+                end = min(end, size - 1)
+                if start > end or start >= size:
+                    self.send_response(416)
+                    self.send_header("Content-Range", f"bytes */{size}")
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
+                code = 206
+            length = end - start + 1
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(length))
+            self.send_header("Accept-Ranges", "bytes")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            if code == 206:
+                self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
+            self.end_headers()
+            if head:
+                return
+            try:
+                with open(path, "rb") as fh:
+                    fh.seek(start)
+                    left = length
+                    while left > 0:
+                        chunk = fh.read(min(65536, left))
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                        left -= len(chunk)
+            except (BrokenPipeError, ConnectionResetError):
+                pass          # the player stopped asking; that is its right
+
+        def do_HEAD(self):
+            if self.path.startswith("/video/audio") and ctrl.video is not None \
+                    and ctrl.video.audio_path and ctrl.video.audio_ready:
+                self._send_file(ctrl.video.audio_path, "audio/mp4", head=True)
+                return
+            self._empty(404)
+
         def do_GET(self):
             u = urlparse(self.path)
+            if u.path.startswith("/video/audio"):
+                v = ctrl.video
+                if v is None or not v.audio_path or not v.audio_ready:
+                    self._json(404, {"error": "no sound yet"})
+                    return
+                self._send_file(v.audio_path, "audio/mp4")
+                return
+            if u.path.startswith("/video"):
+                self._json(200, ctrl.video.public() if ctrl.video is not None
+                           else {"status": "idle"})
+                return
             if u.path.startswith("/frame.raw"):
                 px = ctrl.last_frame
                 if px is None:
@@ -624,6 +750,65 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, ctrl.public_state())
                 return
 
+            if self.path.startswith("/video/clock"):
+                data = self._body()
+                if data is None:
+                    return
+                if ctrl.video is None:
+                    self._json(404, {"error": "video is not available on this wall"})
+                    return
+                try:
+                    ctrl.video.clock(float(data.get("t", 0.0)), bool(data.get("playing", True)))
+                except (TypeError, ValueError):
+                    self._json(400, {"error": "t must be a number"})
+                    return
+                ctrl.last_client = time.monotonic()
+                self._json(200, ctrl.video.public())
+                return
+
+            if self.path.startswith("/video/control"):
+                data = self._body()
+                if data is None:
+                    return
+                if ctrl.video is None:
+                    self._json(404, {"error": "video is not available on this wall"})
+                    return
+                action = data.get("action")
+                if action not in ("play", "pause", "seek"):
+                    self._json(400, {"error": "action must be play, pause or seek"})
+                    return
+                try:
+                    t = float(data["t"]) if "t" in data else None
+                except (TypeError, ValueError):
+                    self._json(400, {"error": "t must be a number"})
+                    return
+                ctrl.video.control(action, t)
+                self._json(200, ctrl.video.public())
+                return
+
+            if self.path.startswith("/video/stop"):
+                ctrl.video_stop()
+                self._json(200, ctrl.public_state())
+                return
+
+            if self.path.startswith("/video"):
+                data = self._body()
+                if data is None:
+                    return
+                url = data.get("url")
+                if not isinstance(url, str) or not 8 <= len(url.strip()) <= 4096 \
+                        or not url.strip().lower().startswith(("http://", "https://")):
+                    self._json(400, {"error": "url must be an http(s) link"})
+                    return
+                why = ctrl.video_start(url.strip(), bool(data.get("sound", True)),
+                                       bool(data.get("loop", False)))
+                if why:
+                    self._json(503, {"error": why})
+                    return
+                ctrl.last_client = time.monotonic()
+                self._json(200, ctrl.public_state())
+                return
+
             if self.path.startswith("/state"):
                 ctrl.last_client = time.monotonic()
                 patch = self._body()
@@ -697,7 +882,18 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
         def log_message(self, *args):
             pass
 
-    httpd = ThreadingHTTPServer(("0.0.0.0", port), Handler)
+    class Quiet(ThreadingHTTPServer):
+        # A phone that drops a kept-alive connection, or a player that
+        # abandons a byte-range request mid-way, is not an error worth a
+        # traceback in the journal. Everything else still is.
+        def handle_error(self, request, client_address):
+            import sys
+            if isinstance(sys.exc_info()[1], (ConnectionResetError, BrokenPipeError,
+                                              TimeoutError)):
+                return
+            super().handle_error(request, client_address)
+
+    httpd = Quiet(("0.0.0.0", port), Handler)
     threading.Thread(target=httpd.serve_forever, daemon=True,
                      name="control-api").start()
     print(f"[control] wall control API on 0.0.0.0:{port}")

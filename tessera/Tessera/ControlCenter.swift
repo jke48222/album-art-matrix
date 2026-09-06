@@ -346,17 +346,23 @@ struct ControlCenterPanel: View {
 
     /// The wall's faces: a grid of tiles, every one in view, the one that
     /// is on filled with the record's colour.
+    @State private var videoOpen = false
+
     private var faces: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
             tile(.art, "Art", mode: "art")
             tile(.spin, "Spin", mode: "cd")
             tile(.lyrics, "Lyrics", mode: "lyrics")
             tile(.nine, "Nine", mode: "nine")
             tile(.palette, "Design", mode: "frame")
+            // A video needs a link before it is a face, so the tile opens
+            // the page that asks for one; the wall goes to "video" itself.
+            tile(.video, "Video", mode: "video") { videoOpen = true }
             tile(.lamp, "Lamp", mode: "ambient")
             tile(.clock, "Clock", mode: "clock")
             tile(.dark, "Off", mode: "off")
         }
+        .sheet(isPresented: $videoOpen) { VideoPage(accent: accent) }
     }
 
     private func tile(_ g: Glyph, _ label: String, mode: String?, action: (() -> Void)? = nil) -> some View {
@@ -396,6 +402,7 @@ struct ControlCenterPanel: View {
         case "ticker": wordsBoard
         case "off": sleepBoard
         case "frame", "clip": designBoard
+        case "video": videoBoard
         default: finishBoard
         }
     }
@@ -575,6 +582,13 @@ struct ControlCenterPanel: View {
 
     /// A design or a clip: the studio itself, here, and the finish over it.
     /// Drawing is the point of this face, so it is not behind a door.
+    private var videoBoard: some View {
+        VStack(spacing: gutter) {
+            board("Video") { VideoBoard(accent: accent) { videoOpen = true } }
+            board("Finish") { finishes }
+        }
+    }
+
     private var designBoard: some View {
         VStack(spacing: gutter) {
             board("Design") {

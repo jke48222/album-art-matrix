@@ -19,6 +19,7 @@ class Media:
     duration_s: float
     video_url: str
     video_note: str                     # "144p avc1", for the app to show
+    video_bytes: Optional[int] = None   # known size: small enough to keep whole
     audio_url: Optional[str] = None     # None: no sound to give the phone
     audio_bytes: Optional[int] = None   # known size, for a progress figure
     audio_transcode: bool = False       # True: ffmpeg must make the m4a

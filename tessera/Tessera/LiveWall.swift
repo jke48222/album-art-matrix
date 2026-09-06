@@ -135,7 +135,7 @@ final class LiveWall {
         // enough that ActivityKit keeps delivering them.
         let key = "\(state.mode)|\(state.title ?? "")|\(state.artist ?? "")"
         let fresh = key != lastKey
-        let moving = ["cd", "ambient", "ticker", "clock", "timer", "clip", "snake", "lyrics"].contains(state.mode)
+        let moving = ["cd", "ambient", "ticker", "clock", "timer", "clip", "snake", "lyrics", "video"].contains(state.mode)
         let every: TimeInterval = moving ? 1.0 : 30
         guard fresh || Date().timeIntervalSince(lastSent) > every else { return }
         lastKey = key

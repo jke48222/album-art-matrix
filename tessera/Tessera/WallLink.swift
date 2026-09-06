@@ -59,6 +59,8 @@ struct WallState: Equatable {
     /// pushed frame or clip), never on a settings change. The one honest key
     /// for arrival animations; 0 means an older brain that does not send it.
     var shownSeq: Int = 0
+    /// A video the wall is fetching or playing, when there is one.
+    var video: WallVideo? = nil
     /// Where the song is. Held as "this was true then" rather than as a
     /// number, so the phone can run the same clock the wall runs instead of
     /// showing a position that went stale the moment it arrived.
@@ -131,6 +133,7 @@ struct WallState: Equatable {
         artColors = json["art_colors"] as? [String] ?? []
         sleepRemaining = json["sleep_remaining_s"] as? Int
         shownSeq = json["shown_seq"] as? Int ?? 0
+        if let v = json["video"] as? [String: Any] { video = WallVideo(json: v) }
     }
 }
 
@@ -299,7 +302,7 @@ final class WallSession {
                     try? await Task.sleep(for: .milliseconds(pace))
                     continue
                 }
-                let animating = ["cd", "ambient", "ticker", "clip", "lyrics"].contains(self.state.mode)
+                let animating = ["cd", "ambient", "ticker", "clip", "lyrics", "video"].contains(self.state.mode)
                 if tick % 10 == 0, !self.probing {                    // ~1s
                     self.probing = true
                     Task { [weak self] in

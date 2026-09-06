@@ -258,11 +258,11 @@ struct ServicesPage: View {
                     }
                 }
                 Rule()
-                otherRow(.soundcloud, "From a Mac, or out loud.")
+                otherRow(.soundcloud, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
                 Rule()
-                otherRow(.youtubeMusic, "From a Mac, or out loud.")
+                otherRow(.youtubeMusic, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
                 Rule()
-                otherRow(.amazonMusic, "From a Mac, or out loud.")
+                otherRow(.amazonMusic, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
             }
 
             SetupGroup("A Mac, if you use one", note: "Optional. A Mac running the reporter passes along whatever it plays: Spotify's app, TIDAL, a browser tab on YouTube Music.") {
@@ -354,7 +354,7 @@ struct ServicesPage: View {
     }
 
     private var otherNote: String {
-        "SoundCloud, YouTube Music and Amazon Music do not tell any phone app what they play. On a Mac running the reporter the wall reads them; out loud, the wall's ears pick them up."
+        "SoundCloud, YouTube Music and Amazon Music have no way to tell any phone app what they play. In a computer's browser, the free Web Scrobbler extension reports them to Last.fm or ListenBrainz, and the wall reads those. On a Mac running the reporter the wall reads them directly; out loud, the wall's ears pick them up."
     }
 
     private var macLine: String {
