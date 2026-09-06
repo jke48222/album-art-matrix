@@ -14,7 +14,9 @@ export FRAME_FIFO="$FIFO"
 # Map-rate cap; must cover [animation] fps in config.toml (the brain produces
 # at fps, this decides how many of those map). Set HERE so a tuned value has
 # one home that survives reboots — the systemd unit runs this script.
-export MAX_MAP_HZ="${MAX_MAP_HZ:-60}"
+MAPHZ="$(cat "$HOME/album-art-matrix/map-hz" 2>/dev/null || echo 60)"
+case "$MAPHZ" in ''|*[!0-9]*) MAPHZ=60 ;; esac
+export MAX_MAP_HZ="${MAX_MAP_HZ:-$MAPHZ}"
 # The panel's own brightness cap, 1-254. The brain writes this file when the
 # cap is changed from the phone and restarts the renderer, because the cap is
 # a launch flag: there is no way to change it in a running panel.
@@ -40,9 +42,12 @@ case "$DITHER" in ''|*[!0-9.]*) DITHER=1.0 ;; esac
 # Bit depth, 4-64 in fours. Higher is more colour and a slower refresh.
 DEPTH="$(cat "$HOME/album-art-matrix/bit-depth" 2>/dev/null || echo 64)"
 case "$DEPTH" in ''|*[!0-9]*) DEPTH=64 ;; esac
+# The panel's row addressing, 0-7. Written by the brain, same as the rest.
+PTYPE="$(cat "$HOME/album-art-matrix/panel-type" 2>/dev/null || echo 0)"
+case "$PTYPE" in ''|*[!0-9]*) PTYPE=0 ;; esac
 exec "$HOME/album-art-matrix/renderer/art_display" \
   -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 \
-  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT"
+  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT" -P "$PTYPE"
 
 # The last row. This panel used to ghost the content's own colour into the
 # bottom row of its scan (a red clock left a red line there) on frames whose

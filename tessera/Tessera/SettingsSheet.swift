@@ -59,7 +59,7 @@ struct SettingsSheet: View {
                             row("waveform.path.ecg", "How it's doing", healthValue) { HealthPage(accent: accent, vitals: $vitals) }
                         }
                         row("network", "Addresses", "The wall, and a Mac if you use one") { AddressesPage(accent: accent, onChange: {}) }
-                        row("info.circle", "About Tessera", nil) { AboutPage() }
+                        row("info.circle", "About Tessera", nil) { AboutPage(accent: accent) }
                     }
                     .padding(.top, 14)
                 }
@@ -1135,9 +1135,15 @@ struct AddressesPage: View {
 }
 
 struct AboutPage: View {
+    /// The room's own colour, so the tuning page's controls are lit the same
+    /// as everything else. Defaulted, because About is opened without it.
+    var accent: Color = Ink.moss
     @AppStorage("design") private var design = Design.ipod.rawValue
     @AppStorage("onboarding.again") private var onboardingAgain = false
     @AppStorage("intro.replay") private var replay = false
+    /// Found once, open from then on. See the tap target at the foot of
+    /// this page.
+    @AppStorage("tuning.unlocked") private var tuningUnlocked = false
     @AppStorage("intro.style") private var introStyle = "film"
 
     var body: some View {
@@ -1169,7 +1175,32 @@ struct AboutPage: View {
                         ActionPill(title: "Mark", filled: introStyle == "mark") { introStyle = "mark" }
                     }
                 }
+                if tuningUnlocked {
+                    Rule()
+                    NavigationLink {
+                        PanelTuningPage(accent: accent)
+                    } label: {
+                        SetupRow(title: "Panel tuning",
+                                 subtitle: "Every number that decides what the LEDs do.") {
+                            Value("Open")
+                        }
+                    }
+                    .buttonStyle(PressStyle(scale: 0.99))
+                }
             }
+
+            // The way in to the tuning. Not a setting: these are the panel's
+            // own physics, and a wrong one makes the wall worse in ways that
+            // are hard to undo by eye. Five taps here opens it, and it stays
+            // open once it has been found.
+            Color.clear
+                .frame(height: 56)
+                .contentShape(Rectangle())
+                .onTapGesture(count: 5) {
+                    tuningUnlocked = true
+                    Taps.found()
+                }
+                .accessibilityHidden(true)
         }
     }
 }

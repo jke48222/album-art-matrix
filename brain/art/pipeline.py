@@ -38,8 +38,8 @@ NOISE = 16.0             # below this a pixel is a photograph's noise: off
 FLOOR = 64.0             # the lowest level the panel is steady at
 
 
-@lru_cache(maxsize=8)
-def _wb_lut(gains: tuple) -> np.ndarray:
+@lru_cache(maxsize=32)
+def _wb_lut(gains: tuple, shape: tuple) -> np.ndarray:
     """3x256 uint8 table for white_balance. The mapping depends only on the
     input byte and that channel's gain (the same float32 ops on the same
     values, so bit-identical to the direct formula) — and this runs per frame
@@ -50,13 +50,14 @@ def _wb_lut(gains: tuple) -> np.ndarray:
     # dithers them in time, and each becomes an LED that flashes now and
     # then, red or green by whichever channel the noise favoured. Below the
     # point is off; above it, the range is stretched back to white.
+    black, low_end, low_full, low_red, low_blue = shape
     byte = np.arange(256, dtype=np.float32)
-    v = np.clip((byte - BLACK_POINT) / (255.0 - BLACK_POINT), 0.0, 1.0)
+    v = np.clip((byte - black) / (255.0 - black), 0.0, 1.0)
     # the dark-end lean, by the channel's own level (see LOW_END)
-    t = np.clip((LOW_END - byte) / (LOW_END - LOW_FULL), 0.0, 1.0)
-    lean = np.stack([1.0 + (LOW_RED - 1.0) * t,
+    t = np.clip((low_end - byte) / max(low_end - low_full, 1e-6), 0.0, 1.0)
+    lean = np.stack([1.0 + (low_red - 1.0) * t,
                      np.ones_like(t),
-                     1.0 + (LOW_BLUE - 1.0) * t]).astype(np.float32)
+                     1.0 + (low_blue - 1.0) * t]).astype(np.float32)
     linear = np.power(v, 2.2)[None, :] \
         * np.asarray(gains, dtype=np.float32)[:, None] * lean
     np.clip(linear, 0.0, 1.0, out=linear)
@@ -130,7 +131,9 @@ def white_balance(img: Image.Image, gains, hard: bool = False,
     re-encode. uint8 HxWx3. Everything the wall lights comes through here,
     so this is where the panel's own floor belongs. `floor=False` keeps the
     blacks black, which is what a moving picture needs (see steady)."""
-    lut = _wb_lut((float(gains[0]), float(gains[1]), float(gains[2])))
+    lut = _wb_lut((float(gains[0]), float(gains[1]), float(gains[2])),
+                  (float(BLACK_POINT), float(LOW_END), float(LOW_FULL),
+                   float(LOW_RED), float(LOW_BLUE)))
     arr = steady(np.asarray(img), hard=hard, floor=floor)
     out = np.empty_like(arr)
     for c in range(3):
