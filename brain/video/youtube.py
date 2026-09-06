@@ -53,9 +53,11 @@ _PATTERNS = [
     re.compile(r"youtu\.be/" + _ID),
 ]
 
-# The picture: the smallest stream there is, H.264 first because it is the
-# cheapest to decode. 144p is 256 px wide; the panel is 64.
-_VIDEO_PREF = {160: 0, 278: 1, 394: 2, 133: 3, 242: 4, 395: 5, 134: 6, 18: 7}
+# The picture. 240p first: cropped square it is 240 px, and the panel wants
+# something to throw away when it downscales — 144p leaves a square of 144,
+# barely twice the panel, and it shows. H.264 before VP9 and AV1, which the
+# wall would decode in software at several times the cost.
+_VIDEO_PREF = {133: 0, 134: 1, 160: 2, 242: 3, 243: 4, 278: 5, 395: 6, 396: 7, 394: 8, 18: 9}
 # The sound: AAC in an mp4 container, which AVPlayer plays as it is. The
 # file lives in the wall's RAM, so a long video takes the small one.
 _AUDIO_PREF = {140: 0, 139: 1}          # 130 kbps, 50 kbps

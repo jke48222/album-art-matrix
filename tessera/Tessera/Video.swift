@@ -11,7 +11,6 @@
 import AVFoundation
 import Foundation
 import SwiftUI
-import UIKit
 
 // MARK: - What the wall says
 
@@ -150,7 +149,12 @@ final class VideoSound {
     }
 
     /// The wall's word, on every poll: the sound starts when the wall is
-    /// ready for this phone's clock, and stops when the video is gone.
+    /// waiting for this phone's clock, and stops when the video is gone.
+    ///
+    /// A video shared from the share sheet starts on the wall with no app
+    /// open, so the wall plays it itself. This does NOT jump in and start
+    /// blaring when the app is opened later; that is a button (`join`), so
+    /// sound only ever begins because someone asked for it.
     func follow(_ v: WallVideo?, mode: String, host: String) {
         guard let v, v.live, mode == "video" else {
             if started { stop() }
@@ -168,9 +172,15 @@ final class VideoSound {
         }
     }
 
+    /// The wall is playing something on its own clock and there is sound
+    /// sitting on it. Pick it up from where the wall has got to.
+    func join(_ v: WallVideo, host: String) {
+        begin(host: host, key: v.url, source: .wall, at: v.position)
+    }
+
     /// The wall says ready: play the sound, unless this is the same video
     /// this player is already on.
-    func begin(host: String, key: String, source: Source = .wall) {
+    func begin(host: String, key: String, source: Source = .wall, at start: Double = 0) {
         guard key != self.key || !started else { return }
         stop()
         self.key = key
@@ -199,6 +209,11 @@ final class VideoSound {
         endWatch = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime,
                                                           object: item, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.ended() }
+        }
+        if start > 1 {
+            p.seek(to: CMTime(seconds: start, preferredTimescale: 600),
+                   toleranceBefore: .zero, toleranceAfter: .zero)
+            time = start
         }
         p.play()
         playing = true
@@ -262,298 +277,5 @@ final class VideoSound {
         let t = p.currentTime().seconds
         let h = host, on = playing
         Task { await WallVideoLink.clock(host: h, t: t.isFinite ? t : 0, playing: on) }
-    }
-}
-
-// MARK: - The page: a link in
-
-struct VideoPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.dismiss) private var dismiss
-    let accent: Color
-
-    @State private var link = ""
-    @AppStorage("video.sound") private var sound = true
-    @State private var busy = false
-    @State private var problem: String?
-    @State private var clipboardHasLink = false
-    /// A video the share sheet kept: what is being done to it, how far.
-    @State private var handoff: (words: String, fraction: Double)? = nil
-    @State private var handoffTitle: String?
-
-    private var typed: String {
-        // a shared text can wrap the link in words; the link is what counts
-        let raw = link.trimmingCharacters(in: .whitespacesAndNewlines)
-        if raw.lowercased().hasPrefix("http") { return raw }
-        return raw.split(whereSeparator: { $0.isWhitespace })
-            .map(String.init).first { $0.lowercased().hasPrefix("http") } ?? raw
-    }
-    private var canPlay: Bool { typed.lowercased().hasPrefix("http") && !busy && !wall.link.isStandIn }
-
-    var body: some View {
-        NavigationStack {
-            SetupPage("Video", blurb: "A YouTube link, or a link to a video file. The wall fetches it and plays the picture at its own size; the sound plays on this phone, so the two stay in step.") {
-                SetupGroup("The link", note: wall.link.isStandIn
-                           ? "The wall is not answering, so nothing can be played right now."
-                           : "The wall does the fetching. Sound comes to this phone and plays through whatever it is connected to.") {
-                    KeyField(placeholder: "https://youtu.be/...", text: $link)
-                    Rule()
-                    if clipboardHasLink {
-                        SetupRow(title: "There is a link on the clipboard", subtitle: nil) {
-                            ActionPill(title: "Paste", filled: false) { paste() }
-                        }
-                        Rule()
-                    }
-                    Toggle(isOn: $sound) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Sound on this phone").font(.ui(16)).foregroundStyle(Ink.ink)
-                            Text(sound ? "The wall follows this phone's player."
-                                       : "Picture only; the wall keeps its own time.")
-                                .font(.ui(13)).foregroundStyle(Ink.dim)
-                        }
-                    }
-                    .tint(accent)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 12)
-                    Rule()
-                    SaveLine(title: "Play on the wall", enabled: canPlay, busy: busy, done: nil,
-                             accent: accent) { play() }
-                }
-                .padding(.top, -12)
-                Problem(text: problem)
-
-                if let h = handoff {
-                    SetupGroup("From your library", note: "The small picture is made on this phone and sent up; the sound plays from here.") {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text(handoffTitle ?? "Video").font(.ui(16)).foregroundStyle(Ink.ink).lineLimit(1)
-                            Text(h.words).font(.ui(13)).foregroundStyle(Ink.dim)
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(Ink.ink.opacity(0.12)).frame(height: 6)
-                                    Capsule().fill(accent).frame(width: max(6, geo.size.width * h.fraction), height: 6)
-                                }
-                            }
-                            .frame(height: 6)
-                        }
-                        .padding(16)
-                    }
-                }
-
-                if wall.state.video != nil || wall.state.mode == "video" {
-                    SetupGroup("On the wall", note: nil) {
-                        VideoBoard(accent: accent) {}
-                            .padding(16)
-                    }
-                }
-
-                SetupGroup("How it works", note: nil) {
-                    fact("Picture", "Decoded on the wall from the smallest stream there is. 144p is already twice the panel.")
-                    Rule()
-                    fact("Sound", "A small file on the wall, played by this phone. Nothing is kept once the video is over.")
-                    Rule()
-                    fact("Time", "This phone's player is the clock. The wall shows the frame for the moment it names, once a second.")
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .font(.ui(15, .semibold))
-                        .foregroundStyle(accent)
-                }
-            }
-        }
-        .onAppear {
-            clipboardHasLink = UIPasteboard.general.hasURLs
-            UserDefaults(suiteName: WallSnapshot.group)?.set(sound, forKey: "video.sound")
-        }
-        .onChange(of: sound) { _, on in
-            // the share sheet reads the same choice
-            UserDefaults(suiteName: WallSnapshot.group)?.set(on, forKey: "video.sound")
-        }
-        .task { await runHandoff() }
-    }
-
-    /// What came through the app's door: a link goes to the wall as if it
-    /// were typed here; a video gets its picture made and sent up.
-    private func runHandoff() async {
-        var p = VideoHandoff.arrived
-        VideoHandoff.arrived = nil
-        if p == nil, let kept = VideoHandoff.read(), kept.kind == "file" {
-            p = kept
-            VideoHandoff.clear()
-        }
-        guard let p else { return }
-        if p.kind == "link" {
-            if let l = p.url { link = l }
-            if canPlay { play() }
-            return
-        }
-        guard p.kind == "file", let path = p.path else { return }
-        guard !wall.link.isStandIn else {
-            problem = "The wall is not answering, so the video from your library cannot be played right now."
-            return
-        }
-        VideoSound.shared.stop()
-        handoffTitle = p.title
-        handoff = ("Making the picture", 0)
-        VideoHandoff.inProgress = true
-        defer { VideoHandoff.inProgress = false }
-        do {
-            _ = try await VideoHandoff.send(file: URL(fileURLWithPath: path), title: p.title,
-                                            host: wall.host) { words, fraction in
-                Task { @MainActor in handoff = (words, fraction) }
-            }
-            handoff = nil
-            Taps.landed()
-        } catch {
-            handoff = nil
-            problem = error.localizedDescription
-            Taps.error()
-        }
-    }
-
-    private func fact(_ name: String, _ words: String) -> some View {
-        SetupRow(title: name, subtitle: words) { EmptyView() }
-    }
-
-    private func paste() {
-        if let u = UIPasteboard.general.url?.absoluteString ?? UIPasteboard.general.string {
-            link = u
-            clipboardHasLink = false
-            Taps.detent(intensity: 0.4)
-        }
-    }
-
-    private func play() {
-        let url = typed
-        guard canPlay else { return }
-        busy = true
-        problem = nil
-        VideoSound.shared.stop()
-        Task {
-            // The page stays up while the wall fetches: what it says about
-            // the fetch, and anything that goes wrong with it, shows below.
-            let why = await WallVideoLink.start(host: wall.host, url: url, sound: sound)
-            problem = why
-            if why == nil { Taps.landed() } else { Taps.error() }
-            busy = false
-        }
-    }
-}
-
-// MARK: - The board: what is on, and the transport
-
-/// Where the video is, a rail to scrub it, and the buttons. Sits in the
-/// control centre while the wall's face is "video", and on the page.
-struct VideoBoard: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    var another: () -> Void
-
-    @State private var scrub: Double? = nil
-    @State private var stopping = false
-
-    private var video: WallVideo? { wall.state.video }
-    private var sound: VideoSound { VideoSound.shared }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(video?.title ?? "Nothing on")
-                    .font(.ui(16, .medium)).foregroundStyle(Ink.ink)
-                    .lineLimit(2)
-                Text(line)
-                    .font(.ui(13)).foregroundStyle(video?.error != nil ? Ink.signal : Ink.dim)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let v = video, let of = v.duration, of > 1, v.live {
-                rail(v, of)
-            }
-            HStack(spacing: 10) {
-                if let v = video, ["playing", "paused"].contains(v.status) {
-                    ActionPill(title: v.status == "playing" ? "Pause" : "Play") { toggle(v) }
-                }
-                if video?.live == true {
-                    ActionPill(title: stopping ? "Stopping" : "Stop", filled: false) { stop() }
-                        .disabled(stopping)
-                }
-                Spacer()
-                ActionPill(title: video?.live == true ? "Another link" : "Play a link", filled: false) { another() }
-            }
-        }
-    }
-
-    private var line: String {
-        guard let v = video else { return "Paste a link and the wall plays it." }
-        if v.status == "playing", sound.started, !v.phoneClock { return v.words + ". Sound starting." }
-        return v.words
-    }
-
-    private func toggle(_ v: WallVideo) {
-        if sound.started {
-            v.status == "playing" ? sound.pause() : sound.resume()
-        } else {
-            let h = wall.host
-            Task { await WallVideoLink.control(host: h, v.status == "playing" ? "pause" : "play") }
-        }
-        Taps.detent(intensity: 0.4)
-    }
-
-    private func stop() {
-        stopping = true
-        sound.stop()
-        let h = wall.host
-        Task {
-            await WallVideoLink.stop(host: h)
-            Taps.commit()
-            stopping = false
-        }
-    }
-
-    private func seek(_ t: Double) {
-        if sound.started {
-            sound.seek(to: t)
-        } else {
-            let h = wall.host
-            Task { await WallVideoLink.control(host: h, "seek", t: t) }
-        }
-        Taps.commit()
-    }
-
-    private func rail(_ v: WallVideo, _ of: Double) -> some View {
-        let at = scrub ?? v.position
-        let f = min(1, max(0, at / of))
-        return VStack(alignment: .leading, spacing: 6) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(Ink.ink.opacity(0.12)).frame(height: 6)
-                    Capsule().fill(Ink.ink.opacity(0.18))
-                        .frame(width: max(6, geo.size.width * CGFloat(min(1, (v.position + v.buffered) / of))), height: 6)
-                    Capsule().fill(accent).frame(width: max(6, geo.size.width * CGFloat(f)), height: 6)
-                    Circle().fill(Color.white).frame(width: 18, height: 18)
-                        .overlay(Circle().strokeBorder(Color.black.opacity(0.14), lineWidth: 1))
-                        .offset(x: (geo.size.width - 18) * CGFloat(f))
-                }
-                .frame(height: 18)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { g in
-                            let t = Double((g.location.x - 9) / max(1, geo.size.width - 18))
-                            scrub = of * min(1, max(0, t))
-                        }
-                        .onEnded { _ in
-                            if let t = scrub { seek(t) }
-                            scrub = nil
-                        }
-                )
-            }
-            .frame(height: 18)
-            HStack {
-                Text(WallVideo.clock(at)).font(.machine(11)).foregroundStyle(Ink.dim)
-                Spacer()
-                Text(WallVideo.clock(of)).font(.machine(11)).foregroundStyle(Ink.dim)
-            }
-        }
     }
 }

@@ -30,7 +30,7 @@ from . import Media, ResolveError
 # The picture: the smallest there is, H.264 first. The sound: AAC in mp4,
 # which the phone plays as it is. Slashes are preferences, and yt-dlp is
 # asked for both in one run.
-VIDEO_FMT = "160/278/394/133/242/395/134/18/worst[height<=360]"
+VIDEO_FMT = "133/134/160/242/243/278/18/worst[height<=360]"
 # Both files sit in the wall's RAM disk while the video is on, and the wall
 # has a gigabyte in total, so a long video takes the small sound stream
 # (50 kbps rather than 130), the same rule the fast path uses.

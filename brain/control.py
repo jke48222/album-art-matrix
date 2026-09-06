@@ -400,6 +400,15 @@ class ControlState:
         that was up so the wall can go back to it when the video is over."""
         if self.video is None:
             return "video is not available on this wall"
+        if clock == "auto" and sound:
+            # Who keeps time depends on whether anyone is holding the phone.
+            # A link shared from the share sheet arrives with no app open,
+            # and a wall that waits for a clock nobody is keeping is a wall
+            # that does not play. The sound is still fetched either way, so
+            # the phone can pick it up when it does come along.
+            recent = (self.last_client is not None
+                      and time.monotonic() - self.last_client < 90)
+            clock = "phone" if recent else "wall"
         here = self.get()["mode"]
         if here != "video":
             self.video_ret = here if here not in ("frame", "clip", "timer") else "art"
