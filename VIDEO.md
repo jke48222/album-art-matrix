@@ -19,6 +19,12 @@ Paste a YouTube link in Tessera (the Video tile), and the wall plays it.
   album sleeve is: Lanczos to 64 and the same unsharp, at 15 frames a
   second. It used to be a box filter straight from 144p, which the art
   pipeline's own notes call mud, and it looked like it.
+- **A video keeps its blacks.** Everything the wall lights goes through the
+  same white balance, but a still sleeve also gets its shadows lifted to the
+  level the panel holds steadily, and a video must not: a night scene lives
+  almost entirely inside that lift's range, so the wall showed it as a flat
+  pale field with the street lights barely above it. `white_balance(...,
+  floor=False)` is the video path.
 - **A dark clip is lifted once,** at the start, by a gamma read from its own
   first second. Film is graded for a dark room and sits below the level a
   64 px panel can hold steadily; under that the renderer dithers in time and
