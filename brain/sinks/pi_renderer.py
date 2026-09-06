@@ -36,6 +36,7 @@ class PiRendererSink(FrameSink):
         self._fd = None
         self._warned = False
         self.brightness = 160
+        self.dither = 0.0
         # The last frame actually written, and the cap it went out with.
         # Sending the same picture again is not free: the renderer maps it
         # into the very bit-plane buffer its scan is reading, and the scan
@@ -43,6 +44,7 @@ class PiRendererSink(FrameSink):
         # once a second, so the wall tore about once a second.
         self._last = None
         self._last_cap = None
+        self._last_dither = None
 
     def _connect(self) -> bool:
         if self._fd is not None:
@@ -79,19 +81,20 @@ class PiRendererSink(FrameSink):
         if not self._connect():
             return
         cap = max(1, min(254, int(self.brightness)))
-        if rgb888 == self._last and cap == self._last_cap:
+        dit = max(0, min(100, int(round(self.dither * 10))))
+        if rgb888 == self._last and cap == self._last_cap and dit == self._last_dither:
             return                      # the panel is already showing this
         try:
             # A frame exceeds PIPE_BUF, so a signal landing mid-write can
             # return a short count; anything short would shift every later
             # frame boundary (the protocol has no resync marker) — write all.
-            head = MAGIC + bytes((cap, 0, 0, 0))
+            head = MAGIC + bytes((cap, dit, 0, 0))
             out = self.wall.remap(rgb888) if self.wall is not None else rgb888
             view = memoryview(head + bytes(out))
             sent = 0
             while sent < len(view):
                 sent += os.write(self._fd, view[sent:])
-            self._last, self._last_cap = bytes(rgb888), cap
+            self._last, self._last_cap, self._last_dither = bytes(rgb888), cap, dit
         except (BrokenPipeError, OSError):
             # The renderer restarted. Reconnect on the next frame.
             self._last = None

@@ -154,6 +154,8 @@ class _FrameTee:
         self._ctrl.last_frame = (pre_wb_img.tobytes()
                                  if pre_wb_img is not None else rgb888)
         self._sink.brightness = self._ctrl.get()["panel_brightness"]
+        if self._ctrl.tuning is not None:
+            self._sink.dither = self._ctrl.tuning.get("dither")
         self._sink.show(rgb888, pre_wb_img=pre_wb_img)
 
 

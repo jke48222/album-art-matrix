@@ -7,7 +7,8 @@ is on — no Mac required.
   POST /state   -> partial update, e.g. {"mode": "ambient", "brightness": 0.4}
   GET  /journal -> what the wall has worn, newest first (?limit=N, default 50)
   POST /replay  -> {"ts": <journal ts>} re-show that sleeve until next track
-  POST /frame   -> {"px": base64 raw RGB, 64*64*3 bytes} — doodles and photos;
+  POST /frame   -> {"px": base64 raw RGB, one wall's worth} — doodles and
+                   photos; a smaller square is taken and scaled up;
                    switches mode to "frame" so the push is visible immediately
   POST /push    -> what the phone is playing: {track, artist, album, id?,
                    playing, progress_ms, duration_ms, art?}; 40 s TTL
@@ -59,11 +60,11 @@ STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
-# What Tessera draws on and reads back. The app checks for 64*64*3 raw bytes
-# in about thirty places, so the wire stays 64 whatever the wall grew to: a
-# doodle arrives at 64 and is blown up to the panel count, and the wall's own
-# frame is boxed back down to 64 for the app's preview. `?full=1` on
-# /frame.raw is the native frame, for anything that asks for it by name.
+# The app draws and reads at the wall's own size: what Tessera puts on the
+# wall is what the wall shows, pixel for pixel. Anything sending a smaller
+# square (an older build, the share extension, a script) is still taken and
+# scaled up, and /frame.raw takes ?side=N for a caller that wants a small
+# copy for a thumbnail. This is that fallback size, not a limit.
 PHONE_SIDE = 64
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
@@ -679,21 +680,20 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if px is None:
                     self._json(404, {"error": "nothing shown yet"})
                     return
-                # The app asks for a frame and means "the picture the wall is
-                # showing", not "one byte per LED": it draws its own emitters
-                # at its own size. A nine panel wall would hand it nine times
-                # the bytes and every length check in it would refuse them.
-                full = parse_qs(u.query).get("full", ["0"])[0] not in ("0", "", "false")
-                if not full:
-                    px = ctrl.wall.phone_view(px, ctrl.phone_side)
+                # The wall's own frame, at the wall's own size. A caller that
+                # wants a small copy (a thumbnail, a list) asks for ?side=64
+                # and gets a box average rather than every ninth LED.
+                side = ctrl.wall.width
+                want = parse_qs(u.query).get("side", [""])[0]
+                if want.isdigit() and 16 <= int(want) < ctrl.wall.width:
+                    side = int(want)
+                    px = ctrl.wall.phone_view(px, side)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
                 self.send_header("Content-Length", str(len(px)))
                 self.send_header("Access-Control-Allow-Origin", "*")
-                side = ctrl.wall.width if full else ctrl.phone_side
                 self.send_header("X-Frame-Width", str(side))
-                self.send_header("X-Frame-Height",
-                                 str(ctrl.wall.height if full else ctrl.phone_side))
+                self.send_header("X-Frame-Height", str(side))
                 self.end_headers()
                 self.wfile.write(px)
                 return
@@ -713,12 +713,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 key, shots = ctrl._finish_shots
                 if key != ctrl.finish_seq:
                     from .art.pipeline import apply_finish
-                    # Rendered at the wall's size, sent at the phone's: the
-                    # finish is what the quantiser does to this picture, and
-                    # it has to be judged on the picture the wall will show.
-                    shots = {n: base64.b64encode(ctrl.wall.phone_view(
-                        apply_finish(base, n).convert("RGB").tobytes(),
-                        ctrl.phone_side)).decode()
+                    # Full size, because a finish IS a quantisation: shrink
+                    # it for the phone and a box average smooths the dither
+                    # back into the flat picture it was meant to be told from.
+                    shots = {n: base64.b64encode(
+                        apply_finish(base, n).convert("RGB").tobytes()).decode()
                         for n in ("clean", "dither", "poster")}
                     ctrl._finish_shots = (ctrl.finish_seq, shots)
                 self._json(200, shots)
@@ -868,10 +867,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(503, {"error": "tuning is not available on this wall"})
                     return
                 ctrl.tuning.reset()
+                ctrl.last_frame = None
                 ctrl.dirty.set()
                 print("[tuning] back to what the wall shipped with")
                 out = ctrl.tuning.public()
-                out["restart"] = True        # the launch flags moved too
+                out["restarting"] = True     # the wall took the panel down itself
                 self._json(200, out)
                 return
 
@@ -890,7 +890,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     ctrl.dirty.set()
                     print(f"[tuning] {', '.join(f'{k}={v}' for k, v in changed.items())}")
                 out = ctrl.tuning.public()
-                out["restart"] = restart
+                out["restarting"] = restart
                 if rejected:
                     out["rejected"] = sorted(rejected)
                 self._json(200, out)
