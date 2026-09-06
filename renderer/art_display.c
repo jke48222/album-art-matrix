@@ -114,7 +114,10 @@ static void *frame_reader(void *arg) {
             }
 
             // Every frame arrives behind an eight-byte header: "TSRA", the
-            // panel brightness (1-254), three spare. Scan for the magic a
+            // panel brightness (1-254), the dither strength in tenths
+            // (0-100), two spare. Both take effect on the frame they arrive
+            // with, so the phone can turn them without the panel going
+            // down. Scan for the magic a
             // byte at a time, so a reader that starts mid-frame, or a pipe
             // that kept half a frame across a restart, lines up on the next
             // frame instead of showing every frame after it shifted.
@@ -145,6 +148,15 @@ static void *frame_reader(void *arg) {
                         // the cap, live: the mapper reads it on every frame
                         scene->brightness = rest[0];
                         fprintf(stderr, "art_display: brightness %d\n", rest[0]);
+                    }
+                    if (!eof && rest[1] <= 100) {
+                        // dither strength, tenths. The mapper reads this on
+                        // every frame too (pixels.c), so it needs no relaunch.
+                        float want = (float)rest[1] / 10.0f;
+                        if (want != scene->dither) {
+                            scene->dither = want;
+                            fprintf(stderr, "art_display: dither %.1f\n", (double)want);
+                        }
                     }
                 }
             }

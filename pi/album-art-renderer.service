@@ -10,7 +10,7 @@ User=pi
 WorkingDirectory=/home/pi/album-art-matrix
 ExecStart=/home/pi/album-art-matrix/pi/run_renderer.sh
 Restart=on-failure
-RestartSec=5
+RestartSec=1
 # gpio/video/render come from bootstrap.sh. Listed again so a fresh install
 # that skipped the re-login still gets the device access.
 SupplementaryGroups=gpio video render

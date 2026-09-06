@@ -33,7 +33,7 @@ ROOT = os.path.expanduser("~/album-art-matrix")
 SPECS = [
     ("bit_depth", "Panel", "int", 4, 64, 4, True,
      "Bit planes per frame. More colour in the dark end, a slower refresh."),
-    ("dither", "Panel", "float", 0.0, 10.0, 0.1, True,
+    ("dither", "Panel", "float", 0.0, 10.0, 0.1, False,
      "Spatial dithering. Buys colour below the panel's steps, and at the "
      "bottom of the range shows as single red LEDs in a grey field."),
     ("addr_settle_ns", "Panel", "int", 0, 2000, 25, True,
@@ -186,6 +186,11 @@ class Tuning:
         if changed:
             self.apply()
             self._save()
+        if restart:
+            # Nobody should have to press a button to see what they just
+            # turned. The launch flags are launch flags; the wall takes the
+            # panel down and brings it back itself.
+            print("[tuning] " + self.restart_renderer())
         return changed, rejected, restart
 
     def reset(self):
@@ -193,6 +198,7 @@ class Tuning:
             self.values = dict(self.defaults)
         self.apply()
         self._save()
+        print("[tuning] " + self.restart_renderer())
 
     # ---- making it so ---------------------------------------------------
     def apply(self):
