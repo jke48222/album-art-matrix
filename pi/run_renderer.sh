@@ -30,9 +30,19 @@ case "$BRIGHT" in ''|*[!0-9]*) BRIGHT=160 ;; esac
 SETTLE="$(cat "$HOME/album-art-matrix/addr-settle-ns" 2>/dev/null || echo 1000)"
 case "$SETTLE" in ''|*[!0-9]*) SETTLE=1000 ;; esac
 export HUB75_ADDR_SETTLE_NS="$SETTLE"
+# Spatial dithering strength, 0-10. It buys colour in dark areas by toggling
+# the lowest bits, and at the very bottom of the range that shows as single
+# LEDs of one colour in a field that should be grey — red first, because a
+# red LED reaches current soonest in a drive window. A file, so it can be
+# tuned against the panel without editing this script.
+DITHER="$(cat "$HOME/album-art-matrix/dither" 2>/dev/null || echo 1.0)"
+case "$DITHER" in ''|*[!0-9.]*) DITHER=1.0 ;; esac
+# Bit depth, 4-64 in fours. Higher is more colour and a slower refresh.
+DEPTH="$(cat "$HOME/album-art-matrix/bit-depth" 2>/dev/null || echo 64)"
+case "$DEPTH" in ''|*[!0-9]*) DEPTH=64 ;; esac
 exec "$HOME/album-art-matrix/renderer/art_display" \
   -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 \
-  -d 64 -f 120 -g 2.2 -t none -l 1.0 -b "$BRIGHT"
+  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT"
 
 # The last row. This panel used to ghost the content's own colour into the
 # bottom row of its scan (a red clock left a red line there) on frames whose
