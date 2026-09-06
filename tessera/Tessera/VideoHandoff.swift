@@ -24,6 +24,24 @@ enum VideoHandoff {
     static var localSound: (key: String, url: URL)?
     /// A picture is being made or sent: the sound must wait for it.
     static var inProgress = false
+    /// What arrived through the app's own door: a link from the share
+    /// sheet, or a video opened in Tessera. The page takes it from here.
+    static var arrived: Pending?
+
+    /// An opened URL: the share sheet's tessera://video?url=..., or a file.
+    /// True when it was something for the wall.
+    static func accept(_ url: URL) -> Bool {
+        if url.isFileURL {
+            arrived = Pending(kind: "file", url: nil, path: url.path,
+                              title: url.deletingPathExtension().lastPathComponent, sound: true)
+            return true
+        }
+        guard url.scheme == "tessera", url.host == "video" else { return false }
+        let link = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+            .queryItems?.first { $0.name == "url" }?.value
+        arrived = Pending(kind: "link", url: link, path: nil, title: nil, sound: true)
+        return true
+    }
 
     static func read() -> Pending? {
         guard let data = defaults?.data(forKey: key),
