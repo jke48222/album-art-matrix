@@ -373,10 +373,22 @@ struct VideoPage: View {
         .task { await runHandoff() }
     }
 
-    /// A video the share sheet kept for us: make the picture, send it up.
+    /// What came through the app's door: a link goes to the wall as if it
+    /// were typed here; a video gets its picture made and sent up.
     private func runHandoff() async {
-        guard let p = VideoHandoff.read(), p.kind == "file", let path = p.path else { return }
-        VideoHandoff.clear()
+        var p = VideoHandoff.arrived
+        VideoHandoff.arrived = nil
+        if p == nil, let kept = VideoHandoff.read(), kept.kind == "file" {
+            p = kept
+            VideoHandoff.clear()
+        }
+        guard let p else { return }
+        if p.kind == "link" {
+            if let l = p.url { link = l }
+            if canPlay { play() }
+            return
+        }
+        guard p.kind == "file", let path = p.path else { return }
         guard !wall.link.isStandIn else {
             problem = "The wall is not answering, so the video from your library cannot be played right now."
             return

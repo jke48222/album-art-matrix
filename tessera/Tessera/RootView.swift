@@ -185,14 +185,14 @@ struct RootView: View {
         // The lock screen's three keys land here. Only modes: anything that
         // needs a choice made about it needs the app open to make it in.
         .onOpenURL { url in
-            guard url.scheme == "tessera" else { return }
-            if url.host == "video" {
-                // the share sheet handed something over
+            // a link from the share sheet, or a video opened in Tessera
+            if VideoHandoff.accept(url) {
                 showSetup = false
                 showVideo = true
                 page = 0
                 return
             }
+            guard url.scheme == "tessera" else { return }
             if url.host == "mode", let mode = url.pathComponents.last,
                ["art", "cd", "ambient", "off", "ticker", "clock"].contains(mode) {
                 wall.send(["mode": mode])

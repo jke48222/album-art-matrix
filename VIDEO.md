@@ -52,14 +52,23 @@ Paste a YouTube link in Tessera (the Video tile), and the wall plays it.
 ## Sharing to the wall
 
 The share sheet has a Tessera in it (`tessera/TesseraShare/`): from the
-YouTube app, Safari, Photos, or anything AirDropped to the phone, Share,
-then Tessera. A link goes straight to the wall from the sheet; with sound
-on, the sheet opens Tessera, because the phone is the speaker and an
-extension cannot stay to play. A video from the library is handed to the
-app, which makes a small square H.264 copy of the picture (160 px, 15 fps,
-about 300 kbps: `VideoHandoff.swift`), sends it to `POST /video/upload`,
-and plays the sound from the original it kept; the wall waits for the
-phone's clock as it does for a link.
+YouTube app, Safari, or a link AirDropped to the phone, Share, then
+Tessera. The sheet carries the link into the app through its own scheme
+(`tessera://video?url=`) and the app puts it on the wall, the way a typed
+link goes; the phone is the speaker, so the app has to be open anyway.
+
+A video from the library reaches the app as a document: Tessera declares
+itself an opener of movies, so "Open in Tessera" (from Photos, Files, or
+an AirDropped file) lands the file in the app. The app makes a small
+square H.264 copy of the picture (160 px, 15 fps, about 300 kbps:
+`VideoHandoff.swift`), sends it to `POST /video/upload`, and plays the
+sound from the original; the wall waits for the phone's clock as it does
+for a link.
+
+The share sheet could take library videos too, by handing the file across
+an App Group. That needs the extension's own App ID registered with the
+App Groups capability, which the command line can only do with an Apple ID
+signed into Xcode, so it is left for a session with Xcode open.
 
 AirDrop, AirPlay and Bluetooth are not routes to the panel. AirDrop only
 runs between Apple devices, so the Pi cannot be a target (AirDrop to the
