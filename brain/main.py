@@ -611,9 +611,9 @@ def main():
                         continue
                     f = countdown.frame_at(left, tm["total"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
-                    # the ring moves a pixel every few seconds; the pulse
-                    # needs to breathe. Wait shorter only when pulsing.
-                    if ctrl.dirty.wait(0.15 if left <= 0 else 0.5):
+                    # the ring drains continuously and the alarm is motion:
+                    # a steady thirty frames a second, both ways
+                    if ctrl.dirty.wait(1.0 / 30.0):
                         ctrl.dirty.clear()
                     continue
 
