@@ -212,6 +212,7 @@ def main():
     lyric_book = LyricBook()
     lyric_canvas, lyric_key = None, None
     woke_on = None                   # date the wake fade last fired
+    rang_on = None                   # date the alarm last rang
     sun_f, sun_at = 1.0, 0.0         # evening factor, refreshed each poll
     away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
@@ -467,6 +468,23 @@ def main():
                                    eff[1] * k * (0.55 + 0.45 * k),
                                    eff[2] * k * (0.30 + 0.70 * k))
                             need_show = True
+
+                # ---- the alarm ---------------------------------------------
+                # At the set minute, once a day, the wall rings: the timer's
+                # own ending, 00:00 and the fireworks, then back to what it
+                # was doing. Stop on the phone ends it like any timer.
+                if s["alarm_enabled"] and ctrl.timer is None:
+                    lt = time.localtime()
+                    try:
+                        ah, am = int(s["alarm_time"][:2]), int(s["alarm_time"][3:])
+                    except ValueError:
+                        ah, am = 7, 0
+                    today = (lt.tm_year, lt.tm_yday)
+                    if lt.tm_hour == ah and lt.tm_min == am and rang_on != today:
+                        rang_on = today
+                        print(f"[main] alarm: {s['alarm_time']}")
+                        ctrl.ring()
+                        continue
 
                 # A minute of silence, and only for the modes that are about a
                 # track. Choosing a lamp or a clock is a decision the music

@@ -30,6 +30,9 @@ is on — no Mac required.
                    the wall shows the frame for that moment
   POST /video/control -> {action: play|pause|seek, t?}: the wall's own clock
   POST /video/stop -> the video is over; back to what the wall was doing
+  POST /video/upload?title=&clock=phone -> the body is a small mp4 the phone
+                   made from a video of its own; the wall plays the picture
+                   and the phone plays the sound it already has
 
 State persists to ~/.config/album-art-matrix/control.json so the wall comes
 back the way you left it. Every accepted POST sets `dirty` (a threading.Event)
@@ -53,6 +56,7 @@ JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
+UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
 IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
@@ -79,6 +83,8 @@ DEFAULTS = {
     "panel_type": 0,         # the panel's row addressing, 0-7; ditto
     "idle": "black",         # silence: black | hold | dim | ambient
     "away": "stay",          # phone gone >15 min: stay | off
+    "alarm_enabled": False,  # a time of day the wall rings: the timer's fireworks
+    "alarm_time": "07:00",   # local HH:MM
     "wake_enabled": False,   # morning fade-up
     "wake_time": "07:00",    # local HH:MM
     "wake_fade_min": 20.0,   # how long the fade-up takes
@@ -177,8 +183,12 @@ class ControlState:
                     self._s[k] = v
                 elif k == "away" and v in AWAYS:
                     self._s[k] = v
-                elif k == "wake_enabled":
+                elif k in ("wake_enabled", "alarm_enabled"):
                     self._s[k] = bool(v)
+                elif k == "alarm_time" and isinstance(v, str) and len(v) == 5 \
+                        and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
+                        and int(v[:2]) < 24 and int(v[3:]) < 60:
+                    self._s[k] = v
                 elif k == "wake_time" and isinstance(v, str) and len(v) == 5 \
                         and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
                         and int(v[:2]) < 24 and int(v[3:]) < 60:
@@ -254,6 +264,15 @@ class ControlState:
         frame it ever drew for as long as it turned."""
         self._finish_base = img
         self.finish_seq += 1
+
+    def ring(self):
+        """The alarm: straight to the timer's zero, fireworks and all, and
+        back to whatever the wall was doing when it is done."""
+        here = self.get()["mode"]
+        ret = self.timer["ret"] if self.timer else \
+            (here if here not in ("timer", "frame", "clip") else "clock")
+        self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret}
+        self.apply({"mode": "timer"})
 
     def apply(self, patch: dict) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
@@ -375,16 +394,17 @@ class ControlState:
         return rejected
 
     # ---- video ----------------------------------------------------------
-    def video_start(self, url: str, sound: bool, loop: bool):
-        """A link from the phone. Remembers the face that was up so the
-        wall can go back to it when the video is over."""
+    def video_start(self, url: str, sound: bool, loop: bool,
+                    clock: str = "auto", title: str | None = None):
+        """A link from the phone, or a file it sent up. Remembers the face
+        that was up so the wall can go back to it when the video is over."""
         if self.video is None:
             return "video is not available on this wall"
         here = self.get()["mode"]
         if here != "video":
             self.video_ret = here if here not in ("frame", "clip", "timer") else "art"
             self._showing_before = self.now_showing
-        self.video.start(url, sound=sound, loop=loop)
+        self.video.start(url, sound=sound, loop=loop, clock=clock, title=title)
         self.shown_seq += 1
         self.apply({"mode": "video"})
         return None
@@ -405,8 +425,11 @@ class ControlState:
 
     def video_media(self, media):
         """The player resolved the link: the wall now shows a title."""
+        src = self.video.url if self.video else ""
         self.now_showing = {"title": media.title, "artist": media.author,
-                            "album": "YouTube" if "youtu" in (self.video.url if self.video else "") else "Video"}
+                            "album": ("YouTube" if "youtu" in src
+                                      else "Video" if src.lower().startswith("http")
+                                      else "From the phone")}
         self.shown_seq += 1
         self.dirty.set()
 
@@ -788,6 +811,53 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
 
             if self.path.startswith("/video/stop"):
                 ctrl.video_stop()
+                self._json(200, ctrl.public_state())
+                return
+
+            if self.path.startswith("/video/upload"):
+                # A small mp4 the phone made from a video of its own: the
+                # picture, square, at a size the wall decodes for nothing.
+                # The phone keeps the original and plays its sound itself.
+                if ctrl.video is None:
+                    self._json(404, {"error": "video is not available on this wall"})
+                    return
+                try:
+                    n = int(self.headers.get("Content-Length", "0"))
+                except ValueError:
+                    n = 0
+                if not 1000 <= n <= UPLOAD_MAX:
+                    self._json(413 if n > UPLOAD_MAX else 400,
+                               {"error": f"the picture must be under {UPLOAD_MAX // 1_000_000} MB"})
+                    return
+                from .video.player import WORK_DIR
+                os.makedirs(WORK_DIR, exist_ok=True)
+                path = os.path.join(WORK_DIR, f"upload-{int(time.time())}.mp4")
+                left = n
+                try:
+                    with open(path, "wb") as fh:
+                        while left > 0:
+                            chunk = self.rfile.read(min(1 << 20, left))
+                            if not chunk:
+                                break
+                            fh.write(chunk)
+                            left -= len(chunk)
+                except OSError as exc:
+                    self._json(500, {"error": f"could not keep the picture: {exc}"[:120]})
+                    return
+                if left > 0:
+                    os.remove(path)
+                    self._json(400, {"error": "the upload stopped short"})
+                    return
+                q = parse_qs(urlparse(self.path).query)
+                title = (q.get("title") or [""])[0].strip()[:120] or None
+                clock = (q.get("clock") or ["phone"])[0]
+                why = ctrl.video_start(path, sound=False, loop=False,
+                                       clock=clock if clock in ("phone", "wall") else "phone",
+                                       title=title)
+                if why:
+                    self._json(503, {"error": why})
+                    return
+                ctrl.last_client = time.monotonic()
                 self._json(200, ctrl.public_state())
                 return
 

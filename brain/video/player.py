@@ -2,11 +2,17 @@
 
 The main loop asks one question, frame_at(), and gets a picture or None.
 Everything slow happens on the player's own threads: resolving the link,
-fetching the sound for the phone, and an ffmpeg that decodes the picture and
-scales it to the panel, writing raw frames down a pipe. The reader keeps a
-window of frames around the playhead (two minutes ahead, a little behind)
+fetching the picture and the sound, and an ffmpeg that decodes the picture
+and scales it to the panel, writing raw frames down a pipe. The reader keeps
+a window of frames around the playhead (two minutes ahead, a little behind)
 and lets ffmpeg block on the pipe beyond that, so a two-hour video costs no
 more memory than a two-minute one.
+
+The picture and the sound come down in ranged pieces of a megabyte: YouTube
+serves a ranged piece at full speed and a whole file at a crawl, and a file
+on the wall's own RAM disk seeks in no time and never expires. A picture too
+big to keep (over an hour of 144p) is streamed instead. A picture the phone
+sent up (a video from its own library) is already a file here.
 
 Two clocks. With the sound on the phone, the phone's player is the clock:
 it says where it is every second and the wall shows the frame for that
@@ -31,10 +37,16 @@ FPS = 15
 AHEAD_S = 120           # decode this far past the playhead, then wait
 BEHIND_S = 20           # keep this much behind it, for a scrub back
 READY_S = 2.0           # picture buffered before the wall says "ready"
-CHUNK = 1_000_000       # the sound comes down in ranged pieces this big
-AUDIO_DIR = ("/dev/shm/album-art-matrix" if os.path.isdir("/dev/shm")
-             else os.path.join(tempfile.gettempdir(), "album-art-matrix"))
+CHUNK = 1_000_000       # the files come down in ranged pieces this big
+PICTURE_MAX = 60_000_000    # fetched whole up to this; streamed past it
+WORK_DIR = ("/dev/shm/album-art-matrix" if os.path.isdir("/dev/shm")
+            else os.path.join(tempfile.gettempdir(), "album-art-matrix"))
+AUDIO_DIR = WORK_DIR
 _LOADING_INK = (232, 176, 75)
+
+
+def _is_url(s: str) -> bool:
+    return s.lower().startswith(("http://", "https://"))
 
 
 class VideoPlayer:
@@ -54,17 +66,22 @@ class VideoPlayer:
         self.url = ""
         self.sound = False
         self.loop = False
-        self.phone_clock = False
+        self.clock_mode = "wall"       # who keeps time: "phone" or "wall"
+        self.phone_clock = False       # the phone has spoken
         self._frames = {}              # frame index -> raw rgb
         self._first = 0                # lowest index still kept
         self._last = -1                # highest index decoded
         self._eof = None               # index count when ffmpeg finished cleanly
         self._clock = (0.0, time.monotonic(), False)     # (seconds, at, playing)
         self._shown = None             # the last picture handed out, for "same as before"
+        self._source = None            # what ffmpeg reads: a file here, or a URL
+        self._files = []               # what to delete when this is over
         self.audio_path = None
         self.audio_ready = False
         self.audio_got = 0
         self.audio_total = None
+        self.picture_got = 0
+        self.picture_total = None
 
     # ---- what the API asks ------------------------------------------------
     @property
@@ -89,18 +106,28 @@ class VideoPlayer:
             "sound": bool(m and m.audio_url and self.sound),
             "sound_ready": self.audio_ready,
             "sound_got": self.audio_got, "sound_total": self.audio_total,
-            "loop": self.loop, "clock": "phone" if self.phone_clock else "wall",
+            "picture_got": self.picture_got, "picture_total": self.picture_total,
+            "loop": self.loop, "clock": self.clock_mode,
         }
 
     # ---- start and stop -----------------------------------------------------
-    def start(self, url: str, sound: bool = True, loop: bool = False):
+    def start(self, url: str, sound: bool = True, loop: bool = False,
+              clock: str = "auto", title: str | None = None):
+        """A link, or a file the phone sent up. clock: "phone" waits for the
+        phone to say where it is (it has the sound, or it has the file);
+        "wall" plays on the wall's own time; "auto" is phone when the wall
+        makes sound for the phone, wall otherwise."""
         self.stop()
         with self._lock:
             self._gen += 1
             gen = self._gen
             self._blank()
             self.status, self.url, self.sound, self.loop = "fetching", url, sound, loop
-        threading.Thread(target=self._run, args=(gen, url), daemon=True,
+            self.clock_mode = clock if clock in ("phone", "wall") else ("phone" if sound else "wall")
+            self.phone_clock = self.clock_mode == "phone"
+            if not _is_url(url) and os.path.abspath(url).startswith(os.path.abspath(WORK_DIR)):
+                self._files.append(url)       # the phone's upload goes when the video does
+        threading.Thread(target=self._run, args=(gen, url, title), daemon=True,
                          name="video-fetch").start()
 
     def stop(self, error: str | None = None):
@@ -108,12 +135,12 @@ class VideoPlayer:
         still read why the video never came."""
         with self._lock:
             self._gen += 1
-            proc, path = self._proc, self.audio_path
+            proc, files = self._proc, list(self._files)
             self._proc = None
             self._blank()
             self.error = error
         self._kill(proc)
-        if path:
+        for path in files:
             try:
                 os.remove(path)
             except OSError:
@@ -142,15 +169,17 @@ class VideoPlayer:
         self._dirty.set()
 
     # ---- the fetch ----------------------------------------------------------
-    def _run(self, gen, url):
+    def _run(self, gen, url, title):
         try:
             media = youtube.resolve(url) if youtube.video_id(url) else direct.resolve(url)
         except ResolveError as exc:
             self._fail(gen, str(exc))
             return
         except Exception as exc:
-            self._fail(gen, f"could not read that link: {exc}")
+            self._fail(gen, f"could not read that: {exc}")
             return
+        if title:
+            media.title = title
         with self._lock:
             if not self._current(gen):
                 return
@@ -158,7 +187,8 @@ class VideoPlayer:
             want_sound = self.sound and bool(media.audio_url)
             self.sound = want_sound
         print(f"[video] {media.title!r}: {media.video_note}, "
-              f"{media.duration_s:.0f} s, sound {'yes' if want_sound else 'no'}")
+              f"{media.duration_s:.0f} s, sound {'yes' if want_sound else 'no'}, "
+              f"clock {self.clock_mode}")
         if self._on_media:
             try:
                 self._on_media(media)
@@ -167,6 +197,15 @@ class VideoPlayer:
         if want_sound:
             threading.Thread(target=self._fetch_audio, args=(gen, media), daemon=True,
                              name="video-audio").start()
+        source = media.video_url
+        if _is_url(source) and media.video_bytes and media.video_bytes <= PICTURE_MAX:
+            source = self._fetch_picture(gen, media)
+            if source is None:
+                return
+        with self._lock:
+            if not self._current(gen):
+                return
+            self._source = source
         self._decode(gen, media, 0.0)
         # ready when a couple of seconds of picture are in and the sound is whole
         while self._current(gen):
@@ -174,7 +213,7 @@ class VideoPlayer:
                 enough = self._last + 1 >= READY_S * FPS or self._eof is not None
                 sound_ok = not self.sound or self.audio_ready
                 if enough and sound_ok and self.status == "fetching":
-                    if self.sound:
+                    if self.clock_mode == "phone":
                         self.status = "ready"        # the phone starts the clock
                     else:
                         self.status = "playing"      # the wall's own clock, from now
@@ -185,41 +224,64 @@ class VideoPlayer:
                     return
             time.sleep(0.1)
 
+    def _ranged(self, gen, url, headers, total, path, progress):
+        """A file, in ranged pieces, with a progress callback (got)."""
+        with requests.Session() as sess, open(path, "wb") as fh:
+            sess.headers.update(headers)
+            got = 0
+            while got < total:
+                if not self._current(gen):
+                    return False
+                end = min(total, got + CHUNK) - 1
+                r = sess.get(url, headers={"Range": f"bytes={got}-{end}"}, timeout=30)
+                if r.status_code not in (200, 206) or not r.content:
+                    raise RuntimeError(f"HTTP {r.status_code} at byte {got}")
+                fh.write(r.content)
+                got += len(r.content)
+                progress(got)
+        return True
+
+    def _fetch_picture(self, gen, media: Media):
+        os.makedirs(WORK_DIR, exist_ok=True)
+        path = os.path.join(WORK_DIR, f"picture-{gen}.mp4")
+        with self._lock:
+            self._files.append(path)
+            self.picture_total = media.video_bytes
+        try:
+            def progress(got):
+                self.picture_got = got
+            if not self._ranged(gen, media.video_url, media.headers, media.video_bytes,
+                                path, progress):
+                return None
+            return path
+        except Exception as exc:
+            self._fail(gen, f"the picture did not come: {exc}")
+            return None
+
     def _fetch_audio(self, gen, media: Media):
-        os.makedirs(AUDIO_DIR, exist_ok=True)
-        path = os.path.join(AUDIO_DIR, f"audio-{gen}.m4a")
+        os.makedirs(WORK_DIR, exist_ok=True)
+        path = os.path.join(WORK_DIR, f"audio-{gen}.m4a")
         with self._lock:
             self.audio_path, self.audio_total = path, media.audio_bytes
+            self._files.append(path)
         try:
             if media.audio_transcode:
-                cmd = ["ffmpeg", "-y", "-nostdin", "-hide_banner", "-loglevel", "error",
-                       "-user_agent", media.headers.get("User-Agent", "album-art-matrix"),
-                       "-i", media.audio_url, "-vn", "-c:a", "aac", "-b:a", "96k",
-                       "-movflags", "+faststart", path]
+                cmd = ["ffmpeg", "-y", "-nostdin", "-hide_banner", "-loglevel", "error"]
+                if media.headers.get("User-Agent"):
+                    cmd += ["-user_agent", media.headers["User-Agent"]]
+                cmd += ["-i", media.audio_url, "-vn", "-c:a", "aac", "-b:a", "96k",
+                        "-movflags", "+faststart", path]
                 if shutil.which("nice"):
                     cmd = ["nice", "-n", "10"] + cmd
                 out = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
                 if out.returncode != 0:
                     raise RuntimeError((out.stderr or "ffmpeg failed").strip().splitlines()[-1][:120])
             elif media.audio_bytes:
-                # In pieces, each asked for by byte range: YouTube serves a
-                # ranged megabyte at full speed and a whole file at a crawl
-                # (3 MB/s against 32 KB/s, measured from the wall).
-                total = media.audio_bytes
-                with requests.Session() as sess, open(path, "wb") as fh:
-                    sess.headers.update(media.headers)
-                    got = 0
-                    while got < total:
-                        if not self._current(gen):
-                            return
-                        end = min(total, got + CHUNK) - 1
-                        r = sess.get(media.audio_url, headers={"Range": f"bytes={got}-{end}"},
-                                     timeout=30)
-                        if r.status_code not in (200, 206) or not r.content:
-                            raise RuntimeError(f"HTTP {r.status_code} at byte {got}")
-                        fh.write(r.content)
-                        got += len(r.content)
-                        self.audio_got = got
+                def progress(got):
+                    self.audio_got = got
+                if not self._ranged(gen, media.audio_url, media.headers, media.audio_bytes,
+                                    path, progress):
+                    return
             else:
                 with requests.get(media.audio_url, headers=media.headers, stream=True,
                                   timeout=30) as r:
@@ -249,19 +311,21 @@ class VideoPlayer:
             self._first = self._last = int(round(from_s * FPS))
             self._last -= 1
             self._eof = None
+            source = self._source or media.video_url
         self._kill(old)
         if not shutil.which("ffmpeg"):
             self._fail(gen, "ffmpeg is missing on the wall")
             return
         s = self.size
         cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
-               "-threads", "1", "-filter_threads", "1",
-               "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
-        if media.headers.get("User-Agent"):
-            cmd += ["-user_agent", media.headers["User-Agent"]]
+               "-threads", "1", "-filter_threads", "1"]
+        if _is_url(source):
+            cmd += ["-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5"]
+            if media.headers.get("User-Agent"):
+                cmd += ["-user_agent", media.headers["User-Agent"]]
         if from_s > 0.05:
             cmd += ["-ss", f"{from_s:.3f}"]
-        cmd += ["-i", media.video_url, "-an",
+        cmd += ["-i", source, "-an",
                 "-vf", f"crop=min(iw\\,ih):min(iw\\,ih),scale={s}:{s}:flags=area,unsharp=3:3:0.5",
                 "-r", str(FPS), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
         if shutil.which("nice"):
@@ -364,6 +428,7 @@ class VideoPlayer:
                 return
             gen = self._gen
             self.phone_clock = True
+            self.clock_mode = "phone"
             self._clock = (max(0.0, float(t)), time.monotonic(), bool(playing))
             self.status = "playing" if playing else "paused"
             restart = self._ensure(gen, t)
@@ -449,8 +514,13 @@ class VideoPlayer:
 
     def _loading(self):
         """A dark frame with a thin bar: how far along the fetch is."""
+        parts = []
+        if self.picture_total:
+            parts.append(min(1.0, self.picture_got / max(1, self.picture_total)))
         if self.sound and self.audio_total:
-            p = min(1.0, self.audio_got / max(1, self.audio_total))
+            parts.append(min(1.0, self.audio_got / max(1, self.audio_total)))
+        if parts:
+            p = sum(parts) / len(parts)
         else:
             p = min(1.0, (self._last + 1) / (READY_S * FPS))
         s = self.size
