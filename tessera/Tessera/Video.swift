@@ -142,15 +142,48 @@ final class VideoSound {
     @ObservationIgnored private var observer: Any?
     @ObservationIgnored private var endWatch: NSObjectProtocol?
     @ObservationIgnored private var host = ""
+    @ObservationIgnored private var localFile: URL?
 
-    /// The wall says ready: play its sound, unless this is the same video
+    enum Source {
+        case wall              // the m4a the wall made
+        case file(URL)         // a video of this phone's own; its sound
+    }
+
+    /// The wall's word, on every poll: the sound starts when the wall is
+    /// ready for this phone's clock, and stops when the video is gone.
+    func follow(_ v: WallVideo?, mode: String, host: String) {
+        guard let v, v.live, mode == "video" else {
+            if started { stop() }
+            return
+        }
+        guard v.status == "ready", v.phoneClock else { return }
+        if v.sound {
+            begin(host: host, key: v.url, source: .wall)
+        } else if let local = VideoHandoff.localSound, local.key == v.url {
+            begin(host: host, key: v.url, source: .file(local.url))
+        } else if key != v.url, !VideoHandoff.inProgress {
+            // nothing here to play sound from: the wall keeps its own time
+            key = v.url
+            Task { await WallVideoLink.control(host: host, "play") }
+        }
+    }
+
+    /// The wall says ready: play the sound, unless this is the same video
     /// this player is already on.
-    func begin(host: String, key: String) {
+    func begin(host: String, key: String, source: Source = .wall) {
         guard key != self.key || !started else { return }
         stop()
         self.key = key
         self.host = host
-        guard let url = URL(string: "http://\(host)/video/audio") else { return }
+        let url: URL
+        switch source {
+        case .wall:
+            guard let u = URL(string: "http://\(host)/video/audio") else { return }
+            url = u
+        case .file(let u):
+            url = u
+            localFile = u
+        }
         let session = AVAudioSession.sharedInstance()
         try? session.setCategory(.playback, mode: .default)
         try? session.setActive(true)
@@ -203,6 +236,12 @@ final class VideoSound {
         playing = false
         time = 0
         key = ""
+        if let f = localFile {
+            // the original was kept only for its sound
+            try? FileManager.default.removeItem(at: f)
+            localFile = nil
+            if VideoHandoff.localSound?.url == f { VideoHandoff.localSound = nil }
+        }
     }
 
     private func tick(_ t: Double) {
@@ -238,6 +277,9 @@ struct VideoPage: View {
     @State private var busy = false
     @State private var problem: String?
     @State private var clipboardHasLink = false
+    /// A video the share sheet kept: what is being done to it, how far.
+    @State private var handoff: (words: String, fraction: Double)? = nil
+    @State private var handoffTitle: String?
 
     private var typed: String {
         // a shared text can wrap the link in words; the link is what counts
@@ -280,6 +322,23 @@ struct VideoPage: View {
                 .padding(.top, -12)
                 Problem(text: problem)
 
+                if let h = handoff {
+                    SetupGroup("From your library", note: "The small picture is made on this phone and sent up; the sound plays from here.") {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text(handoffTitle ?? "Video").font(.ui(16)).foregroundStyle(Ink.ink).lineLimit(1)
+                            Text(h.words).font(.ui(13)).foregroundStyle(Ink.dim)
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Ink.ink.opacity(0.12)).frame(height: 6)
+                                    Capsule().fill(accent).frame(width: max(6, geo.size.width * h.fraction), height: 6)
+                                }
+                            }
+                            .frame(height: 6)
+                        }
+                        .padding(16)
+                    }
+                }
+
                 if wall.state.video != nil || wall.state.mode == "video" {
                     SetupGroup("On the wall", note: nil) {
                         VideoBoard(accent: accent) {}
@@ -303,7 +362,42 @@ struct VideoPage: View {
                 }
             }
         }
-        .onAppear { clipboardHasLink = UIPasteboard.general.hasURLs }
+        .onAppear {
+            clipboardHasLink = UIPasteboard.general.hasURLs
+            UserDefaults(suiteName: WallSnapshot.group)?.set(sound, forKey: "video.sound")
+        }
+        .onChange(of: sound) { _, on in
+            // the share sheet reads the same choice
+            UserDefaults(suiteName: WallSnapshot.group)?.set(on, forKey: "video.sound")
+        }
+        .task { await runHandoff() }
+    }
+
+    /// A video the share sheet kept for us: make the picture, send it up.
+    private func runHandoff() async {
+        guard let p = VideoHandoff.read(), p.kind == "file", let path = p.path else { return }
+        VideoHandoff.clear()
+        guard !wall.link.isStandIn else {
+            problem = "The wall is not answering, so the video from your library cannot be played right now."
+            return
+        }
+        VideoSound.shared.stop()
+        handoffTitle = p.title
+        handoff = ("Making the picture", 0)
+        VideoHandoff.inProgress = true
+        defer { VideoHandoff.inProgress = false }
+        do {
+            _ = try await VideoHandoff.send(file: URL(fileURLWithPath: path), title: p.title,
+                                            host: wall.host) { words, fraction in
+                Task { @MainActor in handoff = (words, fraction) }
+            }
+            handoff = nil
+            Taps.landed()
+        } catch {
+            handoff = nil
+            problem = error.localizedDescription
+            Taps.error()
+        }
     }
 
     private func fact(_ name: String, _ words: String) -> some View {
@@ -375,22 +469,12 @@ struct VideoBoard: View {
                 ActionPill(title: video?.live == true ? "Another link" : "Play a link", filled: false) { another() }
             }
         }
-        .onChange(of: video?.status) { _, s in readiness(s) }
-        .onChange(of: video == nil) { _, gone in if gone { sound.stop() } }
-        .onChange(of: wall.state.mode) { _, m in if m != "video" { sound.stop() } }
-        .onAppear { readiness(video?.status) }
     }
 
     private var line: String {
         guard let v = video else { return "Paste a link and the wall plays it." }
         if v.status == "playing", sound.started, !v.phoneClock { return v.words + ". Sound starting." }
         return v.words
-    }
-
-    /// The wall says it is ready and it made sound for us: start playing.
-    private func readiness(_ status: String?) {
-        guard status == "ready", let v = video, v.sound else { return }
-        sound.begin(host: wall.host, key: v.url)
     }
 
     private func toggle(_ v: WallVideo) {

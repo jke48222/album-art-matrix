@@ -8,10 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		9C0000000000000000000013 /* TesseraWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 9C0000000000000000000004 /* TesseraWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		5A0000000000000000000013 /* TesseraShare.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 5A0000000000000000000004 /* TesseraShare.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		9C0000000000000000000004 /* TesseraWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TesseraWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		5A0000000000000000000004 /* TesseraShare.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = TesseraShare.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		7E0000000000000000000004 /* Tessera.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tessera.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -24,6 +26,11 @@
 		9C0000000000000000000009 /* TesseraWidgets */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = TesseraWidgets;
+			sourceTree = "<group>";
+		};
+		5A0000000000000000000009 /* TesseraShare */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = TesseraShare;
 			sourceTree = "<group>";
 		};
 		7E00000000000000000000A0 /* Shared */ = {
@@ -48,6 +55,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5A0000000000000000000007 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -56,6 +70,7 @@
 			children = (
 				7E0000000000000000000009 /* Tessera */,
 				9C0000000000000000000009 /* TesseraWidgets */,
+				5A0000000000000000000009 /* TesseraShare */,
 				7E00000000000000000000A0 /* Shared */,
 				7E0000000000000000000003 /* Products */,
 			);
@@ -66,6 +81,7 @@
 			children = (
 				7E0000000000000000000004 /* Tessera.app */,
 				9C0000000000000000000004 /* TesseraWidgets.appex */,
+				5A0000000000000000000004 /* TesseraShare.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -86,6 +102,7 @@
 			);
 			dependencies = (
 				9C0000000000000000000010 /* PBXTargetDependency */,
+				5A0000000000000000000010 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				7E0000000000000000000009 /* Tessera */,
@@ -117,6 +134,26 @@
 			productReference = 9C0000000000000000000004 /* TesseraWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		5A0000000000000000000005 /* TesseraShare */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5A000000000000000000000A /* Build configuration list for PBXNativeTarget "TesseraShare" */;
+			buildPhases = (
+				5A0000000000000000000006 /* Sources */,
+				5A0000000000000000000007 /* Frameworks */,
+				5A0000000000000000000008 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				5A0000000000000000000009 /* TesseraShare */,
+			);
+			name = TesseraShare;
+			productName = TesseraShare;
+			productReference = 5A0000000000000000000004 /* TesseraShare.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -130,6 +167,9 @@
 						CreatedOnToolsVersion = 27.0;
 					};
 					9C0000000000000000000005 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					5A0000000000000000000005 = {
 						CreatedOnToolsVersion = 27.0;
 					};
 				};
@@ -150,6 +190,7 @@
 			targets = (
 				7E0000000000000000000005 /* Tessera */,
 				9C0000000000000000000005 /* TesseraWidgets */,
+				5A0000000000000000000005 /* TesseraShare */,
 			);
 		};
 /* End PBXProject section */
@@ -169,6 +210,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		5A0000000000000000000008 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -179,6 +227,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				9C0000000000000000000013 /* TesseraWidgets.appex in Embed Foundation Extensions */,
+				5A0000000000000000000013 /* TesseraShare.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -189,6 +238,10 @@
 		9C0000000000000000000010 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 9C0000000000000000000005 /* TesseraWidgets */;
+		};
+		5A0000000000000000000010 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 5A0000000000000000000005 /* TesseraShare */;
 		};
 /* End PBXTargetDependency section */
 
@@ -201,6 +254,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9C0000000000000000000006 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5A0000000000000000000006 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -359,6 +419,58 @@
 			};
 			name = Release;
 		};
+		5A000000000000000000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Share.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PK389W6V96;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Tessera;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jalenedusei.tessera.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		5A000000000000000000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Share.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = PK389W6V96;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = ShareInfo.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = Tessera;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.jalenedusei.tessera.share;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -385,6 +497,15 @@
 			buildConfigurations = (
 				9C000000000000000000000E /* Debug */,
 				9C000000000000000000000F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5A000000000000000000000A /* Build configuration list for PBXNativeTarget "TesseraShare" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5A000000000000000000000E /* Debug */,
+				5A000000000000000000000F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

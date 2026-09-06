@@ -392,6 +392,10 @@ final class WallSession {
 
             state = fresh
             lastSync = Date()
+            // the sound for a video starts and stops on the wall's word,
+            // wherever in the app you are
+            let v = state.video, m = state.mode, h = host
+            Task { @MainActor in VideoSound.shared.follow(v, mode: m, host: h) }
             if reconnected {
                 Taps.found()                      // the lamp switched on
                 FlightLog.note("LINK", "wall answered at \(host)")
