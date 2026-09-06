@@ -187,7 +187,9 @@ def main():
     source = SourceChain(build_sources(cfg, ctrl))
     ctrl.source = source
     # a link from the phone: fetched and decoded on its own threads
-    ctrl.video = VideoPlayer(size, ctrl.dirty, on_media=ctrl.video_media)
+    ctrl.video = VideoPlayer(size, ctrl.dirty, on_media=ctrl.video_media,
+                             unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
+                             unsharp_percent=int(pipe.get("unsharp_percent", 60)))
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
     sink = _FrameTee(make_sink(cfg, args.sink), ctrl, size)
 

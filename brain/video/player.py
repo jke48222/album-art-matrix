@@ -21,6 +21,7 @@ sound, the wall keeps its own clock.
 """
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import subprocess
@@ -28,15 +29,30 @@ import tempfile
 import threading
 import time
 
+import numpy as np
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 from . import Media, ResolveError, direct, youtube, ytdlp
 
 FPS = 15
+# What ffmpeg hands over: the square, three times the panel. The last step
+# down is Lanczos in here rather than a box filter in ffmpeg, because a box
+# filter is what the art pipeline calls mud, and it looked like it.
 AHEAD_S = 120           # decode this far past the playhead, then wait
 BEHIND_S = 20           # keep this much behind it, for a scrub back
 READY_S = 2.0           # picture buffered before the wall says "ready"
+ALONE_S = 12.0          # waiting for the phone's clock before starting alone
+SRC = 192               # ffmpeg's output side, three times a 64 px panel
+# Where a video's own midtones should land. A panel this size holds a level
+# steadily only from about a quarter of the way up; below that the renderer
+# dithers in time and the picture becomes a field of single LEDs blinking
+# red and green. Film is graded for a dark room and sits well under that, so
+# a clip is lifted once, at the start, by a gamma chosen from its own levels
+# — once, not per frame, or the wall would breathe with every cut.
+TONE_TARGET = 112.0     # where the 70th percentile of a clip is put
+TONE_MIN = 0.55         # the most a clip may be lifted (gamma floor)
+TONE_SAMPLES = 15       # frames looked at before the decision, one second
 CHUNK = 1_000_000       # the files come down in ranged pieces this big
 PICTURE_MAX = 60_000_000    # fetched whole up to this; streamed past it
 WORK_DIR = ("/dev/shm/album-art-matrix" if os.path.isdir("/dev/shm")
@@ -50,8 +66,13 @@ def _is_url(s: str) -> bool:
 
 
 class VideoPlayer:
-    def __init__(self, size: int, dirty: threading.Event, on_media=None):
+    def __init__(self, size: int, dirty: threading.Event, on_media=None,
+                 unsharp_radius: float = 1.0, unsharp_percent: int = 60):
         self.size = size
+        # the same unsharp the sleeves get, so a frame of video and a sleeve
+        # are finished by the same hand
+        self.unsharp_radius = float(unsharp_radius)
+        self.unsharp_percent = int(unsharp_percent)
         self._dirty = dirty            # wakes the main loop
         self._on_media = on_media      # told the title once the link resolves
         self._lock = threading.Lock()
@@ -83,6 +104,9 @@ class VideoPlayer:
         self.picture_got = 0
         self.picture_total = None
         self._picture_why = None       # why the picture stopped coming, if it did
+        self._tone = None              # the clip's own lift, once decided
+        self._tone_seen = []           # frames counted toward that decision
+        self._ready_at = None          # when the wall started waiting for the phone
         self.by = "wall"               # who got it: the wall itself, or yt-dlp
 
     # ---- what the API asks ------------------------------------------------
@@ -267,6 +291,7 @@ class VideoPlayer:
                 if enough and sound_ok and self.status == "fetching":
                     if self.clock_mode == "phone":
                         self.status = "ready"        # the phone starts the clock
+                        self._ready_at = time.monotonic()
                     else:
                         self.status = "playing"      # the wall's own clock, from now
                         self._clock = (0.0, time.monotonic(), True)
@@ -398,8 +423,12 @@ class VideoPlayer:
                 cmd += ["-user_agent", media.headers["User-Agent"]]
         if from_s > 0.05:
             cmd += ["-ss", f"{from_s:.3f}"]
+        # Crop to the square the wall is, then down to SRC with Lanczos.
+        # The last step to the panel happens in _finish, in the same words
+        # the art pipeline uses.
         cmd += ["-i", source, "-an",
-                "-vf", f"crop=min(iw\\,ih):min(iw\\,ih),scale={s}:{s}:flags=area,unsharp=3:3:0.5",
+                "-vf", f"crop=min(iw\\,ih):min(iw\\,ih),"
+                       f"scale={SRC}:{SRC}:flags=lanczos+accurate_rnd+full_chroma_int",
                 "-r", str(FPS), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
         if shutil.which("nice"):
             cmd = ["nice", "-n", "10"] + cmd
@@ -417,8 +446,43 @@ class VideoPlayer:
         threading.Thread(target=self._read, args=(gen, proc, self._first), daemon=True,
                          name="video-decode").start()
 
+    def _finish(self, raw: bytes) -> bytes:
+        """SRC square in, panel square out: Lanczos down, the sleeve's own
+        unsharp (art/pipeline.prepare), then the clip's lift. Done here, on
+        the decode thread, so the frame window still holds panel-sized
+        frames and the main loop still just hands one over."""
+        img = Image.frombytes("RGB", (SRC, SRC), raw)
+        img = img.resize((self.size, self.size), Image.LANCZOS)
+        if self.unsharp_percent > 0:
+            img = img.filter(ImageFilter.UnsharpMask(
+                radius=self.unsharp_radius, percent=self.unsharp_percent,
+                threshold=2))
+        if self._tone is None and self._tone_seen is not None:
+            self._weigh(img)
+        if self._tone is not None:
+            img = img.point(self._tone)
+        return img.tobytes()
+
+    def _weigh(self, img):
+        """The first second of a clip decides how much to lift it."""
+        self._tone_seen.append(np.asarray(img, dtype=np.uint8).reshape(-1))
+        if len(self._tone_seen) < TONE_SAMPLES:
+            return
+        level = float(np.percentile(np.concatenate(self._tone_seen), 70))
+        self._tone_seen = None                    # decided; stop counting
+        if level >= TONE_TARGET or level < 2:
+            return                                # bright enough, or nothing there
+        gamma = math.log(TONE_TARGET / 255.0) / math.log(level / 255.0)
+        gamma = min(1.0, max(TONE_MIN, gamma))
+        if gamma > 0.97:
+            return
+        curve = np.clip(255.0 * (np.arange(256) / 255.0) ** gamma, 0, 255)
+        self._tone = list((curve + 0.5).astype(np.uint8)) * 3
+        print(f"[video] dark clip: 70th percentile {level:.0f}, lifting by "
+              f"gamma {gamma:.2f} so the panel can hold it")
+
     def _read(self, gen, proc, index):
-        n = self.size * self.size * 3
+        n = SRC * SRC * 3
         keep_behind = BEHIND_S * FPS
         ahead = AHEAD_S * FPS
         buf = bytearray()
@@ -436,7 +500,7 @@ class VideoPlayer:
                 buf += chunk
                 if len(buf) < n:
                     continue
-                frame, buf = bytes(buf), bytearray()
+                frame, buf = self._finish(bytes(buf)), bytearray()
                 with self._lock:
                     if not self._current(gen) or proc is not self._proc:
                         return
@@ -542,6 +606,18 @@ class VideoPlayer:
             status = self.status
             if status in ("fetching", "error"):
                 return (self._loading() if status == "fetching" else None), 0.25
+            if status == "ready" and not self.phone_clock \
+                    and self._ready_at is not None \
+                    and time.monotonic() - self._ready_at > ALONE_S:
+                # Nobody is holding the phone. A video shared to the wall
+                # from the share sheet has no app open to be its clock, and
+                # a wall that waits forever for one is just a wall that
+                # does not play. It starts itself; the sound is still there
+                # for the phone to pick up when it does arrive.
+                print("[video] no clock from the phone; the wall starts it itself")
+                self.status = "playing"
+                self.clock_mode = "wall"
+                self._clock = (0.0, time.monotonic(), True)
             head = self._playhead()
             idx = int(head * FPS)
             over = self._eof is not None and idx >= self._eof

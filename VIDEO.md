@@ -13,11 +13,19 @@ Paste a YouTube link in Tessera (the Video tile), and the wall plays it.
   JavaScript runtime such as deno, which YouTube support in yt-dlp now needs).
   Any other link ffmpeg can read (an mp4, a webm, an HLS playlist) goes
   through `brain/video/direct.py`.
-- **The picture is decoded on the wall,** by ffmpeg, from the smallest
-  stream there is (144p, already four times the panel's pixels), cropped
-  square, area-scaled to 64 px, sharpened a touch, at 15 frames a second.
-  Twenty seconds of 144p costs a third of a second of one core. ffmpeg runs
-  at nice 10 on its own thread and writes raw frames down a pipe; the reader
+- **The picture is decoded on the wall,** by ffmpeg, from a 240p stream
+  (cropped square that is 240 px, and the last step down wants something to
+  throw away), Lanczos-scaled to 192, then finished in Python exactly as an
+  album sleeve is: Lanczos to 64 and the same unsharp, at 15 frames a
+  second. It used to be a box filter straight from 144p, which the art
+  pipeline's own notes call mud, and it looked like it.
+- **A dark clip is lifted once,** at the start, by a gamma read from its own
+  first second. Film is graded for a dark room and sits below the level a
+  64 px panel can hold steadily; under that the renderer dithers in time and
+  the picture becomes a field of single LEDs blinking red and green. The
+  lift is decided once, not per frame, so the wall does not breathe at every
+  cut.
+  ffmpeg runs at nice 10 on its own thread and writes raw frames down a pipe; the reader
   keeps a window of two minutes ahead of the playhead and twenty seconds
   behind (about 26 MB) and lets ffmpeg block on the pipe beyond that. A
   two-hour video costs no more memory than a two-minute one.

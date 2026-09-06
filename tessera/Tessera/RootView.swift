@@ -52,8 +52,6 @@ struct RootView: View {
     @State private var lastTitle = ""
     @State private var showSetup = false
     @State private var showStudio = false
-    /// The video page, for a share-sheet hand-off or the lock screen.
-    @State private var showVideo = false
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
     @AppStorage("intro.replay") private var replay = false
@@ -137,19 +135,12 @@ struct RootView: View {
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background: wall.live.appSleeps(canStayAwake: wall.push.keepAlive)
-            case .active:
-                wall.live.appWakes()
-                // a video the share sheet kept for us: the page does the work
-                if VideoHandoff.read()?.kind == "file" { showVideo = true }
-                else if VideoHandoff.read() != nil { VideoHandoff.clear() }
+            case .active: wall.live.appWakes()
             default: break
             }
         }
         .sheet(isPresented: $showSetup) {
             SettingsSheet(accent: light.steadyAccent).environment(wall)
-        }
-        .sheet(isPresented: $showVideo) {
-            VideoPage(accent: light.steadyAccent).environment(wall)
         }
         // The studio is a place you go into and come back from, not a third
         // page: drawing needs the whole surface, and a horizontal stroke must
@@ -185,10 +176,18 @@ struct RootView: View {
         // The lock screen's three keys land here. Only modes: anything that
         // needs a choice made about it needs the app open to make it in.
         .onOpenURL { url in
-            // a link from the share sheet, or a video opened in Tessera
-            if VideoHandoff.accept(url) {
+            // a video opened in Tessera: it goes up to the wall as it is,
+            // small picture made here, and the wall plays it
+            if VideoHandoff.accept(url), let p = VideoHandoff.arrived,
+               let path = p.path {
+                VideoHandoff.arrived = nil
+                let host = wall.host
+                Task {
+                    _ = try? await VideoHandoff.send(
+                        file: URL(fileURLWithPath: path),
+                        title: p.title, host: host) { _, _ in }
+                }
                 showSetup = false
-                showVideo = true
                 page = 0
                 return
             }

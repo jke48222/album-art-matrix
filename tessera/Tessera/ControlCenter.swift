@@ -10,6 +10,7 @@
 // the only colour.
 
 import MediaPlayer
+import PhotosUI
 import SwiftUI
 
 /// The ink the glass is written in. Cream over the dark designs; near-black
@@ -117,6 +118,15 @@ struct ControlCenterPanel: View {
     var sleeve: UIImage? = nil
 
     @State private var lastDetent = -1
+    /// The Video face is chosen here, not on the wall: a video needs a link
+    /// before there is anything for the wall to be in the middle of.
+    @State private var videoFace = false
+    @State private var videoLink = ""
+    @AppStorage("video.sound") private var videoSound = true
+    @State private var videoPick: PhotosPickerItem? = nil
+    /// What is being done to a video of your own, and how far along.
+    @State private var videoWork: (String, Double)? = nil
+    @State private var videoProblem: String? = nil
     @State private var speedDrag: Double? = nil
     /// A rail being dragged: its key and where the thumb is now, so the
     /// number under a finger is the finger's, not the wall's last word.
@@ -355,8 +365,6 @@ struct ControlCenterPanel: View {
 
     /// The wall's faces: a grid of tiles, every one in view, the one that
     /// is on filled with the record's colour.
-    @State private var videoOpen = false
-
     private var faces: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
             tile(.art, "Art", mode: "art")
@@ -364,19 +372,19 @@ struct ControlCenterPanel: View {
             tile(.lyrics, "Lyrics", mode: "lyrics")
             tile(.nine, "Nine", mode: "nine")
             tile(.palette, "Design", mode: "frame")
-            // A video needs a link before it is a face, so the tile opens
-            // the page that asks for one; the wall goes to "video" itself.
-            tile(.video, "Video", mode: "video") { videoOpen = true }
+            tile(.video, "Video", mode: "video") { videoFace = true }
             tile(.lamp, "Lamp", mode: "ambient")
             tile(.clock, "Clock", mode: "clock")
             tile(.dark, "Off", mode: "off")
         }
-        .sheet(isPresented: $videoOpen) { VideoPage(accent: accent) }
     }
 
     private func tile(_ g: Glyph, _ label: String, mode: String?, action: (() -> Void)? = nil) -> some View {
-        let on = mode != nil && (wall.state.mode == mode || (mode == "clock" && wall.state.mode == "timer"))
+        let on = mode == "video"
+            ? (videoFace || wall.state.mode == "video")
+            : (mode != nil && (wall.state.mode == mode || (mode == "clock" && wall.state.mode == "timer")))
         return Button {
+            if mode != "video" { videoFace = false }
             if let action { action() }
             else if let mode { wall.send(["mode": mode == "off" && wall.state.mode == "off" ? "art" : mode]) }
         } label: {
@@ -403,6 +411,14 @@ struct ControlCenterPanel: View {
     // MARK: What this face needs
 
     @ViewBuilder private var context: some View {
+        if videoFace || wall.state.mode == "video" {
+            videoBoard
+        } else {
+            faceContext
+        }
+    }
+
+    @ViewBuilder private var faceContext: some View {
         switch wall.state.mode {
         case "cd": speedBoard
         case "ambient": lampBoard
@@ -411,7 +427,6 @@ struct ControlCenterPanel: View {
         case "ticker": wordsBoard
         case "off": sleepBoard
         case "frame", "clip": designBoard
-        case "video": videoBoard
         default: finishBoard
         }
     }
@@ -709,11 +724,224 @@ struct ControlCenterPanel: View {
 
     /// A design or a clip: the studio itself, here, and the finish over it.
     /// Drawing is the point of this face, so it is not behind a door.
+    // MARK: Video: a link, or something out of your own library
+
     private var videoBoard: some View {
         VStack(spacing: gutter) {
-            board("Video") { VideoBoard(accent: accent) { videoOpen = true } }
+            board("Video") {
+                if let v = wall.state.video, v.live {
+                    videoNow(v)
+                } else {
+                    videoEntry
+                }
+                if let work = videoWork { videoWorking(work) }
+                if let why = videoProblem {
+                    Text(why).font(.ui(13)).foregroundStyle(Ink.signal)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
             board("Finish") { finishes }
         }
+        .onChange(of: videoPick) { _, item in
+            guard let item else { return }
+            videoPick = nil
+            Task { await sendChosenVideo(item) }
+        }
+        .task { await takeHandedOverVideo() }
+    }
+
+    private var videoTyped: String {
+        let raw = videoLink.trimmingCharacters(in: .whitespacesAndNewlines)
+        if raw.lowercased().hasPrefix("http") { return raw }
+        return raw.split(whereSeparator: { $0.isWhitespace }).map(String.init)
+            .first { $0.lowercased().hasPrefix("http") } ?? ""
+    }
+
+    /// Nothing on: a link, how it should sound, and your own library.
+    private var videoEntry: some View {
+        let empty = videoTyped.isEmpty
+        let busy = videoWork != nil
+        return VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                TextField("youtube link", text: $videoLink)
+                    .font(.machine(14)).foregroundStyle(ink.ink)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+                    .keyboardType(.URL)
+                    .submitLabel(.go)
+                    .padding(.horizontal, 14).frame(height: 44)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+                    .onSubmit(playVideoLink)
+                Button(action: playVideoLink) {
+                    Text("Play").font(.ui(14, .semibold))
+                        .foregroundStyle(empty || busy ? ink.faint : Ink.ground)
+                        .padding(.horizontal, 18).frame(height: 44)
+                        .background(Capsule().fill(empty || busy ? AnyShapeStyle(ink.fill) : AnyShapeStyle(accent)))
+                }
+                .buttonStyle(PressStyle(scale: 0.95))
+                .disabled(empty || busy)
+            }
+            HStack(spacing: 8) {
+                choice("Sound here", true, videoSound, { videoSound = $0 })
+                choice("Silent", false, videoSound, { videoSound = $0 })
+            }
+            PhotosPicker(selection: $videoPick, matching: .videos) {
+                HStack(spacing: 8) {
+                    GlyphShape(glyph: .photo, lineWidth: 1.5).frame(width: 17, height: 17)
+                    Text("A video of your own").font(.ui(14, .medium))
+                }
+                .foregroundStyle(busy ? ink.faint : ink.ink)
+                .frame(maxWidth: .infinity).frame(height: 44)
+                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+            }
+            .buttonStyle(PressStyle(scale: 0.97))
+            .disabled(busy)
+        }
+    }
+
+    /// Something on: what it is, where it is, and the four things you can
+    /// do to it.
+    private func videoNow(_ v: WallVideo) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(v.title ?? "Video")
+                    .font(.ui(16, .medium)).foregroundStyle(ink.ink).lineLimit(2)
+                Text(v.error ?? v.words)
+                    .font(.ui(13)).foregroundStyle(v.error != nil ? Ink.signal : ink.dim)
+            }
+            if let of = v.duration, of > 1, ["playing", "paused"].contains(v.status) {
+                videoRail(v, of)
+            }
+            HStack(spacing: 8) {
+                if ["playing", "paused"].contains(v.status) {
+                    videoKey(v.status == "playing" ? "Pause" : "Play", filled: true) {
+                        if VideoSound.shared.started {
+                            v.status == "playing" ? VideoSound.shared.pause() : VideoSound.shared.resume()
+                        } else {
+                            let h = wall.host
+                            Task { await WallVideoLink.control(host: h, v.status == "playing" ? "pause" : "play") }
+                        }
+                        Taps.detent(intensity: 0.4)
+                    }
+                }
+                if v.sound, !v.phoneClock, !VideoSound.shared.started,
+                   ["playing", "paused"].contains(v.status) {
+                    videoKey("Sound here") { VideoSound.shared.join(v, host: wall.host) }
+                }
+                videoKey("Stop") {
+                    VideoSound.shared.stop()
+                    let h = wall.host
+                    Task { await WallVideoLink.stop(host: h) }
+                    videoLink = ""
+                    Taps.commit()
+                }
+            }
+        }
+    }
+
+    private func videoKey(_ label: String, filled: Bool = false,
+                          _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label).font(.ui(14, .medium))
+                .foregroundStyle(filled ? Ink.ground : ink.ink)
+                .lineLimit(1)
+                .padding(.horizontal, 16).frame(height: 40)
+                .background(Capsule().fill(filled ? AnyShapeStyle(accent) : AnyShapeStyle(ink.fill)))
+        }
+        .buttonStyle(PressStyle(scale: 0.95))
+    }
+
+    /// Where the video is, and a drag to put it somewhere else.
+    private func videoRail(_ v: WallVideo, _ of: Double) -> some View {
+        let at = rail(key: "video") ?? v.position
+        return VStack(alignment: .leading, spacing: 6) {
+            slider(key: "video", value: min(at, of), from: 0, to: of, step: 1) { t in
+                if VideoSound.shared.started { VideoSound.shared.seek(to: t) }
+                else {
+                    let h = wall.host
+                    Task { await WallVideoLink.control(host: h, "seek", t: t) }
+                }
+            }
+            HStack {
+                Text(WallVideo.clock(at)).font(.machine(11)).foregroundStyle(ink.dim)
+                Spacer()
+                Text(WallVideo.clock(of)).font(.machine(11)).foregroundStyle(ink.dim)
+            }
+        }
+    }
+
+    private func videoWorking(_ work: (String, Double)) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(work.0).font(.ui(13)).foregroundStyle(ink.dim)
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(ink.fill).frame(height: 6)
+                    Capsule().fill(accent)
+                        .frame(width: max(6, geo.size.width * max(0.06, work.1)), height: 6)
+                }
+            }
+            .frame(height: 6)
+        }
+    }
+
+    private func playVideoLink() {
+        let url = videoTyped
+        guard !url.isEmpty, !wall.link.isStandIn else {
+            videoProblem = wall.link.isStandIn ? "The wall is not answering." : nil
+            return
+        }
+        videoProblem = nil
+        VideoSound.shared.stop()
+        let h = wall.host, sound = videoSound
+        Task {
+            videoWork = ("Handing it to the wall", 0.15)
+            let why = await WallVideoLink.start(host: h, url: url, sound: sound)
+            videoWork = nil
+            videoProblem = why
+            if why == nil { videoLink = ""; Taps.landed() } else { Taps.error() }
+        }
+    }
+
+    /// A video out of the library: the picture is made small here, sent up,
+    /// and its sound stays on this phone.
+    private func sendChosenVideo(_ item: PhotosPickerItem) async {
+        guard !wall.link.isStandIn else {
+            videoProblem = "The wall is not answering."
+            return
+        }
+        videoProblem = nil
+        videoWork = ("Reading the video", 0)
+        guard let movie = try? await item.loadTransferable(type: Movie.self) else {
+            videoWork = nil
+            videoProblem = "That video could not be read."
+            Taps.error()
+            return
+        }
+        await sendVideoFile(movie.url, title: "From your library")
+    }
+
+    private func sendVideoFile(_ file: URL, title: String) async {
+        VideoSound.shared.stop()
+        VideoHandoff.inProgress = true
+        defer { VideoHandoff.inProgress = false }
+        do {
+            _ = try await VideoHandoff.send(file: file, title: title, host: wall.host) { words, fraction in
+                Task { @MainActor in videoWork = (words, fraction) }
+            }
+            videoWork = nil
+            Taps.landed()
+        } catch {
+            videoWork = nil
+            videoProblem = error.localizedDescription
+            Taps.error()
+        }
+    }
+
+    /// A video opened in Tessera from somewhere else lands here.
+    private func takeHandedOverVideo() async {
+        guard let p = VideoHandoff.arrived, p.kind == "file", let path = p.path else { return }
+        VideoHandoff.arrived = nil
+        await sendVideoFile(URL(fileURLWithPath: path), title: p.title ?? "Shared with the wall")
     }
 
     private var designBoard: some View {
