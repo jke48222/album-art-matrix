@@ -126,6 +126,11 @@ struct ControlCenterPanel: View {
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     /// The countdown being dialled up, before Start sends it.
     @State private var timerDraft: Double = 10
+    // The minutes, typed: tap the number and it becomes a field. "12" is
+    // twelve minutes, "1:30" a minute and a half, "45s" forty-five seconds.
+    @State private var timerTyping = false
+    @State private var timerTyped = ""
+    @FocusState private var timerFocus: Bool
     private var accent: Color { light.steadyAccent }
     /// Ink that can be read on the record's own colour, whatever it is.
     private var onAccent: Color {
@@ -527,12 +532,32 @@ struct ControlCenterPanel: View {
             } else {
                 let mins = rail(key: "timer_min") ?? timerDraft
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text("\(Int(mins))").font(.display(28)).foregroundStyle(ink.ink)
-                        .contentTransition(.numericText())
-                    Text("min").font(.ui(13)).foregroundStyle(ink.dim)
+                    if timerTyping {
+                        TextField("", text: $timerTyped)
+                            .font(.display(28)).foregroundStyle(ink.ink)
+                            .keyboardType(.numbersAndPunctuation)
+                            .submitLabel(.done)
+                            .focused($timerFocus)
+                            .onSubmit { commitTypedTimer() }
+                            .onChange(of: timerFocus) { _, on in if !on { commitTypedTimer() } }
+                            .frame(maxWidth: 120)
+                        Text("min").font(.ui(13)).foregroundStyle(ink.dim)
+                    } else {
+                        Text(timerLabel(mins)).font(.display(28)).foregroundStyle(ink.ink)
+                            .contentTransition(.numericText())
+                            .onTapGesture {
+                                timerTyped = timerLabel(mins)
+                                timerTyping = true
+                                timerFocus = true
+                                Taps.detent(intensity: 0.3)
+                            }
+                            .accessibilityHint("Tap to type a time")
+                        Text(mins == mins.rounded(.down) ? "min" : "m:ss").font(.ui(13)).foregroundStyle(ink.dim)
+                    }
                     Spacer()
                     Button {
-                        wall.send(["timer_min": mins]); timerDraft = mins; Taps.commit()
+                        if timerTyping { commitTypedTimer() }
+                        wall.send(["timer_min": timerDraft]); Taps.commit()
                     } label: {
                         Text("Start").font(.ui(14, .semibold)).foregroundStyle(Ink.ground)
                             .padding(.horizontal, 20).frame(height: 40)
@@ -553,6 +578,36 @@ struct ControlCenterPanel: View {
                 colours
             }
         }
+    }
+
+    /// "12" for whole minutes, "1:30" otherwise.
+    private func timerLabel(_ mins: Double) -> String {
+        if mins == mins.rounded(.down) { return "\(Int(mins))" }
+        let total = Int((mins * 60).rounded())
+        return "\(total / 60):" + String(format: "%02d", total % 60)
+    }
+
+    /// What was typed, as minutes: "12", "1:30", "90s", "0.5". Kept within
+    /// what the wall accepts; nonsense leaves the draft alone.
+    private func commitTypedTimer() {
+        guard timerTyping else { return }
+        timerTyping = false; timerFocus = false
+        let t = timerTyped.trimmingCharacters(in: .whitespaces).lowercased()
+        var mins: Double? = nil
+        if t.contains(":") {
+            let parts = t.split(separator: ":", omittingEmptySubsequences: false).map { Double($0) ?? 0 }
+            if parts.count == 2 { mins = parts[0] + parts[1] / 60 }
+            if parts.count == 3 { mins = parts[0] * 60 + parts[1] + parts[2] / 60 }
+        } else if t.hasSuffix("s"), let v = Double(t.dropLast().trimmingCharacters(in: .whitespaces)) {
+            mins = v / 60
+        } else if t.hasSuffix("h"), let v = Double(t.dropLast().trimmingCharacters(in: .whitespaces)) {
+            mins = v * 60
+        } else if let v = Double(t.replacingOccurrences(of: "min", with: "").trimmingCharacters(in: .whitespaces)) {
+            mins = v
+        }
+        guard let m = mins, m > 0 else { return }
+        timerDraft = min(180, max(0.1, m))
+        Taps.detent(intensity: 0.3)
     }
 
     private var timingBoard: some View {
