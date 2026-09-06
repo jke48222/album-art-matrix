@@ -218,11 +218,16 @@ int main(int argc, char **argv) {
     scene_info *scene = default_scene(argc, argv);
     if (!scene) { fprintf(stderr, "failed to init scene\n"); return 1; }
 
-    // The library dims by jittering the output-enable pin, and that is how
-    // it stays: switching to bit-plane dimming was tried against the bottom
-    // row's ghost, changed nothing there, and rendered colour differently
-    // (a cap of 160 scaled the planes to two thirds of their levels). The
-    // ghost's real cause and fix are in the library's scan loop.
+    // Brightness comes from the bit planes, not from the library's jitter of
+    // the output-enable pin. The bottom row's ghost (a scatter of the
+    // content's own colour on a row that is black) needs two things gone:
+    // the row address changing with output on, which the library patch in
+    // pi/hub75-address-guard.py blanks, and the jitter, which puts output
+    // back on at random around that change. With jitter on the ghost comes
+    // back even with the guard; with it off and the guard in, it is gone.
+    // Bit-plane dimming also means the brightness byte in the frame header
+    // takes effect live.
+    scene->jitter_brightness = false;
 
     // Defined black before the first frame arrives.
     uint8_t *black = calloc(1, (size_t)scene->width * scene->height * scene->stride);

@@ -144,7 +144,8 @@ class Countdown:
     it can do: a white strike, then fireworks. Shells rise from the foot of
     the panel and burst in the accent and the ink, sparks fall and fade, the
     border flashes with every burst, and the digits stay up at 00:00 so a
-    glance still says which timer this was.
+    glance still says which timer this was. It runs for three minutes unless
+    the phone stops it.
     """
 
     SCALE = 2
