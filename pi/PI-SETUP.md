@@ -87,6 +87,12 @@ Nine good panels are needed. Ten were bought.
   pin 4 vs 8; the #3649 panel documents a non-standard E position — the
   switch exists for exactly this).
 - **Nothing at all:** ribbon in the panel's INPUT (not OUTPUT)?
+- **`mlockall failed` and the renderer exits at once:** the user's lockable-memory
+  limit is 8 MB (`ulimit -l`). Install `/etc/security/limits.d/hub75.conf`
+  (`pi - memlock unlimited`, `pi - rtprio 99`; bootstrap.sh writes it) and log
+  in again; the systemd unit carries `LimitMEMLOCK=infinity`. Never run
+  `run_renderer.sh` by hand while the `album-art-renderer` service is active:
+  two renderers on one bonnet.
 - **Renderer permissions:** re-login after bootstrap (gpio/video/render group
   membership), or reboot.
 - **Reporter unreachable:** Mac asleep? Firewall prompt accepted? Same Wi-Fi?
@@ -97,3 +103,12 @@ Nine good panels are needed. Ten were bought.
   `~/rpi-gpu-hub75-matrix/example.c` and adapt renderer/art_display.c. Prove
   the panel meanwhile with the library's own binary:
   `cd ~/rpi-gpu-hub75-matrix && ./example -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 -d 64 -s shaders/cartoon.glsl`
+
+## The bottom row
+
+The panel library ghosts each row onto the next while the row address settles,
+which shows only on the bottom row (it takes the middle row's colour at the
+wrap). `pi/hub75-address-guard.py` patches the library's scan loops to hold the
+output off for the first four clocks of every row; run it after any fresh
+checkout of `~/rpi-gpu-hub75-matrix`, then `make libgpu` there and `make -B`
+in `renderer/`. The renderer links that home build ahead of `/usr/local`.

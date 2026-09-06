@@ -15,20 +15,44 @@ import UIKit
 /// Where the wall and the label are in every frame of the film.
 struct IntroTrack: Decodable {
     struct Frame: Decodable {
-        var face: [[Double]]      // four corners, image fractions
+        var face: [[Double]]?     // four corners, image fractions; none when the wall is out of shot
         var label: [Double]       // cx, cy, ax, ay, bx, by
         var badge: [[[Double]]]?  // nine tiles, four corners each
+        var record: [[Double]]?   // the record's square on its plane, four corners
+        var cells: Double?        // the live wall drawn this coarse: cell as a fraction of its width
     }
     var fps: Double
     var frames: [Frame]
 
-    static let loaded: IntroTrack? = {
-        guard let url = Bundle.main.url(forResource: "room-intro-track", withExtension: "json"),
-              let data = try? Data(contentsOf: url) else { return nil }
-        return try? JSONDecoder().decode(IntroTrack.self, from: data)
-    }()
+    static let loaded: IntroTrack? = load("room-intro-track")
 
-    static var available: Bool { loaded != nil && IntroFlip.available(named: "room-intro") }
+    private static var cache: [String: IntroTrack] = [:]
+    static func load(_ name: String) -> IntroTrack? {
+        if let t = cache[name] { return t }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let t = try? JSONDecoder().decode(IntroTrack.self, from: data) else { return nil }
+        cache[name] = t
+        return t
+    }
+
+    /// Looked up once: the room asks on every body evaluation.
+    static let available: Bool = loaded != nil && IntroFlip.available(named: "room-intro")
+}
+
+/// A set of films that play as one: the room, the wall's light on it, and
+/// the plates, with the track that says where the holes are.
+struct IntroFilms {
+    var main: String
+    var light: String
+    var badge: String
+    var track: String
+    /// The opening: the plates fly in and the camera pulls back to the seat.
+    static let opening = IntroFilms(main: "room-intro", light: "room-light", badge: "room-badge", track: "room-intro-track")
+    /// The mark: the plates build the mark before the wall and grow into it,
+    /// while the deck builds up out of blocks.
+    static let mark = IntroFilms(main: "room-mark", light: "room-mark-light", badge: "room-mark-badge", track: "room-mark-track")
+    var available: Bool { IntroTrack.load(track) != nil && Bundle.main.url(forResource: main, withExtension: "mov") != nil }
 }
 
 struct RoomIntro: View {
@@ -36,39 +60,75 @@ struct RoomIntro: View {
     let duty: Double
     /// Where the room's picture sits on the screen; the film sits there too.
     let fit: CGRect
-    /// The sleeve of the song that is on, for the label.
+    /// The printed label of the song that is on.
     var sleeve: UIImage? = nil
+    /// The song's pressing, for the record.
+    var pressing: UIImage? = nil
+    /// Which films: the opening unless told otherwise.
+    var films: IntroFilms = .opening
     var onDone: () -> Void
 
     @State private var player: AVPlayer? = nil
+    /// The wall's light on the room, and the plates, as films of their own.
+    @State private var lightPlayer: AVPlayer? = nil
+    @State private var badgePlayer: AVPlayer? = nil
     @State private var ended = false
+    @State private var endObserver: NSObjectProtocol? = nil
 
     var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .topLeading) {
                 // behind the film: the app's own background, the room's wall
-                if let track = IntroTrack.loaded, let player, !track.frames.isEmpty {
+                if let track = IntroTrack.load(films.track), let player, !track.frames.isEmpty {
                     // a timeline proposes no size to what it holds: each layer
                     // is given the screen outright
                     TimelineView(.animation(paused: ended)) { tl in
                         let t = player.currentTime().seconds
                         let i = max(0, min(track.frames.count - 1, Int((t.isFinite ? t : 0) * track.fps)))
                         let f = track.frames[i]
-                        let quad = f.face.map { CGPoint(x: fit.origin.x + fit.width * $0[0], y: fit.origin.y + fit.height * $0[1]) }
+                        let quad = (f.face ?? []).map { CGPoint(x: fit.origin.x + fit.width * $0[0], y: fit.origin.y + fit.height * $0[1]) }
                         ZStack(alignment: .topLeading) {
-                            // the wall, through the hole
-                            WarpedPanel(px: light.reading.px, duty: duty, quad: quad)
-                                .frame(width: geo.size.width, height: geo.size.height)
+                            // the record and its label, through theirs
+                            if let rq = f.record, let pressing {
+                                RecordView(image: pressing, quad: rq.map { CGPoint(x: fit.origin.x + fit.width * $0[0], y: fit.origin.y + fit.height * $0[1]) }, angle: 0, blend: .normal)
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                            }
                             FilmView(player: player)
                                 .frame(width: fit.width, height: fit.height)
                                 .offset(x: fit.origin.x, y: fit.origin.y)
-                            // the sleeve on the label, over the film: a view of its own,
-                            // because the film is one and would paint over drawing
-                            LabelArtOverlay(image: sleeve, ellipse: f.label, fit: fit, angle: 0)
-                                .frame(width: geo.size.width, height: geo.size.height)
-                            // the mark on the cover, in the wall's colour
-                            BadgeOverlay(quads: f.badge ?? [], fit: fit, accent: light.steadyAccent, lit: max(0.4, light.room))
-                                .frame(width: geo.size.width, height: geo.size.height)
+                            // the wall's light on the room, in the sleeve's colour, as
+                            // the room itself has it
+                            if let lightPlayer {
+                                FilmView(player: lightPlayer)
+                                    .frame(width: fit.width, height: fit.height)
+                                    .colorMultiply(light.steadyAccent)
+                                    .blendMode(.screen)
+                                    .opacity(min(1, 1.1 * light.room))
+                                    .offset(x: fit.origin.x, y: fit.origin.y)
+                            }
+                            // the wall, through its hole, over the light pass: the light
+                            // is for the room, the wall makes its own, as in the room itself
+                            if quad.count == 4 {
+                                // coarse when the track says so: the wall arriving as a few
+                                // cells that refine to its emitters
+                                let qx = quad.map(\.x), qy = quad.map(\.y)
+                                let cellPx = CGFloat(f.cells ?? 0) * ((qx.max() ?? 0) - (qx.min() ?? 0))
+                                WarpedPanel(px: light.reading.px, duty: duty, quad: quad)
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                                    .layerEffect(ShaderLibrary.pixelate(.float(Float(cellPx)), .float2(Float(qx.min() ?? 0), Float(qy.min() ?? 0))),
+                                                 maxSampleOffset: CGSize(width: max(1, cellPx), height: max(1, cellPx)), isEnabled: cellPx > 1)
+                            }
+                            // the plates, rendered, in the wall's colour
+                            if let badgePlayer {
+                                FilmView(player: badgePlayer)
+                                    .frame(width: fit.width, height: fit.height)
+                                    .colorMultiply(light.steadyAccent)
+                                    .offset(x: fit.origin.x, y: fit.origin.y)
+                            }
+                            if badgePlayer == nil {
+                                BadgeOverlay(quads: f.badge ?? [], fit: fit, accent: light.steadyAccent, lit: max(0.4, light.room))
+                                    .frame(width: geo.size.width, height: geo.size.height)
+                            }
                         }
                         .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
                     }
@@ -78,23 +138,60 @@ struct RoomIntro: View {
         }
         .ignoresSafeArea()
         .onAppear(perform: load)
-        .onDisappear { player?.pause(); player = nil }
+        .onDisappear {
+            // all three reels, not only the first: a replay or an early
+            // finish otherwise leaves two of them decoding off screen
+            for p in [player, lightPlayer, badgePlayer].compactMap({ $0 }) { p.pause() }
+            player = nil; lightPlayer = nil; badgePlayer = nil
+            if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+            endObserver = nil
+        }
     }
 
     private func load() {
-        guard player == nil, let url = Bundle.main.url(forResource: "room-intro", withExtension: "mov") else {
+        guard player == nil, let url = Bundle.main.url(forResource: films.main, withExtension: "mov") else {
             DispatchQueue.main.async { onDone() }; return
         }
         let item = AVPlayerItem(url: url)
         let p = AVPlayer(playerItem: item)
         p.isMuted = true
         p.actionAtItemEnd = .pause
-        NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { _ in
+        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { _ in
             ended = true
             onDone()
         }
         player = p
-        p.play()
+        if let lu = Bundle.main.url(forResource: films.light, withExtension: "mov") {
+            let lp = AVPlayer(url: lu); lp.isMuted = true; lp.actionAtItemEnd = .pause; lightPlayer = lp
+        }
+        if let bu = Bundle.main.url(forResource: films.badge, withExtension: "mov") {
+            let bp = AVPlayer(url: bu); bp.isMuted = true; bp.actionAtItemEnd = .pause; badgePlayer = bp
+        }
+        // the three films start on the same tick
+        startFilmsTogether([p, lightPlayer, badgePlayer].compactMap { $0 })
+    }
+}
+
+/// Starts films on one host tick, once each is ready to play. Asking a
+/// player for a synchronised start before its item is ready throws, and on
+/// a slow start (the simulator under load, a cold phone) it is not ready
+/// at once; so wait, briefly, and fall back to a plain start for any film
+/// that never gets there.
+@MainActor
+func startFilmsTogether(_ players: [AVPlayer]) {
+    // a synchronised start is refused while a player may wait to avoid
+    // stalling; these are files in the bundle, so it need not
+    for pl in players { pl.automaticallyWaitsToMinimizeStalling = false }
+    Task { @MainActor in
+        let deadline = Date().addingTimeInterval(3)
+        while Date() < deadline, players.contains(where: { $0.currentItem?.status == .unknown }) {
+            try? await Task.sleep(for: .milliseconds(16))
+        }
+        let at = CMClockGetTime(CMClockGetHostTimeClock()) + CMTime(value: 1, timescale: 20)
+        for pl in players {
+            if pl.currentItem?.status == .readyToPlay { pl.setRate(1, time: .zero, atHostTime: at) }
+            else { pl.play() }
+        }
     }
 }
 
@@ -190,6 +287,18 @@ enum Homography {
             }
         }
         return (0..<8).map { m[$0][8] } + [1]
+    }
+
+    /// The map the other way, for a shader that asks where a pixel came from.
+    static func inverse(_ m: [Double]) -> [Float]? {
+        guard m.count == 9 else { return nil }
+        let a = m[0], b = m[1], c = m[2], d = m[3], e = m[4], f = m[5], g = m[6], h = m[7], i = m[8]
+        let det = a * (e * i - f * h) - b * (d * i - f * g) + c * (d * h - e * g)
+        guard abs(det) > 1e-12 else { return nil }
+        let k = 1 / det
+        return [ (e * i - f * h) * k, (c * h - b * i) * k, (b * f - c * e) * k,
+                 (f * g - d * i) * k, (a * i - c * g) * k, (c * d - a * f) * k,
+                 (d * h - e * g) * k, (b * g - a * h) * k, (a * e - b * d) * k ].map { Float($0) }
     }
 
     /// Where (u, v) in the unit square lands.
@@ -302,6 +411,8 @@ struct LabelArt: View {
         .allowsHitTesting(false)
     }
 
+    // MARK: The printed label
+
     // MARK: The sleeve as a picture, without the gaps between emitters
 
     private static var cache: (key: Int, image: UIImage)? = nil
@@ -391,7 +502,8 @@ enum Badge {
             return p
         }
     }
-    static func alpha(_ i: Int, lit: Double) -> Double { i == 4 ? 1 : 0.30 + 0.25 * lit }
+    /// Fixed: the mark is part of the glass, not a light that comes and goes.
+    static func alpha(_ i: Int, lit: Double) -> Double { i == 4 ? 1 : 0.55 }
 }
 
 struct BadgeView: View {
@@ -443,6 +555,19 @@ struct BadgeOverlay: UIViewRepresentable {
                 ctx.addPath(p); ctx.setFillColor(accent.withAlphaComponent(CGFloat(Badge.alpha(i, lit: lit))).cgColor); ctx.fillPath()
             }
         }
+    }
+}
+
+extension UIColor {
+    var luma: CGFloat {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b
+    }
+    func darker(_ k: CGFloat) -> UIColor {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        getRed(&r, green: &g, blue: &b, alpha: &a)
+        return UIColor(red: r * (1 - k), green: g * (1 - k), blue: b * (1 - k), alpha: a)
     }
 }
 

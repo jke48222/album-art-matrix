@@ -118,8 +118,21 @@ struct ControlCenterPanel: View {
 
     @State private var lastDetent = -1
     @State private var speedDrag: Double? = nil
+    /// A rail being dragged: its key and where the thumb is now, so the
+    /// number under a finger is the finger's, not the wall's last word.
+    @State private var railDrag: (String, Double)? = nil
+    /// What the wall will letter, as it is typed; sent on return or Send.
+    @State private var wordsDraft = ""
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
+    /// The countdown being dialled up, before Start sends it.
+    @State private var timerDraft: Double = 10
     private var accent: Color { light.steadyAccent }
+    /// Ink that can be read on the record's own colour, whatever it is.
+    private var onAccent: Color {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(accent).getRed(&r, green: &g, blue: &b, alpha: &a)
+        return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? Ink.ground : .white
+    }
     private let gutter: CGFloat = 14
 
     var body: some View {
@@ -146,7 +159,8 @@ struct ControlCenterPanel: View {
                             }
                             .padding(.horizontal, 16)
                             .padding(.top, 58)
-                            .padding(.bottom, 44)
+                            // clear of the page marks at the foot of the screen
+                            .padding(.bottom, 60)
                             .frame(minHeight: geo.size.height)
                             // the glass itself closes on a tap; the blocks keep their own taps
                             .background(Color.black.opacity(0.001).onTapGesture { onClose() })
@@ -157,11 +171,21 @@ struct ControlCenterPanel: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 }
             case .tuning:
-                VStack(spacing: gutter) {
-                    faces
-                    context
+                // Kept to a little over half the screen and scrolled past
+                // that: a tall board (the words face, with its rail, its
+                // finishes and its colours) used to push up over the wall
+                // it was tuning.
+                ScrollView(.vertical) {
+                    VStack(spacing: gutter) {
+                        // (the light is the wall itself up here: drag on it)
+                        faces
+                        context
+                    }
+                    .padding(.horizontal, 16)
                 }
-                .padding(.horizontal, 16)
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+                .frame(maxHeight: 452)
             }
         }
         // the glass takes the room's own scheme: light over the white room,
@@ -200,10 +224,9 @@ struct ControlCenterPanel: View {
             Group {
                 if let sleeve {
                     Image(uiImage: sleeve).resizable().interpolation(.medium)
-                } else if let px = light.reading.px, let img = LabelArt.flat(px) {
-                    Image(uiImage: img).resizable().interpolation(.medium)
                 } else {
-                    PanelCanvas(px: light.reading.px, duty: value)
+                    RoundedRectangle(cornerRadius: 12).fill(ink.fill)
+                        .overlay(Image(systemName: "music.note").font(.system(size: 23)).foregroundStyle(ink.dim))
                 }
             }
             .frame(width: 66, height: 66)
@@ -237,9 +260,9 @@ struct ControlCenterPanel: View {
                     Taps.detent(intensity: 0.5)
                 } label: {
                     ZStack {
-                        Circle().fill(ink.ink)
+                        Circle().fill(accent)
                         GlyphShape(glyph: (wall.state.songPlaying || MPMusicPlayerController.systemMusicPlayer.playbackState == .playing) ? .pause : .play, lineWidth: 1.6)
-                            .frame(width: 14, height: 14).foregroundStyle(Ink.ground)
+                            .frame(width: 14, height: 14).foregroundStyle(onAccent)
                     }
                     .frame(width: 44, height: 44)
                 }
@@ -285,8 +308,8 @@ struct ControlCenterPanel: View {
                 ZStack(alignment: .leading) {
                     Capsule().fill(ink.fill).frame(height: 8)
                     Capsule().fill(accent).frame(width: max(8, geo.size.width * CGFloat(f)), height: 8)
-                    Circle().fill(ink.ink).frame(width: 26, height: 26)
-                        .overlay(Circle().strokeBorder(Color.black.opacity(0.12), lineWidth: 1))
+                    Circle().fill(Color.white).frame(width: 26, height: 26)
+                        .overlay(Circle().strokeBorder(Color.black.opacity(0.14), lineWidth: 1))
                         .offset(x: (geo.size.width - 26) * CGFloat(f))
                         .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
                 }
@@ -329,10 +352,10 @@ struct ControlCenterPanel: View {
             tile(.spin, "Spin", mode: "cd")
             tile(.lyrics, "Lyrics", mode: "lyrics")
             tile(.nine, "Nine", mode: "nine")
+            tile(.palette, "Design", mode: "frame")
             tile(.lamp, "Lamp", mode: "ambient")
             tile(.clock, "Clock", mode: "clock")
             tile(.dark, "Off", mode: "off")
-            tile(.letters, "Words", mode: "ticker")
         }
     }
 
@@ -370,9 +393,56 @@ struct ControlCenterPanel: View {
         case "ambient": lampBoard
         case "clock", "timer": clockBoard
         case "lyrics": timingBoard
+        case "ticker": wordsBoard
         case "off": sleepBoard
+        case "frame", "clip": designBoard
         default: finishBoard
         }
+    }
+
+    // MARK: Words: what the wall letters, and how it moves
+
+    /// The Words face used to have no board here, so the wall lettered
+    /// HELLO for as long as it was chosen. Typing is the whole point.
+    private var wordsBoard: some View {
+        let empty = wordsDraft.trimmingCharacters(in: .whitespaces).isEmpty
+        return board("Words") {
+            HStack(spacing: 10) {
+                TextField("say something", text: $wordsDraft)
+                    .font(.machine(14)).foregroundStyle(ink.ink)
+                    .autocorrectionDisabled()
+                    .submitLabel(.send)
+                    .padding(.horizontal, 14).frame(height: 44)
+                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+                    .onSubmit(sendWords)
+                Button(action: sendWords) {
+                    Text("Send").font(.ui(14, .semibold))
+                        .foregroundStyle(empty ? ink.faint : Ink.ground)
+                        .padding(.horizontal, 18).frame(height: 44)
+                        .background(Capsule().fill(empty ? AnyShapeStyle(ink.fill) : AnyShapeStyle(accent)))
+                }
+                .buttonStyle(PressStyle(scale: 0.95))
+                .disabled(empty)
+            }
+            HStack(spacing: 8) {
+                choice("Across", "across", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
+                choice("Rising", "rising", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
+                choice("Tilt", "crawl", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
+            }
+            HStack(spacing: 8) {
+                choice("Loop", true, wall.state.tickerLoop, { wall.send(["ticker_loop": $0]) })
+                choice("Once, then art", false, wall.state.tickerLoop, { wall.send(["ticker_loop": $0]) })
+            }
+            colours
+        }
+        .onAppear { if wordsDraft.isEmpty { wordsDraft = wall.state.tickerText } }
+    }
+
+    private func sendWords() {
+        let text = wordsDraft.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else { return }
+        wall.send(["ticker_text": text])
+        Taps.commit()
     }
 
     private func board<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
@@ -402,17 +472,26 @@ struct ControlCenterPanel: View {
     }
 
     private var speedBoard: some View {
-        let rpm = speedDrag ?? wall.state.rpm
+        let rpm = rail(key: "rpm") ?? wall.state.rpm
         return board("Spin") {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%.1f", rpm)).font(.display(28)).foregroundStyle(ink.ink).contentTransition(.numericText())
                 Text("rpm").font(.ui(13)).foregroundStyle(ink.dim)
             }
+            slider(key: "rpm", value: rpm, from: 0.5, to: 45, step: 0.5) {
+                wall.send(["rpm": $0])
+            }
             HStack(spacing: 8) {
+                choice("7.5", 7.5, rpm, { wall.send(["rpm": $0]) })
                 choice("33⅓", 33.333, rpm, { wall.send(["rpm": $0]) })
                 choice("45", 45.0, rpm, { wall.send(["rpm": $0]) })
-                choice("Slow", 7.5, rpm, { wall.send(["rpm": $0]) })
             }
+            // what the wall turns: the record on the deck, or the sleeve
+            HStack(spacing: 8) {
+                choice("Pressing", "pressing", wall.state.spinFace, { wall.send(["spin_face": $0]) })
+                choice("Album art", "art", wall.state.spinFace, { wall.send(["spin_face": $0]) })
+            }
+            finishes
         }
     }
 
@@ -425,10 +504,7 @@ struct ControlCenterPanel: View {
                     choice(e.1, e.0, wall.state.effect, { wall.send(["effect": $0]) })
                 }
             }
-            Toggle(isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) })) {
-                Text("Take the album's colours").font(.ui(14)).foregroundStyle(ink.ink)
-            }
-            .tint(accent)
+            colours
         }
     }
 
@@ -442,37 +518,137 @@ struct ControlCenterPanel: View {
                     choice("Stop", true, false, { _ in wall.send(["timer_min": 0.0]) })
                 }
             } else {
+                let mins = rail(key: "timer_min") ?? timerDraft
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text("\(Int(mins))").font(.display(28)).foregroundStyle(ink.ink)
+                        .contentTransition(.numericText())
+                    Text("min").font(.ui(13)).foregroundStyle(ink.dim)
+                    Spacer()
+                    Button {
+                        wall.send(["timer_min": mins]); timerDraft = mins; Taps.commit()
+                    } label: {
+                        Text("Start").font(.ui(14, .semibold)).foregroundStyle(Ink.ground)
+                            .padding(.horizontal, 20).frame(height: 40)
+                            .background(Capsule().fill(accent))
+                    }
+                    .buttonStyle(PressStyle(scale: 0.95))
+                }
+                slider(key: "timer_min", value: mins, from: 1, to: 180, step: 1) { timerDraft = $0 }
                 HStack(spacing: 8) {
                     ForEach([5.0, 10.0, 15.0, 30.0], id: \.self) { m in
-                        choice("\(Int(m)) min", m, -1.0, { wall.send(["timer_min": $0]) })
+                        choice("\(Int(m)) min", m, timerDraft, { timerDraft = $0 })
                     }
                 }
                 HStack(spacing: 8) {
                     choice("24 hour", true, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
                     choice("12 hour", false, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
                 }
+                colours
+                finishes
             }
         }
     }
 
     private var timingBoard: some View {
-        board("Words") {
-            HStack(spacing: 8) {
-                choice("Sooner", -0.4, lyricsNudge, { lyricsNudge = $0 })
-                choice("On time", 0.0, lyricsNudge, { lyricsNudge = $0 })
-                choice("Later", 0.4, lyricsNudge, { lyricsNudge = $0 })
+        let ahead = rail(key: "lyric_offset") ?? wall.state.lyricOffset
+        return board("Words") {
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(String(format: "%+.2f", ahead)).font(.display(28)).foregroundStyle(ink.ink)
+                    .contentTransition(.numericText())
+                Text("s").font(.ui(13)).foregroundStyle(ink.dim)
             }
+            slider(key: "lyric_offset", value: ahead, from: -2, to: 2, step: 0.05) { v in
+                wall.send(["lyric_offset": v])
+                lyricsNudge = v          // the phone's own words follow the wall's
+            }
+            HStack(spacing: 8) {
+                choice("Sooner", -0.4, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
+                choice("On time", 0.2, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
+                choice("Later", 0.8, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
+            }
+            finishes
         }
     }
 
     private var finishBoard: some View {
-        board("Finish") {
-            HStack(spacing: 8) {
-                choice("Clean", "clean", wall.state.finish, { wall.send(["finish": $0]) })
-                choice("Dither", "dither", wall.state.finish, { wall.send(["finish": $0]) })
-                choice("Poster", "poster", wall.state.finish, { wall.send(["finish": $0]) })
+        board("Finish") { finishes }
+    }
+
+    /// A design or a clip: the studio itself, here, and the finish over it.
+    /// Drawing is the point of this face, so it is not behind a door.
+    private var designBoard: some View {
+        VStack(spacing: gutter) {
+            board("Design") {
+                StudioScreen(roomPalette: light.palette, accent: accent, inline: true)
             }
+            board("Finish") { finishes }
         }
+    }
+
+    /// The three finishes, each shown on what is on the wall right now.
+    private var finishes: some View {
+        LiveFinishRow(host: wall.host, mode: wall.state.mode, current: wall.state.finish,
+                  accent: accent, ink: ink, sleeve: sleeve) { wall.send(["finish": $0]) }
+    }
+
+    /// The wall's own two colours, for every face that letters or lights
+    /// something: pick them, or let the record choose.
+    private var colours: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ColourBar(colours: [
+                Binding(get: { Color.wall(hex: wall.state.color) },
+                        set: { wall.send(["color": $0.wallHex]) }),
+                Binding(get: { Color.wall(hex: wall.state.color2) },
+                        set: { wall.send(["color2": $0.wallHex]) }),
+            ], height: 44, stroke: ink.ink.opacity(0.14))
+            Toggle(isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) })) {
+                Text("Album's").font(.ui(14)).foregroundStyle(ink.ink)
+            }
+            .tint(accent)
+        }
+    }
+
+    // MARK: A rail
+
+    /// Where a rail's thumb is while a finger is on it.
+    private func rail(key: String) -> Double? {
+        railDrag?.0 == key ? railDrag?.1 : nil
+    }
+
+    /// The same rail as the light's, for anything with a range.
+    private func slider(key: String, value: Double, from lo: Double, to hi: Double,
+                        step: Double, commit: @escaping (Double) -> Void) -> some View {
+        let f = (value - lo) / (hi - lo)
+        return GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule().fill(ink.fill).frame(height: 8)
+                Capsule().fill(accent).frame(width: max(8, geo.size.width * CGFloat(f)), height: 8)
+                Circle().fill(Color.white).frame(width: 26, height: 26)
+                    .overlay(Circle().strokeBorder(Color.black.opacity(0.14), lineWidth: 1))
+                    .offset(x: (geo.size.width - 26) * CGFloat(min(1, max(0, f))))
+                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+            }
+            .frame(height: 26)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onChanged { g in
+                        let t = Double((g.location.x - 13) / max(1, geo.size.width - 26))
+                        let v = lo + (hi - lo) * min(1, max(0, t))
+                        let stepped = (v / step).rounded() * step
+                        if railDrag?.1 != stepped {
+                            railDrag = (key, stepped)
+                            let d = Int((stepped - lo) / (hi - lo) * 20)
+                            if d != lastDetent { Taps.detent(intensity: 0.3); lastDetent = d }
+                        }
+                    }
+                    .onEnded { _ in
+                        if let v = rail(key: key) { commit(v); Taps.commit() }
+                        railDrag = nil
+                    }
+            )
+        }
+        .frame(height: 26)
     }
 
     private var sleepBoard: some View {

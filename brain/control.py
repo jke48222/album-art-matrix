@@ -63,6 +63,10 @@ DEFAULTS = {
     "ticker_style": "across",  # across (slide) | up (prompter) | tilt (crawl)
     "ticker_colors": [],       # per-glyph inks, in glyph order; [] = one ink     # loop, or scroll once then back to art
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
+    "lyric_offset": 0.2,     # seconds the words run ahead of the song
+    "spin_face": "pressing", # what the record turns: pressing | art
+    "panel_brightness": 160, # the panel's own cap, 1-254; a renderer restart
+    "panel_type": 0,         # the panel's row addressing, 0-7; ditto
     "idle": "black",         # silence: black | hold | dim | ambient
     "away": "stay",          # phone gone >15 min: stay | off
     "wake_enabled": False,   # morning fade-up
@@ -103,6 +107,17 @@ class ControlState:
         self.frame_override = None   # raw RGB bytes for mode "frame"
         self.clip = None             # {"fps": float, "frames": [bytes]}
         self.last_frame = None       # pre-WB RGB of whatever was last shown
+        # The record the phone is showing for this song, as raw RGB the size
+        # of the panel. The spin face turns this when it is here, so the wall
+        # and the room's deck are playing the same pressing.
+        self.pressing = None         # (track_id, bytes)
+        # The picture a finish would act on for the face that is up: the
+        # sleeve for art and words, the grid for the nine. /finishes renders
+        # the three from this, so the phone shows what the wall would do
+        # rather than its own guess at it.
+        self._finish_base = None
+        self.finish_seq = 0                 # bumped whenever the base changes
+        self._finish_shots = (-1, None)     # (finish_seq, {name: b64})
         self.replay = None           # journal entry the main loop should re-show
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
         self.timer = None            # {"end": monotonic, "total": s, "ret": mode}
@@ -187,6 +202,17 @@ class ControlState:
                     self._s[k] = _clamp(v, 0.5, 45.0)
                 elif k == "speed":
                     self._s[k] = _clamp(v, 0.1, 3.0)
+                elif k == "lyric_offset":
+                    self._s[k] = _clamp(v, -2.0, 2.0)
+                elif k == "panel_brightness":
+                    self._s[k] = int(_clamp(v, 1, 254))
+                elif k == "panel_type":
+                    self._s[k] = int(_clamp(v, 0, 7))
+                elif k == "spin_face":
+                    if v in ("pressing", "art"):
+                        self._s[k] = v
+                    else:
+                        rejected[k] = v
                 elif k in ("color", "color2") and isinstance(v, str) \
                         and len(v) == 7 and v.startswith("#") \
                         and all(c in "0123456789abcdefABCDEF" for c in v[1:]):
@@ -202,6 +228,19 @@ class ControlState:
             except OSError:
                 pass
         return rejected
+
+    @property
+    def finish_base(self):
+        return self._finish_base
+
+    @finish_base.setter
+    def finish_base(self, img):
+        """Counted, not identified. The previews were keyed on id(picture),
+        and a per-frame picture is freed as the next one is made, so CPython
+        handed out the same id again and the spinning record served the first
+        frame it ever drew for as long as it turned."""
+        self._finish_base = img
+        self.finish_seq += 1
 
     def apply(self, patch: dict) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
@@ -228,7 +267,24 @@ class ControlState:
                 self.timer = None
                 if self.get()["mode"] == "timer":
                     patch["mode"] = ret
+        want = patch.get("panel_brightness")
+        if patch.get("panel_type") is not None:
+            want = True
         rejected = self._merge(patch)
+        # The cap rides on every frame's header now (see sinks/pi_renderer),
+        # so a change reaches the panel on the next frame. It is still written
+        # down for the renderer's launch, so a reboot starts at the same level.
+        # Restarting the renderer here, as this used to, left half a frame in
+        # the pipe and every frame after it shifted.
+        if want is not None:
+            try:
+                root = os.path.expanduser("~/album-art-matrix")
+                with open(os.path.join(root, "panel-brightness"), "w") as fh:
+                    fh.write(str(self._s["panel_brightness"]))
+                with open(os.path.join(root, "panel-type"), "w") as fh:
+                    fh.write(str(self._s["panel_type"]))
+            except Exception as exc:
+                print(f"[control] panel brightness: {exc}")
         self.dirty.set()
         return rejected
 
@@ -236,6 +292,10 @@ class ControlState:
         """What GET /state returns — settings plus live extras."""
         out = {**self.get(), "now_showing": self.now_showing,
                "progress": self.progress, "shown_seq": self.shown_seq}
+        # which song the phone's pressing is for, so the app (and anyone
+        # looking) can tell whether the spin face has one to turn
+        if self.pressing is not None:
+            out["pressing_for"] = self.pressing[0]
         if self.art_colors:
             out["art_colors"] = list(self.art_colors)
         sl = self.sleep              # snapshot: the render thread can null it
@@ -357,6 +417,13 @@ class ControlState:
 
 def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
     class Handler(BaseHTTPRequestHandler):
+        # Keep the connection open between requests. On HTTP/1.0 every call
+        # closed its socket, so the phone resolved album-matrix.local afresh
+        # each time: a request that costs ten milliseconds on the wire spent
+        # two hundred more on mDNS, and the app, polling several times a
+        # second, spent its life waiting on name lookups.
+        protocol_version = "HTTP/1.1"
+
         def _json(self, code: int, obj):
             body = json.dumps(obj).encode()
             self.send_response(code)
@@ -371,6 +438,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
         def _empty(self, code: int, extra=()):
             self.send_response(code)
             self.send_header("Access-Control-Allow-Origin", "*")
+            # keep-alive needs every response to say how long it is, and a
+            # 204 says it by being defined as empty
+            if code != 204:
+                self.send_header("Content-Length", "0")
             for k, v in extra:
                 self.send_header(k, v)
             self.end_headers()
@@ -408,6 +479,29 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self.end_headers()
                 self.wfile.write(px)
                 return
+            if u.path.startswith("/finishes"):
+                # What each finish would look like, on the sleeve that is on,
+                # rendered by the wall itself. The phone used to draw these
+                # from its own copy of the art and they never quite matched:
+                # a different downscale, no unsharp, no white balance.
+                base = ctrl.finish_base
+                if base is None:
+                    self._json(404, {"error": "nothing prepared yet"})
+                    return
+                # Rendered when the picture changes, not when asked: the phone
+                # asks twice a second and three quantisations per request, on a
+                # wall already drawing sixty frames a second, is how a preview
+                # comes back late or not at all.
+                key, shots = ctrl._finish_shots
+                if key != ctrl.finish_seq:
+                    from .art.pipeline import apply_finish
+                    shots = {n: base64.b64encode(
+                        apply_finish(base, n).convert("RGB").tobytes()).decode()
+                        for n in ("clean", "dither", "poster")}
+                    ctrl._finish_shots = (ctrl.finish_seq, shots)
+                self._json(200, shots)
+                return
+
             if u.path.startswith("/journal"):
                 try:
                     limit = int(parse_qs(u.query).get("limit", ["50"])[0])
@@ -481,6 +575,26 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 ctrl.shown_seq += 1
                 ctrl.apply({"mode": "frame"})
                 self._json(200, ctrl.public_state())
+                return
+
+            if self.path.startswith("/pressing"):
+                # The record the phone drew for the song that is on: raw RGB,
+                # panel-sized, base64. Kept until the song changes.
+                data = self._body()
+                if data is None:
+                    return
+                try:
+                    px = base64.b64decode(data.get("px", ""), validate=True)
+                except (ValueError, TypeError):
+                    px = b""
+                if len(px) != ctrl.frame_len:
+                    self._json(400, {"error":
+                                     f"px must be {ctrl.frame_len} raw RGB "
+                                     "bytes, base64-encoded"})
+                    return
+                ctrl.pressing = (str(data.get("track") or ""), px)
+                ctrl.dirty.set()
+                self._empty(204)
                 return
 
             if self.path.startswith("/clip"):

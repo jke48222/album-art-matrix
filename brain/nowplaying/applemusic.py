@@ -110,6 +110,28 @@ def _osa_now():
     }
 
 
+def _itunes_lookup_art(store_id):
+    """The cover of one exact release, by its Apple catalog id.
+
+    A text search is a guess: "KATSEYE WILD" returned a different single's
+    sleeve for a song on WILD - EP. The id the phone already sends names the
+    track itself, so ask for that and nothing is guessed.
+    """
+    sid = "".join(ch for ch in str(store_id or "") if ch.isdigit())
+    if not sid:
+        return None
+    try:
+        import requests
+        resp = requests.get("https://itunes.apple.com/lookup",
+                            params={"id": sid}, timeout=10)
+        resp.raise_for_status()
+        results = resp.json().get("results") or []
+        url = results[0].get("artworkUrl100") if results else None
+        return url.replace("100x100bb", "600x600bb") if url else None
+    except Exception:
+        return None
+
+
 def _itunes_art(term, entity):
     try:
         import requests  # lazy: keeps module import stdlib-only for the reporter

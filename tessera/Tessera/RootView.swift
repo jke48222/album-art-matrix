@@ -54,6 +54,7 @@ struct RootView: View {
     @State private var showStudio = false
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
+    @AppStorage("intro.replay") private var replay = false
     @State private var showOnboarding = false
     /// The room's colours, held steady. Reading them straight from the frame
     /// meant rainbow and the pattern modes strobed the whole interface: the
@@ -61,6 +62,9 @@ struct RootView: View {
     /// room updates its colour a few times a minute, like a room.
     @State private var stablePalette: [Color] = []
     @State private var paletteAt: Date = .distantPast
+    /// A screen has something over the whole of itself (a board, an
+    /// opening): the page marks step out of the way rather than sit on it.
+    @State private var marksHidden = false
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
@@ -114,9 +118,16 @@ struct RootView: View {
             .scrollIndicators(.hidden)
             .scrollDisabled(onPanel)
             .ignoresSafeArea(edges: .horizontal)
+            // the page marks own the strip at the foot: a page's controls
+            // end above them instead of running underneath (the room, which
+            // ignores the safe area, keeps its own clearance)
+            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 22) }
+            .onPreferenceChange(PageMarksHidden.self) { marksHidden = $0 }
 
             PageTesserae(page: page ?? 0, accent: light.roomBright ? Ink.ground : light.steadyAccent, lit: light.room)
                 .padding(.bottom, 8)
+                .opacity(marksHidden ? 0 : 1)
+                .animation(.easeInOut(duration: 0.2), value: marksHidden)
         }
         .environment(worn)
         .preferredColorScheme(.dark)
@@ -138,7 +149,16 @@ struct RootView: View {
             OnboardingFlow().environment(wall)
         }
         .onChange(of: onboardingAgain) { _, again in
-            if again { onboardingAgain = false; showOnboarding = true }
+            // asked for from inside Settings: the sheet has to go first, or
+            // the cover waits behind it until the sheet is closed by hand
+            guard again else { return }
+            onboardingAgain = false
+            showSetup = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showOnboarding = true }
+        }
+        .onChange(of: replay) { _, on in
+            // the opening plays on the wall screen, so Settings steps aside
+            if on { showSetup = false }
         }
         .fullScreenCover(isPresented: $showStudio) {
             StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
@@ -172,6 +192,12 @@ struct RootView: View {
             }
         }
         .onChange(of: wall.arrivalKey) { _, new in
+            // A new sleeve is a new row in the Archive and a new step in the
+            // panel's backwards drag, so the list catches up on every
+            // arrival, the first one included: with nothing playing at
+            // launch the first key is empty, and the surge guard below used
+            // to swallow the reload along with the surge.
+            Task { await worn.load(host: wall.host) }
             // A new sleeve landing on 4,096 LEDs is an event, not a fade.
             // Keyed on the wall's own shown_seq (title as the old-brain
             // fallback), so same-title tracks surge too and mode taps never
@@ -181,15 +207,18 @@ struct RootView: View {
                 return
             }
             lastTitle = new
-            // A new sleeve is a new row in the Archive and a new step in the
-            // panel's backwards drag, so the list catches up here rather than
-            // only when someone pulls it down.
-            Task { await worn.load(host: wall.host) }
             Taps.landed()
             withAnimation(.easeOut(duration: 0.25)) { arrival = 0.30 }
             withAnimation(.easeInOut(duration: 0.9).delay(0.25)) { arrival = 0 }
         }
     }
+}
+
+/// Set by a page that has covered itself with something (the room's boards,
+/// its opening), so the page marks are not drawn over it.
+struct PageMarksHidden: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
 /// The page indicator is the mark: two tiles, the one you are on is lit.

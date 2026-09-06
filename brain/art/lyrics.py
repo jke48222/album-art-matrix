@@ -109,7 +109,8 @@ class LyricSheet:
         lines that LRC marks as instrumental gaps."""
         lines = self.lines
         if not lines or t < lines[0][0]:
-            return "", 0.0, lines[0][0] if lines else 0.0
+            # before the first line: nothing to sing, and no word times
+            return "", 0.0, (lines[0][0] if lines else 0.0), None
         lo, hi = 0, len(lines) - 1
         while lo < hi:
             mid = (lo + hi + 1) // 2
@@ -192,6 +193,9 @@ class LyricBook:
             if self.track == track_id:
                 self.sheet = sheet
                 self.state = "done" if sheet else "none"
+                print(f"[lyrics] {artist} — {title}: "
+                      f"{len(sheet.lines) if sheet else 'no'} lines"
+                      f"{'' if duration_s else ' (no duration known)'}")
 
         threading.Thread(target=work, daemon=True).start()
 
@@ -202,7 +206,7 @@ class LyricCanvas:
     lettered over the cover dimmed to a quarter, each row throwing its own
     shadow. Layout is recomputed for exactly the words visible so far."""
 
-    DIM = 0.26
+    DIM = 0.46          # the sleeve behind the words: present, not a shadow
     RAMP = 0.12
 
     def __init__(self, size: int, art, sheet: LyricSheet,

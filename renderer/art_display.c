@@ -113,9 +113,42 @@ static void *frame_reader(void *arg) {
                 }
             }
 
+            // Every frame arrives behind an eight-byte header: "TSRA", the
+            // panel brightness (1-254), three spare. Scan for the magic a
+            // byte at a time, so a reader that starts mid-frame, or a pipe
+            // that kept half a frame across a restart, lines up on the next
+            // frame instead of showing every frame after it shifted.
             size_t got = 0;
             int eof = 0;
-            while (got < frame_bytes) {
+            {
+                uint8_t win[4] = {0, 0, 0, 0};
+                size_t have = 0;
+                for (;;) {
+                    uint8_t c;
+                    ssize_t n = read(fd, &c, 1);
+                    if (n == 0) { eof = 1; break; }
+                    if (n < 0) { if (errno == EINTR) continue; eof = 1; break; }
+                    if (have < 4) { win[have++] = c; }
+                    else { win[0] = win[1]; win[1] = win[2]; win[2] = win[3]; win[3] = c; }
+                    if (have == 4 && win[0] == 'T' && win[1] == 'S' && win[2] == 'R' && win[3] == 'A') break;
+                }
+                if (!eof) {
+                    uint8_t rest[4];
+                    size_t r = 0;
+                    while (r < 4) {
+                        ssize_t n = read(fd, rest + r, 4 - r);
+                        if (n > 0) { r += (size_t)n; continue; }
+                        if (n < 0 && errno == EINTR) continue;
+                        eof = 1; break;
+                    }
+                    if (!eof && rest[0] >= 1 && rest[0] <= 254 && rest[0] != scene->brightness) {
+                        // the cap, live: the mapper reads it on every frame
+                        scene->brightness = rest[0];
+                        fprintf(stderr, "art_display: brightness %d\n", rest[0]);
+                    }
+                }
+            }
+            while (!eof && got < frame_bytes) {
                 ssize_t n = read(fd, rgb + got, frame_bytes - got);
                 if (n > 0)  { got += (size_t)n; continue; }
                 if (n == 0) { eof = 1; break; }        // writer closed
@@ -184,6 +217,12 @@ static void map_frame(scene_info *scene, const uint8_t *rgb,
 int main(int argc, char **argv) {
     scene_info *scene = default_scene(argc, argv);
     if (!scene) { fprintf(stderr, "failed to init scene\n"); return 1; }
+
+    // The library dims by jittering the output-enable pin, and that is how
+    // it stays: switching to bit-plane dimming was tried against the bottom
+    // row's ghost, changed nothing there, and rendered colour differently
+    // (a cap of 160 scaled the planes to two thirds of their levels). The
+    // ghost's real cause and fix are in the library's scan loop.
 
     // Defined black before the first frame arrives.
     uint8_t *black = calloc(1, (size_t)scene->width * scene->height * scene->stride);

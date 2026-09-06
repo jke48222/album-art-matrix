@@ -38,6 +38,11 @@ if ! grep -q 'isolcpus=3' "$CMDLINE"; then
 fi
 
 sudo usermod -aG gpio,video,render "$USER" || true
+# The HUB75 driver mlockall()s its buffers and wants SCHED_FIFO; a plain user
+# has 8 MB lockable and rtprio 0, and the library exits on the first. These
+# apply to new logins (pam_limits); the systemd unit carries its own copies.
+printf "%s - memlock unlimited\n%s - rtprio 99\n" "$USER" "$USER" \
+  | sudo tee /etc/security/limits.d/hub75.conf >/dev/null
 
 echo ">>> python env for the brain"
 cd "$HOME/album-art-matrix"

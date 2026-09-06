@@ -87,7 +87,11 @@ struct IPodWallScreen: View {
             .frame(width: geo.size.width)
         }
         .onChange(of: replay) { _, on in
-            if on, IntroFlip.available { replay = false; introDone = false }
+            // always put the switch back, or a build without the film
+            // latches it on and the pill in Settings goes dead
+            guard on else { return }
+            replay = false
+            if IntroFlip.available { introDone = false }
         }
         .fullScreenCover(isPresented: $zoomed) {
             ZStack(alignment: .topTrailing) {
