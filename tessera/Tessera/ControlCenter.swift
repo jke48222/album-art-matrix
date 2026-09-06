@@ -544,7 +544,6 @@ struct ControlCenterPanel: View {
                     choice("12 hour", false, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
                 }
                 colours
-                finishes
             }
         }
     }
