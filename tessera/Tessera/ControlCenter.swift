@@ -607,13 +607,18 @@ struct ControlCenterPanel: View {
     /// The wall's own two colours, for every face that letters or lights
     /// something: pick them, or let the record choose.
     private var colours: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        // With the album choosing, the bar shows the album's two colours and
+        // takes no touches: the choice you could make would not be used.
+        let album = wall.state.matchArt
+        let art = wall.state.artColors
+        let shown = album && art.count >= 2 ? art : [wall.state.color, wall.state.color2]
+        return VStack(alignment: .leading, spacing: 10) {
             ColourBar(colours: [
-                Binding(get: { Color.wall(hex: wall.state.color) },
-                        set: { wall.send(["color": $0.wallHex]) }),
-                Binding(get: { Color.wall(hex: wall.state.color2) },
-                        set: { wall.send(["color2": $0.wallHex]) }),
-            ], height: 44, stroke: ink.ink.opacity(0.14))
+                Binding(get: { Color.wall(hex: shown[0]) },
+                        set: { if !album { wall.send(["color": $0.wallHex]) } }),
+                Binding(get: { Color.wall(hex: shown[1]) },
+                        set: { if !album { wall.send(["color2": $0.wallHex]) } }),
+            ], height: 44, stroke: ink.ink.opacity(0.14), enabled: !album)
             Toggle(isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) })) {
                 Text("Album's").font(.ui(14)).foregroundStyle(ink.ink)
             }

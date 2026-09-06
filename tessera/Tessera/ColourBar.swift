@@ -25,6 +25,9 @@ struct ColourBar: View {
     /// Touching a part when there is a selection picks it; touching the one
     /// already picked opens the picker.
     var onPick: ((Int) -> Void)? = nil
+    /// Off when the colours are being chosen elsewhere (the album's): the
+    /// bar still shows them, and nothing happens when it is touched.
+    var enabled: Bool = true
 
     @State private var editing: Int? = nil
 
@@ -42,6 +45,7 @@ struct ColourBar: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        guard enabled else { return }
                         Taps.detent(intensity: 0.35)
                         if let onPick, selected != i { onPick(i) } else { editing = i }
                     }
@@ -54,6 +58,10 @@ struct ColourBar: View {
         .clipShape(RoundedRectangle(cornerRadius: radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: radius, style: .continuous)
             .strokeBorder(stroke, lineWidth: 1))
+        .opacity(enabled ? 1 : 0.55)
+        .allowsHitTesting(enabled)
+        .accessibilityHint(enabled ? "" : "Set by the album")
+        .animation(.easeOut(duration: 0.2), value: enabled)
         .sheet(isPresented: Binding(get: { editing != nil }, set: { if !$0 { editing = nil } })) {
             if let i = editing, i < colours.count {
                 ColourSheet(colour: colours[i])
