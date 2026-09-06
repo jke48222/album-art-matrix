@@ -24,6 +24,12 @@ case "$BRIGHT" in ''|*[!0-9]*) BRIGHT=160 ;; esac
 # The panel's row addressing, 0-7. This board ghosts the content's colour into
 # the last row of its scan, which is what a wrong addressing looks like, so it
 # is worth sweeping. Written by the brain, same as the cap.
+# Row-change settle in the library's scan loop (see the block below): the
+# output stays off this long after every row address change. Dark time, so
+# the cap above pays it back; tune with the file, 0 turns it off.
+SETTLE="$(cat "$HOME/album-art-matrix/addr-settle-ns" 2>/dev/null || echo 1000)"
+case "$SETTLE" in ''|*[!0-9]*) SETTLE=1000 ;; esac
+export HUB75_ADDR_SETTLE_NS="$SETTLE"
 exec "$HOME/album-art-matrix/renderer/art_display" \
   -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 \
   -d 64 -f 120 -g 2.2 -t none -l 1.0 -b "$BRIGHT"
@@ -32,5 +38,7 @@ exec "$HOME/album-art-matrix/renderer/art_display" \
 # bottom row of its scan (a red clock left a red line there) on frames whose
 # bottom rows were exactly zero. None of the flags here touch that: the cause
 # was the library changing the row address with the output still enabled, and
-# the fix is ADDR_GUARD_PX in its scan loop (pi/hub75-address-guard.py). The
-# flags are the panel's original set and should stay that way.
+# the fix is in its scan loop (pi/hub75-address-guard.py): the output held
+# off while the row address settles, a microsecond by default, because the
+# row just left keeps conducting the new row's data until its driver is off.
+# The flags are the panel's original set and should stay that way.

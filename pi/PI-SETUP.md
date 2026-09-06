@@ -112,3 +112,19 @@ wrap). `pi/hub75-address-guard.py` patches the library's scan loops to hold the
 output off for the first four clocks of every row; run it after any fresh
 checkout of `~/rpi-gpu-hub75-matrix`, then `make libgpu` there and `make -B`
 in `renderer/`. The renderer links that home build ahead of `/usr/local`.
+
+### The settle (2026-09-06)
+
+The guard alone held only 4 clocks, about 200 ns at the Pi 5's loop speed,
+and the ghost came back on a red clock whose digits cross the middle row:
+the bottom row of each half shows a faint copy of the top row of the other
+half while the row just left is still conducting. `pi/hub75-row-settle.py`
+(run after the guard script, then `make libgpu`, then restart the renderer)
+keeps the output off for a real settle after every row change, 1000 ns by
+default, read from `HUB75_ADDR_SETTLE_NS`; `run_renderer.sh` takes that from
+`~/album-art-matrix/addr-settle-ns`. It is dark time, roughly a fifth of the
+row, so `panel-brightness` went from 160 to 200 to keep the same light (the
+average current, which is what the supply sees, is unchanged). If a ghost
+ever shows again, raise the settle file and restart the renderer; 0 turns it
+off. The renderer's own OE jitter must stay off (`jitter_brightness = false`
+in art_display.c): with it on the change lands with the output on at random.
