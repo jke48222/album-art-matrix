@@ -225,15 +225,24 @@ class VideoPlayer:
             time.sleep(0.1)
 
     def _ranged(self, gen, url, headers, total, path, progress):
-        """A file, in ranged pieces, with a progress callback (got)."""
+        """A file, in ranged pieces, with a progress callback (got).
+
+        YouTube caps how big a piece it will serve, and the cap differs by
+        video and by server (a megabyte for one, half that for the next),
+        answering 403 above it. So a refusal halves the piece and asks
+        again, down to 64 KB; a refusal there is a real refusal."""
+        chunk = CHUNK
         with requests.Session() as sess, open(path, "wb") as fh:
             sess.headers.update(headers)
             got = 0
             while got < total:
                 if not self._current(gen):
                     return False
-                end = min(total, got + CHUNK) - 1
+                end = min(total, got + chunk) - 1
                 r = sess.get(url, headers={"Range": f"bytes={got}-{end}"}, timeout=30)
+                if r.status_code == 403 and chunk > 65536:
+                    chunk //= 2
+                    continue
                 if r.status_code not in (200, 206) or not r.content:
                     raise RuntimeError(f"HTTP {r.status_code} at byte {got}")
                 fh.write(r.content)

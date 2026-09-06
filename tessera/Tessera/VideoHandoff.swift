@@ -22,6 +22,8 @@ enum VideoHandoff {
 
     /// The original video of the one on the wall now, for its sound.
     static var localSound: (key: String, url: URL)?
+    /// A picture is being made or sent: the sound must wait for it.
+    static var inProgress = false
 
     static func read() -> Pending? {
         guard let data = defaults?.data(forKey: key),

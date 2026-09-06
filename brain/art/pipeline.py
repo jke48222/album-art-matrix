@@ -50,19 +50,39 @@ def _wb_lut(gains: tuple) -> np.ndarray:
     # dithers them in time, and each becomes an LED that flashes now and
     # then, red or green by whichever channel the noise favoured. Below the
     # point is off; above it, the range is stretched back to white.
-    v = np.arange(256, dtype=np.float32)
-    v = np.clip((v - BLACK_POINT) / (255.0 - BLACK_POINT), 0.0, 1.0)
+    byte = np.arange(256, dtype=np.float32)
+    v = np.clip((byte - BLACK_POINT) / (255.0 - BLACK_POINT), 0.0, 1.0)
+    # the dark-end lean, by the channel's own level (see LOW_END)
+    t = np.clip((LOW_END - byte) / (LOW_END - LOW_FULL), 0.0, 1.0)
+    lean = np.stack([1.0 + (LOW_RED - 1.0) * t,
+                     np.ones_like(t),
+                     1.0 + (LOW_BLUE - 1.0) * t]).astype(np.float32)
     linear = np.power(v, 2.2)[None, :] \
-        * np.asarray(gains, dtype=np.float32)[:, None]
+        * np.asarray(gains, dtype=np.float32)[:, None] * lean
     np.clip(linear, 0.0, 1.0, out=linear)
     encoded = np.power(linear, 1.0 / 2.2) * 255.0
     return (encoded + 0.5).astype(np.uint8)
 
 
-# Pictures: the panel's red-first low end. See steady().
-PIC_BLACK = 40      # below this, off
-PIC_FLOOR = 72      # the dimmest a lit picture pixel is sent at
+# Pictures: the panel's dark end. See steady(). A cut at 40 was tried and
+# took the rocks and the shadow side of a figure clean off the wall; the
+# lift keeps them, compressed but in order.
+PIC_BLACK = 16      # below this, a photograph's noise: off
+PIC_FLOOR = 64      # the dimmest a lit picture pixel is drawn at (the black
+                    # point below takes it to about 52 as sent: two of the
+                    # panel's 64 steps at the current cap)
 PIC_KNEE = 104      # from here up, as drawn
+
+# The panel's colour at the dark end. Its LEDs sit on short drive windows,
+# and a red LED reaches full current far sooner in a window than a blue one
+# (its forward voltage is lowest, blue's highest), so a dim pixel of any
+# hue leans red and loses blue: pink skin on a dark sleeve came out orange.
+# Below LOW_END the balance leans the other way to meet it, fully by
+# LOW_FULL. Two numbers to tune by eye, from a photo of the wall.
+LOW_END = 160.0
+LOW_FULL = 40.0
+LOW_RED = 0.85      # red gain at the dark end, relative
+LOW_BLUE = 1.35     # blue gain at the dark end, relative
 
 
 def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
@@ -81,11 +101,9 @@ def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
         lift = np.where(peak < NOISE, 0.0,
                         np.where(peak < FLOOR, FLOOR / safe, 1.0))
     else:
-        # Pictures. Below about a quarter this panel lights red first, so a
-        # dim tone of any hue comes out red, and a curve that left dim tones
-        # dim (an earlier try) turned a dark sleeve into red murk. Deep
-        # shadows go black, and everything else is lifted over the red zone
-        # with its order kept: 40 -> 72, 72 -> 88, 104 -> 104, then as is.
+        # Pictures. The panel has only a few steps at the dark end, so the
+        # shadows are lifted into the steps it has, in order: 16 -> 64,
+        # 44 -> 77, 72 -> 89, 104 -> 104, then as is. Noise below 16 is off.
         knee = PIC_KNEE
         wanted = np.where(peak < PIC_BLACK, 0.0,
                           np.where(peak < knee,
