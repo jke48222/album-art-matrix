@@ -56,7 +56,7 @@ final class StandIn {
         if let v = patch["timer_min"] as? Double {
             if v > 0 {
                 let ret = timer?.ret
-                    ?? (["timer", "frame", "clip"].contains(state.mode) ? "clock" : state.mode)
+                    ?? (["timer", "frame", "clip", "video"].contains(state.mode) ? "clock" : state.mode)
                 timer = (Date().addingTimeInterval(v * 60), v * 60, ret)
                 state.mode = "timer"
                 state.timerTotal = Int(v * 60)

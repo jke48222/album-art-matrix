@@ -44,8 +44,11 @@ _PATTERNS = [
 # The picture: the smallest stream there is, H.264 first because it is the
 # cheapest to decode. 144p is 256 px wide; the panel is 64.
 _VIDEO_PREF = {160: 0, 278: 1, 394: 2, 133: 3, 242: 4, 395: 5, 134: 6, 18: 7}
-# The sound: AAC in an mp4 container, which AVPlayer plays as it is.
-_AUDIO_PREF = {140: 0, 139: 1}
+# The sound: AAC in an mp4 container, which AVPlayer plays as it is. The
+# file lives in the wall's RAM, so a long video takes the small one.
+_AUDIO_PREF = {140: 0, 139: 1}          # 130 kbps, 50 kbps
+_LONG_S = 20 * 60
+_AUDIO_MAX = 80_000_000
 
 
 def video_id(url: str) -> Optional[str]:
@@ -90,15 +93,19 @@ def resolve(url: str, timeout: float = 15.0) -> Media:
         raise ResolveError("YouTube gave no plain picture stream"
                            + (" (only signed ones: the client trick has changed)" if ciphered else ""))
     v = videos[0]
+    duration = float(det.get("lengthSeconds") or 0)
     audios = [f for f in fmts if f.get("url") and f.get("itag") in _AUDIO_PREF]
-    audios.sort(key=lambda f: _AUDIO_PREF[f["itag"]])
+    audios.sort(key=lambda f: _AUDIO_PREF[f["itag"]], reverse=duration > _LONG_S)
     a = audios[0] if audios else None
+    if a and int(a.get("contentLength") or 0) > _AUDIO_MAX:
+        raise ResolveError("too long: the sound would not fit in the wall's memory")
     codec = re.search(r'codecs="([^".]+)', v.get("mimeType", ""))
     note = " ".join(x for x in (v.get("qualityLabel"), codec.group(1) if codec else None) if x)
     return Media(title=det.get("title") or "YouTube",
                  author=det.get("author") or "",
-                 duration_s=float(det.get("lengthSeconds") or 0),
+                 duration_s=duration,
                  video_url=v["url"], video_note=note or "picture",
+                 video_bytes=int(v["contentLength"]) if v.get("contentLength") else None,
                  audio_url=a["url"] if a else None,
                  audio_bytes=int(a["contentLength"]) if a and a.get("contentLength") else None,
                  headers={"User-Agent": UA})

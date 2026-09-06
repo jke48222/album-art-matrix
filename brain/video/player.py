@@ -31,6 +31,7 @@ FPS = 15
 AHEAD_S = 120           # decode this far past the playhead, then wait
 BEHIND_S = 20           # keep this much behind it, for a scrub back
 READY_S = 2.0           # picture buffered before the wall says "ready"
+CHUNK = 1_000_000       # the sound comes down in ranged pieces this big
 AUDIO_DIR = ("/dev/shm/album-art-matrix" if os.path.isdir("/dev/shm")
              else os.path.join(tempfile.gettempdir(), "album-art-matrix"))
 _LOADING_INK = (232, 176, 75)
@@ -102,12 +103,15 @@ class VideoPlayer:
         threading.Thread(target=self._run, args=(gen, url), daemon=True,
                          name="video-fetch").start()
 
-    def stop(self):
+    def stop(self, error: str | None = None):
+        """Over. An error given here outlives the stop, so the phone can
+        still read why the video never came."""
         with self._lock:
             self._gen += 1
             proc, path = self._proc, self.audio_path
             self._proc = None
             self._blank()
+            self.error = error
         self._kill(proc)
         if path:
             try:
@@ -197,6 +201,25 @@ class VideoPlayer:
                 out = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
                 if out.returncode != 0:
                     raise RuntimeError((out.stderr or "ffmpeg failed").strip().splitlines()[-1][:120])
+            elif media.audio_bytes:
+                # In pieces, each asked for by byte range: YouTube serves a
+                # ranged megabyte at full speed and a whole file at a crawl
+                # (3 MB/s against 32 KB/s, measured from the wall).
+                total = media.audio_bytes
+                with requests.Session() as sess, open(path, "wb") as fh:
+                    sess.headers.update(media.headers)
+                    got = 0
+                    while got < total:
+                        if not self._current(gen):
+                            return
+                        end = min(total, got + CHUNK) - 1
+                        r = sess.get(media.audio_url, headers={"Range": f"bytes={got}-{end}"},
+                                     timeout=30)
+                        if r.status_code not in (200, 206) or not r.content:
+                            raise RuntimeError(f"HTTP {r.status_code} at byte {got}")
+                        fh.write(r.content)
+                        got += len(r.content)
+                        self.audio_got = got
             else:
                 with requests.get(media.audio_url, headers=media.headers, stream=True,
                                   timeout=30) as r:
