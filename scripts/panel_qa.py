@@ -74,6 +74,26 @@ class Geom:
 
 
 G = Geom()          # set from the command line before any pattern is built
+
+# The renderer's launch tunables live in files the brain and run_renderer.sh
+# both read. The QA tool reads them too, so a pattern is lit at the same cap
+# and dither the wall runs at rather than at some default of its own.
+PI_ROOT = os.path.expanduser("~/album-art-matrix")
+
+
+def _clamp_int(v, lo, hi):
+    try:
+        return max(lo, min(hi, int(v)))
+    except (TypeError, ValueError):
+        return lo
+
+
+def _tunable(name, default, kind=int):
+    try:
+        with open(os.path.join(PI_ROOT, name)) as fh:
+            return kind(fh.read().strip())
+    except (OSError, ValueError):
+        return default
 DEFAULT_FIFO = os.environ.get("FRAME_FIFO", "/tmp/album-frame.fifo")
 DEFAULT_HTTP = "http://album-matrix.local:8788"
 
@@ -372,31 +392,73 @@ def sequence():
 class FifoTransport:
     """Straight to the renderer's named pipe. What you send is what lights up:
     no white balance, no brightness scaling, no brain in the way. Requires the
-    brain stopped so the two are not both writing frames."""
+    brain stopped so the two are not both writing frames.
+
+    Every frame goes out behind the renderer's eight byte header, the same one
+    brain/sinks/pi_renderer.py writes: "TSRA", the panel brightness (1-254),
+    the dither strength in tenths, two spare. art_display scans for that magic
+    and drops everything else, so a frame sent without it does not appear as a
+    wrong picture, it appears as nothing at all: the panel stays black while
+    the renderer reads and discards. The cap and the dither come from the same
+    files run_renderer.sh reads, so a QA pattern is lit the way the wall is.
+
+    The pipe is opened once and held. Opening per frame loses the walk
+    patterns, which send 192 frames in twelve seconds.
+    """
 
     name = "fifo"
+    MAGIC = b"TSRA"
 
-    def __init__(self, path=DEFAULT_FIFO):
+    def __init__(self, path=DEFAULT_FIFO, brightness=None, dither=None):
         self.path = path
         if not os.path.exists(path):
             raise SystemExit(
                 "no fifo at %s. Start pi/run_renderer.sh first, or pass "
                 "--to http://album-matrix.local:8788" % path)
+        self.brightness = _clamp_int(
+            brightness if brightness is not None else _tunable("panel-brightness", 160),
+            1, 254)
+        dit = dither if dither is not None else _tunable("dither", 0.0, float)
+        self.head = self.MAGIC + bytes((self.brightness,
+                                        _clamp_int(round(float(dit) * 10), 0, 100),
+                                        0, 0))
+        self._fd = None
 
-    def send(self, frame):
+    def _connect(self):
+        if self._fd is not None:
+            return
         try:
-            fd = os.open(self.path, os.O_WRONLY | os.O_NONBLOCK)
+            # Non-blocking open so a missing reader is an immediate ENXIO
+            # rather than a hang, then blocking writes so a frame goes whole.
+            self._fd = os.open(self.path, os.O_WRONLY | os.O_NONBLOCK)
         except OSError as exc:
             if exc.errno in (errno.ENXIO, errno.ENOENT):
                 raise SystemExit(
-                    "renderer is not listening on %s. Start "
-                    "pi/run_renderer.sh" % self.path)
+                    "nothing is reading %s. Start the renderer: "
+                    "sudo systemctl start album-art-renderer" % self.path)
             raise
-        with os.fdopen(fd, "wb") as fh:
-            fh.write(frame.tobytes())
+        os.set_blocking(self._fd, True)
+
+    def send(self, frame):
+        self._connect()
+        buf = memoryview(self.head + frame.tobytes())
+        sent = 0
+        while sent < len(buf):
+            try:
+                sent += os.write(self._fd, buf[sent:])
+            except BrokenPipeError:
+                os.close(self._fd)
+                self._fd = None
+                raise SystemExit("the renderer went away mid-pattern")
 
     def close(self):
-        self.send(blank())
+        try:
+            self.send(blank())
+        except SystemExit:
+            pass
+        if self._fd is not None:
+            os.close(self._fd)
+            self._fd = None
 
 
 class HttpTransport:
@@ -472,7 +534,8 @@ def make_transport(args):
     if to is None:
         to = "fifo" if os.path.exists(DEFAULT_FIFO) else DEFAULT_HTTP
     if to == "fifo":
-        return FifoTransport()
+        return FifoTransport(brightness=getattr(args, "brightness", None),
+                             dither=getattr(args, "dither", None))
     if to.startswith("http"):
         return HttpTransport(to)
     if to == "preview":
@@ -839,6 +902,12 @@ def main():
         p.add_argument("--tile", type=int, default=None,
                        help="the tile the FIRST named panel is standing in, "
                             "1 up, reading across from the top left")
+        p.add_argument("--brightness", type=int, default=None,
+                       help="panel cap 1-254 for this run (default: the "
+                            "wall's own panel-brightness file)")
+        p.add_argument("--dither", type=float, default=None,
+                       help="dither strength 0-10 for this run (default: the "
+                            "wall's own dither file)")
 
     s = sub.add_parser("sweep", help="run the full QA sweep on one panel")
     common(s)
@@ -884,6 +953,17 @@ def main():
     G = Geom(cols, rows)
     if (cols * TILE) % 32:
         raise SystemExit("the renderer needs a width that is a multiple of 32")
+    # The renderer reads exactly one wall of pixels per frame, from the shape
+    # IT was launched with. If the two disagree every frame is the wrong
+    # length and the panel shows nothing at all, which looks like dead
+    # hardware and is not, so it is caught here instead.
+    running = _tunable("wall", None, str)
+    if running and running != shape.lower() and getattr(args, "to", None) != "preview":
+        raise SystemExit(
+            "the renderer is running %s and this is --wall %s.\n"
+            "        echo %s > ~/album-art-matrix/wall\n"
+            "        sudo systemctl restart album-art-renderer"
+            % (running, shape, shape))
     args.func(args)
 
 

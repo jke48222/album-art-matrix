@@ -66,10 +66,36 @@ static const char *fifo_path(void) {
 static void map_frame(scene_info *scene, const uint8_t *rgb,
                       uint8_t *staged, size_t frame_bytes);
 
+// What the library's mapper actually reads, which is not what it was given.
+//
+// update_bcm_signal_64_rgb() in pixels.c takes six base pointers off the
+// image every pixel: the top and bottom half of three ports, at
+// width * (panel_height/2) pixels apart, and it does that whatever
+// scene->num_ports says. A wall on one port hands it a third of that and it
+// reads the other two thirds off the end of the buffer.
+//
+// One 64x64 panel over-read 24 KB past a 12 KB buffer for months and never
+// faulted, because the heap had those pages. The first 192x64 frame (three
+// panels on one port) over-read 73 KB and killed the renderer with SIGSEGV
+// on the frame it mapped, which on the panel looks exactly like dead
+// hardware: black, and a service that keeps restarting.
+//
+// So the staging buffer is always sized for the three ports the mapper is
+// going to read, and calloc'd, so the ports that do not exist read as black
+// instead of as whatever follows in memory. At three ports this is the frame
+// size and costs nothing.
+static size_t mapper_bytes(const scene_info *scene) {
+    const size_t stride = (size_t)scene->stride;
+    const size_t frame = (size_t)scene->width * scene->height * stride;
+    const size_t six_halves =
+        6 * (size_t)scene->width * ((size_t)scene->panel_height / 2) * stride;
+    return frame > six_halves ? frame : six_halves;
+}
+
 static void *frame_reader(void *arg) {
     scene_info *scene = (scene_info *)arg;
     const size_t frame_bytes = (size_t)scene->width * scene->height * 3;
-    const size_t stage_bytes = (size_t)scene->width * scene->height * scene->stride;
+    const size_t stage_bytes = mapper_bytes(scene);
     uint8_t *rgb     = calloc(1, frame_bytes);
     uint8_t *staged  = calloc(1, stage_bytes);
     uint8_t *pending = calloc(1, frame_bytes);
@@ -241,8 +267,9 @@ int main(int argc, char **argv) {
     // takes effect live.
     scene->jitter_brightness = false;
 
-    // Defined black before the first frame arrives.
-    uint8_t *black = calloc(1, (size_t)scene->width * scene->height * scene->stride);
+    // Defined black before the first frame arrives. Sized for the mapper's
+    // reach, not the frame's, for the reason above.
+    uint8_t *black = calloc(1, mapper_bytes(scene));
     if (black) { scene->bcm_mapper(scene, black); free(black); }
 
     pthread_t tid;
