@@ -81,8 +81,8 @@ PIC_KNEE = 104      # from here up, as drawn
 # LOW_FULL. Two numbers to tune by eye, from a photo of the wall.
 LOW_END = 160.0
 LOW_FULL = 40.0
-LOW_RED = 0.85      # red gain at the dark end, relative
-LOW_BLUE = 1.35     # blue gain at the dark end, relative
+LOW_RED = 0.93      # red gain at the dark end, relative (0.85 read orange-free but blue)
+LOW_BLUE = 1.15     # blue gain at the dark end, relative (1.35 was overly blue)
 
 
 def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:

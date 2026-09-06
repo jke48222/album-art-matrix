@@ -243,6 +243,11 @@ class VideoPlayer:
                 if r.status_code == 403 and chunk > 65536:
                     chunk //= 2
                     continue
+                if r.status_code == 403 and got > 0:
+                    # the first stretch came and the rest will not: this is
+                    # YouTube's token wall, seen on big label releases
+                    raise RuntimeError("YouTube stopped serving it after the first stretch; "
+                                       "this video needs a signed-in token now (see VIDEO.md)")
                 if r.status_code not in (200, 206) or not r.content:
                     raise RuntimeError(f"HTTP {r.status_code} at byte {got}")
                 fh.write(r.content)
