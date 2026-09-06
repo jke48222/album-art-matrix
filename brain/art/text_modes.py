@@ -134,7 +134,8 @@ class Countdown:
 
     MM:SS in 2x glyphs, and the panel's border is the vessel: it starts full
     and drains clockwise from the top as the time runs, so the shape of what
-    is left is visible long before the digits are legible. The drain is
+    is left is visible long before the digits are legible; what has run out
+    is dark, since this panel shows a dim accent as red. The drain is
     continuous: the border's leading LED is lit by exactly the fraction of
     its share of the time that is left, and a soft bright head rides that
     edge, so the eye sees a point sliding round the panel rather than a
@@ -207,12 +208,17 @@ class Countdown:
         """The border with `pos` LEDs' worth of time left (a float: the
         LED at the edge is lit by its fraction), a bright head riding the
         edge, and an optional flash over the whole ring."""
+        # The drained part is off, not dim. A quarter-strength accent was
+        # the first try and the panel showed it red: at that level its red
+        # LEDs light long before the green and blue do, so a dim yellow, or
+        # a dim anything, comes out red. The edge LED fades to about a
+        # quarter and then goes out for the same reason.
         accent = np.array(self.accent, dtype=np.float32)
-        dim = accent * 0.25
         cover = np.clip(pos - self._ring_i, 0.0, 1.0)
         head = np.clip(1.0 - np.abs(self._ring_i + 0.5 - pos) / 3.0, 0.0, 1.0)
-        rgb = dim + (accent - dim) * cover[:, None]
+        rgb = accent * cover[:, None]
         rgb += accent * 0.5 * (head * cover)[:, None]
+        rgb[rgb.max(axis=1) < 72.0] = 0.0
         if flash > 0:
             rgb += (np.array((255, 255, 255), np.float32) - rgb) * flash
         canvas[self._ring_y, self._ring_x] = np.clip(rgb, 0, 255).astype(np.uint8)
