@@ -131,6 +131,10 @@ struct ControlCenterPanel: View {
     @State private var timerTyping = false
     @State private var timerTyped = ""
     @FocusState private var timerFocus: Bool
+    // The alarm's time, typed the same way: "7:30", "19:45", "7:30 pm".
+    @State private var alarmTyping = false
+    @State private var alarmTyped = ""
+    @FocusState private var alarmFocus: Bool
     private var accent: Color { light.steadyAccent }
     /// Ink that can be read on the record's own colour, whatever it is.
     private var onAccent: Color {
@@ -575,9 +579,77 @@ struct ControlCenterPanel: View {
                     choice("24 hour", true, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
                     choice("12 hour", false, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
                 }
+                alarmRow
                 colours
             }
         }
+    }
+
+    /// A time of day the wall rings, with the timer's ending.
+    private var alarmRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("Alarm").font(.ui(14)).foregroundStyle(ink.ink)
+            if alarmTyping {
+                TextField("", text: $alarmTyped)
+                    .font(.display(22)).foregroundStyle(ink.ink)
+                    .keyboardType(.numbersAndPunctuation)
+                    .submitLabel(.done)
+                    .focused($alarmFocus)
+                    .onSubmit { commitTypedAlarm() }
+                    .onChange(of: alarmFocus) { _, on in if !on { commitTypedAlarm() } }
+                    .frame(maxWidth: 130)
+            } else {
+                Text(alarmLabel(wall.state.alarmTime)).font(.display(22)).foregroundStyle(ink.ink)
+                    .contentTransition(.numericText())
+                    .onTapGesture {
+                        alarmTyped = alarmLabel(wall.state.alarmTime)
+                        alarmTyping = true
+                        alarmFocus = true
+                        Taps.detent(intensity: 0.3)
+                    }
+                    .accessibilityHint("Tap to type a time")
+            }
+            Spacer()
+            Toggle("", isOn: Binding(get: { wall.state.alarmEnabled },
+                                     set: { wall.send(["alarm_enabled": $0]); Taps.detent(intensity: 0.4) }))
+                .labelsHidden()
+                .tint(accent)
+                .accessibilityLabel("Alarm on")
+        }
+    }
+
+    /// "07:30" on the 24 hour clock, "7:30 AM" on the 12 hour one.
+    private func alarmLabel(_ hhmm: String) -> String {
+        let bits = hhmm.split(separator: ":")
+        guard bits.count == 2, let h = Int(bits[0]), let m = Int(bits[1]) else { return hhmm }
+        if wall.state.clock24h { return String(format: "%02d:%02d", h, m) }
+        let h12 = h % 12 == 0 ? 12 : h % 12
+        return String(format: "%d:%02d %@", h12, m, h < 12 ? "AM" : "PM")
+    }
+
+    /// What was typed, as HH:MM: "7:30", "07:30", "7:30 pm", "7pm", "1930".
+    private func commitTypedAlarm() {
+        guard alarmTyping else { return }
+        alarmTyping = false; alarmFocus = false
+        var t = alarmTyped.lowercased().replacingOccurrences(of: " ", with: "")
+        var pm: Bool? = nil
+        if t.hasSuffix("pm") { pm = true; t = String(t.dropLast(2)) }
+        else if t.hasSuffix("am") { pm = false; t = String(t.dropLast(2)) }
+        t = t.replacingOccurrences(of: ".", with: ":")
+        var h = -1, m = 0
+        if t.contains(":") {
+            let p = t.split(separator: ":", omittingEmptySubsequences: false)
+            if p.count == 2, let hh = Int(p[0]), let mm = Int(p[1]) { h = hh; m = mm }
+        } else if let v = Int(t) {
+            if t.count <= 2 { h = v } else { h = v / 100; m = v % 100 }
+        }
+        guard h >= 0, h < 24 || (pm != nil && h <= 12), m >= 0, m < 60 else { return }
+        if let pm {
+            h = h % 12 + (pm ? 12 : 0)
+        }
+        guard h < 24 else { return }
+        wall.send(["alarm_time": String(format: "%02d:%02d", h, m)])
+        Taps.detent(intensity: 0.3)
     }
 
     /// "12" for whole minutes, "1:30" otherwise.

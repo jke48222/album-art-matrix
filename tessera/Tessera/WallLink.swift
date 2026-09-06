@@ -38,6 +38,8 @@ struct WallState: Equatable {
     var panelBrightness: Double = 160
     var idle: String = "black"
     var away: String = "stay"
+    var alarmEnabled: Bool = false
+    var alarmTime: String = "07:00"
     var wakeEnabled: Bool = false
     var wakeTime: String = "07:00"
     var wakeFade: Double = 20
@@ -105,6 +107,8 @@ struct WallState: Equatable {
         panelBrightness = json["panel_brightness"] as? Double ?? 160
         idle = json["idle"] as? String ?? "black"
         away = json["away"] as? String ?? "stay"
+        alarmEnabled = json["alarm_enabled"] as? Bool ?? false
+        alarmTime = json["alarm_time"] as? String ?? "07:00"
         wakeEnabled = json["wake_enabled"] as? Bool ?? false
         wakeTime = json["wake_time"] as? String ?? "07:00"
         wakeFade = json["wake_fade_min"] as? Double ?? 20
@@ -369,6 +373,8 @@ final class WallSession {
             keep("ticker_style", &fresh.tickerStyle, mine.tickerStyle)
             keep("ticker_colors", &fresh.tickerColors, mine.tickerColors)
             keep("clock_24h", &fresh.clock24h, mine.clock24h)
+            keep("alarm_enabled", &fresh.alarmEnabled, mine.alarmEnabled)
+            keep("alarm_time", &fresh.alarmTime, mine.alarmTime)
             keep("idle", &fresh.idle, mine.idle)
             keep("away", &fresh.away, mine.away)
             keep("wake_enabled", &fresh.wakeEnabled, mine.wakeEnabled)

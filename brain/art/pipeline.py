@@ -59,6 +59,12 @@ def _wb_lut(gains: tuple) -> np.ndarray:
     return (encoded + 0.5).astype(np.uint8)
 
 
+# Pictures: the panel's red-first low end. See steady().
+PIC_BLACK = 40      # below this, off
+PIC_FLOOR = 72      # the dimmest a lit picture pixel is sent at
+PIC_KNEE = 104      # from here up, as drawn
+
+
 def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
     """Dim tones raised to where the panel can hold them. See FLOOR.
 
@@ -75,9 +81,18 @@ def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
         lift = np.where(peak < NOISE, 0.0,
                         np.where(peak < FLOOR, FLOOR / safe, 1.0))
     else:
-        eased = FLOOR * np.sqrt(safe / FLOOR)          # 16 -> 32, 32 -> 45, 48 -> 55
-        lift = np.where(peak < NOISE, 0.0,
-                        np.where(peak < FLOOR, eased / safe, 1.0))
+        # Pictures. Below about a quarter this panel lights red first, so a
+        # dim tone of any hue comes out red, and a curve that left dim tones
+        # dim (an earlier try) turned a dark sleeve into red murk. Deep
+        # shadows go black, and everything else is lifted over the red zone
+        # with its order kept: 40 -> 72, 72 -> 88, 104 -> 104, then as is.
+        knee = PIC_KNEE
+        wanted = np.where(peak < PIC_BLACK, 0.0,
+                          np.where(peak < knee,
+                                   PIC_FLOOR + (safe - PIC_BLACK)
+                                   * (knee - PIC_FLOOR) / (knee - PIC_BLACK),
+                                   safe))
+        lift = wanted / safe
     return np.clip(a * lift, 0, 255).astype(np.uint8)
 
 
