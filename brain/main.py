@@ -603,9 +603,10 @@ def main():
                                               accent=s["color2"])
                         countdown_key = key
                     left = tm["end"] - time.monotonic()
-                    if left <= -60:
-                        # a minute of light is the whole alarm; then put back
-                        # whatever the wall was doing before the timer took it
+                    if left <= -180:
+                        # three minutes of fireworks is the whole alarm (Stop
+                        # on the phone ends it sooner); then put back whatever
+                        # the wall was doing before the timer took it
                         ctrl.timer = None
                         ctrl.apply({"mode": tm["ret"]})
                         continue
