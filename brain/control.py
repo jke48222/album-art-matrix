@@ -455,10 +455,17 @@ class ControlState:
                          "ever": bool(bits & 0x70000)}   # since boot
         except Exception:
             pass
+        ytdlp_v = None
+        try:
+            from .video import ytdlp
+            ytdlp_v = ytdlp.version()
+        except Exception:
+            pass
         return {"fps": round(self.fps_last, 1), "temp_c": temp,
                 "throttled": throttled,
                 "uptime_s": int(time.monotonic() - _T0),
-                "mode": self.get()["mode"]}
+                "mode": self.get()["mode"],
+                "ytdlp": ytdlp_v}
 
     # ---- journal --------------------------------------------------------
     def journal_append(self, entry: dict):

@@ -31,7 +31,7 @@ import time
 import requests
 from PIL import Image, ImageDraw
 
-from . import Media, ResolveError, direct, youtube
+from . import Media, ResolveError, direct, youtube, ytdlp
 
 FPS = 15
 AHEAD_S = 120           # decode this far past the playhead, then wait
@@ -82,6 +82,8 @@ class VideoPlayer:
         self.audio_total = None
         self.picture_got = 0
         self.picture_total = None
+        self._picture_why = None       # why the picture stopped coming, if it did
+        self.by = "wall"               # who got it: the wall itself, or yt-dlp
 
     # ---- what the API asks ------------------------------------------------
     @property
@@ -107,6 +109,7 @@ class VideoPlayer:
             "sound_ready": self.audio_ready,
             "sound_got": self.audio_got, "sound_total": self.audio_total,
             "picture_got": self.picture_got, "picture_total": self.picture_total,
+            "by": self.by,
             "loop": self.loop, "clock": self.clock_mode,
         }
 
@@ -169,14 +172,62 @@ class VideoPlayer:
         self._dirty.set()
 
     # ---- the fetch ----------------------------------------------------------
-    def _run(self, gen, url, title):
+    def _get(self, gen, url):
+        """The streams for a link, and who got them.
+
+        YouTube's own answer first: it takes about a second. The proof that
+        it will really serve the video is the picture arriving whole, so
+        that download happens here, and a refusal part way through (the
+        token wall) falls through to yt-dlp, which knows ways in the wall
+        does not. Returns (media, reason it failed)."""
+        if not youtube.video_id(url):
+            try:
+                return direct.resolve(url), None
+            except ResolveError as exc:
+                return None, str(exc)
+            except Exception as exc:
+                return None, f"could not read that: {exc}"
+
+        fast_why = None
         try:
-            media = youtube.resolve(url) if youtube.video_id(url) else direct.resolve(url)
+            media = youtube.resolve(url)
         except ResolveError as exc:
-            self._fail(gen, str(exc))
-            return
+            fast_why = str(exc)
         except Exception as exc:
-            self._fail(gen, f"could not read that: {exc}")
+            fast_why = f"could not read that: {exc}"
+        else:
+            if not (media.video_bytes and media.video_bytes <= PICTURE_MAX):
+                return media, None          # too big to keep: ffmpeg streams it
+            path = self._fetch_picture(gen, media)
+            if path:
+                media.video_url, media.local = path, True
+                return media, None
+            if not self._current(gen):
+                return None, None
+            fast_why = self._picture_why or "YouTube stopped serving the picture"
+            self.picture_got, self.picture_total = 0, None
+
+        if not ytdlp.available():
+            return None, fast_why
+        print(f"[video] {fast_why}; asking yt-dlp")
+        try:
+            media = ytdlp.resolve(url, WORK_DIR)
+        except ResolveError as exc:
+            return None, f"{fast_why}. yt-dlp could not either: {exc}"
+        self.by = "yt-dlp"
+        with self._lock:
+            for f in (media.video_url, media.audio_url):
+                if f and f not in self._files:
+                    self._files.append(f)
+        return media, None
+
+    def _run(self, gen, url, title):
+        media, why = self._get(gen, url)
+        if media is None:
+            if why:
+                self._fail(gen, why)
+            return
+        if not self._current(gen):
             return
         if title:
             media.title = title
@@ -188,24 +239,25 @@ class VideoPlayer:
             self.sound = want_sound
         print(f"[video] {media.title!r}: {media.video_note}, "
               f"{media.duration_s:.0f} s, sound {'yes' if want_sound else 'no'}, "
-              f"clock {self.clock_mode}")
+              f"clock {self.clock_mode}, got by {self.by}")
         if self._on_media:
             try:
                 self._on_media(media)
             except Exception:
                 pass
-        if want_sound:
+        if want_sound and media.local:
+            # yt-dlp already fetched it; it is a file, and it is whole
+            with self._lock:
+                self.audio_path = media.audio_url
+                self.audio_got = self.audio_total = media.audio_bytes or 0
+                self.audio_ready = True
+        elif want_sound:
             threading.Thread(target=self._fetch_audio, args=(gen, media), daemon=True,
                              name="video-audio").start()
-        source = media.video_url
-        if _is_url(source) and media.video_bytes and media.video_bytes <= PICTURE_MAX:
-            source = self._fetch_picture(gen, media)
-            if source is None:
-                return
         with self._lock:
             if not self._current(gen):
                 return
-            self._source = source
+            self._source = media.video_url
         self._decode(gen, media, 0.0)
         # ready when a couple of seconds of picture are in and the sound is whole
         while self._current(gen):
@@ -256,11 +308,14 @@ class VideoPlayer:
         return True
 
     def _fetch_picture(self, gen, media: Media):
+        """The picture, kept whole on the RAM disk. None when YouTube would
+        not serve it all; the reason is left in _picture_why."""
         os.makedirs(WORK_DIR, exist_ok=True)
         path = os.path.join(WORK_DIR, f"picture-{gen}.mp4")
         with self._lock:
             self._files.append(path)
             self.picture_total = media.video_bytes
+            self._picture_why = None
         try:
             def progress(got):
                 self.picture_got = got
@@ -269,7 +324,11 @@ class VideoPlayer:
                 return None
             return path
         except Exception as exc:
-            self._fail(gen, f"the picture did not come: {exc}")
+            self._picture_why = str(exc)
+            try:
+                os.remove(path)
+            except OSError:
+                pass
             return None
 
     def _fetch_audio(self, gen, media: Media):

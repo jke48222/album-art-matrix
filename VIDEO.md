@@ -78,19 +78,41 @@ on the Pi is a large third-party stack that mirrors a whole phone screen in
 app will not hand video to one anyway. Bluetooth carries no video, and the
 sound already plays on the phone.
 
-## YouTube's token wall
+## YouTube's token wall, and yt-dlp
 
 Some videos, seen so far on big label releases, come back from every client
-identity with streams that serve about the first megabyte and then answer
-403 to everything, with no refill (measured 2026-09-06 on FyS5dAywkEo, from
-the Pi and the Mac alike, across nine client identities). That is YouTube's
-signed-in "proof of origin" token being enforced server by server, and the
-wall cannot mint one. The fetcher starts with megabyte pieces and halves
-them on a refusal, which handles the servers that merely cap the piece
-size; the token wall it reports plainly and stops. The route that does
-handle it is yt-dlp with a JavaScript runtime (deno) and its token
-provider plugin, a new set of binaries on the Pi (or on the Mac as a
-helper), which is a decision, not a default.
+identity the wall asks with streams that serve about the first megabyte and
+then answer 403 to everything, with no refill (measured 2026-09-06 on
+FyS5dAywkEo, from the Pi and the Mac alike, across eleven client
+identities). That is YouTube's signed-in "proof of origin" token being
+enforced, and the wall cannot mint one.
+
+So there are two ways in, and the wall tries them in order:
+
+1. **The wall's own resolver** (`youtube.py`), about a second. The proof
+   that YouTube will really serve the video is the picture arriving whole,
+   so that download happens during resolution; pieces start at a megabyte
+   and halve on a refusal, which handles servers that merely cap the piece
+   size.
+2. **yt-dlp** (`ytdlp.py`), when the first is refused. It runs as its own
+   process at nice 10, downloads the picture and the sound itself into the
+   RAM disk, and hands back two files. It reaches these videos through a
+   visionOS client identity carrying a visitor id, which is exactly the
+   kind of thing that changes month to month and exactly why the job
+   belongs to a project that tracks it. Measured on the Mac: the refused
+   video plays, ready in 7.3 s against 1.8 s for the fast path.
+
+`GET /video` says which got it, under `by`. `GET /health` says which
+version of yt-dlp is installed, or null.
+
+**No JavaScript runtime is installed.** yt-dlp warns that YouTube
+extraction without one is deprecated, but the client it reaches these
+videos with needs no player script, so deno's 80 MB and V8's appetite stay
+off a 1 GB board. If a video ever does need one, yt-dlp says so and the
+wall reports it; installing deno is then the next step.
+
+Install or update with `pi/install-ytdlp.sh`, which ends by fetching the
+known-refused video as its own proof.
 
 ## What it does not do
 
