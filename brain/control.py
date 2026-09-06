@@ -29,6 +29,10 @@ is on — no Mac required.
   POST /video/clock -> {t, playing}: the phone's player says where it is;
                    the wall shows the frame for that moment
   POST /video/control -> {action: play|pause|seek, t?}: the wall's own clock
+  GET  /tuning   -> every knob that decides what the LEDs do, with ranges
+  POST /tuning   -> {knob: value, ...}; says which need the renderer back
+  POST /tuning/reset   -> back to what the wall shipped with
+  POST /tuning/restart -> relaunch the renderer so launch flags take
   POST /video/stop -> the video is over; back to what the wall was doing
   POST /video/upload?title=&clock=phone -> the body is a small mp4 the phone
                    made from a video of its own; the wall plays the picture
@@ -54,6 +58,13 @@ from urllib.parse import parse_qs, urlparse
 STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
+
+# What Tessera draws on and reads back. The app checks for 64*64*3 raw bytes
+# in about thirty places, so the wire stays 64 whatever the wall grew to: a
+# doodle arrives at 64 and is blown up to the panel count, and the wall's own
+# frame is boxed back down to 64 for the app's preview. `?full=1` on
+# /frame.raw is the native frame, for anything that asks for it by name.
+PHONE_SIDE = 64
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
@@ -108,9 +119,14 @@ def _clamp(v, lo, hi):
 class ControlState:
     """Thread-safe control state shared between the API and the main loop."""
 
-    def __init__(self, seed: dict | None = None, frame_len: int = 64 * 64 * 3):
+    def __init__(self, seed: dict | None = None, frame_len: int = 64 * 64 * 3,
+                 wall=None):
         """seed: config.toml defaults — used only when no saved state exists
-        (a phone-set state should survive restarts over config defaults)."""
+        (a phone-set state should survive restarts over config defaults).
+
+        wall: the panel arrangement. The app speaks 64x64 and the wall may be
+        192x192, so every frame crossing this API is translated: what the
+        phone sends is scaled up, what it reads back is scaled down."""
         self._lock = threading.Lock()
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
@@ -120,6 +136,12 @@ class ControlState:
         self.progress = {}           # {at, of, playing, stamped}
         self.art_colors = None       # main loop writes ("#rrggbb", "#rrggbb")
         self.frame_len = frame_len
+        if wall is None:
+            from .wall import Wall
+            side = max(16, int(round((frame_len / 3) ** 0.5)))
+            wall = Wall(tile=side, cols=1, rows=1)
+        self.wall = wall
+        self.phone_side = PHONE_SIDE
         self.frame_override = None   # raw RGB bytes for mode "frame"
         self.clip = None             # {"fps": float, "frames": [bytes]}
         self.last_frame = None       # pre-WB RGB of whatever was last shown
@@ -151,6 +173,7 @@ class ControlState:
         self.source = None           # the whole chain, for /nowplaying
         self.video = None            # video.player.VideoPlayer, set by main
         self.video_ret = None        # the mode a video interrupted
+        self.tuning = None           # tuning.Tuning: every LED knob
         self._showing_before = None  # now_showing from before the video
         # Bumps whenever new content lands (track change, replay, pushed frame
         # or clip) — never on a settings change. Clients key their arrival
@@ -336,7 +359,13 @@ class ControlState:
     def public_state(self) -> dict:
         """What GET /state returns — settings plus live extras."""
         out = {**self.get(), "now_showing": self.now_showing,
-               "progress": self.progress, "shown_seq": self.shown_seq}
+               "progress": self.progress, "shown_seq": self.shown_seq,
+               # The shape of the thing on the wall. /frame.raw still answers
+               # in phone_side pixels unless asked for the full frame, so an
+               # app that ignores these keys keeps working.
+               "wall": {"width": self.wall.width, "height": self.wall.height,
+                        "tile": self.wall.tile, "cols": self.wall.cols,
+                        "rows": self.wall.rows, "frame_side": self.phone_side}}
         # which song the phone's pressing is for, so the app (and anyone
         # looking) can tell whether the spin face has one to turn
         if self.pressing is not None:
@@ -639,15 +668,32 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, ctrl.video.public() if ctrl.video is not None
                            else {"status": "idle"})
                 return
+            if u.path.startswith("/tuning"):
+                if ctrl.tuning is None:
+                    self._json(503, {"error": "tuning is not available on this wall"})
+                    return
+                self._json(200, ctrl.tuning.public())
+                return
             if u.path.startswith("/frame.raw"):
                 px = ctrl.last_frame
                 if px is None:
                     self._json(404, {"error": "nothing shown yet"})
                     return
+                # The app asks for a frame and means "the picture the wall is
+                # showing", not "one byte per LED": it draws its own emitters
+                # at its own size. A nine panel wall would hand it nine times
+                # the bytes and every length check in it would refuse them.
+                full = parse_qs(u.query).get("full", ["0"])[0] not in ("0", "", "false")
+                if not full:
+                    px = ctrl.wall.phone_view(px, ctrl.phone_side)
                 self.send_response(200)
                 self.send_header("Content-Type", "application/octet-stream")
                 self.send_header("Content-Length", str(len(px)))
                 self.send_header("Access-Control-Allow-Origin", "*")
+                side = ctrl.wall.width if full else ctrl.phone_side
+                self.send_header("X-Frame-Width", str(side))
+                self.send_header("X-Frame-Height",
+                                 str(ctrl.wall.height if full else ctrl.phone_side))
                 self.end_headers()
                 self.wfile.write(px)
                 return
@@ -667,8 +713,12 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 key, shots = ctrl._finish_shots
                 if key != ctrl.finish_seq:
                     from .art.pipeline import apply_finish
-                    shots = {n: base64.b64encode(
-                        apply_finish(base, n).convert("RGB").tobytes()).decode()
+                    # Rendered at the wall's size, sent at the phone's: the
+                    # finish is what the quantiser does to this picture, and
+                    # it has to be judged on the picture the wall will show.
+                    shots = {n: base64.b64encode(ctrl.wall.phone_view(
+                        apply_finish(base, n).convert("RGB").tobytes(),
+                        ctrl.phone_side)).decode()
                         for n in ("clean", "dither", "poster")}
                     ctrl._finish_shots = (ctrl.finish_seq, shots)
                 self._json(200, shots)
@@ -738,10 +788,13 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     px = base64.b64decode(patch.get("px", ""), validate=True)
                 except (ValueError, TypeError):
                     px = b""
-                if len(px) != ctrl.frame_len:
+                px = ctrl.wall.fit(px)
+                if px is None:
                     self._json(400, {"error":
-                                     f"px must be {ctrl.frame_len} raw RGB "
-                                     "bytes, base64-encoded"})
+                                     f"px must be square raw RGB, "
+                                     f"{ctrl.phone_side}x{ctrl.phone_side} or "
+                                     f"{ctrl.wall.width}x{ctrl.wall.height}, "
+                                     "base64-encoded"})
                     return
                 ctrl.frame_override = px
                 ctrl.shown_seq += 1
@@ -759,10 +812,13 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     px = base64.b64decode(data.get("px", ""), validate=True)
                 except (ValueError, TypeError):
                     px = b""
-                if len(px) != ctrl.frame_len:
+                px = ctrl.wall.fit(px)
+                if px is None:
                     self._json(400, {"error":
-                                     f"px must be {ctrl.frame_len} raw RGB "
-                                     "bytes, base64-encoded"})
+                                     f"px must be square raw RGB, "
+                                     f"{ctrl.phone_side}x{ctrl.phone_side} or "
+                                     f"{ctrl.wall.width}x{ctrl.wall.height}, "
+                                     "base64-encoded"})
                     return
                 ctrl.pressing = (str(data.get("track") or ""), px)
                 ctrl.dirty.set()
@@ -784,16 +840,60 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                         b = base64.b64decode(f, validate=True)
                     except (ValueError, TypeError):
                         b = b""
-                    if len(b) != ctrl.frame_len:
+                    b = ctrl.wall.fit(b)
+                    if b is None:
                         self._json(400, {"error":
-                                         "every frame must be "
-                                         f"{ctrl.frame_len} raw RGB bytes"})
+                                         "every frame must be square raw RGB, "
+                                         f"{ctrl.phone_side}x{ctrl.phone_side} "
+                                         f"or {ctrl.wall.width}x{ctrl.wall.height}"})
                         return
                     frames.append(b)
                 ctrl.clip = {"fps": _clamp(fps, 1, 24), "frames": frames}
                 ctrl.shown_seq += 1
                 ctrl.apply({"mode": "clip"})
                 self._json(200, ctrl.public_state())
+                return
+
+            if self.path.startswith("/tuning/restart"):
+                if ctrl.tuning is None:
+                    self._json(503, {"error": "tuning is not available on this wall"})
+                    return
+                said = ctrl.tuning.restart_renderer()
+                print(f"[tuning] {said}")
+                self._json(200, {"said": said})
+                return
+
+            if self.path.startswith("/tuning/reset"):
+                if ctrl.tuning is None:
+                    self._json(503, {"error": "tuning is not available on this wall"})
+                    return
+                ctrl.tuning.reset()
+                ctrl.dirty.set()
+                print("[tuning] back to what the wall shipped with")
+                out = ctrl.tuning.public()
+                out["restart"] = True        # the launch flags moved too
+                self._json(200, out)
+                return
+
+            if self.path.startswith("/tuning"):
+                patch = self._body()
+                if patch is None:
+                    return
+                if ctrl.tuning is None:
+                    self._json(503, {"error": "tuning is not available on this wall"})
+                    return
+                changed, rejected, restart = ctrl.tuning.update(patch)
+                if changed:
+                    # a colour or dark-end knob changes the picture that is
+                    # already up, so it has to be drawn again
+                    ctrl.last_frame = None
+                    ctrl.dirty.set()
+                    print(f"[tuning] {', '.join(f'{k}={v}' for k, v in changed.items())}")
+                out = ctrl.tuning.public()
+                out["restart"] = restart
+                if rejected:
+                    out["rejected"] = sorted(rejected)
+                self._json(200, out)
                 return
 
             if self.path.startswith("/video/clock"):

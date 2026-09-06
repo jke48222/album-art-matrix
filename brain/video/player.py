@@ -43,7 +43,14 @@ AHEAD_S = 120           # decode this far past the playhead, then wait
 BEHIND_S = 20           # keep this much behind it, for a scrub back
 READY_S = 2.0           # picture buffered before the wall says "ready"
 ALONE_S = 12.0          # waiting for the phone's clock before starting alone
-SRC = 192               # ffmpeg's output side, three times a 64 px panel
+SRC = 192               # ffmpeg's output side for a 64 px panel, three times it
+# How much decoded picture may sit in memory. The window used to be counted
+# in seconds, which was 22 MB of 64 px frames and would have been 230 MB of
+# 192 px ones: a nine panel frame is nine times the bytes, and this board has
+# a gigabyte in total. Seconds still cap it, so a small panel keeps exactly
+# the window it had; a big one gets as many frames as the budget allows.
+FRAME_BUDGET = 32_000_000
+BEHIND_BUDGET = 8_000_000
 # Where a video's own midtones should land. A panel this size holds a level
 # steadily only from about a quarter of the way up; below that the renderer
 # dithers in time and the picture becomes a field of single LEDs blinking
@@ -69,10 +76,17 @@ class VideoPlayer:
     def __init__(self, size: int, dirty: threading.Event, on_media=None,
                  unsharp_radius: float = 1.0, unsharp_percent: int = 60):
         self.size = size
+        # ffmpeg hands over a square twice the panel and the last step down is
+        # Lanczos in _finish. At 64 that is the 192 it always was.
+        self.src = max(SRC, size * 2)
+        px = size * size * 3
+        self._ahead = min(AHEAD_S * FPS, max(FPS * 10, FRAME_BUDGET // px))
+        self._behind = min(BEHIND_S * FPS, max(FPS * 3, BEHIND_BUDGET // px))
         # the same unsharp the sleeves get, so a frame of video and a sleeve
         # are finished by the same hand
         self.unsharp_radius = float(unsharp_radius)
         self.unsharp_percent = int(unsharp_percent)
+        self.tone_target = TONE_TARGET      # the tuning may move this
         self._dirty = dirty            # wakes the main loop
         self._on_media = on_media      # told the title once the link resolves
         self._lock = threading.Lock()
@@ -428,7 +442,7 @@ class VideoPlayer:
         # the art pipeline uses.
         cmd += ["-i", source, "-an",
                 "-vf", f"crop=min(iw\\,ih):min(iw\\,ih),"
-                       f"scale={SRC}:{SRC}:flags=lanczos+accurate_rnd+full_chroma_int",
+                       f"scale={self.src}:{self.src}:flags=lanczos+accurate_rnd+full_chroma_int",
                 "-r", str(FPS), "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]
         if shutil.which("nice"):
             cmd = ["nice", "-n", "10"] + cmd
@@ -451,7 +465,7 @@ class VideoPlayer:
         unsharp (art/pipeline.prepare), then the clip's lift. Done here, on
         the decode thread, so the frame window still holds panel-sized
         frames and the main loop still just hands one over."""
-        img = Image.frombytes("RGB", (SRC, SRC), raw)
+        img = Image.frombytes("RGB", (self.src, self.src), raw)
         img = img.resize((self.size, self.size), Image.LANCZOS)
         if self.unsharp_percent > 0:
             img = img.filter(ImageFilter.UnsharpMask(
@@ -470,9 +484,10 @@ class VideoPlayer:
             return
         level = float(np.percentile(np.concatenate(self._tone_seen), 70))
         self._tone_seen = None                    # decided; stop counting
-        if level >= TONE_TARGET or level < 2:
-            return                                # bright enough, or nothing there
-        gamma = math.log(TONE_TARGET / 255.0) / math.log(level / 255.0)
+        target = float(self.tone_target)
+        if target < 1 or level >= target or level < 2:
+            return                                # lift off, bright enough, or nothing there
+        gamma = math.log(target / 255.0) / math.log(level / 255.0)
         gamma = min(1.0, max(TONE_MIN, gamma))
         if gamma > 0.97:
             return
@@ -482,9 +497,9 @@ class VideoPlayer:
               f"gamma {gamma:.2f} so the panel can hold it")
 
     def _read(self, gen, proc, index):
-        n = SRC * SRC * 3
-        keep_behind = BEHIND_S * FPS
-        ahead = AHEAD_S * FPS
+        n = self.src * self.src * 3
+        keep_behind = self._behind
+        ahead = self._ahead
         buf = bytearray()
         try:
             while self._current(gen) and proc is self._proc:

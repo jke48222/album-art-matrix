@@ -42,7 +42,9 @@ from .nowplaying.macmedia import MacMediaSource
 from .nowplaying.pushed import PushedSource
 from .nowplaying.spotify import SpotifySource
 from .services import Services
+from .tuning import Tuning
 from .video.player import VideoPlayer
+from .wall import Wall
 from .sinks.mac_preview import MacPreviewSink
 from .sinks.pi_renderer import PiRendererSink
 
@@ -52,10 +54,11 @@ def load_config(path: str) -> dict:
         return tomllib.load(fh)
 
 
-def make_sink(cfg: dict, override: str | None = None):
+def make_sink(cfg: dict, override: str | None = None, wall=None):
     kind = override or cfg["sink"]["type"]
     if kind == "pi":
-        return PiRendererSink(cfg["sink"].get("fifo", "/tmp/album-frame.fifo"))
+        return PiRendererSink(cfg["sink"].get("fifo", "/tmp/album-frame.fifo"),
+                              wall=wall)
     if kind == "preview":
         return MacPreviewSink(cfg["sink"].get("preview_dir", "preview_out"))
     raise ValueError(f"unknown sink type: {kind}")
@@ -164,9 +167,14 @@ def main():
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    size = int(cfg["panel"]["width"])
-    wb = cfg["whitebalance"]
-    gains = (float(wb["r"]), float(wb["g"]), float(wb["b"]))
+    # How many panels, in what order, which way up. One panel is a wall of
+    # one: everything below sizes itself from wall.width either way.
+    wall = Wall.from_config(cfg)
+    size = wall.width
+    # Every knob that decides what the LEDs do, in one store: the gains, the
+    # dark end, the sharpening, the renderer's own launch flags. config.toml
+    # seeds it; the phone's tuning page moves it from there.
+    tune = Tuning(cfg)
     pipe = cfg.get("pipeline", {})
     poll_s = float(cfg.get("nowplaying", {}).get("poll_seconds", 5.0))
 
@@ -183,19 +191,22 @@ def main():
     ctrl = ControlState(seed={
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
-    }, frame_len=size * size * 3)
+    }, frame_len=size * size * 3, wall=wall)
     source = SourceChain(build_sources(cfg, ctrl))
     ctrl.source = source
     # a link from the phone: fetched and decoded on its own threads
     ctrl.video = VideoPlayer(size, ctrl.dirty, on_media=ctrl.video_media,
-                             unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
-                             unsharp_percent=int(pipe.get("unsharp_percent", 60)))
+                             unsharp_radius=tune.get("unsharp_radius"),
+                             unsharp_percent=tune.get("unsharp_percent"))
+    ctrl.tuning = tune
+    tune.video = ctrl.video
+    tune.apply()
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
-    sink = _FrameTee(make_sink(cfg, args.sink), ctrl, size)
+    sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size)
 
     print(f"[main] adapters: {[s.name for s in source.sources]}, "
-          f"panel {size}x{size}, poll {poll_s:.0f}s, "
-          f"gains R{gains[0]:.2f}/G{gains[1]:.2f}/B{gains[2]:.2f}")
+          f"wall {wall}, poll {poll_s:.0f}s, "
+          f"gains R{tune.gains[0]:.2f}/G{tune.gains[1]:.2f}/B{tune.gains[2]:.2f}")
 
     last_track, last_pre = None, None
     animator, t0 = None, time.monotonic()
@@ -230,8 +241,8 @@ def main():
         nonlocal last_pre, animator, t0, need_show
         pre = prepare(
             fetch_art(art_url), size,
-            unsharp_radius=float(pipe.get("unsharp_radius", 1.0)),
-            unsharp_percent=int(pipe.get("unsharp_percent", 60)),
+            unsharp_radius=tune.get("unsharp_radius"),
+            unsharp_percent=tune.get("unsharp_percent"),
         )
         last_pre = pre
         animator = build_disc(pre)
@@ -407,7 +418,7 @@ def main():
         if args.once:
             if last_pre is not None:
                 s = ctrl.get()
-                eff = tuple(g * s["brightness"] for g in gains)
+                eff = tuple(g * s["brightness"] for g in tune.gains)
                 sink.show(white_balance(last_pre, eff).tobytes(),
                           pre_wb_img=last_pre)
             break
@@ -440,7 +451,7 @@ def main():
                 # can be dialled all the way back to none without a channel
                 # blowing its top; brightness then scales all three equally.
                 wbc = (s["wb_r"], s["wb_g"], s["wb_b"])
-                colour = tuple(min(1.0, g * w) for g, w in zip(gains, wbc))
+                colour = tuple(min(1.0, g * w) for g, w in zip(tune.gains, wbc))
                 eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
                 mode = s["mode"]
 
@@ -676,8 +687,10 @@ def main():
                     if img is not video_shown or sl is not None:
                         ctrl.finish_base = img
                         f = apply_finish(img, s["finish"])
-                        # no floor lift: a video keeps its blacks (see steady)
-                        sink.show(white_balance(f, eff, floor=False).tobytes(),
+                        # the floor lift is a still sleeve's; a video keeps
+                        # its blacks unless the tuning says otherwise
+                        sink.show(white_balance(f, eff,
+                                                floor=bool(tune.get("video_floor"))).tobytes(),
                                   pre_wb_img=f)
                         video_shown = img
                     if ctrl.dirty.wait(max(0.0, min(wait_s, 0.5))):

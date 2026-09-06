@@ -27,11 +27,22 @@ class PiRendererSink(FrameSink):
     instead of showing every frame after it shifted. And the cap rides on
     every frame, so it changes without restarting anything."""
 
-    def __init__(self, fifo: str = "/tmp/album-frame.fifo"):
+    def __init__(self, fifo: str = "/tmp/album-frame.fifo", wall=None):
         self.fifo = fifo
+        # The wall's shape, when there is more than one panel: the frame is
+        # cut into tiles and each one goes to the panel standing in that
+        # spot. None, or a wall needing no bending, costs nothing.
+        self.wall = wall if (wall is not None and not wall.plain) else None
         self._fd = None
         self._warned = False
         self.brightness = 160
+        # The last frame actually written, and the cap it went out with.
+        # Sending the same picture again is not free: the renderer maps it
+        # into the very bit-plane buffer its scan is reading, and the scan
+        # shows the seam. On a still sleeve the brain was writing about
+        # once a second, so the wall tore about once a second.
+        self._last = None
+        self._last_cap = None
 
     def _connect(self) -> bool:
         if self._fd is not None:
@@ -51,6 +62,9 @@ class PiRendererSink(FrameSink):
         # EAGAIN and tearing a frame in half.
         os.set_blocking(self._fd, True)
         self._warned = False
+        # A renderer that has just come up has nothing on its panel, so the
+        # next frame must go even if it is the one already sent.
+        self._last = None
         return True
 
     def _drop(self):
@@ -64,15 +78,21 @@ class PiRendererSink(FrameSink):
     def show(self, rgb888: bytes, pre_wb_img=None):
         if not self._connect():
             return
+        cap = max(1, min(254, int(self.brightness)))
+        if rgb888 == self._last and cap == self._last_cap:
+            return                      # the panel is already showing this
         try:
             # A frame exceeds PIPE_BUF, so a signal landing mid-write can
             # return a short count; anything short would shift every later
             # frame boundary (the protocol has no resync marker) — write all.
-            head = MAGIC + bytes((max(1, min(254, int(self.brightness))), 0, 0, 0))
-            view = memoryview(head + bytes(rgb888))
+            head = MAGIC + bytes((cap, 0, 0, 0))
+            out = self.wall.remap(rgb888) if self.wall is not None else rgb888
+            view = memoryview(head + bytes(out))
             sent = 0
             while sent < len(view):
                 sent += os.write(self._fd, view[sent:])
+            self._last, self._last_cap = bytes(rgb888), cap
         except (BrokenPipeError, OSError):
             # The renderer restarted. Reconnect on the next frame.
+            self._last = None
             self._drop()
