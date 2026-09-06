@@ -435,10 +435,13 @@ def main():
                     else:
                         fade = max(0.0, min(1.0, 1.0 - el_min / sl["minutes"]))
                 # Calibration multipliers ride on top of the config gains;
-                # identity until a camera has measured the wall.
+                # identity until a camera has measured the wall. The colour
+                # part is settled first and capped at 1.0, so a correction
+                # can be dialled all the way back to none without a channel
+                # blowing its top; brightness then scales all three equally.
                 wbc = (s["wb_r"], s["wb_g"], s["wb_b"])
-                eff = tuple(g * w * s["brightness"] * fade * sun_f
-                            for g, w in zip(gains, wbc))
+                colour = tuple(min(1.0, g * w) for g, w in zip(gains, wbc))
+                eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
                 mode = s["mode"]
 
                 # ---- waking up ---------------------------------------------

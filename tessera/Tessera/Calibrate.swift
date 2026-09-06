@@ -33,6 +33,9 @@ struct CalibrateScreen: View {
     @State private var shot: CGImage? = nil
     @State private var pick: PhotosPickerItem? = nil
     @State private var showCamera = false
+    /// The last photograph ran into the top of the sensor, so it measured
+    /// nothing; the card says so rather than quietly correcting on it.
+    @State private var clipped = false
     /// Everything the wall was before, restored on any way out.
     @State private var prior: (mode: String, brightness: Double,
                                r: Double, g: Double, b: Double)? = nil
@@ -53,10 +56,14 @@ struct CalibrateScreen: View {
         .onAppear {
             let s = wall.state
             prior = (s.mode, s.brightness, s.wbR, s.wbG, s.wbB)
-            // The card: full white, full light. Measuring a dim wall measures
-            // the dimming, not the panel.
+            // The card: bright, but not blinding. A panel at full white
+            // and full light overruns a phone's sensor, and a channel that
+            // clips reads LOW, so the solver pulls the other two down to
+            // meet it. That is how this wall ended up correcting green to
+            // 0.66 and blue to 0.46 and turning every grey warm. Three
+            // quarters is bright enough to measure and leaves headroom.
             wall.send(["brightness": 1.0])
-            wall.pushFlat(r: 255, g: 255, b: 255)
+            wall.pushFlat(r: 191, g: 191, b: 191)
         }
         .fullScreenCover(isPresented: $showCamera) {
             CameraShot { image in
@@ -216,6 +223,15 @@ struct CalibrateScreen: View {
             step = .card
             return
         }
+        // A clipped channel is not a measurement. If any of the three has
+        // run into the top of the sensor the ratios are a fiction, and
+        // acting on them is how a wall gets a cast rather than loses one.
+        guard max(r, max(g, b)) < 247 else {
+            clipped = true
+            step = .card
+            return
+        }
+        clipped = false
 
         // What the camera saw too much of gets turned down. Anchored to the
         // dimmest channel so nothing is ever asked to exceed 1.0.
