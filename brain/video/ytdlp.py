@@ -31,7 +31,12 @@ from . import Media, ResolveError
 # which the phone plays as it is. Slashes are preferences, and yt-dlp is
 # asked for both in one run.
 VIDEO_FMT = "160/278/394/133/242/395/134/18/worst[height<=360]"
+# Both files sit in the wall's RAM disk while the video is on, and the wall
+# has a gigabyte in total, so a long video takes the small sound stream
+# (50 kbps rather than 130), the same rule the fast path uses.
 AUDIO_FMT = "140/139/bestaudio[ext=m4a]"
+AUDIO_FMT_LONG = "139/140/bestaudio[ext=m4a]"
+LONG_S = 20 * 60
 MAX_FILESIZE = "60M"
 TIMEOUT = 300.0
 
@@ -132,7 +137,9 @@ def resolve(url: str, workdir: str, timeout: float = TIMEOUT) -> Media:
                 continue
 
     # the sound, if the video has any
-    snd_out = _run(["-f", AUDIO_FMT, "--max-filesize", MAX_FILESIZE, "--no-simulate",
+    duration = float(info.get("duration") or 0)
+    snd_out = _run(["-f", AUDIO_FMT_LONG if duration > LONG_S else AUDIO_FMT,
+                    "--max-filesize", MAX_FILESIZE, "--no-simulate",
                     "-o", os.path.join(workdir, "ytdlp-sound.%(ext)s"), url], timeout)
     audio = _landed(workdir, "ytdlp-sound")
     if audio is None:
@@ -144,7 +151,7 @@ def resolve(url: str, workdir: str, timeout: float = TIMEOUT) -> Media:
                     if x and x != "none") or "picture"
     return Media(title=info.get("title") or "YouTube",
                  author=info.get("uploader") or info.get("channel") or "",
-                 duration_s=float(info.get("duration") or 0),
+                 duration_s=duration,
                  video_url=path, video_note=note,
                  video_bytes=os.path.getsize(path),
                  audio_url=audio,
