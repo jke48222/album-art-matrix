@@ -27,3 +27,6 @@ tessera/build-device/
 build-device/
 tessera/build/
 tessera/build-device/
+
+# Xcode DerivedData from a simulator build at the repo root
+/build/

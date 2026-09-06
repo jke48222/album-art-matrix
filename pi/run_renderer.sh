@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
-# Start the display daemon for S1: 1 port, 1 chain, one 64x64 panel.
+# Start the display daemon. The wall's shape comes from ~/album-art-matrix/wall
+# ("COLSxROWS", e.g. 3x3), so bringing panels up a chain at a time is a one
+# line change on the Pi and a restart, not an edit to this script:
+#   echo 3x1 > ~/album-art-matrix/wall     # one port, three panels
+#   echo 3x3 > ~/album-art-matrix/wall     # the whole wall
+# Rows are PORTS on the Triple Bonnet (one to three) and columns are the
+# panels chained off each port. The library clocks every port together, so
+# each port must carry the SAME number of panels.
 #   -d 64  : 64-bit BCM (the camera-flicker killer, with the 9600 Hz refresh)
 #   -g 2.2 : decode our sRGB-encoded frames to linear for BCM
 #   -t none: no tone mapping — album art should not be "enhanced"
@@ -45,9 +52,27 @@ case "$DEPTH" in ''|*[!0-9]*) DEPTH=64 ;; esac
 # The panel's row addressing, 0-7. Written by the brain, same as the rest.
 PTYPE="$(cat "$HOME/album-art-matrix/panel-type" 2>/dev/null || echo 0)"
 case "$PTYPE" in ''|*[!0-9]*) PTYPE=0 ;; esac
+# The wall: COLS x ROWS panels of TILE pixels. Anything unreadable falls back
+# to the single panel this started as, because a wrong geometry is a wall of
+# scrambled tiles and a missing file should not produce one.
+TILE="${PANEL_TILE:-64}"
+WALL="$(cat "$HOME/album-art-matrix/wall" 2>/dev/null || echo 1x1)"
+COLS="${WALL%%x*}"; ROWS="${WALL##*x}"
+case "$COLS" in ''|*[!0-9]*) COLS=1 ;; esac
+case "$ROWS" in ''|*[!0-9]*) ROWS=1 ;; esac
+[ "$COLS" -ge 1 ] && [ "$COLS" -le 8 ] || COLS=1
+[ "$ROWS" -ge 1 ] && [ "$ROWS" -le 3 ] || ROWS=1     # three ports on the bonnet
+W=$((COLS * TILE)); H=$((ROWS * TILE))
+# The library wants the total width in multiples of 32.
+[ $((W % 32)) -eq 0 ] || { echo "wall $COLS x $TILE = $W is not a multiple of 32" >&2; exit 1; }
+# -P takes one panel type per panel: colons across a port, commas between
+# ports. Every panel here is the same type, so it is that type repeated.
+ROW="$PTYPE"; for _ in $(seq 2 "$COLS"); do ROW="$ROW:$PTYPE"; done
+PMAP="$ROW"; for _ in $(seq 2 "$ROWS"); do PMAP="$PMAP,$ROW"; done
+echo "[renderer] wall ${COLS}x${ROWS} panels = ${W}x${H}, ports=$ROWS chain=$COLS" >&2
 exec "$HOME/album-art-matrix/renderer/art_display" \
-  -w 64 -h 64 -p 1 -c 1 -x 64 -y 64 \
-  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT" -P "$PTYPE"
+  -w "$TILE" -h "$TILE" -p "$ROWS" -c "$COLS" -x "$W" -y "$H" \
+  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT" -P "$PMAP"
 
 # The last row. This panel used to ghost the content's own colour into the
 # bottom row of its scan (a red clock left a red line there) on frames whose

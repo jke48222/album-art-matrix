@@ -3,8 +3,33 @@
 # ~/.config/widgetsuite/ (the same stack the Übersicht widgets use).
 
 [panel]
-width = 64      # S1: one 64x64 P2.5 panel. Later: 128 (4 panels) / 192 (9).
+width = 64      # the WHOLE wall in pixels: 64 (one panel), 128 (2x2), 192 (3x3)
 height = 64
+
+# [wall] describes how that canvas is made of panels. Leave it out and the
+# canvas is one panel, which is what it was through first light.
+#
+#   [wall]
+#   tile = 64     # one panel's pixels
+#   cols = 3      # panels across: the CHAIN length off each port
+#   rows = 3      # panels down: one PORT each, and the bonnet has three
+#
+# The library clocks every port together, so each port carries the same
+# number of panels. On the Pi the renderer reads the same shape from
+# ~/album-art-matrix/wall ("3x3"), and the two must agree.
+#
+# Two more keys bend the frame to the wall that actually got built, which
+# is what stops a mis-cabled panel being a dismantling job:
+#
+#   order  = "2 1 0 5 4 3 8 7 6"   # tile 0 is top left, reading across.
+#                                  # This example is the map for chains that
+#                                  # fill right to left.
+#   rotate = "0 0 0 180 180 180 0 0 0"   # degrees clockwise, per tile, for a
+#                                        # panel mounted upside down so its
+#                                        # ribbon could reach.
+#
+# Light `scripts/panel_qa.py sweep --wall 3x3 --only tilemap` and read the
+# numbers off the wall: that picture tells you exactly what to put here.
 
 [whitebalance]
 # Applied in LINEAR light before re-encode. HUB75 primaries are green/blue-

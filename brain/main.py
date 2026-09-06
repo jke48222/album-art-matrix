@@ -172,6 +172,14 @@ def main():
     # How many panels, in what order, which way up. One panel is a wall of
     # one: everything below sizes itself from wall.width either way.
     wall = Wall.from_config(cfg)
+    if wall.width != wall.height:
+        sys.exit(
+            f"[main] the wall is {wall.width}x{wall.height} and the brain "
+            "renders squares: every face it draws, from a sleeve to the "
+            "clock, is a square.\n"
+            "        A single chain (3x1) is for bring-up and QA: run the "
+            "renderer and scripts/panel_qa.py against it, and start the "
+            "brain when the wall is square.")
     size = wall.width
     # Every knob that decides what the LEDs do, in one store: the gains, the
     # dark end, the sharpening, the renderer's own launch flags. config.toml
