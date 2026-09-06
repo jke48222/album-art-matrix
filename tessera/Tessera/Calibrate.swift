@@ -99,7 +99,7 @@ struct CalibrateScreen: View {
 
             // What the wall is doing right now, in miniature, so the step
             // is checkable from here.
-            PanelCanvas(px: [UInt8](repeating: 235, count: 64 * 64 * 3), duty: 1)
+            PanelCanvas(px: Panel.blank(235), duty: 1)
                 .frame(width: 120, height: 120)
                 .padding(.horizontal, 20)
 
@@ -203,16 +203,19 @@ struct CalibrateScreen: View {
 
     // MARK: - The arithmetic
 
-    /// From the aimed 64x64 of the photographed card: the average cast of the
-    /// middle of it, turned into multipliers that pull every channel down to
-    /// the weakest one's honest level.
+    /// From the aimed square of the photographed card: the average cast of
+    /// the middle of it, turned into multipliers that pull every channel down
+    /// to the weakest one's honest level.
     private func solve(_ px: [UInt8]) {
         var r = 0.0, g = 0.0, b = 0.0, n = 0.0
         // centre only: the aiming square includes the panel's edge, and the
-        // edge includes the room
-        for y in 12..<52 {
-            for x in 12..<52 {
-                let o = (y * 64 + x) * 3
+        // edge includes the room. The same middle five eighths whatever the
+        // wall's size is.
+        let side = Panel.square(px.count) ?? 64
+        let edge = side * 3 / 16, far = side - edge
+        for y in edge..<far {
+            for x in edge..<far {
+                let o = (y * side + x) * 3
                 r += Double(px[o]); g += Double(px[o + 1]); b += Double(px[o + 2])
                 n += 1
             }

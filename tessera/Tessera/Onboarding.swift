@@ -128,7 +128,7 @@ struct OnboardingFlow: View {
             Spacer()
             wallPicture.frame(width: 300, height: 300)
             Spacer()
-            headline("Your music, on the wall.", "A wall of 4,096 lights that shows the sleeve of whatever you are playing.")
+            headline("Your music, on the wall.", "A wall of \(Panel.lights) lights that shows the sleeve of whatever you are playing.")
                 .padding(.top, 0)
             PrimaryButton(title: "Get started", accent: accent) { step = .find; startSearch() }
                 .padding(.top, 28)
@@ -212,7 +212,7 @@ struct OnboardingFlow: View {
         VStack(spacing: 0) {
             headline("Did the wall just glow?", "It is showing a soft white for five seconds, so you know this phone is talking to that wall and not a neighbour's.")
             Spacer()
-            PanelCanvas(px: [UInt8](repeating: 234, count: 64 * 64 * 3), duty: 1)
+            PanelCanvas(px: Panel.blank(234), duty: 1)
                 .frame(width: 240, height: 240).clipShape(RoundedRectangle(cornerRadius: 8))
             Spacer()
             PrimaryButton(title: "Yes, that's mine", accent: accent) {

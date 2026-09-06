@@ -58,7 +58,7 @@ enum LocalJournal {
     /// those is the same track, not another wearing of it.
     static func append(title: String?, artist: String?, album: String?, frame: [UInt8]) {
         let t = title ?? ""
-        guard !t.isEmpty, frame.count == 64 * 64 * 3 else { return }
+        guard !t.isEmpty, Panel.square(frame.count) != nil else { return }
         var all = loadRows()
         if let last = all.last, last.title == t, last.artist == (artist ?? "") { return }
 
@@ -96,7 +96,7 @@ enum LocalJournal {
 
     static func frame(_ ts: Int) -> [UInt8]? {
         guard let url = frameURL(ts), let data = try? Data(contentsOf: url),
-              data.count == 64 * 64 * 3 else { return nil }
+              Panel.square(data.count) != nil else { return nil }
         return [UInt8](data)
     }
 

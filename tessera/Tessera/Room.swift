@@ -104,18 +104,23 @@ struct Room: View {
     private static var cachedKey: Int = 0
     private static var cachedTones: [Color]? = nil
     static func tones(_ px: [UInt8]?) -> [Color]? {
-        guard let px, px.count == 64 * 64 * 3 else { return nil }
+        guard let px, let side = Panel.square(px.count) else { return nil }
         var h = 0
         for i in stride(from: 0, to: px.count, by: 97) { h = h &* 31 &+ Int(px[i]) }
         if h == cachedKey, let cachedTones { return cachedTones }
 
         func region(_ cx: Double, _ cy: Double) -> (Double, Double, Double) {
-            let x0 = max(0, Int(cx * 63) - 10), x1 = min(64, Int(cx * 63) + 11)
-            let y0 = max(0, Int(cy * 63) - 8), y1 = min(64, Int(cy * 63) + 9)
+            // The patch is a fraction of the wall, not a count of LEDs: ten
+            // pixels of a 64 panel is a sixth of it, and of a 192 wall a
+            // sixteenth, which sampled a different thing on each.
+            let rx = max(1, side * 10 / 64), ry = max(1, side * 8 / 64)
+            let mid = side - 1
+            let x0 = max(0, Int(cx * Double(mid)) - rx), x1 = min(side, Int(cx * Double(mid)) + rx + 1)
+            let y0 = max(0, Int(cy * Double(mid)) - ry), y1 = min(side, Int(cy * Double(mid)) + ry + 1)
             var r = 0.0, g = 0.0, b = 0.0, n = 0.0
             for y in y0..<y1 {
                 for x in x0..<x1 {
-                    let o = (y * 64 + x) * 3
+                    let o = (y * side + x) * 3
                     r += Double(px[o]); g += Double(px[o + 1]); b += Double(px[o + 2])
                     n += 1
                 }

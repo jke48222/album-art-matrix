@@ -73,17 +73,17 @@ struct WallProvider: TimelineProvider {
 
 // MARK: - Views
 
-private struct Panel: View {
+private struct PanelView: View {
     let entry: WallEntry
 
     /// The wall with nothing on it. Shown when the wall is off or unknown,
     /// so the widget is still the object rather than an empty square.
-    private static let unlit = WallSnapshot.render([UInt8](repeating: 0, count: 64 * 64 * 3))
+    private static let unlit = WallSnapshot.render(Panel.blank())
 
     var body: some View {
         ZStack {
             Color.black
-            if let img = (entry.isDark ? Panel.unlit : entry.image ?? Panel.unlit) {
+            if let img = (entry.isDark ? PanelView.unlit : entry.image ?? PanelView.unlit) {
                 // The Tinted and Clear home screens re-render widget
                 // content as monochrome glass unless the image opts out,
                 // which turned the whole panel into a blank white tile.
@@ -101,7 +101,7 @@ private struct Panel: View {
 private struct SmallWall: View {
     let entry: WallEntry
     var body: some View {
-        Panel(entry: entry)
+        PanelView(entry: entry)
             .overlay(alignment: .bottomTrailing) {
                 if let asOf = entry.asOf {
                     Text(asOf, style: .time)
@@ -117,7 +117,7 @@ private struct MediumWall: View {
     let entry: WallEntry
     var body: some View {
         HStack(spacing: 14) {
-            Panel(entry: entry)
+            PanelView(entry: entry)
                 .aspectRatio(1, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 

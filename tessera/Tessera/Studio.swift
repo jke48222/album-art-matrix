@@ -1,7 +1,10 @@
 // The Studio.
 //
-// Built from the object, not from a menu of tools. The wall is 64x64 tiles,
-// so there is exactly one canvas here and it is 64x64 tiles. Drawing, photos
+// Built from the object, not from a menu of tools. The wall is a square of
+// tiles, so there is exactly one canvas here and it is that same square, at
+// whatever size the wall actually is: 64 for one panel, 192 for the nine
+// panel wall, so a drawing is drawn at the resolution it will be lit at,
+// never blown up to fit afterwards. Drawing, photos
 // and words are not three apps: they are three ways of filling the same
 // 4,096 cells. You are never editing a document that later becomes a frame,
 // you are lighting the frame itself.
@@ -19,9 +22,10 @@ import AVFoundation
 
 @MainActor
 @Observable
-final class Canvas64 {
-    /// 64*64*3 RGB888: the exact buffer the wall consumes.
-    private(set) var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+final class WallCanvas {
+    /// The exact buffer the wall consumes, at the wall's own size.
+    let side = Panel.side
+    private(set) var px = Panel.blank()
     private(set) var revision = 0
 
     var isEmpty: Bool { !px.contains { $0 > 6 } }
@@ -30,10 +34,10 @@ final class Canvas64 {
         for dy in -radius...radius {
             for dx in -radius...radius {
                 let nx = x + dx, ny = y + dy
-                guard nx >= 0, nx < 64, ny >= 0, ny < 64 else { continue }
+                guard nx >= 0, nx < side, ny >= 0, ny < side else { continue }
                 // round brush, not square
                 guard dx * dx + dy * dy <= radius * radius + radius else { continue }
-                let o = (ny * 64 + nx) * 3
+                let o = (ny * side + nx) * 3
                 px[o] = rgb.0; px[o + 1] = rgb.1; px[o + 2] = rgb.2
             }
         }
@@ -47,7 +51,7 @@ final class Canvas64 {
 
     /// Undo as snapshots, because at 12KB a frame the honest approach is
     /// also the cheap one: forty snapshots is half a megabyte, and forty
-    /// steps is more history than a 64-pixel drawing has ever needed.
+    /// steps is more history than a drawing on a wall has ever needed.
     private(set) var canUndo = false
     private(set) var canRedo = false
     private var undoStack: [[UInt8]] = []
@@ -83,26 +87,26 @@ final class Canvas64 {
     /// colour. The tolerance exists for imported photos, whose regions are
     /// never exactly one value; drawings fill exactly.
     func fill(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8)) {
-        let o = (y * 64 + x) * 3
+        let o = (y * side + x) * 3
         let t = (Int(px[o]), Int(px[o + 1]), Int(px[o + 2]))
         // pouring a colour onto itself is a no-op, not a 4,096-tile walk
         if abs(t.0 - Int(rgb.0)) < 4, abs(t.1 - Int(rgb.1)) < 4,
            abs(t.2 - Int(rgb.2)) < 4 { return }
         let tol = 14
-        var seen = [Bool](repeating: false, count: 64 * 64)
+        var seen = [Bool](repeating: false, count: side * side)
         var stack = [(x, y)]
-        seen[y * 64 + x] = true
+        seen[y * side + x] = true
         while let (cx, cy) = stack.popLast() {
-            let ci = (cy * 64 + cx) * 3
+            let ci = (cy * side + cx) * 3
             guard abs(Int(px[ci]) - t.0) <= tol,
                   abs(Int(px[ci + 1]) - t.1) <= tol,
                   abs(Int(px[ci + 2]) - t.2) <= tol else { continue }
             px[ci] = rgb.0; px[ci + 1] = rgb.1; px[ci + 2] = rgb.2
             for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
                 let nx = cx + dx, ny = cy + dy
-                guard nx >= 0, nx < 64, ny >= 0, ny < 64,
-                      !seen[ny * 64 + nx] else { continue }
-                seen[ny * 64 + nx] = true
+                guard nx >= 0, nx < side, ny >= 0, ny < side,
+                      !seen[ny * side + nx] else { continue }
+                seen[ny * side + nx] = true
                 stack.append((nx, ny))
             }
         }
@@ -142,13 +146,30 @@ final class Canvas64 {
     }
 
     func clear() {
-        px = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        px = Panel.blank()
         revision &+= 1
     }
 
+    /// Anything square goes on the canvas. A drawing kept when the wall was
+    /// one panel is 64 pixels and the canvas may now be 192, so it is blown
+    /// up by whole tiles rather than refused: pixel art scaled by threes is
+    /// still pixel art, and a rejected drawing just vanishes with no reason
+    /// given.
     func load(_ buffer: [UInt8]) {
-        guard buffer.count == 64 * 64 * 3 else { return }
-        px = buffer
+        guard let from = Panel.square(buffer.count) else { return }
+        if from == side {
+            px = buffer
+        } else {
+            var out = Panel.blank()
+            for y in 0..<side {
+                let sy = y * from / side
+                for x in 0..<side {
+                    let o = (y * side + x) * 3, i = (sy * from + x * from / side) * 3
+                    out[o] = buffer[i]; out[o + 1] = buffer[i + 1]; out[o + 2] = buffer[i + 2]
+                }
+            }
+            px = out
+        }
         revision &+= 1
     }
 
@@ -205,12 +226,12 @@ final class Canvas64 {
 
         let lineStep = PixelFont.height * scale + scale
         let blockHeight = lines.count * lineStep - scale
-        var y = max(1, (64 - blockHeight) / 2)
+        var y = max(1, (side - blockHeight) / 2)
 
         var gi = 0
         for line in lines {
             let w = PixelFont.textWidth(line, scale: scale)
-            var x = (64 - w) / 2
+            var x = (side - w) / 2
             for ch in line {
                 let (rows, gw, adv, gdy) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6, 0)
                 let glyphInk: (UInt8, UInt8, UInt8)
@@ -226,8 +247,8 @@ final class Canvas64 {
                             for sx in 0..<scale {
                                 let xx = x + rx * scale + sx
                                 let yy = y + (ry + gdy) * scale + sy
-                                guard xx >= 0, xx < 64, yy >= 0, yy < 64 else { continue }
-                                let o = (yy * 64 + xx) * 3
+                                guard xx >= 0, xx < side, yy >= 0, yy < side else { continue }
+                                let o = (yy * side + xx) * 3
                                 out[o] = glyphInk.0; out[o + 1] = glyphInk.1; out[o + 2] = glyphInk.2
                             }
                         }
@@ -269,7 +290,7 @@ final class MadeStore {
         let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
         made = files.sorted(by: >).prefix(24).compactMap { name in
             guard let d = try? Data(contentsOf: dir.appendingPathComponent(name)),
-                  d.count == 64 * 64 * 3 else { return nil }
+                  Panel.square(d.count) != nil else { return nil }
             return Made(id: name, px: [UInt8](d))
         }
     }
@@ -303,7 +324,7 @@ struct StudioScreen: View {
     /// redo and clear where the toolbar would have been.
     var inline: Bool = false
 
-    @State private var canvas = Canvas64()
+    @State private var canvas = WallCanvas()
     @State private var kept = MadeStore()
     @State private var ink: (UInt8, UInt8, UInt8) = (255, 255, 255)
     /// Whatever the picker last mixed, kept as a swatch of its own so a
@@ -575,13 +596,14 @@ struct StudioScreen: View {
     private var board: some View {
         GeometryReader { geo in
             SwiftUI.Canvas { ctx, size in
-                let cell = size.width / 64
+                let n = canvas.side
+                let cell = size.width / CGFloat(n)
                 let r = cell * 0.36
                 ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black))
-                for i in 0..<(64 * 64) {
+                for i in 0..<(n * n) {
                     let o = i * 3
-                    let cx = CGFloat(i % 64) * cell + cell / 2
-                    let cy = CGFloat(i / 64) * cell + cell / 2
+                    let cx = CGFloat(i % n) * cell + cell / 2
+                    let cy = CGFloat(i / n) * cell + cell / 2
                     let dot = Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
                     // drawn as the wall will light it: below 16 is off, 16 up
                     // to 64 is lifted to 64, the panel's lowest steady level,
@@ -610,7 +632,7 @@ struct StudioScreen: View {
                         }
                         if writing { leaveWords() }
                         guard tool != .fill else { return }   // the bucket pours on release
-                        let cell = geo.size.width / 64
+                        let cell = geo.size.width / CGFloat(canvas.side)
                         let fx = min(63.49, max(0.0, g.location.x / cell - 0.5))
                         let fy = min(63.49, max(0.0, g.location.y / cell - 0.5))
                         let rgb: (UInt8, UInt8, UInt8) = tool == .erase ? (0, 0, 0) : ink
@@ -629,7 +651,7 @@ struct StudioScreen: View {
                     .onEnded { g in
                         lastF = nil
                         if tool == .fill {
-                            let cell = geo.size.width / 64
+                            let cell = geo.size.width / CGFloat(canvas.side)
                             let x = min(63, max(0, Int(g.location.x / cell)))
                             let y = min(63, max(0, Int(g.location.y / cell)))
                             canvas.checkpoint()
@@ -640,7 +662,7 @@ struct StudioScreen: View {
                         }
                     }
             )
-            .accessibilityLabel("Canvas, 64 by 64 tiles. Draw with one finger.")
+            .accessibilityLabel("Canvas, \(canvas.side) by \(canvas.side) tiles. Draw with one finger.")
         }
         .aspectRatio(1, contentMode: .fit)
         // The canvas IS the wall, so it is framed and lit like the wall: a
@@ -1088,26 +1110,30 @@ enum Clip {
 
     /// The wall is square and a phone video is not, so the middle of the
     /// frame is what survives.
-    static func square64(_ src: CGImage) -> [UInt8]? {
-        let count = 64 * 64 * 4
+    /// `side` defaults to the wall's own size. The stand-in and the archive
+    /// ask for 64: their pictures are miniatures on a phone screen, and a
+    /// tile in a dense grid gains nothing from nine times the pixels.
+    static func squareFrame(_ src: CGImage, side: Int = Panel.side) -> [UInt8]? {
+        let n = side
+        let count = n * n * 4
         let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
         raw.initialize(repeating: 0, count: count)
         defer { raw.deallocate() }
         guard let ctx = CGContext(
-            data: raw, width: 64, height: 64, bitsPerComponent: 8, bytesPerRow: 64 * 4,
+            data: raw, width: n, height: n, bitsPerComponent: 8, bytesPerRow: n * 4,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
         ) else { return nil }
         ctx.interpolationQuality = .high
         let w = CGFloat(src.width), h = CGFloat(src.height)
-        let scale = 64 / min(w, h)
+        let scale = CGFloat(n) / min(w, h)
         let dw = w * scale, dh = h * scale
-        ctx.draw(src, in: CGRect(x: (64 - dw) / 2, y: (64 - dh) / 2, width: dw, height: dh))
+        ctx.draw(src, in: CGRect(x: (CGFloat(n) - dw) / 2, y: (CGFloat(n) - dh) / 2, width: dw, height: dh))
 
         // The picture as it is: the wall does its own levels on a pushed
         // design, and the preview draws them the same way (see wallLift).
-        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        for i in 0..<(64 * 64) {
+        var px = [UInt8](repeating: 0, count: n * n * 3)
+        for i in 0..<(n * n) {
             px[i * 3] = raw[i * 4]
             px[i * 3 + 1] = raw[i * 4 + 1]
             px[i * 3 + 2] = raw[i * 4 + 2]

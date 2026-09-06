@@ -73,7 +73,7 @@ final class Outbox {
     }
 
     func add(frame f: [UInt8]) {
-        guard f.count == 64 * 64 * 3 else { return }
+        guard Panel.square(f.count) != nil else { return }
         frame = f
         frameAt = Date()
         save()
@@ -108,7 +108,7 @@ final class Outbox {
     private func load() {
         guard let blob = store?.dictionary(forKey: Self.key) else { return }
         if let p = blob["patch"] as? [String: Any] { patch = p }
-        if let d = blob["frame"] as? Data, d.count == 64 * 64 * 3 { frame = [UInt8](d) }
+        if let d = blob["frame"] as? Data, Panel.square(d.count) != nil { frame = [UInt8](d) }
         // tolerate the old single-stamp format
         patchAt = (blob["patchAt"] as? Date) ?? (blob["at"] as? Date)
         frameAt = (blob["frameAt"] as? Date) ?? (blob["at"] as? Date)
