@@ -49,6 +49,40 @@ Paste a YouTube link in Tessera (the Video tile), and the wall plays it.
 
 `GET /state` carries the same under `video` while one is on.
 
+## Sharing to the wall
+
+The share sheet has a Tessera in it (`tessera/TesseraShare/`): from the
+YouTube app, Safari, Photos, or anything AirDropped to the phone, Share,
+then Tessera. A link goes straight to the wall from the sheet; with sound
+on, the sheet opens Tessera, because the phone is the speaker and an
+extension cannot stay to play. A video from the library is handed to the
+app, which makes a small square H.264 copy of the picture (160 px, 15 fps,
+about 300 kbps: `VideoHandoff.swift`), sends it to `POST /video/upload`,
+and plays the sound from the original it kept; the wall waits for the
+phone's clock as it does for a link.
+
+AirDrop, AirPlay and Bluetooth are not routes to the panel. AirDrop only
+runs between Apple devices, so the Pi cannot be a target (AirDrop to the
+phone, then Share to Tessera, is the two-step version). An AirPlay receiver
+on the Pi is a large third-party stack that mirrors a whole phone screen in
+1080p H.264, which the 1 GB Pi 5 has to decode in software, and the YouTube
+app will not hand video to one anyway. Bluetooth carries no video, and the
+sound already plays on the phone.
+
+## YouTube's token wall
+
+Some videos, seen so far on big label releases, come back from every client
+identity with streams that serve about the first megabyte and then answer
+403 to everything, with no refill (measured 2026-09-06 on FyS5dAywkEo, from
+the Pi and the Mac alike, across nine client identities). That is YouTube's
+signed-in "proof of origin" token being enforced server by server, and the
+wall cannot mint one. The fetcher starts with megabyte pieces and halves
+them on a refusal, which handles the servers that merely cap the piece
+size; the token wall it reports plainly and stops. The route that does
+handle it is yt-dlp with a JavaScript runtime (deno) and its token
+provider plugin, a new set of binaries on the Pi (or on the Mac as a
+helper), which is a decision, not a default.
+
 ## What it does not do
 
 - Live streams (there is no file to make the sound from).
