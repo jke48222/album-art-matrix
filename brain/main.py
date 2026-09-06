@@ -673,7 +673,9 @@ def main():
                     if img is not video_shown or sl is not None:
                         ctrl.finish_base = img
                         f = apply_finish(img, s["finish"])
-                        sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                        # no floor lift: a video keeps its blacks (see steady)
+                        sink.show(white_balance(f, eff, floor=False).tobytes(),
+                                  pre_wb_img=f)
                         video_shown = img
                     if ctrl.dirty.wait(max(0.0, min(wait_s, 0.5))):
                         ctrl.dirty.clear()

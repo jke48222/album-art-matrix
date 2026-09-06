@@ -85,18 +85,28 @@ LOW_RED = 0.93      # red gain at the dark end, relative (0.85 read orange-free 
 LOW_BLUE = 1.15     # blue gain at the dark end, relative (1.35 was overly blue)
 
 
-def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
+def steady(arr: np.ndarray, hard: bool = False, floor: bool = True) -> np.ndarray:
     """Dim tones raised to where the panel can hold them. See FLOOR.
 
-    Two shapes. `hard` lifts every dim tone to FLOOR outright: right for a
+    Three shapes. `hard` lifts every dim tone to FLOOR outright: right for a
     design, where a dim grey is a flat tone drawn on purpose. The default is
     a curve, sqrt-shaped, that raises the dark end while keeping its order:
     a sleeve's shadows stay shadows instead of becoming one grey, which is
     what the hard lift did to nearly half the pixels of a dark cover.
+
+    `floor=False` lifts nothing, and only takes the noise off. That is for
+    moving pictures. A night scene lives almost entirely between 16 and 104,
+    which the curve squeezes into 64 to 104: on the wall it came out as a
+    flat grey field with the street lights barely above it. A sleeve is
+    still and its shadows must survive the panel's dither; a video moves,
+    which hides the dither, and what it cannot survive is losing its
+    blacks.
     """
     a = arr.astype(np.float32)
     peak = a.max(axis=2, keepdims=True)
     safe = np.maximum(peak, 1.0)
+    if not floor:
+        return np.where(peak < PIC_BLACK, 0.0, a).astype(np.uint8)
     if hard:
         lift = np.where(peak < NOISE, 0.0,
                         np.where(peak < FLOOR, FLOOR / safe, 1.0))
@@ -114,12 +124,14 @@ def steady(arr: np.ndarray, hard: bool = False) -> np.ndarray:
     return np.clip(a * lift, 0, 255).astype(np.uint8)
 
 
-def white_balance(img: Image.Image, gains, hard: bool = False) -> np.ndarray:
+def white_balance(img: Image.Image, gains, hard: bool = False,
+                  floor: bool = True) -> np.ndarray:
     """Steps 3-5: dim tones lifted, linear decode, per-channel gains,
     re-encode. uint8 HxWx3. Everything the wall lights comes through here,
-    so this is where the panel's own floor belongs."""
+    so this is where the panel's own floor belongs. `floor=False` keeps the
+    blacks black, which is what a moving picture needs (see steady)."""
     lut = _wb_lut((float(gains[0]), float(gains[1]), float(gains[2])))
-    arr = steady(np.asarray(img), hard=hard)
+    arr = steady(np.asarray(img), hard=hard, floor=floor)
     out = np.empty_like(arr)
     for c in range(3):
         out[..., c] = lut[c][arr[..., c]]
