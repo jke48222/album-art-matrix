@@ -169,39 +169,80 @@ def apply_finish(img: Image.Image, finish: str) -> Image.Image:
 
 
 def dominant_colors(img: Image.Image, n: int = 2) -> list[str]:
-    """The sleeve's n most-common colors as "#rrggbb", most common first.
-    Feeds ambient match_art. Tiny resize first so it costs nothing."""
-    small = img.convert("RGB").resize((24, 24), Image.LANCZOS)
-    pal = small.quantize(colors=max(8, n * 4))
-    counts = sorted(pal.getcolors(), reverse=True)
-    palette = pal.getpalette()
+    """The colours a picture would lend a room, the most telling first.
 
-    # Rank by population WEIGHTED BY SATURATION. A photographic sleeve is
-    # mostly near-grey skin, paper and highlight; ranking on raw population
-    # picks one of those, and "match the album" then lights the wall grey.
-    scored = []
-    for count, idx in counts:
-        r, g, b = palette[idx * 3: idx * 3 + 3]
-        mx, mn = max(r, g, b), min(r, g, b)
-        if mx < 70 or mn > 232:          # too dark to light a room, or a white fill
-            continue
-        sat = (mx - mn) / mx if mx else 0
-        if sat < 0.20:                   # not a colour to light a room with
-            continue
-        scored.append((count * (0.2 + sat * 0.8), r, g, b))
+    Not the most common ones. A photograph is mostly skin, paper, grass in
+    shade and highlight, and ranking on population lights the wall grey,
+    which is exactly what the wall was doing: a cover whose brightest
+    colour is a warm tan lit the room in two near-neutral greys, because
+    the picture was first averaged down to 24 px and quantised to eight
+    tones, and nothing that survived that carried enough colour to pass.
 
-    scored.sort(reverse=True)
-    out = [f"#{r:02x}{g:02x}{b:02x}" for _, r, g, b in scored[:n]]
+    So the picture is read at 48 px, every lit pixel is weighed by how much
+    colour it carries, and the hues are gathered into bins. A hue that
+    covers a small part of the picture strongly (a jacket, a neon sign, a
+    sky) beats a large wash of nearly-grey. What comes back is that hue's
+    own colour, brought up to a level that lights a room but keeping the
+    saturation it had. Only a picture with no colour at all falls back to
+    its own grey.
+    """
+    small = img.convert("RGB").resize((48, 48), Image.LANCZOS)
+    arr = np.asarray(small, dtype=np.float32).reshape(-1, 3)
+    mx = arr.max(axis=1)
+    mn = arr.min(axis=1)
+    sat = np.where(mx > 0, (mx - mn) / np.maximum(mx, 1.0), 0.0)
+    # too dark to light anything, or a paper-white fill with no colour in it
+    lit = (mx >= 56) & (mn <= 240)
+    hue = _hue(arr, mx, mn)
+    # Colour carried, not area covered: squared, so a small strong patch
+    # outweighs a wide faint one, which is how a person reads a picture.
+    weight = np.where(lit, sat ** 2, 0.0)
+
+    out: list[str] = []
+    if weight.sum() > 0:
+        bins = np.clip((hue / 15.0).astype(np.int32), 0, 23)   # 24 bins of 15 degrees
+        mass = np.bincount(bins, weights=weight, minlength=24)
+        # a hue's neighbours belong with it: a red at 359 and one at 1 are one colour
+        spread = mass + 0.5 * (np.roll(mass, 1) + np.roll(mass, -1))
+        for _ in range(n):
+            best = int(np.argmax(spread))
+            if spread[best] <= 0:
+                break
+            near = (np.abs((bins - best + 12) % 24 - 12) <= 1) & lit
+            if not near.any():
+                spread[best] = 0.0
+                continue
+            w = weight[near][:, None]
+            colour = (arr[near] * w).sum(axis=0) / max(float(w.sum()), 1e-6)
+            out.append(_as_light(colour))
+            for d in range(-2, 3):                    # this hue is spoken for
+                spread[(best + d) % 24] = 0.0
+
     if not out:
-        # A black-and-white sleeve has no colour to lend. It used to get blue
-        # and pink, and the app lit its room with them; its own tone is the
-        # honest answer: the mean of what is lit, brought up to a light, and
-        # a shade of the same for the second colour.
-        lit = [px for px in small.getdata() if max(px) >= 40]
-        if lit:
-            mr, mg, mb = (sum(c) / len(lit) for c in zip(*lit))
-            k = 235 / max(mr, mg, mb, 1)
-            r, g, b = (min(255, int(c * k)) for c in (mr, mg, mb))
-            out = [f"#{r:02x}{g:02x}{b:02x}",
-                   f"#{int(r * 0.72):02x}{int(g * 0.72):02x}{int(b * 0.72):02x}"]
+        # A black-and-white sleeve has no colour to lend. Its own tone is the
+        # honest answer: the mean of what is lit, brought up to a light.
+        pale = arr[mx >= 40]
+        if len(pale):
+            out = [_as_light(pale.mean(axis=0))]
+    while out and len(out) < n:
+        r, g, b = (int(out[0][i:i + 2], 16) for i in (1, 3, 5))
+        out.append("#%02x%02x%02x" % (int(r * 0.72), int(g * 0.72), int(b * 0.72)))
     return (out or ["#d8d8d8", "#9a9a9a"])[:n]
+
+
+def _hue(arr: np.ndarray, mx: np.ndarray, mn: np.ndarray) -> np.ndarray:
+    """Hue in degrees, 0-360, for an Nx3 array."""
+    r, g, b = arr[:, 0], arr[:, 1], arr[:, 2]
+    span = np.maximum(mx - mn, 1e-6)
+    h = np.where(mx == r, (g - b) / span % 6.0,
+                 np.where(mx == g, (b - r) / span + 2.0, (r - g) / span + 4.0))
+    return (h * 60.0) % 360.0
+
+
+def _as_light(colour) -> str:
+    """A colour brought up to something that lights a room, keeping its own
+    hue and saturation."""
+    r, g, b = (float(c) for c in colour)
+    top = max(r, g, b, 1.0)
+    k = 232.0 / top if top < 232.0 else 1.0
+    return "#%02x%02x%02x" % tuple(min(255, int(c * k + 0.5)) for c in (r, g, b))
