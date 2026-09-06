@@ -48,10 +48,20 @@ class Ticker:
 
     SCALE = 2
 
+    # Glyphs are drawn at SCALE times the 5x7 font. Two was the whole story
+    # when the wall was one 64 pixel panel; a nine panel wall is three times
+    # as wide and the same two would put a postage stamp in the middle of it,
+    # so the scale follows the panel count and the layout, which is all
+    # centred arithmetic, follows the scale.
+    @staticmethod
+    def _scale_for(size: int) -> int:
+        return max(2, 2 * size // 64)
+
     def __init__(self, size: int, text: str, color: str = "#f4f1ea",
                  speed: float = 1.0, loop: bool = True,
                  colors: list | None = None):
         self.size = size
+        self.SCALE = self._scale_for(size)
         self.text = normalize(text) or "?"
         self.color = _hex_rgb(color)
         self.colors = [_hex_rgb(c) for c in (colors or [])]
@@ -89,9 +99,19 @@ class Clock:
 
     SCALE = 2
 
+    # Glyphs are drawn at SCALE times the 5x7 font. Two was the whole story
+    # when the wall was one 64 pixel panel; a nine panel wall is three times
+    # as wide and the same two would put a postage stamp in the middle of it,
+    # so the scale follows the panel count and the layout, which is all
+    # centred arithmetic, follows the scale.
+    @staticmethod
+    def _scale_for(size: int) -> int:
+        return max(2, 2 * size // 64)
+
     def __init__(self, size: int, color: str = "#f4f1ea",
                  twenty_four: bool = True):
         self.size = size
+        self.SCALE = self._scale_for(size)
         self.color = _hex_rgb(color)
         self.twenty_four = twenty_four
 
@@ -123,9 +143,10 @@ class Clock:
         draw_text(canvas, mm, x + digits_w + gap, y,
                   self.color, self.SCALE)
         if suffix:
-            sw = text_width(suffix, 1)
+            sub = max(1, self.SCALE // 2)
+            sw = text_width(suffix, sub)
             draw_text(canvas, suffix, (self.size - sw) // 2,
-                      y + 7 * self.SCALE + 5, self.color, 1)
+                      y + 7 * self.SCALE + 2 + self.SCALE, self.color, sub)
         return Image.fromarray(canvas, "RGB")
 
 
@@ -153,9 +174,19 @@ class Countdown:
     GRAVITY = 26.0          # px/s^2 on sparks
     SHELL_GRAVITY = 30.0    # px/s^2 on a rising shell
 
+    # Glyphs are drawn at SCALE times the 5x7 font. Two was the whole story
+    # when the wall was one 64 pixel panel; a nine panel wall is three times
+    # as wide and the same two would put a postage stamp in the middle of it,
+    # so the scale follows the panel count and the layout, which is all
+    # centred arithmetic, follows the scale.
+    @staticmethod
+    def _scale_for(size: int) -> int:
+        return max(2, 2 * size // 64)
+
     def __init__(self, size: int, color: str = "#f4f1ea",
                  accent: str = "#e8b04b"):
         self.size = size
+        self.SCALE = self._scale_for(size)
         self.color = _hex_rgb(color)
         self.accent = _hex_rgb(accent)
         # The border, as an ordered walk: top edge from the middle out, then
@@ -422,12 +453,16 @@ class Crawl:
         self.size = size
         self.loop = loop
         # Reading several lines is slower work than watching one slide by.
-        self.px_per_s = 5.5 * max(0.1, speed)
+        self.px_per_s = 5.5 * max(0.1, speed) * max(1, size // 64)
 
         base = _hex_rgb(color)
         inks = [_hex_rgb(c) for c in (colors or [])]
-        lines = wrap_text(normalize(text) or "?", size - 4, 1)
-        line_h = 9                      # 7 px of glyph, 2 of leading
+        # The glyph grows with the wall: a line of 1x text that filled a 64
+        # pixel panel is a thread across a 192 pixel one, and a crawl nobody
+        # can read from the sofa is not a crawl.
+        sc = max(1, size // 64)
+        lines = wrap_text(normalize(text) or "?", size - 4 * sc, sc)
+        line_h = 9 * sc                 # 7 px of glyph, 2 of leading
         h = len(lines) * line_h + 1
         rgb = np.zeros((h, size, 3), dtype=np.uint8)
         # Glyph inks are baked into the plane itself; the resampler then
@@ -435,13 +470,13 @@ class Crawl:
         # glyph counter runs across lines, so a wrapped word keeps its inks.
         gi = 0
         for i, ln in enumerate(lines):
-            x = (size - text_width(ln, 1)) // 2
+            x = (size - text_width(ln, sc)) // 2
             for ch in ln:
                 if ch != " ":
                     ink = inks[gi] if gi < len(inks) else base
-                    draw_text(rgb, ch, x, i * line_h, ink, 1)
+                    draw_text(rgb, ch, x, i * line_h, ink, sc)
                     gi += 1
-                x += 6
+                x += 6 * sc
         self.mask = rgb.astype(np.float32) / 255.0
         self.h = h
 

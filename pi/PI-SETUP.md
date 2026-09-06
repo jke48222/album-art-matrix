@@ -58,29 +58,29 @@ Pi-side config.toml needs two edits (deploy.sh copies the Mac file verbatim):
 
 Play a record. Take the photo.
 
-## 5. Panel QA, before anything goes on a wall
+## 5. Panel QA, and the wall
 
 First light proves one panel. The other nine are unknown, and the faults that
 matter cannot be fixed once the wall is assembled.
 
+The panels are proved a chain at a time, in the arrangement they will live
+in, off the wall supply rather than the bench one. The whole sequence, from
+the supply's first check to nine panels lit and the phone rebuilt, is
+**[docs/WALL-BUILD.md](../docs/WALL-BUILD.md)**.
+
+The shape lives in one file on the Pi:
+
 ```
-# on the Pi. Stop the brain first so the two are not both writing frames:
-sudo systemctl stop album-art-matrix
-python3 scripts/panel_qa.py sweep --panel 1 --serial <batch sticker>
+echo 3x1 > ~/album-art-matrix/wall     # one port, three panels
+echo 3x3 > ~/album-art-matrix/wall     # the whole wall
+sudo systemctl restart album-art-renderer
 ```
 
-Flat fields, a one pixel checkerboard, a row sweep and a column sweep, with a
-prompt after each. Verdicts land in `qa/panel-NN.json` and `qa/QA-SHEET.md`.
-Power the panel down, move the ribbon and the power leads to the next panel,
-run it again with `--panel 2`. About a minute each.
-
-Two of the patterns want a camera or a meter. `binref` is a flat 50 percent
-white to photograph at fixed exposure, which is how brightness bins get
-compared across the ten panels at the end. `white100` is the load test: meter
-the panel's own screw terminals while it is lit, and anything below about
-4.8 V means the supply or the wire gauge is undersized.
-
-Nine good panels are needed. Ten were bought.
+`run_renderer.sh` reads it and works out the rest (`-p` ports, `-c` chain,
+`-x`/`-y`, the panel type map). Rows are ports on the bonnet, columns are
+the panels chained off each port, and every port carries the same number.
+The brain's `[panel]` size and `[wall]` block in the Pi's config.toml have to
+agree with it; it prints what it believes at startup.
 
 ## Troubleshooting
 - **Interleaved / scrambled rows:** flip the bonnet's **E switch** (E on IDC
