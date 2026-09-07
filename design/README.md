@@ -1,8 +1,8 @@
 # The wall, designed
 
-`wall_model.py` builds the finished wall in Blender from the parts on the
-bench and renders it six ways. Every number is a constant at the top of the
-file with its source beside it. This page is the reasoning.
+`wall_model.py` builds the wall in Blender from the parts on the bench and
+renders it six ways. Every number is a constant at the top of the file with
+its source beside it. This page is the reasoning.
 
 ```
 /Applications/Blender.app/Contents/MacOS/Blender --background \
@@ -11,42 +11,45 @@ file with its source beside it. This page is the reasoning.
 
 ## What it is
 
-A black walnut shadow box, 522 mm square and 87 mm deep, with a 16 mm face.
-Inside the wood, a 3 mm black anodised aluminium reveal frames a 484 mm
-window, two millimetres past the LEDs on every side so the panel frames never
-show. The glass is 3 mm opal and 3 mm smoked ND acrylic, 492 mm square,
-sitting 4 mm under the reveal, and the wood stands 5 mm proud of it: a shadow
-line, so the picture reads as set into the object rather than stuck on it.
+A 24 inch square of half inch plywood with a sheet of 22 gauge steel glued to
+its face, both painted matte black. The nine panels hold themselves to the
+steel with the magnetic feet that ship in their boxes: nothing is drilled
+into a panel, and any one of them lifts off with a fingernail. The picture
+lands 480 mm square in the middle, leaving a 64.8 mm black border that reads
+as a mat.
 
-The mitres are keyed with brass splines, two per corner, which show as thin
-brass lines across the outer faces. The app's seven by seven lattice is
-inlaid in brass on the bottom rail with one tile lit. Both are the only
-ornament, and both are structural or meaningful: the splines hold the
-corners, the lattice is the mark the app carries.
+A 24 inch sheet of smoked grey acrylic floats an inch in front on four black
+sign standoffs, one at each corner. The standoff barrel sets the geometry:
+25.4 mm off the steel, less 17.5 mm of panel and magnet, leaves the glass
+7.9 mm clear of the LEDs. Off, the whole thing is a square of black glass.
+On, the art is behind it and the panel frames are not visible.
 
-Behind the panels, a 1.5 mm galvanised steel plate. The panels hold
-themselves to it with the magnetic feet that ship in their boxes, so nothing
-is drilled into a panel and any one of them lifts off by hand for service.
-The plate has generous slots behind each panel's connector zone for the
-ribbons and the power leads. Behind the plate, a 40 mm cavity holds the
-LRS-350-5 along the bottom, the Pi 5 with its Active Cooler on a stacking
-header with the Triple Bonnet above it, the two bus bars, nine inline fuse
-holders, the SL22 inrush limiter, the microphone and the lux sensor.
+Everything electrical is on the back, in the open: the LRS-350-5 low, the
+two bus bars, nine inline fuse holders, the Pi 5 with its Active Cooler and
+the Triple Bonnet, the inlet, the inrush limiter, the microphone and the lux
+sensor. Two blocks of 1 x 3 furring under the cleat and two feet at the
+bottom corners hold the board 63.5 mm off the wall, which is the gap all of
+that lives in. The tallest thing back there is a bus bar with its cover on,
+at 38.1 mm, so there is 25 mm to spare. A 1 x 2 strip would have left
+exactly none.
 
-The back is a 3 mm black anodised aluminium panel on eight countersunk
-screws, inset 12 mm to leave a plenum, with two guarded 340 x 22 mm openings
-in it, one low and one high. Four 16 mm pads hold the back off the wall so
-those openings work: the supply has its own fan (the datasheet's fan curve:
-on above 50 C, off below 40 C) and this gives it somewhere to breathe. The
-rails taper 6 mm toward the wall so the box reads thinner from the side than
-it is. The OOK cleat hangs it. A brass badge on the back carries the name
-and number.
+The supply's fan has the whole room to breathe into, which is the one thing
+an open back does better than a sealed box.
 
-One mains cord. The C14 module with its switch and fuse sits in the bottom
-rail. The Pi takes its 5 V from the same rail as the panels, through a fused
-pigtail into its USB-C port, with `usb_max_current_enable=1` in config.txt.
-The LRS-350-5 trims from 4.5 to 5.5 V, so 5.1 V is available to everything.
-The 27 W USB-C brick is not part of the wall.
+The only ornament is the app's seven by seven lattice on the bottom border,
+one tile lit, a stencil and a fingertip of grey paint. It costs nothing.
+
+About $109 over what is already on the bench. The full list, with the order
+of work, is at the end of [PARTS.md](../PARTS.md).
+
+## The upgrade path
+
+`wall_model_walnut.py` is the same wall in a black walnut shadow box with a
+black anodised reveal, brass keyed mitres, opal and smoked glazing and a
+vented aluminium back. It is about four times the money and a weekend of
+joinery. This carcass is what it would be built around: the steel plate, the
+magnets and the electronics layout do not change, so nothing done now is
+wasted if the frame happens later.
 
 ## What was taken from the atelier study
 
@@ -77,16 +80,16 @@ wood, so the shell itself was not adopted. What was:
 Not adopted: it keeps the 27 W USB-C brick as a second mains device; this
 design feeds the Pi from the 5 V rail on the white paper's authority.
 
-## What changed from the first design, and why
+## What changed, and why
 
 | Was | Now | Because |
 |---|---|---|
-| Nylon standoffs, panels screwed to a PVC plate | Magnetic feet on a steel plate | The manual says four magnetic feet ship with each panel. Their positions do not need verifying because the plate is continuous, and nothing gets drilled |
-| 28 mm rails, 95 mm deep | 16 mm rails, 87 mm deep | A slim face with visible depth reads as a gallery box; a wide face reads as a picture frame |
-| Wood straight to acrylic | Black aluminium reveal, glass recessed 5 mm | The reveal hides the panel frames and gives the picture an edge; the recess gives the wood a shadow line |
-| Sealed box | Vented back panel, plenum, wall pads, fan-cooled supply | The supply has a fan. A sealed walnut box would cook it |
-| Two mains devices | One cord | The Pi is fed from the 5 V rail; the white paper says the GPIO or a non-negotiating USB-C supply is a supported way to power it |
-| A shelf and turntable in the scene | Just the wall | Asked for |
+| Nylon standoffs, panels screwed to a PVC plate | Magnetic feet on a steel skin | The manual says four magnetic feet ship with each panel. Nothing gets drilled and any panel lifts off |
+| A walnut shadow box, brass, an anodised reveal, a vented back | A painted plywood square and four sign standoffs | About a quarter of the money and a day instead of a weekend. The walnut version is kept as the upgrade path |
+| Laser-cut slotted steel | A plain 24 inch sheet, cables round the edge | The slots existed to pass cables through a plate; going round the edge is free and the panels' own 12 mm shells hide the runs on the front |
+| Opal plus smoked acrylic | Smoked only | Two sheets was $50 and the opal's job, hiding the LED grid, is not wanted here: the grid is the point |
+| Sealed box | Open back | The supply has a fan and now has a room to breathe into |
+| Two mains devices | One cord | The Pi is fed from the 5 V rail; the white paper says a non-negotiating supply is a supported way to power it |
 
 ## The verification ledger
 
@@ -125,19 +128,30 @@ checked against the one in the box. DESIGN is a decision.
 | Mini USB mic | 22.2 x 18.3 x 7.0 mm | VERIFIED | Adafruit 3367 |
 | VEML7700 board | 25.5 x 17.7 x 4.6 mm | VERIFIED | Adafruit 4162 |
 | OOK cleat | 12 in long, 1.5 in tall, stands 1/8 in off the wall, 1 in hole pitch | LISTING | OOK 533208 dimension images |
+| Plywood board | 24 x 24 in, 1/2 in | LISTING | Home Depot project panel |
+| Steel skin | 24 x 24 in, 22 gauge (0.76 mm) | LISTING | Everbilt sheet metal |
+| Smoked acrylic | 24 x 24 in, 1/8 in, grey tinted cast | LISTING | Sibe-R / Canal Plastics #2064 |
+| Sign standoffs | 1 x 1 in barrel, black | LISTING | four of them, corners |
+| Furring strip | 1 x 3, 3/4 x 2-1/2 in actual | LISTING | the back gap |
 | Pi power without PD | 600 mA USB limit, 1.6 A with `usb_max_current_enable=1`, GPIO feed acknowledged | VERIFIED | Raspberry Pi USB PD white paper |
 
 ## What to measure before cutting anything
 
-Two numbers decide the depth and neither is on paper: how tall the magnetic
-feet stand off the panel back, and how far the tallest thing on a panel's
-back (the harness plug, most likely) stands off it. A ruler on one panel
-gives both. `MAG_FOOT_H` and the slot sizes are the constants to change.
+**The magnetic feet.** How far they stand a panel off a flat surface is the
+one number this design rests on and nobody has published it. Three
+millimetres is assumed. It sets how far the glass floats over the LEDs
+(`MAG_FOOT_H`, and `AIR_GAP` follows from it), and if the feet turn out to
+be 5 mm the standoffs want to be 1-1/4 in rather than 1 in.
+
+A ruler on one panel, two minutes, before anything is ordered.
 
 ## What is not in the model
 
-The wiring is suggested, not routed: the drops run where they would, the
-ribbons run where they would, but nobody has bent a real 14 AWG lead around
-a real bus bar yet. The Pi's USB-C pigtail exists as a line. The vent slot
-count is a guess at the airflow the supply's fan needs; nobody has measured
-the cavity's temperature.
+The wiring is suggested, not routed: the drops and ribbons run where they
+would, round the board's edge and then inside the panels' own 12 mm shells,
+but nobody has bent a real 14 AWG lead around a real bus bar yet. The Pi's
+USB-C pigtail exists as a line. How the steel is bonded to the plywood
+(construction adhesive, weighted flat) is a note, not geometry. And the
+smoked sheet is a shader, not an optical model: how much of the LED grid it
+actually veils depends on the tint you buy, and #2064 grey at about 35
+percent transmission is the one the render assumes.

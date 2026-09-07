@@ -341,7 +341,7 @@ cams={
  '03-corner-detail':camera('03 Bronze and glass detail',(.48,-.70,.28),(.17,-.09,.17),85),
  '04-rear-service':camera('04 Open rear service',(.43,1.33,.41),(0,-.04,0),62),
  '05-exploded':camera('05 Exploded assembly',(1.12,-1.65,.7),(0,-.20,0),48),
- '06-dimensions':camera('06 Dimension elevation',(0,-2,0),(0,0,0),ortho=.91),
+ '06-dimensions':camera('06 Dimension elevation',(0,-2,0),(0,0,0),ortho=1.08),
  '07-controller':camera('07 Actual controller hardware',(.28,.30,.30),(.09,-.028,.12),72),
  '08-album-mode':camera('08 Album artwork portrait',(.68,-1.6,.18),(0,-.04,0),65)}
 def light(n,p,t,power,size,color,shape='DISK',size_y=None):
