@@ -171,6 +171,87 @@ Then the wiring, which is the same wiring you already have, re-terminated:
 5. Mains: inlet L through the SL22 to the supply's L, N straight to N, earth
    to FG. No exposed copper, cover on, tug test.
 
+### The four parts that are not obvious
+
+**SL22 10005 inrush limiter: mains, in series on the hot line.** Inlet's
+switched and fused output, through the thermistor, into the supply's **L**
+terminal. Not on neutral, not on the DC side, and only one is needed for the
+whole build: the wall draws about 3 A at 120 V and the part is rated 5 A
+steady.
+
+It works by getting hot. Cold it is 10 ohms and swallows the inrush; within a
+second it self-heats down to a fraction of an ohm and stays there. So it must
+sit in **free air**: do not bury it in heat shrink, do not lay it against the
+plywood, do not let wire insulation touch the disc. Splice both leads with the
+insulation held well back, and if you sleeve anything use high-temperature
+sleeving. It is 22 mm across and 5 mm thick with 7.8 mm lead spacing, so
+tuck it in a corner of the mains run with nothing near it.
+
+One caveat worth knowing: it only limits inrush when it is cold. Switch the
+wall off and straight back on and it is still hot, so it does nothing. Give it
+a minute if you are power cycling.
+
+**Mini USB microphone: any Pi USB port, but put it on an extension.** There is
+no wiring; it is USB. The problem is where the Pi is: on the back, facing the
+wall, in a 63.5 mm gap, next to a fan. A microphone there hears the fan. Run a
+short USB extension and zip tie the mic at the **bottom edge of the board**
+facing into the room, or just below the edge where nothing sees it.
+
+Then check the Pi can see it, because it currently has no capture device at
+all:
+
+```bash
+arecord -l          # the mic should appear as card 1 or 2
+```
+
+`config.toml` already has `[acoustid] device = "auto"`, which takes the first
+USB microphone in that list, and the key is already set. Plugging this in is
+what turns the wall's ears on.
+
+**TCS34725 colour sensors: neither one goes in the wall.** They are the bench
+instrument for the white balance measurement in section 8, and they run on the
+spare **Pico 2 W**, not the Pi. Solder the header strip, then:
+
+```
+VIN -> 3V3 OUT (Pico pin 36)      GND -> GND (pin 38)
+SDA -> GP4 (pin 6)                SCL -> GP5 (pin 7)
+```
+
+Flash MicroPython (RPI_PICO2_W build) and
+`mpremote cp scripts/pico_colorimeter.py :main.py`. You have two because one
+is a spare. When the measurement is done they go back in the drawer.
+
+**VEML7700 lux sensor: pins 27 and 28, and only if you want it now.**
+
+The Triple Bonnet uses every GPIO on the header except two. Read off Adafruit's
+own board file: every header net lands on one of its buffers (U1, U2, U3, U5)
+or the STEMMA connector, except **pin 27 (ID_SD, GPIO0)** and **pin 28 (ID_SC,
+GPIO1)**, which land on nothing at all. That pair is I2C0, and it is exactly
+where the parked backplane design put the sensors.
+
+- Wire the sensor's plain header pads, not its STEMMA QT cable: the bonnet's
+  QT port shares SDA and SCL with matrix port 3, and with three chains running
+  that bus is taken.
+- 3V3 from pin 1 or 17, GND from any ground pin, SDA to pin 27, SCL to pin 28.
+  Your riser's pins protrude above the bonnet, so female jumpers slip straight
+  on. Same warning as the ground wire: verify each pin with a meter before
+  connecting, and strain relieve it.
+- Enable the bus in `/boot/firmware/config.txt`:
+
+  ```
+  dtoverlay=i2c0-pi5
+  ```
+
+  then reboot and confirm with `i2cdetect -y 0`, which should show the sensor
+  at 0x10.
+- Mount it at the **top edge**, sensor facing up and out, so it reads room
+  light rather than the wall's own glow.
+
+**The honest part: nothing reads it yet.** There is no lux code in the brain;
+auto-brightness was an S6 idea that never got written. Mount it now if you
+want the wiring done once, or leave it in the box until the software exists.
+It changes nothing about the build either way.
+
 **Do not power up yet.** The panels are not on.
 
 ---
