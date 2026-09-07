@@ -1,0 +1,16 @@
+{
+  "objects": 3905,
+  "pi_solids": 2689,
+  "bonnet_meshes": 138,
+  "cameras": 8,
+  "riser_to_pi_mating_gap_mm": 0.0,
+  "bonnet_to_riser_mating_gap_mm": 0.0,
+  "nominal_bonnet_top_above_pi_pcb_bottom_mm": 30.859614089131355,
+  "packed_images": [
+    "album192.png",
+    "album192.png.001",
+    "disc192.png"
+  ],
+  "notes_embedded": true,
+  "restored_camera": "01 Atelier portrait"
+}

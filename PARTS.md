@@ -180,7 +180,7 @@ and the back is open, so the supply's fan cools itself.
 | USB-C to bare wire pigtail | 18 to 22 AWG, 2 pin; the Pi's feed from the +5 V bar through the tenth fuse holder | $8 |
 | ATC fuses, 5 A | a few; the Pi's drop, the 10 A ones on hand are for panels | $5 |
 | M4 x 16 screws and nuts | 4, through the plywood into the supply's bottom holes | $3 |
-| 1 x 2 furring strip, 8 ft | two blocks under the cleat and two feet at the bottom corners, so the back hangs 45 mm off the wall over the electronics | $2 |
+| 1 x 3 furring strip, 8 ft | two blocks under the cleat and two feet at the bottom corners. Its 2-1/2 in face stood on edge holds the back 63.5 mm off the wall. A 1 x 2 gives 38.1 mm, which is EXACTLY the bus bar's height with its cover on, so the wider strip is the same money and the difference between a fit and a scrape | $2 |
 | | | **about $109** |
 
 Skip the acrylic and it is about $84. Everything else is already on the
@@ -209,7 +209,8 @@ cleat, the M3 kit, the inlet, zip ties, butt connectors, ring terminals.
 7. Acrylic on the four standoffs, and hang it.
 
 What it looks like: a 24 inch square of black glass floating an inch off a
-black plate, the art glowing through it, the 65 mm border reading as a
-black mat. From the side, the electronics are visible behind the plate;
+black plate, the art glowing through it, the 64.8 mm border reading as a
+black mat. `design/wall_model.py` builds exactly this and renders it six
+ways. From the side, the electronics are visible behind the plate;
 a 24 x 24 sheet of black ACM or foam board as a back cover is a $15 add-on
 for later, and the walnut frame is the add-on after that.
