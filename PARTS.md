@@ -160,3 +160,56 @@ calibration tools.
 The height of a magnetic foot off a panel back, and the height of the
 tallest thing on a panel back, most likely the harness plug. Both go into
 `design/wall_model.py` before the steel is ordered.
+
+## The cheap way, 2026-09-07
+
+The walnut design above is the aspiration. This is what gets it hung this
+week. The panels' own magnetic feet do the work: one steel skin is the whole
+mount, a plywood square behind it takes every screw, the smoked acrylic in
+front is the finish. No frame, no reveal, no brass, no laser cutting, no
+second wire spool (the bars sit behind the panels, so the drops are short),
+and the back is open, so the supply's fan cools itself.
+
+| Part | Spec | About |
+|---|---|---|
+| Plywood or MDF, 24 x 24 in | 1/2 in project panel, Home Depot | $18 |
+| Steel sheet, 24 x 24 in | Everbilt 22 gauge, glued to the plywood front; 16 gauge is $64.20 and only worth it if you skip the plywood | $30 |
+| Matte black spray paint | one can, for the steel face and the plywood edges; magnets hold through paint | $6 |
+| Smoked acrylic, 24 x 24 x 1/8 in | grey tinted cast acrylic; Walmart lists the Sibe-R sheet at $24.88 | $25 |
+| Sign standoffs, 1 x 1 in, black | pack of 4; through the acrylic corners into the plywood | $12 |
+| USB-C to bare wire pigtail | 18 to 22 AWG, 2 pin; the Pi's feed from the +5 V bar through the tenth fuse holder | $8 |
+| ATC fuses, 5 A | a few; the Pi's drop, the 10 A ones on hand are for panels | $5 |
+| M4 x 16 screws and nuts | 4, through the plywood into the supply's bottom holes | $3 |
+| 1 x 2 furring strip, 8 ft | two blocks under the cleat and two feet at the bottom corners, so the back hangs 45 mm off the wall over the electronics | $2 |
+| | | **about $109** |
+
+Skip the acrylic and it is about $84. Everything else is already on the
+bench: the panels, the supply, the bars, ten fuse holders, the wire, the
+cleat, the M3 kit, the inlet, zip ties, butt connectors, ring terminals.
+
+### The order of work
+
+1. Home Depot: plywood, steel, paint, furring strip, M4s. Amazon or Walmart:
+   acrylic, standoffs, pigtail, fuses.
+2. Glue the steel to the plywood (construction adhesive, weight it flat
+   overnight), then paint the face and the edges matte black.
+3. On the back: the supply low with M4s, the bars in the middle with M3 kit
+   screws and nuts through the plywood, the fuse holders zip tied to the
+   drops, the Pi on zip ties or foam tape (its holes are 2.7 mm; M3 will
+   not fit), the inlet on its flange at the bottom edge. Bond the steel
+   skin to the -V bar with one ring terminal under a bar screw.
+4. Cables come round the plywood's edge to the front: ribbons along the
+   left edge, drops along the bottom. On the front they run inside the
+   panels' 12 mm shells, crossing at the seams, exactly as they do on the
+   floor now.
+5. Panels on by their magnets, in the order the tile map already
+   established. Run the tile map once to confirm.
+6. Cleat on two furring blocks at the top of the back, two feet at the
+   bottom corners, the wall half of the cleat on the wall.
+7. Acrylic on the four standoffs, and hang it.
+
+What it looks like: a 24 inch square of black glass floating an inch off a
+black plate, the art glowing through it, the 65 mm border reading as a
+black mat. From the side, the electronics are visible behind the plate;
+a 24 x 24 sheet of black ACM or foam board as a back cover is a $15 add-on
+for later, and the walnut frame is the add-on after that.
