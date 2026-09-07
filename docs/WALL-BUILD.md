@@ -200,10 +200,32 @@ agree: the brain prints what it believes at startup.
 ```
 
 Every tile shows its number and an arrow at its top edge. Read them off the
-wall:
+wall.
 
-- **Numbers in the wrong order:** the chain fills the other way. Either move
-  the ribbons, or write the order into the Pi's `config.toml`:
+**With the wall face down** (which is where it lives until there is a frame
+to hang it on) the numbers are unreadable, and the map still comes out of
+the edge glow. Light one tile at a time, full white, three seconds each,
+with two seconds of dark to mark the start of a cycle, and note which panel
+glows at each step. Nine observations, one pass, no faces needed. The tool
+that walks them is `panel_qa.py`; the brain must be stopped for it, because
+two writers on the frame pipe interleave and the wall shows a mix of both.
+
+**Measured on this wall, 2026-09-06:** every chain fills RIGHT TO LEFT, rows
+in the right order. Canvas tile 1 lit the top right panel, 2 the top middle,
+3 the top left, and the same across the middle and bottom rows. That is
+`order = "2 1 0 5 4 3 8 7 6"`, which is in the Pi's config.toml. Verified by
+pushing a frame lit only in the picture's top left corner and watching the
+top left panel come up.
+
+Note that `panel_qa.py` writes straight to the renderer and does NOT apply
+that order: its tile numbers are the renderer's, which is what you want
+while you are still working the mapping out. The brain applies the order,
+so anything the wall shows for itself is already the right way round.
+
+If the numbers come back wrong:
+
+- **Numbers in the wrong order:** the chain fills the other way. Write the
+  order into the Pi's `config.toml` rather than moving ribbons:
   `[wall] order = "2 1 0 5 4 3 8 7 6"` for chains that fill right to left.
   Tile 0 is top left and they read across.
 - **A number upside down or sideways:** that panel is mounted the other way
