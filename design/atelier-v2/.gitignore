@@ -1,0 +1,9 @@
+.tools/
+__pycache__/
+*.blend1
+references/*.html
+references/*-images.json
+references/*-contact.png
+references/*-install.log
+references/pi-meshes.json
+references/raspberry-pi-5.step

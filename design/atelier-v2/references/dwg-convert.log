@@ -1,0 +1,15 @@
+Warning: Skip HATCH common handles due to short handle stream
+Warning: Skip HATCH common handles due to short handle stream
+Warning: Unstable Class object 503 MATERIAL (0x481) 3107/0
+Warning: Unstable Class object 503 MATERIAL (0x481) 3115/0
+Warning: Unstable Class object 503 MATERIAL (0x481) 3123/0
+Warning: Unstable Class object 505 TABLESTYLE (0xfff) 3158/0
+Warning: TODO TABLESTYLE r2010+ missing fields
+Warning: Unstable Class object 507 MLEADERSTYLE (0xfff) 3178/0
+Warning: Unstable Class object 503 MATERIAL (0x481) 3107/DFF
+Warning: Unstable Class object 503 MATERIAL (0x481) 3115/E07
+Warning: Unstable Class object 503 MATERIAL (0x481) 3123/E0F
+Warning: TODO TABLESTYLE r2010+ missing fields
+Warning: Unstable Class object 507 MLEADERSTYLE (0xfff) 3178/E46
+Reading DWG file design/atelier-v2/references/RGB-Matrix-P2_5-64x64-2D.dwg
+Writing DXF file design/atelier-v2/references/panel.dxf
