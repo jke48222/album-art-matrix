@@ -8,6 +8,14 @@ Pi 5.
 circuit simulation, and the software that will run on it. Some of the first light parts have since
 been ordered; no panel has arrived. The section below is exact about what exists.
 
+## Building it
+
+[docs/ASSEMBLY.md](docs/ASSEMBLY.md) is the current guide: nine panels are
+lit and mapped, and it takes them from the floor to a hung wall. The design
+being built is in [design/](design/), the parts and prices at the end of
+[PARTS.md](PARTS.md), and [docs/WALL-BUILD.md](docs/WALL-BUILD.md) is the
+record of how the wiring was arrived at.
+
 ## Status
 
 | Piece | State |

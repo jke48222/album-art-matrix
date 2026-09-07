@@ -1,5 +1,12 @@
 # Building the wall, without the frame
 
+> **Steps 1 to 8 of this page were finished on 2026-09-06.** Nine panels are
+> lit, the tile map is settled and the wiring is proved. To carry on from
+> there, go to **[ASSEMBLY.md](ASSEMBLY.md)**, which takes it from the floor
+> to the wall. This page is kept as the record of how the wiring was arrived
+> at and what each check was for.
+
+
 Nine panels, one Pi, one supply, no wood. The frame and the acrylic are a
 later job and they change nothing electrical: what gets built here is the
 whole wall lying face up on the floor, proved, calibrated and running. When
