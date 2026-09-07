@@ -288,6 +288,12 @@ threes rather than refused.
 
 ## 9. What is left for the frame
 
+The frame itself now has a design: [design/README.md](../design/README.md)
+and the renders beside it. Two things in it change the steps above. The
+panels ship with four magnetic feet each, so the plan is a steel plate and
+no standoffs, which makes step 2's sheet a 1.5 mm steel one and step 3
+unnecessary. And the supply has a fan, so the box is vented.
+
 Nothing electrical. The wall works on the floor and it will work on timber.
 When the wood arrives:
 

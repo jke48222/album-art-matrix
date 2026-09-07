@@ -1,0 +1,248 @@
+                                                  350W Single Output Switching Power Supply                                               L R S - 3 5 0 series
+                                                                                                                                                                          User’s Manual
+
+
+
+
+                                                                                                                                                                            Click Me
+
+
+
+
+                IS 13252
+                                  THOMAS SAMUEL
+                  THOMAS SAMUEL
+
+
+
+
+              (Note.12)
+                                                    EN61558-1
+                                          EN61558-2-16
+
+
+
+
+              (Note.11)                           TP TC004    IEC62368-1      UL62368-1   (Note.10)   
+                                                              IEC61558-1
+■                                                     IEC61558-2-16
+                                                                                                                                 ■ 
+‧                                                                                             ‧
+‧                                                                                       ‧
+‧                                                                          ‧ 
+                                                                                                             ‧
+‧                                                                                             
+‧
+                                                                                                                                 ■ 
+‧                                                                                                                       
+‧
+‧
+‧
+‧
+‧℃
+‧O altitude up to 5000 meters (Note.8)
+‧
+‧
+
+■ 
+     
+     
+     
+     
+     ℃
+     
+     
+     
+     
+
+■ 
+      
+                                                                       
+                                                                       
+                                                                                                                                               File Name:LRS-350-SPEC 2025-09-12
+                      350W Single Output Switching Power Supply                                                    L R S - 3 5 0 series
+SPECIFICATION
+MODEL                                     LRS-350-3.3    LRS-350-4.2 LRS-350-5          LRS-350-12     LRS-350-15 LRS-350-24 LRS-350-36 LRS-350-48
+             DC VOLTAGE                   3.3V            4.2V           5V             12V            15V            24V             36V            48V
+             RATED CURRENT                60A            60A             60A            29A            23.2A          14.6A           9.7A           7.3A
+             CURRENT RANGE                0 ~ 60A         0 ~ 60A        0 ~ 60A        0 ~ 29A        0 ~ 23.2A      0 ~ 14.6A       0 ~ 9.7A       0 ~ 7.3A
+             RATED POWER                  198W            252W           300W           348W           348W           350.4W          349.2W         350.4W
+             RIPPLE & NOISE (max.) Note.2 150mVp-p        150mVp-p       150mVp-p       150mVp-p       150mVp-p       150mVp-p       200mVp-p        200mVp-p
+OUTPUT       VOLTAGE ADJ. RANGE           2.97 ~ 3.6V     3.6 ~ 4.4V     4.5 ~ 5.5V     10.2 ~ 13.8V 13.5 ~ 18V       21.6 ~ 28.8V 32.4 ~ 39.6V 43.2 ~ 52.8V
+             VOLTAGE TOLERANCE Note.3 ±4.0%               ±4.0%          ±3.0%          ±1.5%          ±1.0%          ±1.0%           ±1.0%          ±1.0%
+             LINE REGULATION Note.4 ±0.5%                 ±0.5%          ±0.5%          ±0.5%          ±0.5%          ±0.5%           ±0.5%          ±0.5%
+             LOAD REGULATION Note.5 ±2.5%                 ±2.5%          ±2.0%          ±1.0%          ±0.5%          ±0.5%           ±0.5%          ±0.5%
+             SETUP, RISE TIME             1500ms, 50ms/230VAC            1500ms,50ms/115VAC at full load
+             HOLD UP TIME (Typ.)          16ms/230VAC        12ms/115VAC at full load
+             VOLTAGE RANGE                90 ~ 132VAC / 180 ~ 264VAC by switch           240 ~ 370VDC        (switch on 230VAC)
+             FREQUENCY RANGE              47 ~ 63Hz
+             EFFICIENCY (Typ.)            79.5%          81.5%           83.5%          85%            86%             88%           88.5%            89%
+INPUT
+             AC CURRENT (Typ.)            6.8A/115VAC            3.4A/230VAC
+             INRUSH CURRENT (Typ.)        60A/115VAC         60A/230VAC
+             LEAKAGE CURRENT              <2mA / 240VAC
+                                          110 ~ 140% rated output power
+             OVER LOAD                    3.3~36V Hiccup mode, recovers automatically after fault condition is removed.
+                                          48V Shut down and latch off o/p voltage, re-power on to recover.
+PROTECTION                                3.8 ~ 4.45V    4.6 ~ 5.4V      5.75 ~ 6.75V 13.8 ~ 16.2V 18 ~ 21V           28.8 ~ 33.6V 41.4 ~ 46.8V 55.2 ~ 64.8V
+             OVER VOLTAGE                 3.3~36V Hiccup mode, recovers automatically after fault condition is removed.
+                                          48V Shut down and latch off o/p voltage, re-power on to recover.
+                                          3.3~36V Hiccup mode, recovers automatically after fault condition is removed.
+             OVER TEMPERATURE             48V Shut down and latch off o/p voltage, re-power on to recover.
+
+         FAN ON/OFF CONTROL               RTH3≧50℃ FAN ON, ≦40℃ FAN OFF
+FUNCTION (Typ.)
+
+             WORKING TEMP.                -25 ~ +70℃ (Refer to "Derating Curve")
+             WORKING HUMIDITY             20 ~ 90% RH non-condensing
+ENVIRONMENT STORAGE TEMP., HUMIDITY -40 ~ +85℃, 10 ~ 95% RH
+             TEMP. COEFFICIENT            ±0.03%/℃ (0 ~ 50℃)
+             VIBRATION             10 ~ 500Hz, 5G 10min./1cycle, 60min. each along X, Y, Z axes
+             OVER VOLTAGE CATEGORY Ⅲ: According to EN61558, EN50178, EN60664-1, EN62477-1; altitude up to 2000 meters
+                                          IEC/UL 62368-1,BSMI CNS15598-1,EAC TP TC 004,KC62368-1(for LRS-350-12/24 only),GB 4943.1,
+SAFETY &                                  BIS IS13252(Part1): 2010/IEC 60950-1: 2005(NOTE 12),BS EN/EN61558-1, BS EN61558-2-16
+         SAFETY STANDARDS
+EMC                                       Designed by AS/NZS 61558.1/2.16, AS/NZS 62368.1,BS EN/EN62368-1,
+(Note.9)
+             WITHSTAND VOLTAGE            I/P-O/P:3.75KVAC        I/P-FG:2KVAC     O/P-FG:0.5KVAC
+             ISOLATION RESISTANCE I/P-O/P, I/P-FG, O/P-FG:100M Ohms/500VDC / 25℃/ 70% RH
+             EMC EMISSION                 Compliance to BSMI CNS15936, EAC TP TC 020,KSC9832,KSC9835(for LRS-350-12/24 only)
+             EMC IMMUNITY                 Compliance to BS EN/EN55035, EAC TP TC 020,KSC9832,KSC9835(for LRS-350-12/24 only)
+             MTBF                         2099.9K hrs min.        Telcordia SR-332 (Bellcore) ; 328.6Khrs min.       MIL-HDBK-217F (25℃)
+OTHERS DIMENSION                          215*115*30mm (L*W*H)
+             PACKING                      0.76Kg; 15pcs/12.4Kg/0.67CUFT
+NOTE         1. All parameters NOT specially mentioned are measured at 230VAC input, rated load and 25℃ of ambient temperature.
+             2. Ripple & noise are measured at 20MHz of bandwidth by using a 12" twisted pair-wire terminated with a 0.1uf & 47uf parallel capacitor.
+             3. Tolerance : includes set up tolerance, line regulation and load regulation.
+             4. Line regulation is measured from low line to high line at rated load.
+             5. Load regulation is measured from 0% to 100% rated load.
+             6. Length of set up time is measured at cold first start. Turning ON/OFF the power supply very quickly may lead to increase of the set up time.
+             7. The 150% peak load capability is built in for up to 1 second for 12~48V.LRS-350 will enter hiccup mode if the peak load is delivered
+                for over 1 second and will recover once it resumes to the rated current level(115VAC/230VAC).
+             8. The ambient temperature derating of 5℃/1000m is needed for operating altitude greater than 2000m(6500ft).
+             9. The power supply is considered a component which will be installed into a final equipment. All the EMC tests are been executed by
+                mounting the unit on a 360mm*360mm metal plate with 1mm of thickness. The final equipment must be re-confirmed that it still meets
+                EMC directives. For guidance on how to perform these EMC tests, please refer to “EMI testing of component power supplies.”
+                (as available on https://www.meanwell.com//Upload/PDF/EMI_statement_en.pdf)
+             10. This power supply does not meet the harmonic current requirements outlined by BS EN/EN61000-3-2. Please do not use this power supply
+                 under the following conditions:
+                 a) the end-devices is used within the European Union, and
+                 b) the end-devices is connected to public mains supply with 220Vac or greater rated nominal voltage, and
+                 c) the power supply is:
+                    - installed in end-devices with average or continuous input power greater than 75W, or
+                    - belong to part of a lighting system
+                 Exception:
+                 Power supplies used within the following end-devices do not need to fulfill BS EN/EN61000-3-2
+                 a) professional equipment with a total rated input power greater than 1000W;
+                 b) symmetrically controlled heating elements with a rated power less than or equal to 200W
+             11. RCM is on voluntary basis and meets relevant IEC or AS/NZS standards complying with AS/NZS 4417.1.
+             12. Some model may not have the BIS logo, please contact your MEAN WELL sales for more information.
+             ※ Product Liability Disclaimer：For detailed information, please refer to https://www.meanwell.com/serviceDisclaimer.aspx
+                                                                                                                                     File Name:LRS-350-SPEC 2025-09-12
+                         350W Single Output Switching Power Supply                                                          L R S - 3 5 0 series
+   Block Diagram
+
+                                                   115/230V(SW)                                    RECTIFIERS                                            fosc : 65KHz
+                                                                                                        &               FAN
+                                                                                                     FILTER
+                                                                                                                 FAN ON/OFF CONTROL
+                       EMI                                         POWER                           RECTIFIERS                                                     +V
+I/P                                           RECTIFIERS                                                &
+                     FILTER                                       SWITCHING                                                                                       -V
+                                                                                                     FILTER
+
+
+                                                                                                                      O.T.P.
+FG                                                                                                                    O.V.P.
+                                                       O.L.P.            PWM
+                                                                       CONTROL                                  DETECTION
+                                                                                                                 CIRCUIT
+
+   Derating Curve                                                                     Static Characteristics
+
+
+                                                                                                 100
+           100
+                                                                                                  90
+            80
+                                                                                                                                           180 ~ 264VAC
+                                                                                                  80                                        90 ~ 132VAC
+
+            60                                                                                    70
+
+
+
+
+LOAD (%)                                                                              LOAD (%)
+                                                                                                  60
+            40
+                                                                                                  50
+            20
+                                                                                                  40
+
+
+             -25   -20   -10   0   10   20   30   40   50   60    70   (HORIZONTAL)                90    95     100   105      110   115    120    125      132
+                                                                                                   180   190    200   210      220   230    240    250      264
+
+                         AMBIENT TEMPERATURE (℃)                                                                  INPUT VOLTAGE (VAC) 60Hz
+
+
+
+
+                                                                                                                                              File Name:LRS-350-SPEC 2025-09-12
+                    350W Single Output Switching Power Supply                                      L R S - 3 5 0 series
+  Mechanical Specification                                                            Case No.207A           Unit:mm        Tolerance:±1
+
+                                             215
+             32.5                            150
+
+
+
+
+            LED
+             +V
+            ADJ.                                   36.7
+                9
+                8
+                              4-M4 L=3mm
+                7
+      9.5
+                6                                                      50     115
+135
+                5
+                                                          47.45
+                4
+      8         3
+                2
+                                                                       32.5
+                1
+
+
+                                                             16
+
+                     15
+
+
+             32.5                            150
+
+                                                                                                Terminal Pin No. Assignment :
+                               2
+                                                                                                 Pin No.   Assignment   Pin No.  Assignment
+
+                               12.8 6.9
+                                                                              30     Air flow       1         AC/L       4~6    DC OUTPUT -V
+                                                                                    direction
+                                                                       12.5                         2         AC/N       7~9    DC OUTPUT +V
+                    6.5 6.5                                   4-M4(Both Sides) L=5mm                3        FG
+
+
+
+
+  Installation Manual
+ Please refer to : http://www.meanwell.com/manual.html
+
+
+
+
+                                                                                                                    File Name:LRS-350-SPEC 2025-09-12
+
