@@ -30,3 +30,6 @@ tessera/build-device/
 
 # Xcode DerivedData from a simulator build at the repo root
 /build/
+
+# Blender backup saves
+*.blend1

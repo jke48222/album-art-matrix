@@ -1,0 +1,7 @@
+TESSERA WALL / CODEX CONCEPT
+Units: millimetres, geometry in metres.
+CONFIRMED: 9 x 160 mm Waveshare modules, 2.5 mm pitch, 192 square pixels. Two 480 x 480 x 3 acrylic sheets per PARTS.md. LRS-350-5 envelope 215 x 115 x 30 per Mean Well. Pi PCB 85 x 56 per Raspberry Pi.
+DESIGNED: 528 square x 110 deep walnut enclosure; 476 aperture retaining 480 acrylic; 12 wall stand-off; 3 mm support rails; 20 mm nylon standoffs; 15.5 mm LED-to-opal gap.
+PROVISIONAL: panel thickness 14.5, every module mounting-hole centre, sockets, bus bars, bonnet/cooler stack, fuses, IEC cutout, cleat engagement and fastener schedule. Measure purchased parts before fabrication. Support-rail drill patterns must follow actual modules.
+Display proxy represents intended appearance, not measured diffuser transmission or brightness. Room and furniture are staging. Wiring curves show topology and reserved routing, not a pinout or fabrication harness. External Pi USB-C supply retained; internal PSU powers panels only. Verify cooler/bonnet compatibility, mains segregation, ventilation and mounting load on physical build.
+Sources: docs/WALL-BUILD.md; PARTS.md; https://www.waveshare.com/wiki/RGB-Matrix-P2.5-64x64 ; https://www.meanwell.com/Upload/PDF/LRS-350/LRS-350-SPEC.PDF ; https://datasheets.raspberrypi.com/rpi5/raspberry-pi-5-mechanical-drawing.pdf
