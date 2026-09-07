@@ -101,3 +101,62 @@ S6, local:
 - Mean Well on Amazon only through brand-verified listings. A "Generic" LRS-350-5
   listing claiming 73 A is not a real Mean Well and its own spec table
   contradicts its title.
+
+## For the designed wall (design/README.md), 2026-09-07
+
+What the second design adds, and what the original list still owes. Sizes
+follow the numbers in `design/wall_model.py`. Nothing here is ordered.
+
+### Structure
+
+| Part | Spec | Why |
+|---|---|---|
+| Black walnut | four rails 522 x 87 x 16 mm: one 5/8 in x 3-1/2 in board, 8 ft, or two 4 ft | the frame |
+| Steel mount plate | 496 x 496 x 1.5 mm (16 ga), eighteen cable slots, cleat holes; laser cut (SendCutSend or a local shop) or a 24 x 24 in 16 ga sheet cut by hand | the panels' magnetic feet hold to it; replaces the PVC board and every standoff |
+| Black anodised aluminium flat bar | 1/8 x 1/2 in, one 6 ft length, cut to four at 490 mm | the reveal: stood on edge in the glazing rebate, its 3 mm edge is what shows |
+| Back panel | 3 mm black aluminium composite (ACM) or black anodised aluminium, 490 x 490, two 340 x 22 openings; SendCutSend can cut it with the steel | closes the box; the vents are in it |
+| Brass flat bar | 1/16 x 1/2 in, 12 in | eight mitre splines, about 20 mm each |
+| Brass sheet | 0.016 in, a 20 x 20 mm piece engraved with the 7x7 lattice, plus a 30 x 11 mm badge | the mark on the bottom rail, the badge on the back |
+| Countersunk black M3 x 8 screws | 8 | the back panel; the M3 kit has socket heads only |
+| Hardwax oil | one small tin (Osmo or Rubio) | the walnut |
+| Wall pads | four 30 x 30 x 16 mm blocks, walnut offcuts | hold the back off the wall so the vents breathe |
+
+### Electrical
+
+| Part | Spec | Why |
+|---|---|---|
+| USB-C to bare wire pigtail | 18 AWG, about 30 cm | feeds the Pi from the +5 V bar through the tenth fuse holder |
+| ATC fuse, 3 A | 1 (the 25 on hand are 10 A) | the Pi's drop |
+| 14 AWG silicone, second spool | 25 ft | nine drops and three feed pairs need about 38 ft; 25 ft is on hand |
+| M4 x 6 mm screws | 4 | the LRS-350-5 bottom holes (3 mm thread depth) |
+| M2.5 nylon standoffs and screws | 4 sets, 3 to 5 mm | the Pi's holes are 2.7 mm; M3 does not fit |
+| IDC ribbons, 50 cm | 2, only if the 30 cm ones shipped with the panels do not reach from the bonnet to the far rows | the three port runs |
+| Wire strippers, 10 to 22 AWG | 1 | still not owned (August note) |
+| Red 22 to 16 AWG rings or forks | small pack | the 18 AWG mains conductors (August note) |
+| Adhesive zip tie mounts | one pack | dressing the drops to the plate |
+
+### Glazing
+
+| Part | Spec | Why |
+|---|---|---|
+| Opal acrylic | 3 mm, 492 x 492 | the diffuser |
+| Smoked ND acrylic | 3 mm, 492 x 492 | the face: black glass when the wall is off |
+
+### Tools this frame needs that the ledger does not list
+
+A mitre saw or a mitre box, a router with a rabbeting bit or a table saw for
+the 4 x 14 mm glazing rebate, a band clamp, a drill with a 3.2 mm bit, a
+thin kerf saw or a spline jig for the mitre keys, a jigsaw with a metal
+blade if the steel or the ACM is cut by hand.
+
+### No longer needed
+
+The nylon M3 standoff kit, the PVC foam board, and the 27 W USB-C supply as
+part of the wall (it stays as the bench supply). The TCS34725 boards remain
+calibration tools.
+
+### Measure first
+
+The height of a magnetic foot off a panel back, and the height of the
+tallest thing on a panel back, most likely the harness plug. Both go into
+`design/wall_model.py` before the steel is ordered.

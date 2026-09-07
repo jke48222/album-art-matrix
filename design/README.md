@@ -34,17 +34,48 @@ header with the Triple Bonnet above it, the two bus bars, nine inline fuse
 holders, the SL22 inrush limiter, the microphone and the lux sensor.
 
 The back is a 3 mm black anodised aluminium panel on eight countersunk
-screws, inset 12 mm to leave a plenum. Twenty four slots milled in the rear
-inner face of the top and bottom rails let air in below and out above; the
-supply has its own fan (the datasheet's fan curve: on above 50 C, off below
-40 C) and this gives it somewhere to breathe. The OOK cleat hangs it. A brass
-badge on the back carries the name and number.
+screws, inset 12 mm to leave a plenum, with two guarded 340 x 22 mm openings
+in it, one low and one high. Four 16 mm pads hold the back off the wall so
+those openings work: the supply has its own fan (the datasheet's fan curve:
+on above 50 C, off below 40 C) and this gives it somewhere to breathe. The
+rails taper 6 mm toward the wall so the box reads thinner from the side than
+it is. The OOK cleat hangs it. A brass badge on the back carries the name
+and number.
 
 One mains cord. The C14 module with its switch and fuse sits in the bottom
 rail. The Pi takes its 5 V from the same rail as the panels, through a fused
 pigtail into its USB-C port, with `usb_max_current_enable=1` in config.txt.
 The LRS-350-5 trims from 4.5 to 5.5 V, so 5.1 V is available to everything.
 The 27 W USB-C brick is not part of the wall.
+
+## What was taken from the atelier study
+
+`design/atelier-v2` is a second, independent design study of the same wall
+(a sculpted graphite aluminium shell with a bronze perimeter, 536 square and
+116 deep). Its shell is a cast or machined part and this wall is built in
+wood, so the shell itself was not adopted. What was:
+
+- **Manufacturer CAD.** Its Pi 5 is Raspberry Pi's own STEP and its bonnet
+  is Adafruit's own 3MF. Both are appended straight out of
+  `Tessera-Atelier.blend` into this model, along with its reconstruction of
+  the LRS-350-5 (fan cutout, label, nine terminals), its bus bars from the
+  seller's dimension image, and its labelled fuse holders.
+- **The official panel drawing.** Waveshare's DWG for the P2.5 64x64 gives a
+  rear shell of 159.8 mm, 12 mm deep, with eight M3 points at (45, 73) and
+  (73, 45) from centre. The panel backs here are those ribbed shells now,
+  and the magnetic feet sit on four of the eight points.
+- **Corrected numbers.** The bus bar is 5.4 x 0.9 x 1.5 in, not the 3 x 2.3
+  in bar of a sibling listing; the SL22 is 5 mm thick; the cleat is 1.5 in
+  tall and stands 1/8 in off the wall.
+- **Air.** Its vents are two guarded 340 x 22 mm openings in a removable rear
+  cover, and it holds the whole body 16 mm off the wall on spacers so the
+  rear can breathe. Both replaced the slots milled in this design's rails.
+- **The taper.** Its shell narrows toward the wall so the body reads thinner
+  than it is. The walnut rails now taper 6 mm on the outer face toward the
+  back, which is one pass on a table saw.
+
+Not adopted: it keeps the 27 W USB-C brick as a second mains device; this
+design feeds the Pi from the 5 V rail on the white paper's authority.
 
 ## What changed from the first design, and why
 
@@ -53,7 +84,7 @@ The 27 W USB-C brick is not part of the wall.
 | Nylon standoffs, panels screwed to a PVC plate | Magnetic feet on a steel plate | The manual says four magnetic feet ship with each panel. Their positions do not need verifying because the plate is continuous, and nothing gets drilled |
 | 28 mm rails, 95 mm deep | 16 mm rails, 87 mm deep | A slim face with visible depth reads as a gallery box; a wide face reads as a picture frame |
 | Wood straight to acrylic | Black aluminium reveal, glass recessed 5 mm | The reveal hides the panel frames and gives the picture an edge; the recess gives the wood a shadow line |
-| Sealed box | Vented rails, plenum, fan-cooled supply | The supply has a fan. A sealed walnut box would cook it |
+| Sealed box | Vented back panel, plenum, wall pads, fan-cooled supply | The supply has a fan. A sealed walnut box would cook it |
 | Two mains devices | One cord | The Pi is fed from the 5 V rail; the white paper says the GPIO or a non-negotiating USB-C supply is a supported way to power it |
 | A shelf and turntable in the scene | Just the wall | Asked for |
 
@@ -70,29 +101,30 @@ checked against the one in the box. DESIGN is a decision.
 | Panel weight | 100 g | VERIFIED | manual: 3.53 oz |
 | Magnetic feet | 4 per panel | VERIFIED | manual, in the box |
 | Magnetic foot height | 3 mm | TYPICAL | not stated anywhere found |
-| Panel back layout | representative | UNVERIFIED | the wiki and product page refuse fetches; two HUB75 and a VH4 header are documented, their positions are not |
+| Panel rear shell | 159.8 mm, 12 mm deep, eight M3 points at (45, 73) and (73, 45) | VERIFIED | Waveshare P2_5 64x64 DWG, official GitHub, extracted in the atelier study |
+| Panel connector positions | representative | UNVERIFIED | two HUB75 and a VH4 header are documented, their positions are not |
 | LRS-350-5 | 215 x 115 x 30 mm, 0.76 kg | VERIFIED | Mean Well datasheet |
 | LRS-350-5 terminals | L, N, FG, -V x3, +V x3 | VERIFIED | datasheet pin assignment |
 | LRS-350-5 trim | 4.5 to 5.5 V | VERIFIED | datasheet |
 | LRS-350-5 cooling | fan, on above 50 C | VERIFIED | datasheet fan curve |
 | LRS-350-5 mounting | 4 x M4 both sides (L=5), 4 x M4 bottom (L=3) | VERIFIED | datasheet |
-| Pi 5 board | 85 x 56 mm, holes 58 x 49 on 3.5 mm insets, dia 2.7 | VERIFIED | Raspberry Pi mechanical drawing |
+| Pi 5 board | 85 x 56 mm, holes 58 x 49 on 3.5 mm insets, dia 2.7; the model is the official STEP | VERIFIED | Raspberry Pi mechanical drawing and CAD |
 | Active Cooler | 63.5 x 42.5 x 13.7 mm | VERIFIED | product brief and mechanical drawing |
-| Triple Bonnet PCB | 65.0 x 30.7 mm | VERIFIED | Eagle board file, layer 20 outline |
+| Triple Bonnet PCB | 65.0 x 30.7 mm; the model is the official 3MF | VERIFIED | Eagle board file and Adafruit CAD |
 | Bonnet connectors | three 2x8 shrouded IDC, one JST SH 4 | VERIFIED | Eagle board file, element positions |
 | Bonnet power | none on board, cannot power the Pi | VERIFIED | Learn guide |
 | Bonnet STEMMA QT | present, shares SDA/SCL with port 3 | VERIFIED | Learn guide pinouts |
 | Stacking header pins | 12 mm | LISTING | Frienda |
 | Header body height | 8.5 mm | TYPICAL | |
-| Bus bar | 3 x 2.3 x 1.81 in, 12 x M4, 1/4 in stud | LISTING | RVBOATPAT |
+| Bus bar | 5.4 x 0.9 x 1.5 in, 12 x M4 at 0.4 in, 1/4 in stud, copper plate 3.8 in, holes 4.7 in apart | LISTING | RVBOATPAT dimension image |
 | Fuse holder leads and fuse | 12 in, 14 AWG, ATC 19.1 x 18.5 x 5.1 | VERIFIED | nilight.com |
 | Fuse holder body | 36 x 14 x 14 mm | TYPICAL | |
 | C14 module | approx 50 x 30 x 30 mm, holes 67 mm apart, 5 x 20 fuse | LISTING | Antrader |
 | C14 cutout | 47 x 27.5 mm | TYPICAL | |
-| SL22 10005 | 22 mm disc, 10 ohm, 5 A | VERIFIED dia | DigiKey, Ametherm; thickness TYPICAL |
+| SL22 10005 | 22 mm max dia, 5 mm max thick, 7.8 mm lead pitch, 10 ohm, 5 A | VERIFIED | Ametherm datasheet |
 | Mini USB mic | 22.2 x 18.3 x 7.0 mm | VERIFIED | Adafruit 3367 |
 | VEML7700 board | 25.5 x 17.7 x 4.6 mm | VERIFIED | Adafruit 4162 |
-| OOK cleat | 12 in | LISTING | OOK 533208 |
+| OOK cleat | 12 in long, 1.5 in tall, stands 1/8 in off the wall, 1 in hole pitch | LISTING | OOK 533208 dimension images |
 | Pi power without PD | 600 mA USB limit, 1.6 A with `usb_max_current_enable=1`, GPIO feed acknowledged | VERIFIED | Raspberry Pi USB PD white paper |
 
 ## What to measure before cutting anything
