@@ -127,6 +127,75 @@ def board_material(name, base, rough=0.86):
     return m
 
 
+def leather_material(name="Saddle leather", base=(0.30, 0.15, 0.06)):
+    """Vegetable-tanned leather: warm, a little sheen, fine grain in the
+    normal, and the colour darkened where the grain dips."""
+    m, nt, b = W.principled(name)
+    b.inputs["Roughness"].default_value = 0.52
+    b.inputs["Specular IOR Level"].default_value = 0.40
+    if "Sheen Weight" in b.inputs:
+        b.inputs["Sheen Weight"].default_value = 0.15
+    tex = nt.nodes.new("ShaderNodeTexCoord")
+    n = nt.nodes.new("ShaderNodeTexNoise")
+    n.inputs["Scale"].default_value = 420.0
+    n.inputs["Detail"].default_value = 5.0
+    nt.links.new(tex.outputs["Object"], n.inputs["Vector"])
+    bump = nt.nodes.new("ShaderNodeBump")
+    bump.inputs["Strength"].default_value = 0.30
+    bump.inputs["Distance"].default_value = 0.5
+    nt.links.new(n.outputs["Fac"], bump.inputs["Height"])
+    nt.links.new(bump.outputs["Normal"], b.inputs["Normal"])
+    ramp = nt.nodes.new("ShaderNodeValToRGB")
+    ramp.color_ramp.elements[0].color = (*[c * 0.70 for c in base], 1.0)
+    ramp.color_ramp.elements[1].color = (*[min(1.0, c * 1.15) for c in base], 1.0)
+    nt.links.new(n.outputs["Fac"], ramp.inputs["Fac"])
+    nt.links.new(ramp.outputs["Color"], b.inputs["Base Color"])
+    return m
+
+
+def walnut():
+    """The first design's oiled black walnut, borrowed so it is the same
+    wood in both files."""
+    try:
+        import wall_model_walnut as WN
+        return WN.walnut_material()
+    except Exception:                                    # noqa: BLE001
+        return board_material("Walnut", (0.045, 0.024, 0.014), 0.55)
+
+
+def rounded_rect(w, h, r, n=10):
+    """Corners as arcs, n points each, counter-clockwise from the right."""
+    hw, hh = w / 2, h / 2
+    pts = []
+    for cx, cy, a0 in ((hw - r, hh - r, 0.0), (-hw + r, hh - r, 90.0),
+                       (-hw + r, -hh + r, 180.0), (hw - r, -hh + r, 270.0)):
+        for i in range(n + 1):
+            a = math.radians(a0 + 90.0 * i / n)
+            pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
+    return pts
+
+
+def chamfered_rect(w, h, c):
+    hw, hh = w / 2, h / 2
+    return [(hw, hh - c), (hw - c, hh), (-hw + c, hh), (-hw, hh - c),
+            (-hw, -hh + c), (-hw + c, -hh), (hw - c, -hh), (hw, -hh + c)]
+
+
+def slab(name, outline, t, z, col, mat):
+    """A flat outline given thickness, centred on z. The soft and chamfered
+    bodies are outlines, and no primitive makes those."""
+    me = bpy.data.meshes.new(name)
+    me.from_pydata([(mm(x), mm(y), mm(z)) for x, y in outline], [], [list(range(len(outline)))])
+    me.update()
+    o = bpy.data.objects.new(name, me)
+    if mat:
+        me.materials.append(mat)
+    sd = o.modifiers.new("Solidify", "SOLIDIFY")
+    sd.thickness, sd.offset = mm(t), 0.0
+    link(o, col)
+    return o
+
+
 def halo_colours(face_png):
     """Twelve zones: three to an edge, one to each panel, each the average of
     the artwork's own outer strip lifted and saturated. An average is duller
@@ -229,6 +298,10 @@ class Build:
                            transmission=1.0, ior=1.49),
             opal=material("Opal acrylic", (0.72, 0.72, 0.70), 0.28,
                           transmission=0.62, ior=1.0),
+            brass=W.brushed_material("Brass", (0.86, 0.66, 0.30), 0.26, 0.3),
+            leather=leather_material(),
+            lacquer=material("Black lacquer", (0.010, 0.010, 0.011), 0.20, coat=0.7),
+            walnut=walnut(),
         )
         self.led = W.led_material(face_png)
         if not lit:
@@ -317,6 +390,25 @@ class Build:
         s.rotation_euler = rot
         self.inlet_at = at
         return self
+
+    def cut(self, target, name, size, at):
+        """Subtract a box from a mesh object."""
+        CUT = bpy.data.collections.get("Cutters body") or collection("Cutters body")
+        CUT.hide_render = True
+        c = self.part(box(name, size, at, CUT), 5)
+        m = target.modifiers.new(name, "BOOLEAN")
+        m.operation, m.object, m.solver = "DIFFERENCE", c, "EXACT"
+        return c
+
+    def well(self, opening, z_from, z_to, mat, t=6.0, cy=0.0):
+        """Four walls lining a recess, from the steel to the glass."""
+        h = z_to - z_from
+        zc = (z_from + z_to) / 2
+        ho = opening / 2 + t / 2
+        for i, (dx, dy, sx, sy) in enumerate((
+                (0, ho, opening + 2 * t, t), (0, -ho, opening + 2 * t, t),
+                (-ho, 0, t, opening), (ho, 0, t, opening))):
+            self.part(box(f"Well {i}", (sx, sy, h), (dx, cy + dy, zc), self.cols["Face"], mat), 2)
 
     # -- the halo ----------------------------------------------------------
     def halo(self, w, h, z, inset=12.0, strength=34.0, cx=0.0, cy=0.0):
@@ -436,7 +528,8 @@ class Build:
         return AIR + ACR_T
 
     def aperture_plate(self, w, h, t, z_back, opening, cx=0.0, cy=0.0, ay=0.0,
-                       mat=None, surround_from=None, sw=20.0):
+                       mat=None, surround_from=None, sw=20.0, bezel_mat=None,
+                       surround_mat=None):
         """A sheet with a square hole and a fine bright edge standing in it,
         plus the perimeter wall that carries it. Without that wall the plate
         floats 35 mm off the carcass over a visible void, which is exactly
@@ -452,7 +545,7 @@ class Build:
                     (-w / 2 + sw / 2, 0, sw, h - 2 * sw),
                     (w / 2 - sw / 2, 0, sw, h - 2 * sw))):
                 self.part(box(f"Surround {i}", (sx, sy, sh), (cx + dx, cy + dy, sz),
-                              self.cols["Face"], face_mat, bevel=0.6), 2)
+                              self.cols["Face"], surround_mat or face_mat, bevel=0.6), 2)
         p = self.part(box("Front plate", (w, h, t), (cx, cy, zc), self.cols["Face"],
                           face_mat, bevel=0.5), 1)
         c = self.part(box("Aperture", (opening, opening, t + 8), (cx, cy + ay, zc), CUT), 1)
@@ -464,7 +557,7 @@ class Build:
                 (-ho, 0, 3.0, opening), (ho, 0, 3.0, opening))):
             self.part(box(f"Bezel {i}", (sx, sy, t + 0.6),
                           (cx + dx, cy + ay + dy, zc), self.cols["Face"],
-                          self.m["alu"], bevel=0.3), 1)
+                          bezel_mat or self.m["alu"], bevel=0.3), 1)
         return zc + t / 2
 
 
@@ -580,9 +673,143 @@ def splay(b):
                 lights=(0.38, 0.30, 0.55))
 
 
-DESIGNS = {"sleeve": sleeve, "lean": lean, "system": system, "splay": splay}
+def case(b):
+    """Index's honest aluminium cassette with Console's charcoal wool face,
+    the black anodised reveal from the walnut design standing 3 mm proud of
+    the glass, the picture set 15 mm back into a black well, and the boxed
+    build's vented enclosure. Mains on the underside, right, where Index put
+    it. The cool one."""
+    S, RECESS_ = 540.0, 15.0
+    b.panels()
+    z_back = b.carcass(S, S, depth=CAVITY, steel=500.0, mat=b.m["alu"], halo_strength=30.0)
+    z_acr_back = AIR + RECESS_
+    b.part(box("Smoked acrylic", (520.0, 520.0, ACR_T), (0, 0, z_acr_back + ACR_T / 2),
+               b.cols["Face"], b.m["smoke"], bevel=0.4), 1)
+    b.well(500.0, Z_STEEL_FRONT, z_acr_back, b.m["anod"])
+    front = b.aperture_plate(S, S, 10.0, z_acr_back + ACR_T, 500.0, mat=b.m["cloth"],
+                             surround_from=Z_STEEL_FRONT, sw=18.0,
+                             bezel_mat=b.m["anod"], surround_mat=b.m["alu"])
+    b.mains((165.0, -S / 2 + 2.0, Z_PLY_BACK - CAVITY / 2), rot=(math.pi / 2, 0, 0))
+    b.electronics(psu=(-20.0, -180.0), bars=(-175.0, 150.0), fuse=(-35.0, 40.0),
+                  pi=(180.0, 150.0), seat=Z_PLY_BACK)
+    return dict(w=S, h=S, front=front, back=z_back, height=1500.0, label="Case")
+
+
+def hearth(b):
+    """Soft's broken rectangle tamed to a chamfered square, in the walnut
+    design's veneer with its brass keys moved to the chamfers; the picture
+    40 mm down a well lined in Vitrine's oatmeal cloth, behind a brass bezel;
+    Soft's black power shoe at the bottom. The warm one."""
+    S, C, RECESS_, WALL = 640.0, 70.0, 40.0, 6.0
+    z_acr_back = AIR + RECESS_
+    z_front = z_acr_back + ACR_T
+    z_frame_back = Z_PLY_BACK - CAVITY
+    z_back = z_frame_back - BACK_T
+    b.panels()
+    b.carcass(560.0, 560.0, depth=0.0, back=False, halo=False, steel=496.0, mat=b.m["black"])
+    depth = z_front - z_frame_back
+    shell = b.part(slab("Shell", chamfered_rect(S, S, C), depth, (z_front + z_frame_back) / 2,
+                        b.cols["Body"], b.m["walnut"]), 5)
+    b.cut(shell, "Shell cavity", (560.0, 560.0, (Z_STEEL_FRONT + 1) - z_frame_back + 4),
+          (0, 0, ((Z_STEEL_FRONT + 1) + z_frame_back) / 2 - 2))
+    b.cut(shell, "Shell aperture", (500.0 + 2 * WALL, 500.0 + 2 * WALL, z_front - Z_STEEL_FRONT + 8),
+          (0, 0, (z_front + Z_STEEL_FRONT) / 2 + 2))
+    b.part(slab("Back panel", chamfered_rect(S, S, C), BACK_T, z_frame_back - BACK_T / 2,
+                b.cols["Body"], b.m["black"]), 5)
+    b.halo(S - 2 * C, S - 2 * C, z_back - 3.0, strength=26.0)
+    b.well(500.0, Z_STEEL_FRONT, z_acr_back, b.m["cloth"], t=WALL)
+    b.part(box("Smoked acrylic", (500.0 + 2 * WALL - 1, 500.0 + 2 * WALL - 1, ACR_T),
+               (0, 0, z_acr_back + ACR_T / 2), b.cols["Face"], b.m["smoke"], bevel=0.4), 1)
+    ho = 250.0 + 1.5
+    for i, (dx, dy, sx, sy) in enumerate((
+            (0, ho, 506.0, 3.0), (0, -ho, 506.0, 3.0), (-ho, 0, 3.0, 500.0), (ho, 0, 3.0, 500.0))):
+        b.part(box(f"Brass bezel {i}", (sx, sy, 3.0), (dx, dy, z_front - 1.0), b.cols["Face"],
+                   b.m["brass"], bevel=0.3), 1)
+    # brass keys let into the four chamfers, the walnut design's splines
+    for i, (sx, sy) in enumerate(((1, 1), (-1, 1), (-1, -1), (1, -1))):
+        k = b.part(box(f"Brass key {i}", (12.0, 1.6, depth - 20.0),
+                       (sx * (S / 2 - C / 2 + 1.0), sy * (S / 2 - C / 2 + 1.0), (z_front + z_frame_back) / 2),
+                       b.cols["Face"], b.m["brass"]), 5)
+        k.rotation_euler = (0, 0, math.radians(45.0 * sx * sy))
+    # the power shoe: one precise black interruption in a soft form
+    shoe = (-140.0, -S / 2 - 12.0, Z_PLY_BACK - CAVITY / 2)
+    b.part(box("Power shoe", (76.0, 26.0, 46.0), shoe, b.cols["Electronics"], b.m["black"], bevel=1.2), 6)
+    b.mains((shoe[0], shoe[1] - 12.0, shoe[2]), rot=(math.pi / 2, 0, 0))
+    b.electronics(psu=(-20.0, -190.0), bars=(-180.0, 160.0), fuse=(-40.0, 45.0),
+                  pi=(190.0, 160.0), seat=Z_PLY_BACK)
+    return dict(w=S, h=S, front=z_front, back=z_back, height=1500.0, label="Hearth")
+
+
+def strap(b):
+    """The original. A black lacquered shell with 50 mm corners, hung from a
+    brass hook on a saddle-leather strap that comes over the top and is
+    fixed to the face with a brass plate, after Adnet's mirror for Hermes:
+    the mounting is the design. The picture flush behind smoked acrylic in a
+    4 mm brass reveal. Mains on the bottom edge in a brass escutcheon."""
+    S, R, LIP = 540.0, 50.0, 12.0
+    z_front = AIR + ACR_T + 2.0
+    z_frame_back = Z_PLY_BACK - CAVITY
+    z_back = z_frame_back - BACK_T
+    b.panels()
+    b.carcass(500.0, 500.0, depth=0.0, back=False, halo=False, steel=496.0, mat=b.m["black"])
+    depth = z_front - z_frame_back
+    shell = b.part(slab("Shell", rounded_rect(S, S, R), depth, (z_front + z_frame_back) / 2,
+                        b.cols["Body"], b.m["lacquer"]), 5)
+    b.cut(shell, "Shell cavity", (502.0, 502.0, (Z_STEEL_FRONT + 1) - z_frame_back + 4),
+          (0, 0, ((Z_STEEL_FRONT + 1) + z_frame_back) / 2 - 2))
+    b.cut(shell, "Shell aperture", (504.0, 504.0, z_front - Z_STEEL_FRONT + 8),
+          (0, 0, (z_front + Z_STEEL_FRONT) / 2 + 2))
+    b.part(slab("Back panel", rounded_rect(S, S, R), BACK_T, z_frame_back - BACK_T / 2,
+                b.cols["Body"], b.m["black"]), 5)
+    b.halo(S - 40, S - 40, z_back - 3.0, strength=30.0)
+    b.part(box("Smoked acrylic", (503.0, 503.0, ACR_T), (0, 0, AIR + ACR_T / 2),
+               b.cols["Face"], b.m["smoke"], bevel=0.4), 1)
+    for i, (dx, dy, sx, sy) in enumerate((
+            (0, 250.0, 508.0, 4.0), (0, -250.0, 508.0, 4.0), (-250.0, 0, 4.0, 500.0), (250.0, 0, 4.0, 500.0))):
+        b.part(box(f"Brass reveal {i}", (sx, sy, 2.4), (dx, dy, z_front - 0.8), b.cols["Face"],
+                   b.m["brass"], bevel=0.3), 1)
+    # the strap, over the top and down the face, 40 wide, 4 thick
+    W.ribbon_profile(20.0, 2.0)
+    PADS = 25.0
+    z_wall = z_back - PADS
+    hook_y = S / 2 + 230.0
+    # Straight runs with square corners, and the run over the top given a
+    # 2 mm rise so it is never exactly parallel to the depth axis: with the
+    # profile's up-vector along that axis, a parallel tangent is degenerate
+    # and the strap spun edge-on down the wall in the first render.
+    zw = z_wall + 3.0
+    b.part(cable("Strap", [(0, hook_y - 8, zw), (0, S / 2 + 120, zw, "V"),
+                           (0, S / 2 + 4.0, zw, "V"), (0, S / 2 + 2.0, z_back - 0.5, "V"),
+                           (0, S / 2 + 4.0, z_front - 6.0, "V"), (0, S / 2 + 1.0, z_front + 2.5, "V"),
+                           (0, S / 2 - 27, z_front + 2.5)],
+                20.0, b.cols["Face"], b.m["leather"], flat=True), 1)
+    b.part(box("Strap plate", (46.0, 14.0, 2.0), (0, S / 2 - 24.0, z_front + 5.5),
+               b.cols["Face"], b.m["brass"], bevel=0.5), 1)
+    for dx in (-15.0, 15.0):
+        b.part(cylinder(f"Strap stud {dx:+.0f}", 3.0, 1.5, (dx, S / 2 - 24.0, z_front + 7.2),
+                        b.cols["Face"], b.m["brass"], verts=16), 1)
+    # the hook: a brass block on the wall with a pin the strap rides
+    b.part(box("Hook base", (28.0, 40.0, 10.0), (0, hook_y + 6, z_wall + 5.0),
+               b.cols["Face"], b.m["brass"], bevel=1.0), 8)
+    b.part(cylinder("Hook pin", 6.0, 22.0, (0, hook_y - 3, z_wall + 11.0),
+                    b.cols["Face"], b.m["brass"], axis="Y", verts=24), 8)
+    for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
+        b.part(box(f"Wall pad {i}", (30, 30, PADS), (sx * (S / 2 - 60), sy * (S / 2 - 60), z_back - PADS / 2),
+                   b.cols["Body"], b.m["black"]), 7)
+    # mains in a brass escutcheon on the bottom edge, right
+    b.part(box("Escutcheon", (66.0, 2.0, 44.0), (165.0, -S / 2 - 1.0, Z_PLY_BACK - CAVITY / 2),
+               b.cols["Electronics"], b.m["brass"], bevel=0.4), 6)
+    b.mains((165.0, -S / 2 + 2.0, Z_PLY_BACK - CAVITY / 2), rot=(math.pi / 2, 0, 0))
+    b.electronics(psu=(-20.0, -165.0), bars=(-165.0, 130.0), fuse=(-35.0, 25.0),
+                  pi=(175.0, 130.0), seat=Z_PLY_BACK)
+    return dict(w=S, h=S + 230.0 + 30.0, front=z_front, back=z_back, height=1500.0,
+                label="Strap", centre_y=115.0, pads=PADS)
+
+
+DESIGNS = {"sleeve": sleeve, "lean": lean, "system": system, "splay": splay,
+           "case": case, "hearth": hearth, "strap": strap}
 DEFAULT_CLOTH = {"sleeve": "oxblood", "lean": "oatmeal", "system": "charcoal",
-                 "splay": "ink"}
+                 "splay": "ink", "case": "charcoal", "hearth": "oatmeal", "strap": "charcoal"}
 
 
 # ==================================================================== main
@@ -630,7 +857,7 @@ def main():
     def scene(lit=True):
         b = Build(face, lit, cloth, tilt=tilt)
         info = DESIGNS[args.design](b)
-        b.place(info["back"], info["height"])
+        b.place(info["back"] - info.get("pads", 0.0), info["height"])
         if args.design == "lean":
             b.root.location = (0, b.wall_y + 0.030, mm(info["height"]))
         b.studio(floor_y=SHELF if args.design == "lean" else 0.0)

@@ -163,12 +163,14 @@ tallest thing on a panel back, most likely the harness plug. Both go into
 
 ## The alternates, 2026-09-07
 
-Four separate objects, not four finishes, live in
-[design/ALTERNATES.md](design/ALTERNATES.md) with their own parts table:
-**sleeve** (a record jacket, open along its top edge), **lean** (a slab in a
-foot, no wall fixing), **system** (a thin plate plus a separate amplifier
-module) and **splay** (a funnel of light). They add about $63 over the build
-below and delete the four sign standoffs.
+[design/ALTERNATES.md](design/ALTERNATES.md) now leads with three objects
+drawn from the six you liked across both studies: **case** (Index's aluminium
+cassette with Console's wool face, about $75 over the build below), **hearth**
+(Soft's chamfered silhouette in the walnut design's veneer, the picture down
+Vitrine's lined well, about $100) and **strap** (new: a black lacquered shell
+hung from a brass hook on a saddle-leather strap, after Adnet, about $65).
+The earlier four (sleeve, lean, system, splay) are kept below them as history.
+All of them delete the four sign standoffs.
 
 There is no knob, no tenth panel and no second driver in any of them: the
 spare panel stays a spare. The C14 module with its switch and fuse is placed
