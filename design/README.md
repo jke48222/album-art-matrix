@@ -1,8 +1,9 @@
 # The wall, designed
 
 `wall_model.py` builds the wall in Blender from the parts on the bench and
-renders it eight ways: hero, front, the bare skin with its openings, a
-standoff, the mark, the back, exploded, and in the room. Every number is a constant at the top of the file with
+renders it nine ways: hero, front, the bare skin with its openings, a
+standoff, the mark, the back, the side, exploded, and in the room. It builds
+three backs, `--enclosure open|back|box`, on one unchanged set of electronics. Every number is a constant at the top of the file with
 its source beside it. This page is the reasoning.
 
 ```
@@ -23,10 +24,12 @@ into a 40 x 12 slot for the ribbon plug. Fifteen holes, all under panels,
 and nothing crosses the border. The picture lands 480 mm square in the
 middle, leaving a 64.8 mm black border that reads as a mat.
 
-A 24 inch sheet of smoked grey acrylic floats an inch in front on four black
-sign standoffs, one at each corner. The standoff barrel sets the geometry:
-25.4 mm off the steel, less 17.5 mm of panel and magnet, leaves the glass
-7.9 mm clear of the LEDs. Off, the whole thing is a square of black glass.
+A 24 inch sheet of smoked grey acrylic floats in front on four black sign
+standoffs, one at each corner. The standoff barrel sets the geometry:
+31.75 mm off the steel, less 14.5 mm of panel and 10.6 mm of magnet, leaves
+the glass 6.7 mm clear of the LEDs. The feet are Adafruit 4631, 16.6 mm long
+with an M3 stud, so a 1 in barrel would have left 0.9 mm and rested the glass
+on the panels. Off, the whole thing is a square of black glass.
 On, the art is behind it and the panel frames are not visible.
 
 Everything electrical is on the back, in the open: the LRS-350-5 low with
@@ -51,6 +54,24 @@ one tile lit, a stencil and a fingertip of grey paint. It costs nothing.
 About $150 over what is already on the bench, $115 without the acrylic. The
 full list with checked prices, the order of work and the tools it needs is
 at the end of [PARTS.md](../PARTS.md).
+
+## Three backs
+
+The board, the panels, the glass and every electrical part are identical in
+all three. Only what happens behind the 63.5 mm cavity changes, so any one
+can become another later without moving a wire.
+
+| | Depth | What you see | Air |
+|---|---|---|---|
+| `open` | 111.9 mm | the supply, the bars and the Pi, from behind and from the side | the whole back |
+| `back` | 118.2 mm | a closed slab from behind, a 63.5 mm slot from either side | the two open sides, no vents needed |
+| `box` | 118.2 mm | closed from every angle | two 340 x 22 slots, low behind the supply's fan and high clear of the cleat, plus 16 mm wall pads |
+
+`open` keeps the blocks and feet. Both covered versions replace them with
+full width 1 x 3 rails, top and bottom for `back`, all four sides for `box`,
+and a 24 x 24 x 1/4 in plywood panel over them. The cleat moves onto that
+panel and screws through into the top rail. In `box` the lux sensor loses its
+view of the room, so it moves to the upper slot and looks out through it.
 
 ## The upgrade path
 
@@ -142,7 +163,12 @@ checked against the one in the box. DESIGN is a decision.
 | Plywood board | 24 x 24 in, 1/2 in | LISTING | Home Depot project panel |
 | Steel skin | 24 x 24 in, 22 gauge (0.76 mm) | LISTING | Everbilt sheet metal |
 | Smoked acrylic | 24 x 24 in, 1/8 in, grey tinted cast | LISTING | Sibe-R / Canal Plastics #2064 |
-| Sign standoffs | 1 x 1 in barrel, black | LISTING | four of them, corners |
+| Magnet feet | Adafruit 4631: 16.6 mm long, 12 mm dia, M3 stud | VERIFIED | product page, the ones in hand |
+| Magnet protrusion | 10.6 mm (16.6 less about 6 mm of thread in the boss) | TYPICAL | the thread engagement is the assumed half; one ruler check settles it |
+| Plugged ribbon height | a little under the magnets | VERIFIED | the owner, with the panels in front of him |
+| Sign standoffs | 1-1/4 in barrel, black | LISTING | four of them, corners |
+| Back panel | 24 x 24 in, 1/4 in plywood | LISTING | Home Depot project panel |
+| Vents | two 340 x 22 mm, closed box only | DESIGN | the atelier study's opening size |
 | Openings | 15 x 12 mm at the panel centres, the right column's three filed to 40 x 12 slots | DESIGN | a 4-pin harness needs 8 mm; a HUB75 plug is 20.3 x 8.9 |
 | Back layout | supply low, bars left, fuse block beside them, Pi mid right, inlet in the left foot | DESIGN | checked against the openings: nothing sits over a hole |
 | Furring strip | 1 x 3, 3/4 x 2-1/2 in actual | LISTING | the back gap |
@@ -150,13 +176,16 @@ checked against the one in the box. DESIGN is a decision.
 
 ## What to measure before cutting anything
 
-**The magnetic feet.** How far they stand a panel off a flat surface is the
-one number this design rests on and nobody has published it. Three
-millimetres is assumed. It sets how far the glass floats over the LEDs
-(`MAG_FOOT_H`, and `AIR_GAP` follows from it), and if the feet turn out to
-be 5 mm the standoffs want to be 1-1/4 in rather than 1 in.
+**The magnetic feet.** Mostly answered: they are Adafruit 4631, 16.6 mm long
+with an M3 stud, so what stands proud is 16.6 less whatever the panel's boss
+swallows. `MAG_THREAD` assumes 6 mm, giving `MAG_FOOT_H` = 10.6, and the
+whole depth stack follows from it. The owner confirms a plugged ribbon stands
+a little under the magnets, so the panel rests on its feet, which was the
+real risk.
 
-A ruler on one panel, two minutes, before anything is ordered.
+One ruler check still settles the last millimetres: a panel with its feet on
+the fridge, measured shell to fridge. 8 to 12 mm keeps the 1-1/4 in
+standoffs; under 8 goes back to 1 in, over 13 goes to 1-1/2.
 
 ## What is not in the model
 

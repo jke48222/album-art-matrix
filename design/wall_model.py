@@ -41,9 +41,16 @@ SHELL_D = 12.0                 # VERIFIED  same drawing: rear shell depth
 PANEL_M3 = ((-45, -73), (45, -73), (-73, -45), (73, -45),
             (-73, 45), (73, 45), (-45, 73), (45, 73))
                                # VERIFIED  same drawing: eight M3 points from centre
-MAG_FOOT_H = 3.0               # TYPICAL   four magnetic feet ship with each panel
-                               #           (manual); their height is not stated.
-                               #           THE ONE NUMBER TO MEASURE FIRST.
+MAG_L = 16.6                   # VERIFIED  Adafruit 4631 Mini Magnet Feet, the
+MAG_D = 12.0                   # VERIFIED  ones in hand: 16.6 long, 12 dia, M3 stud
+MAG_THREAD = 6.0               # TYPICAL   how much of that stud an M3 boss in a
+                               #           12 mm shell swallows
+MAG_FOOT_H = MAG_L - MAG_THREAD    # 10.6: what stands proud, and the number the
+                               #           whole depth stack rests on. The owner
+                               #           reports a plugged ribbon stands a
+                               #           little under this, which is what
+                               #           matters: the panel sits on its
+                               #           magnets, not on its plugs.
 COLS = ROWS = 3
 FACE = PANEL * COLS            # 480
 
@@ -66,7 +73,10 @@ CHAIN_START_COL = 2            # VERIFIED  the tile map: chains fill right to
 # --- the glass ---------------------------------------------------------------
 ACRYLIC = 609.6                # LISTING   the same 24 in square, smoked grey
 ACR_T = 3.175                  # LISTING   1/8 in
-STANDOFF_BARREL = 25.4         # LISTING   1 in sign standoffs, four of them
+STANDOFF_BARREL = 31.75        # LISTING   1-1/4 in sign standoffs, four of them.
+                               #           NOT 1 in: 25.4 - 10.6 - 14.5 leaves
+                               #           0.9 mm and the glass sits on the LEDs.
+                               #           1-1/4 leaves 6.7, 1-1/2 leaves 13.0
 STANDOFF_D = 25.4              # LISTING   1 in diameter
 STANDOFF_INSET = 30.0          # DESIGN    from the board's edge to the barrel centre
 
@@ -82,6 +92,17 @@ CLEAT_L = 304.8                # LISTING   OOK 533208: 12 in
 CLEAT_W, CLEAT_T = 38.1, 1.2   # LISTING   1.5 in tall; stands 1/8 in off the wall.
                                # TYPICAL   1.2 mm stamped aluminium
 CLEAT_PROJ = 3.175             # LISTING   that 1/8 in
+
+# --- the enclosure, when there is one ----------------------------------------
+BACK_T = 6.35                  # LISTING   1/4 in plywood project panel, 24 x 24
+VENT = (340.0, 22.0)           # DESIGN    two slots in a closed back, low and
+                               #           high, so the cavity convects. The size
+                               #           is the atelier study's guarded vent
+VENT_Y = (-234.8, 174.8)       # DESIGN    the low one lands behind the supply's
+                               #           own fan; the high one clears the cleat
+WALL_PAD = 16.0                # DESIGN    what holds a closed box off the wall so
+                               #           the upper vent is not sealed to plaster
+ENCLOSURE = "open"             # open | back | box, set by --enclosure
 
 # --- the electronics: all from datasheets and board files -----------------
 PSU = (215.0, 115.0, 30.0)     # VERIFIED  LRS-350-5 datasheet, 0.76 kg, case 207A
@@ -116,7 +137,8 @@ Z_PANEL_BACK = -PANEL_T
 Z_STEEL_FRONT = Z_PANEL_BACK - MAG_FOOT_H
 Z_STEEL_BACK = Z_STEEL_FRONT - STEEL_T
 Z_PLY_BACK = Z_STEEL_BACK - PLY_T
-Z_WALL = Z_PLY_BACK - FURRING_D - CLEAT_PROJ
+Z_FRAME_BACK = Z_PLY_BACK - FURRING_D
+Z_WALL = Z_FRAME_BACK - CLEAT_PROJ               # main() resets this per enclosure
 Z_ACR_BACK = Z_STEEL_FRONT + STANDOFF_BARREL     # the standoff sets this
 Z_ACR_FRONT = Z_ACR_BACK + ACR_T
 AIR_GAP = Z_ACR_BACK                             # LED face to the glass
@@ -476,7 +498,7 @@ def build(face_png):
             part(box(f"Panel {n} VH4", (12.0, 9.0, 8.0), (cx, cy - 58, zb), cols["Panels"], white), 3)
             # the feet, on four of the drawing's eight M3 points
             for k, (mx, my) in enumerate((PANEL_M3[0], PANEL_M3[1], PANEL_M3[6], PANEL_M3[7])):
-                part(cylinder(f"Panel {n} magnet {k}", 5.0, MAG_FOOT_H,
+                part(cylinder(f"Panel {n} magnet {k}", MAG_D / 2, MAG_FOOT_H,
                               (cx + mx, cy + my, -PANEL_T - MAG_FOOT_H / 2),
                               cols["Panels"], tin, verts=24), 3)
     borrow("P Panels", root, parts, 3, keep=lambda n: "PCB face" not in n and "emitters" not in n)
@@ -521,39 +543,79 @@ def build(face_png):
         m.collection = CUT
         m.solver = "EXACT"
 
-    # ---- hanging: two blocks and the cleat, two feet at the bottom -------
-    # All four are the same 1 x 3 strip. The left foot is 100 long and
-    # carries the mains inlet: the C14 module's cutout goes through its
-    # bottom face, so socket, switch and fuse drawer face the floor 6 mm
-    # inside the board's bottom edge: reachable, invisible, and the cord
-    # hangs straight down behind the board.
+    # ---- hanging, and the enclosure if there is one ----------------------
+    # open: two blocks under the cleat and two feet, the back in the air.
+    # back: two full width rails and a 1/4 in panel over them, the sides left
+    #       as a 63.5 mm slot the whole cavity breathes through.
+    # box:  rails on all four sides and the same panel, closed, with two
+    #       slots low and high so it convects, and pads off the wall so the
+    #       upper slot is not sealed against plaster.
     E = cols["Electronics"]
+    CUTB = collection("Cutters enclosure")       # its own, so it cannot reach the board
+    CUTB.hide_render = True
     zc_top = Z_PLY_BACK - 1.0
-    y_cleat = BOARD / 2 - 60
-    y_foot = -BOARD / 2 + 50
     z_mid = Z_PLY_BACK - FURRING_D / 2
-    for i, sx in enumerate((-1, 1)):
-        part(box(f"Cleat block {i}", (120, FURRING, FURRING_D), (sx * 90, y_cleat, z_mid), cols["Board"], ply), 7)
-    foot_l = part(box("Foot 0 (inlet)", (100, FURRING, FURRING_D), (-205, y_foot, z_mid), cols["Board"], ply), 7)
-    part(box("Foot 1", (60, FURRING, FURRING_D), (220, y_foot, z_mid), cols["Board"], ply), 7)
-    inlet_at = (-205.0, y_foot - FURRING / 2 + INLET[1] / 2, z_mid)
-    cut = part(box("Inlet cutout", (INLET_CUTOUT[0], FURRING + 4, INLET_CUTOUT[1]), (inlet_at[0], y_foot, z_mid), CUT), 7)
-    m = foot_l.modifiers.new("Inlet cutout", "BOOLEAN")
-    m.operation = "DIFFERENCE"
-    m.object = cut
-    m.solver = "EXACT"
+    half_b = BOARD / 2
+    covered = ENCLOSURE in ("back", "box")
+    y_cl = half_b - 60                           # where the cleat lands, always
+    if covered:
+        # painted, not bare: on a covered back these rails are the edge you see
+        y_top, y_bot = half_b - FURRING / 2, -half_b + FURRING / 2
+        part(box("Rail top", (BOARD, FURRING, FURRING_D), (0, y_top, z_mid), cols["Board"], paint), 7)
+        inlet_rail = part(box("Rail bottom (inlet)", (BOARD, FURRING, FURRING_D), (0, y_bot, z_mid), cols["Board"], paint), 7)
+        if ENCLOSURE == "box":
+            for i, sx in enumerate((-1, 1)):
+                part(box(f"Rail side {i}", (FURRING, BOARD - 2 * FURRING, FURRING_D),
+                         (sx * (half_b - FURRING / 2), 0, z_mid), cols["Board"], paint), 7)
+    else:
+        y_top, y_bot = y_cl, -half_b + 50
+        for i, sx in enumerate((-1, 1)):
+            part(box(f"Cleat block {i}", (120, FURRING, FURRING_D), (sx * 90, y_top, z_mid), cols["Board"], ply), 7)
+        inlet_rail = part(box("Foot 0 (inlet)", (100, FURRING, FURRING_D), (-205, y_bot, z_mid), cols["Board"], ply), 7)
+        part(box("Foot 1", (60, FURRING, FURRING_D), (220, y_bot, z_mid), cols["Board"], ply), 7)
+
+    # the mains inlet, through the bottom piece's underside either way
+    inlet_at = (-205.0, y_bot - FURRING / 2 + INLET[1] / 2, z_mid)
+    cut = part(box("Inlet cutout", (INLET_CUTOUT[0], FURRING + 4, INLET_CUTOUT[1]),
+                   (inlet_at[0], y_bot, z_mid), CUTB), 7)
+    m = inlet_rail.modifiers.new("Inlet cutout", "BOOLEAN")
+    m.operation, m.object, m.solver = "DIFFERENCE", cut, "EXACT"
     part(box("C14 inlet module", INLET, inlet_at, E, black, bevel=1.0), 7)
-    # the cleat: OOK's is two thin aluminium hooks in the 1/8 in between the
-    # blocks and the wall
-    z_blocks = Z_PLY_BACK - FURRING_D
-    part(box("Cleat (frame)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cleat + 6, z_blocks - CLEAT_T / 2),
+
+    z_cl = Z_FRAME_BACK                          # the face the cleat screws to
+    if covered:
+        z_cl = Z_FRAME_BACK - BACK_T
+        backp = part(box("Back panel", (BOARD, BOARD, BACK_T), (0, 0, Z_FRAME_BACK - BACK_T / 2),
+                         cols["Board"], paint, bevel=0.5), 7)
+        if ENCLOSURE == "box":
+            vents = []
+            for i, vy in enumerate(VENT_Y):
+                vents.append(part(box(f"Vent {i}", (VENT[0], VENT[1], BACK_T + 6),
+                                      (0, vy, Z_FRAME_BACK - BACK_T / 2), CUTB), 7))
+            for i, v in enumerate(vents):
+                m = backp.modifiers.new(f"Vent {i}", "BOOLEAN")
+                m.operation, m.object, m.solver = "DIFFERENCE", v, "EXACT"
+            for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
+                part(box(f"Wall pad {i}", (30, 30, WALL_PAD),
+                         (sx * (half_b - 45), sy * (half_b - 45), z_cl - WALL_PAD / 2), cols["Board"], paint), 7)
+
+    # the cleat: OOK's is two thin aluminium hooks in the 1/8 in behind it
+    part(box("Cleat (frame)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cl + 6, z_cl - CLEAT_T / 2),
              cols["Board"], alu, bevel=0.3), 7)
-    part(box("Cleat (hook)", (CLEAT_L, 8, (z_blocks - CLEAT_T) - (Z_WALL + CLEAT_T)),
-             (0, y_cleat, ((z_blocks - CLEAT_T) + (Z_WALL + CLEAT_T)) / 2), cols["Board"], alu), 8)
-    part(box("Cleat (wall)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cleat - 6, Z_WALL + CLEAT_T / 2),
+    part(box("Cleat (hook)", (CLEAT_L, 8, (z_cl - CLEAT_T) - (Z_WALL + CLEAT_T)),
+             (0, y_cl, ((z_cl - CLEAT_T) + (Z_WALL + CLEAT_T)) / 2), cols["Board"], alu), 8)
+    part(box("Cleat (wall)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cl - 6, Z_WALL + CLEAT_T / 2),
              cols["Board"], alu, bevel=0.3), 8)
-    # the lux sensor rides on a cleat block, looking at the ceiling
-    part(box("VEML7700 lux sensor", (LUX[0], LUX[2], LUX[1]), (-90, y_cleat + FURRING / 2 + LUX[2] / 2, z_mid), E, pcb_dark), 7)
+
+    # the lux sensor wants to see the room. On an open or open sided back it
+    # rides the top rail looking up; in a closed box it has to look out
+    # through the upper vent, which is the only hole it has.
+    if ENCLOSURE == "box":
+        part(box("VEML7700 lux sensor", (LUX[0], LUX[1], LUX[2]),
+                 (150, VENT_Y[1], Z_FRAME_BACK - BACK_T / 2), E, pcb_dark), 7)
+    else:
+        part(box("VEML7700 lux sensor", (LUX[0], LUX[2], LUX[1]),
+                 (-90, y_top + FURRING / 2 + LUX[2] / 2, z_mid), E, pcb_dark), 7)
 
     # ---- electronics, on the open back -----------------------------------
     # Each group is seated on the plywood by its nearest face. The positions
@@ -623,7 +685,8 @@ def build(face_png):
     # Nothing runs on the border.
     W = cols["Wiring"]
     green = material("Green lead", (0.03, 0.30, 0.05), 0.5)
-    z_gap = Z_PANEL_BACK - 1.5                              # between panel shell and steel
+    z_gap = Z_STEEL_FRONT + 1.2                             # a ribbon lies on the steel,
+                                                            # 10.6 mm behind the shell
     z_in, z_out = Z_STEEL_FRONT + 1.0, Z_PLY_BACK - 2.0     # the two mouths of an opening
     z_back = zc_top - 18.0                                  # a lead dressed across the plywood
     plus_drop = list(range(6, 12)) + [0, 1, 2]              # outer row and three inner; three inner left for feeds
@@ -880,9 +943,20 @@ def main():
     ap.add_argument("--out", default="design/renders")
     ap.add_argument("--face", default="")
     ap.add_argument("--samples", type=int, default=200)
-    ap.add_argument("--views", default="hero,front,skin,detail,mark,back,exploded,room")
+    ap.add_argument("--views", default="hero,front,skin,detail,mark,back,side,exploded,room")
+    ap.add_argument("--enclosure", default="open", choices=("open", "back", "box"),
+                    help="open: nothing behind. back: a panel over two rails, sides left open. "
+                         "box: rails all round and a vented panel, closed")
+    ap.add_argument("--prefix", default="wall")
     args = ap.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
+
+    global ENCLOSURE, Z_WALL
+    ENCLOSURE = args.enclosure
+    if ENCLOSURE == "back":
+        Z_WALL = Z_FRAME_BACK - BACK_T - CLEAT_PROJ
+    elif ENCLOSURE == "box":
+        Z_WALL = Z_FRAME_BACK - BACK_T - WALL_PAD
 
     sc, cam, parts, lights, sweep, wallp = build(os.path.abspath(args.face) if args.face else "")
     glare(sc)
@@ -902,11 +976,11 @@ def main():
     if "hero" in views:
         studio(True)
         aim(cam, (-0.95, -1.40, 1.62), (0.0, 0.0, mm(WALL_H) - 0.01), lens=55, fstop=4.0)
-        render(sc, os.path.join(args.out, "wall-hero.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-hero.png"), args.samples)
     if "front" in views:
         studio(True)
         aim(cam, (0.0, -1.70, mm(WALL_H)), C, lens=60)
-        render(sc, os.path.join(args.out, "wall-front.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-front.png"), args.samples)
     if "skin" in views:
         # the board before the panels go on: the steel, its fifteen openings,
         # a lead waiting at each, the standoff barrels, the mark. Against the
@@ -915,8 +989,15 @@ def main():
         studio(False)
         hide(("Panels", "P Panels", "Glass"), True)
         aim(cam, (-0.10, -1.55, mm(WALL_H) + 0.02), C, lens=60)
-        render(sc, os.path.join(args.out, "wall-skin.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-skin.png"), args.samples)
         hide(("Panels", "P Panels", "Glass"), False)
+    if "side" in views:
+        # the whole profile, raking, because depth is the only thing the three
+        # enclosures argue about
+        studio(False)
+        y_mid = mm(-Z_WALL) - mm(Z_ACR_FRONT) / 2
+        aim(cam, (1.80, -0.42, 1.54), (0.0, y_mid, mm(WALL_H) - 0.01), lens=50, fstop=11.0)
+        render(sc, os.path.join(args.out, f"{args.prefix}-side.png"), args.samples)
     if "detail" in views:
         studio(True)
         # the top left standoff, where the glass, the barrel, the black
@@ -925,19 +1006,19 @@ def main():
         z = mm(WALL_H) + (BOARD / 2 - STANDOFF_INSET) / 1000
         corner = (x, mm(-Z_WALL) - mm(Z_ACR_FRONT), z)
         aim(cam, (corner[0] - 0.20, corner[1] - 0.30, corner[2] + 0.10), corner, lens=85, fstop=5.6, focus=corner)
-        render(sc, os.path.join(args.out, "wall-detail.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-detail.png"), args.samples)
     if "mark" in views:
         studio(True)
         mark = (0.0, mm(-Z_WALL) - mm(Z_STEEL_FRONT), mm(WALL_H) - mm(FACE / 2 + BORDER / 2))
         aim(cam, (mark[0] + 0.06, mark[1] - 0.24, mark[2] + 0.05), mark, lens=85, fstop=5.6, focus=mark)
-        render(sc, os.path.join(args.out, "wall-mark.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-mark.png"), args.samples)
     if "back" in views:
         studio(True)
         lights["back"].hide_render = False
         sweep.hide_render = True
-        # nothing to remove: the back is open
+        # nothing to remove: whatever the back is, it is the subject
         aim(cam, (0.55, 1.15, 1.72), (0.0, 0.06, 1.48), lens=40)
-        render(sc, os.path.join(args.out, "wall-back.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-back.png"), args.samples)
         lights["back"].hide_render = True
     if "exploded" in views:
         sweep.hide_render = True
@@ -945,22 +1026,26 @@ def main():
         hide(("Wiring",), True)
         explode(parts, 110)
         aim(cam, (-1.25, -1.35, 1.95), (0.0, 0.10, mm(WALL_H) - 0.02), lens=45)
-        render(sc, os.path.join(args.out, "wall-exploded.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-exploded.png"), args.samples)
         explode(parts, -110)
         hide(("Wiring",), False)
     if "room" in views:
         studio(False)
         aim(cam, (-0.85, -1.9, 1.40), (0.0, 0.0, mm(WALL_H) - 0.05), lens=40)
-        render(sc, os.path.join(args.out, "wall-room.png"), args.samples)
+        render(sc, os.path.join(args.out, f"{args.prefix}-room.png"), args.samples)
 
     studio(False)
-    blend = os.path.join(args.out, "album-wall.blend")
+    blend = os.path.join(args.out, f"{args.prefix}.blend")
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(blend))
     print("saved", blend)
     print("board %.0f mm square, %.1f mm deep with the glass; LEDs %.0f; border %.1f"
           % (BOARD, DEPTH, FACE, BORDER))
-    print("glass floats %.1f mm over the LEDs; back gap %.1f mm, tallest part %.1f mm, clearance %.1f mm"
-          % (AIR_GAP, FURRING_D, max(PSU[2], PI_STACK, BUSBAR[2]), CLEARANCE))
+    print("glass floats %.1f mm over the LEDs (magnets stand %.1f, barrel %.1f); back gap %.1f mm, "
+          "tallest part %.1f mm, clearance %.1f mm"
+          % (AIR_GAP, MAG_FOOT_H, STANDOFF_BARREL, FURRING_D, max(PSU[2], PI_STACK, BUSBAR[2]), CLEARANCE))
+    total = Z_ACR_FRONT - (Z_FRAME_BACK - (BACK_T if ENCLOSURE in ("back", "box") else 0.0))
+    print("enclosure %-5s: %.1f mm front to back%s" % (
+        ENCLOSURE, total, ", two %.0f x %.0f vents" % VENT if ENCLOSURE == "box" else ""))
     print("openings: %d holes of %.0f mm at the panel centres, %d of them filed into %.0f x %.0f slots on the right column"
           % (ROWS * COLS + 2 * ROWS, HOLE_D, ROWS, SLOT_L, HOLE_D))
 

@@ -180,10 +180,16 @@ and the back is open, so the supply's fan cools itself.
 | M4 x 16 flat head screws | 4, from the front through steel and plywood into the supply's bottom holes, countersunk flush because they sit under a panel: [Everbilt 80298](https://homedepot.com/p/Everbilt-M4-0-7-x-16-mm-Phillips-Flat-Head-Machine-Screws-3-Pack-80298/100338453) or [Prime-Line 9121166](https://www.homedepot.com/p/Prime-Line-Metric-M4-0-7-x-16-mm-Flat-Head-Phillips-Drive-Machine-Screws-9121166/317603646). Not the pan head | about $4 |
 | #6 x 3/8 in wood screws | one small box: bars, fuse holder mounts, cleat blocks, inlet flange, everything mounted from the back without punching through | about $4 |
 | Smoked acrylic, 24 x 24 x 1/8 in | [Sibe-R #2064 light grey/smoke](https://www.amazon.com/SIBE-R-Plastic-Supply-Transparent-Plexiglass/dp/B0731N9NDS); Walmart lists the same sheet at $24.88 | $25 to $35 |
-| Sign standoffs, 1 x 1 in, black | [8 pack, black](https://www.amazon.com/Stainless-Steel-Standoff-Screws-Acrylic/dp/B0GLXVVC4P) or [Outwater black aluminium](https://www.amazon.com/Standoff-Diameter-Barrel-Aluminum-Outwater/dp/B07SXV8YV4); through the acrylic corners into the plywood | about $15 |
+| Sign standoffs, **1-1/4 in barrel**, black | through the acrylic corners into the plywood. NOT 1 in: the magnet feet in hand are Adafruit 4631, 16.6 mm long, and stand about 10.6 mm proud, so a 1 in barrel leaves 0.9 mm and the glass sits on the panels. 1-1/4 leaves 6.7 mm | about $15 |
 | USB-C to bare wire pigtail | [XMSJSIY 18 AWG](https://www.amazon.com/XMSJSIY-Transmission-Extension-Charging-18AWG-1-2M/dp/B0C1YXM9PF); the Pi's feed from the +5 V bar through the tenth fuse holder | about $10 |
 | ATC fuses, 5 A | [10 pack](https://www.amazon.com/5Amp-BLADE-FUSE-Plus-Parts-House/dp/B01F1RVW62); the Pi's drop, the 10 A ones on hand are for panels | about $7 |
 | | | **about $150** |
+
+To cover the back, add one more 1 x 3 furring strip (the rails eat a whole
+8 ft) and a [1/4 in x 2 x 2 ft plywood project panel](https://www.homedepot.com/p/ProWood-1-4-in-x-2-ft-x-2-ft-Sanded-Plywood-Project-Panel-109114/202093828),
+about $16 the pair. Same parts whether you close the back only or the sides
+too; the closed box just gets two 340 x 22 mm slots cut in the panel and four
+pads to hold it off the wall.
 
 Skip the acrylic and it is about $115. The first estimate here was $109: the
 steel is $46 not $30, the plywood only comes as a 2 x 4, and the wood screws

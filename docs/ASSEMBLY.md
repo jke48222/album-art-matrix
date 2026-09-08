@@ -53,9 +53,26 @@ height, and it is the only number in this design nobody has published.
   the LEDs.
 - **5 mm or more**: buy **1-1/4 inch** standoffs instead.
 
-While the panel is in your hand, also measure the tallest thing on its back,
-most likely the power plug. If anything back there is taller than 12 mm it
-wants a note, because the cables have to run past it under the glass.
+**Answered, 2026-09-07.** The feet are Adafruit 4631: 16.6 mm long, 12 mm
+diameter, M3 stud. An M3 boss in a 12 mm shell swallows about 6 mm of that
+stud, so a foot stands roughly **10.6 mm** proud, not the 3 mm first assumed.
+You have confirmed the other half: a plugged ribbon stands a little under the
+magnets, which is the answer that matters. The panel rests on its magnets, not
+on its plugs, and there is a real 10 mm channel behind every panel for the
+harnesses to run in.
+
+What it changes: **the standoffs must be 1-1/4 in, not 1 in.** The barrel has
+to clear the magnet and the panel both.
+
+| Barrel | Glass clears the LEDs by |
+|---|---|
+| 1 in | 0.9 mm. The glass sits on the panels |
+| **1-1/4 in** | **6.7 mm** |
+| 1-1/2 in | 13.0 mm |
+
+Still worth one ruler check before you order: stand a panel with its feet on
+the fridge and measure shell to fridge. If it is 8 to 12 mm, 1-1/4 in is
+right. Under 8, 1 in comes back. Over 13, go to 1-1/2 in.
 
 ---
 
@@ -82,7 +99,7 @@ Amazon or Walmart:
 
 - 24 x 24 x 1/8 in smoked grey acrylic (Sibe-R #2064 grey, about 35 percent
   transmission, is what the renders assume)
-- Four black sign standoffs, 1 x 1 in, the size section 0 decided
+- Four black sign standoffs, **1-1/4 in barrel**. Not 1 in: see section 0
 - USB-C to bare wire pigtail, 18 AWG
 - A few 5 A ATC blade fuses (your 25 are 10 A, which is the panel size)
 
@@ -432,8 +449,8 @@ fallback at the bottom of the procedure is better than the app.
 4. Rest the acrylic on the barrels, fit the caps, snug only.
 5. Peel the front film last, after the board is on the wall.
 
-The barrel sets the optics: 25.4 mm off the steel, less the panel and its
-feet, leaves the glass about 8 mm clear of the LEDs.
+The barrel sets the optics: 31.75 mm off the steel, less 10.6 mm of magnet
+and 14.5 mm of panel, leaves the glass 6.7 mm clear of the LEDs.
 
 ---
 
@@ -455,6 +472,41 @@ feet, leaves the glass about 8 mm clear of the LEDs.
    board, and the switch is under your fingers when you reach up.
 5. Lift it on. The 63.5 mm gap is what the supply's fan breathes through, so
    do not stuff anything into it.
+
+### Covering the back
+
+Three ways to finish it, all on the same 63.5 mm cavity, so you can start
+open and close it later without moving one electrical part. Render each with
+`--enclosure open|back|box`.
+
+**Open.** Two blocks under the cleat, two feet at the bottom, nothing behind.
+111.9 mm front to back. Cheapest, coolest, and from the side you see the
+supply and the bars. This is what is already described above.
+
+**Back covered.** Swap the blocks and feet for two full width 1 x 3 rails,
+top and bottom, and screw a 24 x 24 x 1/4 in plywood panel to them. 118.2 mm
+deep. From behind it is a closed slab; from either side there is a 63.5 mm
+slot the whole cavity breathes through, which is why this one needs no vents
+at all. The cleat moves onto the back panel, screwed through it into the top
+rail so the load still lands on wood. Paint the rails and the panel before
+assembly. A 610 mm span of 1/4 in ply with nothing behind it will bow a
+little; a third rail across the middle fixes that if it bothers you.
+
+**Back and sides covered.** The same two rails plus one down each side, then
+the same panel over all four. A closed box, 118.2 mm deep. Now it needs air,
+so cut two 340 x 22 mm slots in the panel: the low one at 235 mm below
+centre, which lands right behind the supply's own fan, and the high one at
+175 mm above centre, which clears the cleat. Four 30 mm pads hold the box
+16 mm off the wall so the upper slot is not sealed against plaster.
+
+Two things the closed box costs you. The lux sensor can no longer see the
+room from inside, so it moves to the upper slot and looks out through it.
+And the supply is now in a box: run it for an hour on something white-heavy
+and put a hand on the back panel before you leave it alone.
+
+Materials either way: one more 1 x 3 furring strip (the covered versions eat
+the whole 8 ft in rails), one 24 x 24 x 1/4 in plywood panel, about $13, and
+the paint you already have.
 
 ---
 

@@ -33,3 +33,9 @@ tessera/build-device/
 
 # Blender backup saves
 *.blend1
+
+# Blender working files: one blend is tracked (design/renders/wall.blend);
+# the enclosure variants regenerate from the same script with --enclosure
+design/renders/covered.blend
+design/renders/boxed.blend
+design/renders/*.blend1
