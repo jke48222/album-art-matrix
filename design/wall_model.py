@@ -4,9 +4,10 @@ A 24 inch plywood square with a steel skin on its face, painted matte black.
 The nine panels hold themselves to the steel with the magnetic feet that ship
 in their boxes. A sheet of smoked acrylic floats an inch in front on four sign
 standoffs. Everything electrical lives on the back, in the gap two furring
-blocks and the cleat hold open. Nothing is cut but three squares and four
-holes, and the whole of it is about a hundred dollars over what is already on
-the bench.
+blocks and the cleat hold open. Every panel's cables reach the back through
+one opening drilled behind it, under the panel, where nothing shows: fifteen
+12 mm holes, three of them filed into slots for the ribbon plugs. About a
+hundred and fifty dollars over what is already on the bench.
 
 The walnut shadow box this replaces is kept at wall_model_walnut.py. It is the
 upgrade path: this carcass is what it would go around.
@@ -51,6 +52,16 @@ BOARD = 609.6                  # LISTING   24 in: the size both sheets come in
 PLY_T = 12.7                   # LISTING   1/2 in plywood or MDF project panel
 STEEL_T = 0.76                 # LISTING   22 gauge steel sheet, glued to the face
 BORDER = (BOARD - FACE) / 2    # 64.8: what shows around the picture, painted black
+HOLE_D = 12.0                  # DESIGN    one opening behind each panel, at its
+                               #           centre, for the panel's own harness. A
+                               #           1/2 in step bit makes it, through the
+                               #           steel and the plywood in one pass
+SLOT_L = 40.0                  # DESIGN    the three chain-start panels get three
+                               #           holes filed into one slot, wide enough
+                               #           to pass a HUB75 plug (20.3 x 8.9)
+CHAIN_START_COL = 2            # VERIFIED  the tile map: chains fill right to
+                               #           left, so each row's ribbon enters at
+                               #           its right-hand panel
 
 # --- the glass ---------------------------------------------------------------
 ACRYLIC = 609.6                # LISTING   the same 24 in square, smoked grey
@@ -68,7 +79,8 @@ FURRING_D = 63.5               # LISTING   its 2-1/2 in face, stood on edge: the
                                #           wider strip is the same $2 and the
                                #           difference between a fit and a scrape.
 CLEAT_L = 304.8                # LISTING   OOK 533208: 12 in
-CLEAT_W, CLEAT_T = 38.1, 2.0   # LISTING   1.5 in tall; stands 1/8 in off the wall
+CLEAT_W, CLEAT_T = 38.1, 1.2   # LISTING   1.5 in tall; stands 1/8 in off the wall.
+                               # TYPICAL   1.2 mm stamped aluminium
 CLEAT_PROJ = 3.175             # LISTING   that 1/8 in
 
 # --- the electronics: all from datasheets and board files -----------------
@@ -93,6 +105,8 @@ BUSBAR = (137.2, 22.9, 38.1)   # LISTING   RVBOATPAT dimension image: 5.4 x 0.9 
 FUSE_HOLDER = (36.0, 14.0, 14.0)   # TYPICAL  NI-FH01 body; the listing gives only
                                #           the fuse (19.1 x 18.5 x 5.1) and 12 in leads
 INLET = (50.0, 30.0, 30.0)     # LISTING   Antrader: approx 5 x 3 x 3 cm
+INLET_CUTOUT = (47.0, 27.5)    # TYPICAL   the panel cutout a C14 module wants;
+                               #           here it goes through the left foot
 SL22_D, SL22_T = 22.0, 5.0     # VERIFIED  Ametherm datasheet: 22 max dia, 5 thick
 MIC = (22.2, 18.3, 7.0)        # VERIFIED  Adafruit 3367
 LUX = (25.5, 17.7, 4.6)        # VERIFIED  Adafruit 4162
@@ -225,14 +239,45 @@ def cable(name, points, radius, col, mat, flat=False):
     cu.bevel_resolution = 4
     sp = cu.splines.new("BEZIER")
     sp.bezier_points.add(len(points) - 1)
+    cu.use_fill_caps = True
     for bp, p in zip(sp.bezier_points, points):
         bp.co = Vector((mm(p[0]), mm(p[1]), mm(p[2])))
-        bp.handle_left_type = bp.handle_right_type = "AUTO"
+        # a fourth element "V" makes the curve straight through that point:
+        # used where a lead passes through the board
+        kind = "VECTOR" if len(p) > 3 and p[3] == "V" else "AUTO"
+        bp.handle_left_type = bp.handle_right_type = kind
     o = bpy.data.objects.new(name, cu)
     if flat:
-        o.scale = (1, 1, 0.22)
+        cu.bevel_mode = "OBJECT"
+        cu.bevel_object = ribbon_profile(radius)
+        cu.twist_mode = "Z_UP"
     cu.materials.append(mat)
     link(o, col)
+    return o
+
+
+def ribbon_profile(half_width, half_thick=0.6):
+    """The cross section of a 16 way IDC ribbon at 1.27 mm pitch: 20.3 mm
+    wide, about 1.2 thick. The curve's Z-up twist lays it flat against
+    the board, which is how a ribbon lies."""
+    name = "Ribbon profile"
+    o = bpy.data.objects.get(name)
+    if o:
+        return o
+    cu = bpy.data.curves.new(name, "CURVE")
+    cu.dimensions = "2D"
+    sp = cu.splines.new("POLY")
+    sp.points.add(3)
+    # the profile's y follows the curve normal, which Z-up points along the
+    # depth: width in x, thickness in y, and the ribbon lies flat
+    for pt, (x, y) in zip(sp.points, ((-half_width, -half_thick), (half_width, -half_thick),
+                                      (half_width, half_thick), (-half_width, half_thick))):
+        pt.co = (mm(x), mm(y), 0, 1)
+    sp.use_cyclic_u = True
+    o = bpy.data.objects.new(name, cu)
+    bpy.context.scene.collection.objects.link(o)
+    o.hide_render = True
+    o.hide_viewport = True
     return o
 
 
@@ -293,7 +338,7 @@ def brushed_material(name, base, rough=0.32, aniso=0.6):
 
 # ============================================================ borrowed CAD
 
-def borrow(name, root, parts, layer, centre=None, keep=None):
+def borrow(name, root, parts, layer, centre=None, keep=None, seat=None):
     """Append a collection from the atelier study and stand it in this model.
 
     The study's Pi 5 is Raspberry Pi's own STEP and its bonnet is Adafruit's
@@ -302,7 +347,8 @@ def borrow(name, root, parts, layer, centre=None, keep=None):
     model has the face at local z = 0 with depth along -z and up along y, so
     the borrowed objects hang off one empty that turns their frame into ours.
     `centre` then moves the whole group so its middle lands where this design
-    wants it, in local mm. `keep` filters by name.
+    wants it, in local mm; `seat` overrides its depth so the face nearest the
+    board sits exactly at that z, on the plywood. `keep` filters by name.
     """
     if not os.path.exists(ATELIER):
         print("atelier blend missing, skipping", name)
@@ -330,13 +376,14 @@ def borrow(name, root, parts, layer, centre=None, keep=None):
         inv = root.matrix_world.inverted()
         pts = [inv @ (o.matrix_world @ Vector(c)) for o in kept if o.type == "MESH" for c in o.bound_box]
         if pts:
-            mid = Vector((sum(p.x for p in pts) / len(pts), sum(p.y for p in pts) / len(pts), sum(p.z for p in pts) / len(pts)))
             lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts)))
             hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts)))
             mid = (lo + hi) / 2
-            want = Vector((mm(centre[0]), mm(centre[1]), mm(centre[2])))
+            delta = Vector((mm(centre[0]), mm(centre[1]), mm(centre[2]))) - mid
+            if seat is not None:
+                delta.z = mm(seat) - hi.z
             # move the pivot in root-local terms
-            pivot.location = Vector(pivot.location) + (want - mid)
+            pivot.location = Vector(pivot.location) + delta
             bpy.context.view_layer.update()
             print("borrowed %-22s %4d objects, %.0f x %.0f x %.0f mm, placed" % (
                 name, len(kept), (hi.x - lo.x) * 1000, (hi.y - lo.y) * 1000, (hi.z - lo.z) * 1000))
@@ -369,7 +416,7 @@ def build(face_png):
     nylon = material("Nylon", (0.90, 0.88, 0.82), 0.7)
     red = material("Red lead", (0.55, 0.03, 0.02), 0.5)
     blk = material("Black lead", (0.012, 0.012, 0.012), 0.5)
-    ribbon = material("Ribbon", (0.30, 0.30, 0.33), 0.7)
+    ribbon = material("Ribbon", (0.42, 0.42, 0.44), 0.7)      # the classic grey IDC ribbon
     white = material("White plastic", (0.85, 0.85, 0.82), 0.5)
     smoke = material("Smoked acrylic", (0.30, 0.30, 0.32), 0.02, transmission=1.0, ior=1.49)
     ply = plywood_material()
@@ -386,8 +433,12 @@ def build(face_png):
     half = FACE / 2
 
     # ---- the board: plywood, a steel skin on its face, both painted ------
-    part(box("Plywood board", (BOARD, BOARD, PLY_T), (0, 0, Z_STEEL_BACK - PLY_T / 2),
-             cols["Board"], ply, bevel=0.6), 5)
+    board = part(box("Plywood board", (BOARD, BOARD, PLY_T), (0, 0, Z_STEEL_BACK - PLY_T / 2),
+                     cols["Board"], paint, bevel=0.6), 5)
+    board.data.materials.append(ply)         # face and edges painted, the back left bare
+    for poly in board.data.polygons:
+        if poly.normal.z < -0.5:
+            poly.material_index = 1
     part(box("Steel skin", (BOARD, BOARD, STEEL_T), (0, 0, (Z_STEEL_FRONT + Z_STEEL_BACK) / 2),
              cols["Board"], paint), 5)
     # the mark: the app's lattice, a stencil and a fingertip of grey paint on
@@ -395,9 +446,9 @@ def build(face_png):
     for i in range(7):
         for j in range(7):
             lit = (i, j) == (4, 2)
-            g = 0.30 if lit else 0.14
+            g = 0.45 if lit else 0.20
             m = material(f"Stencil {lit}", (g, g, g * 0.95), 0.8)
-            part(box(f"Mark {i}{j}", (2.0, 2.0, 0.05), ((i - 3) * 3.0, -half - BORDER / 2 + (j - 3) * 3.0,
+            part(box(f"Mark {i}{j}", (3.0, 3.0, 0.05), ((i - 3) * 4.5, -half - BORDER / 2 + (j - 3) * 4.5,
                      Z_STEEL_FRONT + 0.03), cols["Board"], m), 5)
 
     # ---- nine panels, held on by their own magnets -----------------------
@@ -419,7 +470,7 @@ def build(face_png):
             link(face, cols["Panels"])
             part(face, 3)
             zb = -PANEL_T + 5.5
-            for k, dx in enumerate((-48, 48)):
+            for k, dx in enumerate((48, -48)):        # input on the right: chains run right to left
                 part(box(f"Panel {n} HUB75 {'in' if k == 0 else 'out'}", IDC,
                          (cx + dx, cy + 44, zb), cols["Panels"], black), 3)
             part(box(f"Panel {n} VH4", (12.0, 9.0, 8.0), (cx, cy - 58, zb), cols["Panels"], white), 3)
@@ -428,7 +479,7 @@ def build(face_png):
                 part(cylinder(f"Panel {n} magnet {k}", 5.0, MAG_FOOT_H,
                               (cx + mx, cy + my, -PANEL_T - MAG_FOOT_H / 2),
                               cols["Panels"], tin, verts=24), 3)
-    borrow("P Panels", root, parts, 3, keep=lambda n: "PCB face" not in n)
+    borrow("P Panels", root, parts, 3, keep=lambda n: "PCB face" not in n and "emitters" not in n)
 
     # ---- the glass, floating on four standoffs ---------------------------
     part(box("Smoked acrylic", (ACRYLIC, ACRYLIC, ACR_T), (0, 0, (Z_ACR_BACK + Z_ACR_FRONT) / 2),
@@ -441,96 +492,205 @@ def build(face_png):
         part(cylinder(f"Standoff cap {i}", STANDOFF_D / 2, 4.0,
                       (x, y, Z_ACR_FRONT + 2.0), cols["Glass"], anod), 1)
 
-    # ---- hanging: two blocks and the cleat, two feet at the bottom -------
-    for i, sx in enumerate((-1, 1)):
-        part(box(f"Cleat block {i}", (120, FURRING, FURRING_D),
-                 (sx * 90, BOARD / 2 - 60, Z_PLY_BACK - FURRING_D / 2), cols["Board"], ply), 7)
-        part(box(f"Foot {i}", (60, FURRING, FURRING_D),
-                 (sx * 220, -BOARD / 2 + 30, Z_PLY_BACK - FURRING_D / 2), cols["Board"], ply), 7)
-    c1 = part(box("Cleat (frame)", (CLEAT_L, CLEAT_W, CLEAT_T), (0, BOARD / 2 - 60, Z_PLY_BACK - FURRING_D - CLEAT_T / 2),
-                  cols["Board"], alu, bevel=0.4), 7)
-    c1.rotation_euler = (math.radians(30), 0, 0)
-    c2 = part(box("Cleat (wall)", (CLEAT_L, CLEAT_W, CLEAT_T), (0, BOARD / 2 - 78, Z_WALL + CLEAT_T / 2 + 1),
-                  cols["Board"], alu, bevel=0.4), 8)
-    c2.rotation_euler = (math.radians(30), 0, 0)
+    # ---- the openings: one behind each panel, where nothing shows ---------
+    # The panel's own harness goes through here to the back, and on the right
+    # column the ribbon plug does too. Drilled after the steel is glued on,
+    # from the front, so the burr lands in the plywood. A slot is three
+    # holes and a file.
+    CUT = collection("Cutters")
+    CUT.hide_render = True
+    z_cut = (Z_STEEL_FRONT + Z_PLY_BACK) / 2
+    d_cut = STEEL_T + PLY_T + 6
+    for r in range(ROWS):
+        for c in range(COLS):
+            cx = -half + PANEL / 2 + c * PANEL
+            cy = half - PANEL / 2 - r * PANEL
+            if c == CHAIN_START_COL:
+                w = SLOT_L - HOLE_D
+                part(box(f"Slot {r}{c}", (w, HOLE_D, d_cut), (cx, cy, z_cut), CUT), 5)
+                for j, dx in enumerate((-w / 2, w / 2)):
+                    part(cylinder(f"Slot {r}{c} end {j}", HOLE_D / 2, d_cut, (cx + dx, cy, z_cut), CUT), 5)
+            else:
+                part(cylinder(f"Hole {r}{c}", HOLE_D / 2, d_cut, (cx, cy, z_cut), CUT), 5)
+    for o in CUT.objects:
+        o.display_type = "WIRE"
+    for name in ("Plywood board", "Steel skin"):
+        m = parts[name][0].modifiers.new("Openings", "BOOLEAN")
+        m.operation = "DIFFERENCE"
+        m.operand_type = "COLLECTION"
+        m.collection = CUT
+        m.solver = "EXACT"
 
-    # ---- electronics, on the open back -----------------------------------
+    # ---- hanging: two blocks and the cleat, two feet at the bottom -------
+    # All four are the same 1 x 3 strip. The left foot is 100 long and
+    # carries the mains inlet: the C14 module's cutout goes through its
+    # bottom face, so socket, switch and fuse drawer face the floor 6 mm
+    # inside the board's bottom edge: reachable, invisible, and the cord
+    # hangs straight down behind the board.
     E = cols["Electronics"]
     zc_top = Z_PLY_BACK - 1.0
-    psu_at = (-40, -BOARD / 2 + PSU[1] / 2 + 40, zc_top - PSU[2] / 2)
-    borrow("E Power", root, parts, 6, centre=psu_at,
-           keep=lambda n: "inlet" not in n.lower() and "iec" not in n.lower())
-    pi_at = (-BOARD / 2 + 90, BOARD / 2 - 120, zc_top - PI_STACK / 2)
-    borrow("D Controller", root, parts, 6, centre=pi_at)
-    bus_plus = (BOARD / 2 - 120, 130)
-    bus_minus = (BOARD / 2 - 120, 60)
-    borrow("E Bus bars", root, parts, 6, centre=(BOARD / 2 - 120, 95, zc_top - 14))
-    fuse_c = (60, 0, zc_top - 8)
-    borrow("U Unresolved fit", root, parts, 6, centre=fuse_c,
-           keep=lambda n: any(k in n.lower() for k in ("fuse", "nilight", "heat", "shrink", "10a", "butt")))
-    inlet_at = (BOARD / 2 - 70, -BOARD / 2 + 24, zc_top - INLET[2] / 2)
-    part(box("C14 inlet module", INLET, inlet_at, E, black, bevel=1.0), 6)
-    part(cylinder("SL22 thermistor", SL22_D / 2, SL22_T, (BOARD / 2 - 140, -BOARD / 2 + 30, zc_top - 8),
-                  E, black, axis="Z", verts=24), 6)
-    part(box("USB microphone", MIC, (-BOARD / 2 + 40, -BOARD / 2 + 40, zc_top - 5), E, black, bevel=1.0), 6)
-    part(box("VEML7700 lux sensor", LUX, (0, BOARD / 2 - 30, zc_top - 3), E, pcb_dark), 6)
-    # the one bond that matters on an open back: the steel skin to -V
-    part(cable("Skin bond", [(BOARD / 2 - 200, 40, Z_PLY_BACK - 6), (bus_minus[0] - 30, bus_minus[1], zc_top - 10)],
-               1.3, cols["Wiring"], blk), 6)
+    y_cleat = BOARD / 2 - 60
+    y_foot = -BOARD / 2 + 50
+    z_mid = Z_PLY_BACK - FURRING_D / 2
+    for i, sx in enumerate((-1, 1)):
+        part(box(f"Cleat block {i}", (120, FURRING, FURRING_D), (sx * 90, y_cleat, z_mid), cols["Board"], ply), 7)
+    foot_l = part(box("Foot 0 (inlet)", (100, FURRING, FURRING_D), (-205, y_foot, z_mid), cols["Board"], ply), 7)
+    part(box("Foot 1", (60, FURRING, FURRING_D), (220, y_foot, z_mid), cols["Board"], ply), 7)
+    inlet_at = (-205.0, y_foot - FURRING / 2 + INLET[1] / 2, z_mid)
+    cut = part(box("Inlet cutout", (INLET_CUTOUT[0], FURRING + 4, INLET_CUTOUT[1]), (inlet_at[0], y_foot, z_mid), CUT), 7)
+    m = foot_l.modifiers.new("Inlet cutout", "BOOLEAN")
+    m.operation = "DIFFERENCE"
+    m.object = cut
+    m.solver = "EXACT"
+    part(box("C14 inlet module", INLET, inlet_at, E, black, bevel=1.0), 7)
+    # the cleat: OOK's is two thin aluminium hooks in the 1/8 in between the
+    # blocks and the wall
+    z_blocks = Z_PLY_BACK - FURRING_D
+    part(box("Cleat (frame)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cleat + 6, z_blocks - CLEAT_T / 2),
+             cols["Board"], alu, bevel=0.3), 7)
+    part(box("Cleat (hook)", (CLEAT_L, 8, (z_blocks - CLEAT_T) - (Z_WALL + CLEAT_T)),
+             (0, y_cleat, ((z_blocks - CLEAT_T) + (Z_WALL + CLEAT_T)) / 2), cols["Board"], alu), 8)
+    part(box("Cleat (wall)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cleat - 6, Z_WALL + CLEAT_T / 2),
+             cols["Board"], alu, bevel=0.3), 8)
+    # the lux sensor rides on a cleat block, looking at the ceiling
+    part(box("VEML7700 lux sensor", (LUX[0], LUX[2], LUX[1]), (-90, y_cleat + FURRING / 2 + LUX[2] / 2, z_mid), E, pcb_dark), 7)
 
-    # ---- wiring: round the edge, then inside the panels' shells ----------
+    # ---- electronics, on the open back -----------------------------------
+    # Each group is seated on the plywood by its nearest face. The positions
+    # were checked against the openings: nothing sits over a hole.
+    psu_c = (-20.0, -232.0)          # low and central; its terminal strip faces -x, toward the inlet
+    borrow("E Power", root, parts, 6, centre=(*psu_c, 0), seat=Z_PLY_BACK,
+           keep=lambda n: not any(k in n.lower() for k in ("inlet", "iec", "c14", "mounting tab", "sl22", "ntc")))
+    pi_c = (230.0, 0.0)              # mid right, a hand's width from the three slots
+    borrow("D Controller", root, parts, 6, centre=(*pi_c, 0), seat=Z_PLY_BACK - 3)
+    bars_c = (-184.8, 100.0)         # mid left, +V above GND
+    borrow("E Bus bars", root, parts, 6, centre=(*bars_c, 0), seat=Z_PLY_BACK)
+    fuse_c = (-45.0, 95.0)           # nine holders in a block beside the bars
+    borrow("U Unresolved fit", root, parts, 6, centre=(*fuse_c, 0), seat=Z_PLY_BACK,
+           keep=lambda n: any(k in n.lower() for k in ("fuse", "nilight", "heat", "shrink", "10a", "butt")))
+    pi_fuse_c = (250.0, 45.0, zc_top - FUSE_HOLDER[2] / 2)
+    part(box("Fuse holder 10 (Pi)", FUSE_HOLDER, pi_fuse_c, E, black, bevel=1.5), 6)
+    sl22_c = (-140.0, -222.0, zc_top - SL22_T / 2 - 4)
+    part(cylinder("SL22 thermistor", SL22_D / 2, SL22_T, sl22_c, E, black, axis="Z", verts=24), 6)
+    mic_c = (285.0, -100.0, zc_top - MIC[2] / 2)
+    part(box("USB microphone", MIC, mic_c, E, black, bevel=1.0), 6)
+
+    # where the borrowed parts actually are, so the leads land on them
+    bpy.context.view_layer.update()
+    inv = root.matrix_world.inverted()
+
+    def bb(name):
+        o = parts[name][0]
+        pts = [inv @ (o.matrix_world @ Vector(c)) for c in o.bound_box]
+        lo = Vector((min(p.x for p in pts), min(p.y for p in pts), min(p.z for p in pts))) * 1000
+        hi = Vector((max(p.x for p in pts), max(p.y for p in pts), max(p.z for p in pts))) * 1000
+        return lo, hi, (lo + hi) / 2
+
+    def screw(n):                    # a ring under a screw: the head's far face
+        lo, hi, m = bb(n)
+        return (m.x, m.y, lo.z - 0.5)
+
+    psu_screws = sorted((n for n in parts if n.startswith("PSU screw")), key=lambda n: bb(n)[2].y)
+
+    def psu_term(i):                 # 1..9 from the bottom edge up: L N FG -V -V -V +V +V +V
+        lo, hi, m = bb(psu_screws[i - 1])
+        return (lo.x - 3, m.y, m.z)
+
+    rowx = lambda n: (round(bb(n)[2].y), bb(n)[2].x)
+    plus_t = sorted((n for n in parts if n.startswith("+5V M4 terminal")), key=rowx)
+    gnd_t = sorted((n for n in parts if n.startswith("GND M4 terminal")), key=rowx)
+    fuses = sorted(n for n in parts if n.startswith("F0"))
+
+    def fuse_end(k, side):
+        lo, hi, m = bb(fuses[k])
+        return ((lo.x if side < 0 else hi.x), m.y, m.z)
+
+    idc = ["Adafruit 6358 | Body2.007", "Adafruit 6358 | Body2.008", "Adafruit 6358 | Body2.009"]
+    lo, hi, m = bb("Official Raspberry Pi 5 CAD solid 1940")      # the USB-C receptacle, HDMI edge
+    usbc = (m.x, lo.y - 2, m.z)
+    lo, hi, m = bb("Official Raspberry Pi 5 CAD solid 1339")      # a USB-A stack, Ethernet end
+    usba = (hi.x + 2, m.y, m.z)
+    lo, hi, m = bb("+5V quarter-inch stud")
+    stud_p = (m.x, m.y, hi.z - 2.5)
+    lo, hi, m = bb("GND quarter-inch stud")
+    stud_g = (m.x, m.y, hi.z - 2.5)
+
+    # ---- wiring ------------------------------------------------------------
+    # Feeds: three pairs, terminal strip to bars. Drops: bar terminal, fuse
+    # holder, across the back and down through the panel's opening to its
+    # plug, one lead. GND: bar terminal to the same opening. Ribbons: bonnet
+    # to the three slots, then panel to panel in the 3 mm the feet hold open.
+    # Nothing runs on the border.
     W = cols["Wiring"]
-    zl = zc_top - 10
-    edge = BOARD / 2 + 6
+    green = material("Green lead", (0.03, 0.30, 0.05), 0.5)
+    z_gap = Z_PANEL_BACK - 1.5                              # between panel shell and steel
+    z_in, z_out = Z_STEEL_FRONT + 1.0, Z_PLY_BACK - 2.0     # the two mouths of an opening
+    z_back = zc_top - 18.0                                  # a lead dressed across the plywood
+    plus_drop = list(range(6, 12)) + [0, 1, 2]              # outer row and three inner; three inner left for feeds
+    gnd_drop = list(range(0, 6)) + [6, 7, 8]
+    for i in range(3):
+        t, p = screw(plus_t[3 + i]), psu_term(7 + i)
+        part(cable(f"Feed + {i}", [p, (p[0] - 20, p[1] + 25, p[2]), (t[0] + 10, t[1] - 70, z_back),
+                                   (t[0], t[1] - 10, t[2] - 2), t], 1.7, W, red), 6)
+        t, p = screw(gnd_t[9 + i]), psu_term(4 + i)
+        part(cable(f"Feed - {i}", [p, (p[0] - 26, p[1] + 25, p[2]), (t[0] + 10, t[1] - 60, z_back),
+                                   (t[0], t[1] - 10, t[2] - 2), t], 1.7, W, blk), 6)
     for r in range(ROWS):
         for c in range(COLS):
             cx = -half + PANEL / 2 + c * PANEL
             cy = half - PANEL / 2 - r * PANEL
             k = r * COLS + c
-            fat = (fuse_c[0] - 41 + (k % 3) * 41, fuse_c[1] + 35 - (k // 3) * 35)
-            # bar to fuse, on the back
-            part(cable(f"Drop {k + 1} bar", [(bus_plus[0] - 50, bus_plus[1] - 30 + (k % 6) * 8, zl),
-                                             (fat[0] + 22, fat[1], zl - 2)], 1.3, W, red), 6)
-            # fuse round the bottom edge to the panel's plug, on the front
-            part(cable(f"Drop {k + 1} +", [(fat[0] - 22, fat[1], zl - 2),
-                                           (fat[0] - 40, -edge + 14, zl),
-                                           (cx + 20, -edge, (zl + Z_PANEL_BACK) / 2),
-                                           (cx + 10, -half - 20, Z_PANEL_BACK - 5),
-                                           (cx + 6, cy - 58, Z_PANEL_BACK - 6)], 1.3, W, red), 6)
-            part(cable(f"Drop {k + 1} -", [(bus_minus[0] - 40, bus_minus[1] - 20 + (k % 6) * 6, zl),
-                                           (cx + 60, -edge + 10, zl),
-                                           (cx - 10, -edge, (zl + Z_PANEL_BACK) / 2),
-                                           (cx - 10, -half - 18, Z_PANEL_BACK - 5),
-                                           (cx - 6, cy - 58, Z_PANEL_BACK - 6)], 1.3, W, blk), 6)
-        # panel to panel along the row, inside the 12 mm shells
-        for c in range(COLS - 1):
-            x0 = -half + PANEL / 2 + c * PANEL + 48
-            x1 = x0 + PANEL - 96
-            cy = half - PANEL / 2 - r * PANEL + 44
-            part(cable(f"Ribbon {r}{c}", [(x0, cy, Z_PANEL_BACK - 9), ((x0 + x1) / 2, cy, Z_PANEL_BACK - 13),
-                                          (x1, cy, Z_PANEL_BACK - 9)], 4.6, W, ribbon, flat=True), 3)
-    # the bonnet's three ports, round the left edge to the first panel of each row
-    for k in range(3):
-        cy = half - PANEL / 2 - k * PANEL + 44
-        part(cable(f"Ribbon port {k + 1}", [(pi_at[0] - 10 + k * 14, pi_at[1] - 10, pi_at[2] - 10),
-                                            (-edge + 20, pi_at[1] - 60, zl),
-                                            (-edge, cy + 10, (zl + Z_PANEL_BACK) / 2),
-                                            (-half - 20, cy, Z_PANEL_BACK - 9),
-                                            (-half + 32, cy, Z_PANEL_BACK - 9)], 4.6, W, ribbon, flat=True), 3)
-    for i in range(3):
-        part(cable(f"Feed + {i}", [(psu_at[0] + PSU[0] / 2 - 12 + i * 6, psu_at[1] + PSU[1] / 2 - 9, psu_at[2] - 12),
-                                   (bus_plus[0] - 70, bus_plus[1] - 60 + i * 8, zl - 6),
-                                   (bus_plus[0], bus_plus[1] + 10, zl)], 1.7, W, red), 6)
-        part(cable(f"Feed - {i}", [(psu_at[0] + PSU[0] / 2 - 30 + i * 6, psu_at[1] + PSU[1] / 2 - 9, psu_at[2] - 12),
-                                   (bus_minus[0] - 70, bus_minus[1] - 60 + i * 8, zl - 6),
-                                   (bus_minus[0], bus_minus[1] - 10, zl)], 1.7, W, blk), 6)
-    part(cable("Mains L", [(inlet_at[0], inlet_at[1] + 16, inlet_at[2]),
-                           (BOARD / 2 - 140, -BOARD / 2 + 30, zc_top - 8),
-                           (psu_at[0] + PSU[0] / 2 - 48, psu_at[1] + PSU[1] / 2 - 9, psu_at[2] - 12)], 1.5, W, blk), 6)
-    part(cable("Mains N", [(inlet_at[0] - 10, inlet_at[1] + 16, inlet_at[2]),
-                           (psu_at[0] + PSU[0] / 2 - 42, psu_at[1] + PSU[1] / 2 - 9, psu_at[2] - 12)], 1.5, W, white), 6)
-    part(cable("Pi feed", [(bus_plus[0] - 20, bus_plus[1] + 14, zl),
-                           (pi_at[0] + 30, pi_at[1] - 20, pi_at[2])], 1.3, W, red), 6)
+            tp, tg = screw(plus_t[plus_drop[k]]), screw(gnd_t[gnd_drop[k]])
+            fi, fo = fuse_end(k, -1), fuse_end(k, +1)
+            part(cable(f"Drop {k + 1} bar to fuse", [tp, (tp[0] + 12, tp[1], tp[2] - 4),
+                                                     ((tp[0] + fi[0]) / 2, (tp[1] + fi[1]) / 2, z_back),
+                                                     (fi[0] - 6, fi[1], fi[2]), fi], 1.3, W, red), 6)
+            part(cable(f"Drop {k + 1} +", [fo, (fo[0] + 8, fo[1], fo[2]), ((fo[0] + cx) / 2, (fo[1] + cy) / 2, z_back),
+                                           (cx + 2.5, cy + 3, z_out, "V"), (cx + 2.5, cy + 3, z_in, "V"),
+                                           (cx + 3, cy - 20, z_gap), (cx + 3, cy - 50, Z_PANEL_BACK + 3)], 1.2, W, red), 6)
+            part(cable(f"Drop {k + 1} -", [tg, (tg[0] + 12, tg[1], tg[2] - 4), ((tg[0] + cx) / 2, (tg[1] + cy) / 2 - 12, z_back),
+                                           (cx - 2.5, cy - 3, z_out, "V"), (cx - 2.5, cy - 3, z_in, "V"),
+                                           (cx - 3, cy - 20, z_gap), (cx - 3, cy - 50, Z_PANEL_BACK + 3)], 1.2, W, blk), 6)
+    for r in range(ROWS):
+        cy = half - PANEL / 2 - r * PANEL
+        cx = -half + PANEL / 2 + CHAIN_START_COL * PANEL
+        lo, hi, m = bb(idc[r])
+        hin = (cx + 48, cy + 44)                            # the chain-start panel's input header
+        part(cable(f"Ribbon port {r + 1}", [(m.x, m.y, lo.z - 1, "V"), (m.x, m.y, lo.z - 12),
+                                            ((m.x + cx) / 2 - 10, (m.y + cy) / 2, lo.z - 14),
+                                            (cx + 8, cy - 1.5, z_out, "V"), (cx + 8, cy + 1.5, z_in, "V"),   # a hair of y so the ribbon turns its width along the slot
+                                            (cx + 28, cy + 24, z_gap), (hin[0], hin[1] - 10, Z_PANEL_BACK + 2)],
+                   10.15, W, ribbon, flat=True), 6)
+        for c in range(COLS - 1, 0, -1):                    # right to left, output to the next input
+            x_out = -half + PANEL / 2 + c * PANEL - 48
+            x_in = x_out - PANEL + 96
+            # straight through the middle: a smooth handle here sags the run into the steel
+            part(cable(f"Ribbon {r}{c}", [(x_out, cy + 44, Z_PANEL_BACK + 2), (x_out - 8, cy + 44, z_gap, "V"),
+                                          (x_in + 8, cy + 44, z_gap, "V"), (x_in, cy + 44, Z_PANEL_BACK + 2)],
+                       10.15, W, ribbon, flat=True), 3)
+    # the Pi: +V stud, the tenth holder, the USB-C pigtail; GND stud straight to it
+    pf_in = (pi_fuse_c[0] - FUSE_HOLDER[0] / 2, pi_fuse_c[1], pi_fuse_c[2])
+    pf_out = (pi_fuse_c[0] + FUSE_HOLDER[0] / 2, pi_fuse_c[1], pi_fuse_c[2])
+    part(cable("Pi feed +", [stud_p, (-110, 158, z_back - 6), (60, 165, z_back - 8), (215, 60, z_back - 4), pf_in], 1.1, W, red), 6)
+    part(cable("Pi feed + fused", [pf_out, (283, 25, z_back + 6), (283, -42, z_back + 6),
+                                   (usbc[0] + 8, usbc[1] - 12, usbc[2]), usbc], 1.1, W, red), 6)
+    part(cable("Pi feed -", [stud_g, (-100, 40, z_back - 6), (100, -40, z_back - 8), (usbc[0] + 3, usbc[1] - 30, z_back + 4),
+                             (usbc[0] + 3, usbc[1] - 12, usbc[2]), (usbc[0] + 3, usbc[1], usbc[2])], 1.1, W, blk), 6)
+    # mains: inlet lugs stand up out of the block; L goes through the limiter
+    lug = lambda dx: (inlet_at[0] + dx, inlet_at[1] + INLET[1] / 2 + 4, inlet_at[2])
+    part(cable("Mains L to limiter", [lug(-14), (sl22_c[0] - 10, sl22_c[1] - 24, sl22_c[2] - 2),
+                                      (sl22_c[0] - 4, sl22_c[1] - 11, sl22_c[2])], 1.5, W, blk), 6)
+    L, N, G = psu_term(1), psu_term(2), psu_term(3)
+    part(cable("Mains L", [(sl22_c[0] + 4, sl22_c[1] - 11, sl22_c[2]), (sl22_c[0] + 14, sl22_c[1] - 4, sl22_c[2] - 4),
+                           (L[0] - 12, L[1] - 8, L[2]), L], 1.5, W, blk), 6)
+    part(cable("Mains N", [lug(0), (inlet_at[0] + 30, inlet_at[1] + 40, z_back), (N[0] - 16, N[1] - 16, N[2]), N], 1.5, W, white), 6)
+    part(cable("Mains E", [lug(14), (inlet_at[0] + 40, inlet_at[1] + 34, z_back), (G[0] - 20, G[1] - 20, G[2]), G], 1.5, W, green), 6)
+    part(cable("Mic USB", [usba, (usba[0] + 10, usba[1] - 24, usba[2] - 6), (mic_c[0] - 2, mic_c[1] + MIC[1] / 2 + 12, zc_top - 8),
+                           (mic_c[0] - 2, mic_c[1] + MIC[1] / 2, mic_c[2])], 1.6, W, white), 6)
+    # the one bond that matters on an open back: the steel skin to GND, a
+    # ring under a screw tapped into the steel at the rim of an opening
+    part(cable("Skin bond", [stud_g, (stud_g[0] + 10, stud_g[1] - 30, z_back + 8),
+                             (-half + PANEL / 2 + 9, 3, Z_PLY_BACK - 1.5)], 1.3, W, blk), 6)
 
     # ---- studio ------------------------------------------------------------
     S = cols["Studio"]
@@ -540,7 +700,10 @@ def build(face_png):
     wallp.scale = (6.0, 4.0, 1)
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     wallp.rotation_euler = (math.pi / 2, 0, 0)
-    wallp.location = (0, mm(-Z_WALL) + 0.002, 1.6)
+    # the root sits at y = -Z_WALL and local depth runs to +y, so the wall
+    # plane is two of those from the origin, not one
+    y_wall = 2 * mm(-Z_WALL)
+    wallp.location = (0, y_wall + 0.002, 1.6)
     wallp.data.materials.append(plaster)
     link(wallp, S)
     bpy.ops.mesh.primitive_plane_add(size=1.0)
@@ -557,7 +720,7 @@ def build(face_png):
     sweep.scale = (8.0, 6.0, 1)
     bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
     sweep.rotation_euler = (math.pi / 2, 0, 0)
-    sweep.location = (0, mm(-Z_WALL) + 0.004, 2.0)
+    sweep.location = (0, y_wall + 0.004, 2.0)
     sweep.data.materials.append(studio_m)
     link(sweep, S)
     sweep.hide_render = True
@@ -642,11 +805,14 @@ def explode(parts, amount_mm):
     """Spread the layers along the wall's depth. Borrowed parts hang under a
     pivot turned -90 about x, so their local -y is this model's depth."""
     for o, layer in parts.values():
-        if o.parent is not None and o.parent.name.startswith("Atelier"):
-            if o.parent.name.startswith("Atelier") and (o.parent is not None):
-                o.location.y -= mm(amount_mm) * (2 - layer)
-        else:
+        p = o.parent
+        if p is None:
+            continue
+        if p.name.startswith("Atelier"):
+            o.location.y -= mm(amount_mm) * (2 - layer)
+        elif p.name == "Wall":
             o.location.z += mm(amount_mm) * (2 - layer)
+        # anything else is a child inside a borrowed group and rides along
 
 
 def glare(sc):
@@ -714,7 +880,7 @@ def main():
     ap.add_argument("--out", default="design/renders")
     ap.add_argument("--face", default="")
     ap.add_argument("--samples", type=int, default=200)
-    ap.add_argument("--views", default="hero,front,detail,back,exploded,room")
+    ap.add_argument("--views", default="hero,front,skin,detail,mark,back,exploded,room")
     args = ap.parse_args(argv)
     os.makedirs(args.out, exist_ok=True)
 
@@ -727,6 +893,12 @@ def main():
         sweep.hide_render = not on
         wallp.hide_render = on
 
+    def hide(names, on):
+        for n in names:
+            c = bpy.data.collections.get(n)
+            if c:
+                c.hide_render = on
+
     if "hero" in views:
         studio(True)
         aim(cam, (-0.95, -1.40, 1.62), (0.0, 0.0, mm(WALL_H) - 0.01), lens=55, fstop=4.0)
@@ -735,6 +907,16 @@ def main():
         studio(True)
         aim(cam, (0.0, -1.70, mm(WALL_H)), C, lens=60)
         render(sc, os.path.join(args.out, "wall-front.png"), args.samples)
+    if "skin" in views:
+        # the board before the panels go on: the steel, its fifteen openings,
+        # a lead waiting at each, the standoff barrels, the mark. Against the
+        # plaster, not the sweep: matte black under the key reads as the
+        # sweep's grey and the board disappears into it
+        studio(False)
+        hide(("Panels", "P Panels", "Glass"), True)
+        aim(cam, (-0.10, -1.55, mm(WALL_H) + 0.02), C, lens=60)
+        render(sc, os.path.join(args.out, "wall-skin.png"), args.samples)
+        hide(("Panels", "P Panels", "Glass"), False)
     if "detail" in views:
         studio(True)
         # the top left standoff, where the glass, the barrel, the black
@@ -744,21 +926,28 @@ def main():
         corner = (x, mm(-Z_WALL) - mm(Z_ACR_FRONT), z)
         aim(cam, (corner[0] - 0.20, corner[1] - 0.30, corner[2] + 0.10), corner, lens=85, fstop=5.6, focus=corner)
         render(sc, os.path.join(args.out, "wall-detail.png"), args.samples)
+    if "mark" in views:
+        studio(True)
+        mark = (0.0, mm(-Z_WALL) - mm(Z_STEEL_FRONT), mm(WALL_H) - mm(FACE / 2 + BORDER / 2))
+        aim(cam, (mark[0] + 0.06, mark[1] - 0.24, mark[2] + 0.05), mark, lens=85, fstop=5.6, focus=mark)
+        render(sc, os.path.join(args.out, "wall-mark.png"), args.samples)
     if "back" in views:
         studio(True)
         lights["back"].hide_render = False
         sweep.hide_render = True
         # nothing to remove: the back is open
-        aim(cam, (0.62, 0.95, 1.80), (0.0, 0.05, mm(WALL_H) - 0.03), lens=45)
+        aim(cam, (0.55, 1.15, 1.72), (0.0, 0.06, 1.48), lens=40)
         render(sc, os.path.join(args.out, "wall-back.png"), args.samples)
         lights["back"].hide_render = True
     if "exploded" in views:
         sweep.hide_render = True
         wallp.hide_render = True
+        hide(("Wiring",), True)
         explode(parts, 110)
         aim(cam, (-1.25, -1.35, 1.95), (0.0, 0.10, mm(WALL_H) - 0.02), lens=45)
         render(sc, os.path.join(args.out, "wall-exploded.png"), args.samples)
         explode(parts, -110)
+        hide(("Wiring",), False)
     if "room" in views:
         studio(False)
         aim(cam, (-0.85, -1.9, 1.40), (0.0, 0.0, mm(WALL_H) - 0.05), lens=40)
@@ -772,6 +961,8 @@ def main():
           % (BOARD, DEPTH, FACE, BORDER))
     print("glass floats %.1f mm over the LEDs; back gap %.1f mm, tallest part %.1f mm, clearance %.1f mm"
           % (AIR_GAP, FURRING_D, max(PSU[2], PI_STACK, BUSBAR[2]), CLEARANCE))
+    print("openings: %d holes of %.0f mm at the panel centres, %d of them filed into %.0f x %.0f slots on the right column"
+          % (ROWS * COLS + 2 * ROWS, HOLE_D, ROWS, SLOT_L, HOLE_D))
 
 
 if __name__ == "__main__":

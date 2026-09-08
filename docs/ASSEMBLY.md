@@ -61,25 +61,38 @@ wants a note, because the cables have to run past it under the glass.
 
 ## 1. Shop
 
-Home Depot, one trip:
+Home Depot, one trip (prices checked 2026-09-07, links in PARTS.md):
 
-- 24 x 24 in plywood or MDF project panel, 1/2 in
-- 24 x 24 in steel sheet, 22 gauge (the 16 gauge is twice the price and you
-  are gluing it to plywood, so it does not need the stiffness)
-- Matte black spray paint, one can, and a small tube of construction adhesive
-- 1 x 3 furring strip, 8 ft. **Not 1 x 2**: a 1 x 2 on edge holds the board
-  38.1 mm off the wall and a bus bar with its cover on is exactly 38.1 mm tall.
-- Four M4 x 16 screws and nuts
+- 1/2 in plywood. No 24 x 24 half-inch project panel exists; the 2 x 4 ft
+  Sande panel is $24.78 and the desk will cut it in half, which leaves a spare.
+- 24 x 24 in steel sheet, 22 gauge, $46.47. The 16 gauge is $64.20 and you
+  are gluing it to plywood, so it does not need the stiffness.
+- Matte black spray paint, one can, $5.98, and a 4 oz tube of Loctite PL
+  Premium construction adhesive.
+- 1 x 3 furring strip, 8 ft, about $3. **Not 1 x 2**: a 1 x 2 on edge holds
+  the board 38.1 mm off the wall and a bus bar with its cover on is exactly
+  38.1 mm tall.
+- Four M4 x 16 **flat head** screws (two 3-packs). They go in from the front
+  and sit under a panel, so their heads must be countersunk flush; a pan head
+  stands 2.6 mm proud and lifts that panel off its magnets.
+- A small box of #6 x 3/8 in wood screws for everything mounted from the
+  back: bars, fuse holder mounts, the cleat blocks, the inlet flange.
 
 Amazon or Walmart:
 
-- 24 x 24 x 1/8 in smoked grey acrylic (#2064 grey, about 35 percent
+- 24 x 24 x 1/8 in smoked grey acrylic (Sibe-R #2064 grey, about 35 percent
   transmission, is what the renders assume)
-- Four black sign standoffs, the size section 0 decided
-- USB-C to bare wire pigtail, 18 to 22 AWG
+- Four black sign standoffs, 1 x 1 in, the size section 0 decided
+- USB-C to bare wire pigtail, 18 AWG
 - A few 5 A ATC blade fuses (your 25 are 10 A, which is the panel size)
 
-Everything else is on the bench. About $109.
+Tools this needs that nothing in the ledger lists: a drill; a 1/8 to 1/2 in
+step bit, which does the fifteen openings in steel-on-plywood and the four
+acrylic holes without chipping; a countersink for the four M4 heads; a
+centre punch or a nail; a jigsaw or coping saw for the inlet's rectangle in
+the foot; wire strippers, still not owned.
+
+Everything else is on the bench. About $150 with the acrylic, $115 without.
 
 **Check on arrival:** the acrylic comes with protective film both sides. Leave
 it on until section 9.
@@ -91,18 +104,32 @@ it on until section 9.
 1. Lay the steel on the plywood, glue side down, adhesive in a grid of dots
    about 100 mm apart plus a bead round the perimeter. Weight it flat
    overnight with books across the whole face, not just the middle.
-2. Sand the plywood edges, then paint the steel face and all four edges matte
-   black. Two thin coats. The magnets hold through paint.
-3. While it dries, mark the back in pencil: **write TOP on the top edge.**
-   Every position in section 4 is given as you look at the back with TOP up.
-4. Mark the panel grid on the painted face: the picture is 480 mm square and
+2. Mark the panel grid on the bare steel: the picture is 480 mm square and
    centred, so there is a 64.8 mm border all round. Draw the outer 480 square
    and the two lines at 160 and 320 in each direction. You will lay panels to
-   these lines, and the magnets let you slide them until the seams are right.
+   these lines. Mark the centre of each of the nine 160 mm cells: 80 mm in
+   from two of its edges.
+3. **Drill the fifteen openings, from the front, through steel and plywood in
+   one pass.** Centre punch every mark first or the bit skates on steel. Six
+   cells get one 12 mm hole at the centre. The three cells of the right-hand
+   column (as you face the front) get three 12 mm holes in a row along the
+   horizontal centre line, at the centre and 14 mm either side, and the two
+   webs filed out into one 40 x 12 slot: that is where each row's ribbon
+   plug comes through. The plywood behind the sheet is what stops thin steel
+   grabbing, and drilling from the front puts the burr in the plywood, so
+   the face stays flat for the magnets. Knock back any burr you can feel.
+4. Sand the plywood edges, then paint the steel face and all four edges matte
+   black. Two thin coats. The magnets hold through paint, and the paint
+   covers the hole edges.
+5. While it dries, mark the back in pencil: **write TOP on the top edge.**
+   Every position in section 4 is given as you look at the back with TOP up.
+   A hole behind the front's right-hand column is on your *left* with the
+   back toward you.
 
 Optional, free, and the only ornament in the design: stencil the app's seven
-by seven lattice on the bottom border, centred, 2 mm squares on 3 mm centres,
-one tile brighter than the rest. A scrap of card and a fingertip of grey paint.
+by seven lattice on the bottom border, centred, 3 mm squares on 4.5 mm
+centres, one tile brighter than the rest. A scrap of card and a fingertip of
+grey paint. In the render it reads through the smoked sheet, just.
 
 ---
 
@@ -137,23 +164,39 @@ down, and do not skip the labels.**
 Board face down, TOP up, back toward you. Positions are approximate; what
 matters is that the cables reach and nothing sits proud of 63.5 mm.
 
-- **Pi 5 with cooler and bonnet:** top corner, on the side your bonnet ribbons
-  reach (section 3, step 3). About 90 mm in from that edge and 120 mm down.
-  Its mounting holes are 2.7 mm so M3 will not fit: use M2.5 nylon standoffs
-  if you have them, otherwise two zip ties through drilled holes, or foam
-  tape. The tallest stack in the build is the Pi plus riser plus bonnet plus
-  the IDC shrouds, about 36 mm, which is why the gap is 63.5.
-- **Bus bars:** the opposite side from the Pi, centred vertically, about
-  120 mm in from that edge, positive above negative. M3 screws and nuts
-  through the plywood.
-- **Nine fuse holders:** the middle of the board, in a three by three, zip
-  tied so each sits near the drop it feeds.
-- **Supply:** across the bottom, roughly centred, 40 mm up from the edge.
-  Four M4 x 16 through the plywood into its bottom holes, which take 3 mm of
-  thread. Its fan faces out into the room.
-- **Inlet:** bottom corner, on the bus bar side, screwed to the plywood
-  through its flange. The SL22 goes in series on the hot line between the
-  inlet and the supply's L terminal.
+Nothing may sit over an opening. The nine are on a 160 mm grid through the
+board's centre, and the three slots are on the side that is the front's
+right-hand column, which is your left with the back toward you.
+
+- **Pi 5 with cooler and bonnet:** mid height, on the slot side, its centre
+  about 75 mm in from that edge, so the three bonnet ribbons reach the three
+  slots with the 30 cm cables that shipped with the panels. Its mounting
+  holes are 2.7 mm so M3 will not fit: use M2.5 nylon standoffs if you have
+  them, otherwise zip ties or foam tape. The tallest stack in the build is
+  the Pi plus riser plus bonnet plus the IDC shrouds, about 36 mm, which is
+  why the gap is 63.5.
+- **Bus bars:** the opposite side, a little above centre, about 120 mm in
+  from that edge, positive above negative, 50 mm apart. Wood screws into the
+  plywood, nothing through to the front.
+- **Nine fuse holders:** a three by three block beside the bars, between
+  them and the centre opening. Each 14 AWG lead runs from a holder to its
+  panel's opening; the 12 in leads reach every one.
+- **A tenth holder** by the Pi, for its feed.
+- **Supply:** across the bottom, roughly centred, its terminal strip toward
+  the inlet side and 15 mm up from the bottom edge, so its top edge clears
+  the bottom row of openings by 8 mm. Four countersunk M4 x 16 from the
+  front into its bottom holes, which take 3 mm of thread. Its fan faces out
+  into the room.
+- **Inlet:** in the left foot (section 10). The C14 module's 47 x 27.5 mm
+  cutout goes through the foot's bottom face, so socket, switch and fuse
+  drawer face the floor, 6 mm inside the board's bottom edge: you can reach
+  the switch from below and see nothing from the front. The SL22 hangs in
+  free air between the foot and the supply's terminal end, in series on the
+  hot line between the inlet and the supply's L terminal.
+- **Microphone:** at the Pi's edge of the board, below the Pi, on a short
+  USB extension from the Pi's USB-A stack, facing the room.
+- **Lux sensor:** lying on top of a cleat block, looking up through the gap
+  at the ceiling.
 
 Then the wiring, which is the same wiring you already have, re-terminated:
 
@@ -162,10 +205,12 @@ Then the wiring, which is the same wiring you already have, re-terminated:
 2. Nine drops: bar to fuse holder to panel harness, fused on the positive
    side. Keep the tile labels on.
 3. **One bond you did not need before:** a ring terminal from the steel skin
-   to the negative bar. Drill a small hole through the steel and plywood near
-   a corner of the border, bolt through it, and run 18 AWG to a bar screw. The
-   skin is a big conductive plate touching every panel's frame; tie it to
-   ground once, and only once.
+   to the negative bar. A #6 sheet metal screw from the back, through the
+   plywood and into the steel, anywhere under a panel but clear of its four
+   magnet feet: its tip comes through into the 3 mm the feet hold open and
+   touches nothing. Ring under its head, 18 AWG to a bar screw. The skin is a
+   big conductive plate touching every panel's frame; tie it to ground once,
+   and only once.
 4. The Pi's feed: the tenth fuse holder with a **5 A** fuse, from the positive
    bar to the USB-C pigtail. Nothing else goes in the Pi's USB-C port.
 5. Mains: inlet L through the SL22 to the supply's L, N straight to N, earth
@@ -258,13 +303,16 @@ It changes nothing about the build either way.
 
 ## 5. The front
 
-1. Panels on, by their magnets, working to the pencil lines. Tile 1 top left,
-   reading across. Slide them until the seams are even; the gap between two
-   panels should look like the gap between two pixels.
-2. Cables round the edge. Each drop comes from the back, around the bottom
-   edge, and forward to its panel's plug. The ribbons run panel to panel
-   inside the 12 mm rear shells, exactly as they did on the floor, crossing
-   at the seams. The three bonnet ribbons come round the side edge.
+1. Cables through the openings first. Each panel's own 4-pin harness comes
+   up through the hole behind its cell and meets its fused lead on the back;
+   the three bonnet ribbons come up through the slots. Nothing crosses the
+   border and no 14 AWG runs under a panel.
+2. Panels on, by their magnets, working to the pencil lines: plug the
+   harness and, on the right-hand column, the ribbon, then lower the panel
+   onto the steel. Tile 1 top left, reading across. The panel to panel
+   ribbons run in the 3 mm the feet hold open, exactly as they did on the
+   floor. Slide panels until the seams are even; the gap between two panels
+   should look like the gap between two pixels.
 3. Zip tie every run to the back so nothing hangs where the glass will sit,
    and nothing pulls on a connector.
 4. Check the depth: put a straight edge across the panel faces. Nothing should
@@ -375,8 +423,10 @@ fallback at the bottom of the procedure is better than the app.
 ## 9. Glass
 
 1. Peel the film from the back face of the acrylic only.
-2. Mark and drill the four standoff holes, 30 mm in from each corner. Slow
-   speed, no pressure, a scrap block underneath. Acrylic chips if you rush.
+2. Mark and drill the four standoff holes, 30 mm in from each corner, with
+   the step bit. Slow speed, no pressure, a scrap block underneath, stop at
+   the barrel screw's size. A twist bit grabs acrylic at the exit and cracks
+   it.
 3. Screw the standoff barrels to the board through the border. They land on
    the black steel, clear of every panel.
 4. Rest the acrylic on the barrels, fit the caps, snug only.
@@ -392,11 +442,17 @@ feet, leaves the glass about 8 mm clear of the LEDs.
 1. Two blocks of 1 x 3, 120 mm long, screwed to the back under the top edge,
    2-1/2 in face standing off the wall. The frame half of the cleat goes on
    them, level.
-2. Two feet of the same strip at the bottom corners, so the board sits square
-   and does not rock.
+2. Two feet of the same strip 50 mm up from the bottom edge, so the board
+   sits square and does not rock. The right one (back toward you) is 60 mm
+   long. The left one is 100 mm and is the inlet's mount: cut the C14
+   module's 47 x 27.5 mm rectangle through its bottom face before you screw
+   it on (four corner holes and a coping saw, or a jigsaw), drop the module
+   in from below, socket and switch facing the floor, and screw its flange to
+   the wood. The module stands 11 mm proud of the block's top, into the gap.
 3. The wall half of the cleat on the wall, into studs if you can find them.
    The finished thing is about 6 kg.
-4. Dress the mains cord down from the bottom corner.
+4. Plug the cord into the foot from below; it hangs straight down behind the
+   board, and the switch is under your fingers when you reach up.
 5. Lift it on. The 63.5 mm gap is what the supply's fan breathes through, so
    do not stuff anything into it.
 

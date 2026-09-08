@@ -172,45 +172,55 @@ and the back is open, so the supply's fan cools itself.
 
 | Part | Spec | About |
 |---|---|---|
-| Plywood or MDF, 24 x 24 in | 1/2 in project panel, Home Depot | $18 |
-| Steel sheet, 24 x 24 in | Everbilt 22 gauge, glued to the plywood front; 16 gauge is $64.20 and only worth it if you skip the plywood | $30 |
-| Matte black spray paint | one can, for the steel face and the plywood edges; magnets hold through paint | $6 |
-| Smoked acrylic, 24 x 24 x 1/8 in | grey tinted cast acrylic; Walmart lists the Sibe-R sheet at $24.88 | $25 |
-| Sign standoffs, 1 x 1 in, black | pack of 4; through the acrylic corners into the plywood | $12 |
-| USB-C to bare wire pigtail | 18 to 22 AWG, 2 pin; the Pi's feed from the +5 V bar through the tenth fuse holder | $8 |
-| ATC fuses, 5 A | a few; the Pi's drop, the 10 A ones on hand are for panels | $5 |
-| M4 x 16 screws and nuts | 4, through the plywood into the supply's bottom holes | $3 |
-| 1 x 3 furring strip, 8 ft | two blocks under the cleat and two feet at the bottom corners. Its 2-1/2 in face stood on edge holds the back 63.5 mm off the wall. A 1 x 2 gives 38.1 mm, which is EXACTLY the bus bar's height with its cover on, so the wider strip is the same money and the difference between a fit and a scrape | $2 |
-| | | **about $109** |
+| Plywood, 1/2 in | [ProWood 1/2 in x 2 x 4 ft Sande project panel](https://www.homedepot.com/p/ProWood-1-2-in-x-2-ft-x-4-ft-Sande-Plywood-Project-Panel-109068/202093791). No 24 x 24 half-inch panel exists; the desk cuts this in half and you keep a spare | $24.78 |
+| Steel sheet, 24 x 24 in | [Everbilt 22 gauge plain steel, 1809](https://www.homedepot.com/p/Everbilt-24-in-x-24-in-22-Gauge-Plain-Steel-Sheet-Metal-1809/332734178), glued to the plywood face. The [16 gauge](https://www.homedepot.com/p/Everbilt-24-in-x-24-in-16-Gauge-Plain-Steel-Sheet-Metal-1709/332734025) is $64.20 and only worth it without the plywood | $46.47 |
+| Matte black spray paint | [Rust-Oleum Painter's Touch 2X, 331182](https://www.homedepot.com/p/Rust-Oleum-Painter-s-Touch-2X-12-Oz-Matte-Black-Ultra-Cover-General-Purpose-Spray-Paint-331182/326635224), for the steel face and the plywood edges; magnets hold through paint | $5.98 |
+| Construction adhesive | [Loctite PL Premium, 4 oz](https://www.homedepot.com/p/Loctite-PL-Premium-4-oz-Polyurethane-Construction-Adhesive-Tan-Tube-each-1451588/203009252), steel to plywood, weighted flat overnight | about $6 |
+| 1 x 3 furring strip, 8 ft | [164704](https://www.homedepot.com/p/1-in-x-3-in-x-8-ft-Furring-Strip-Board-164704/100094214). Two blocks under the cleat and two feet at the bottom; the left foot is 100 mm and carries the inlet. Its 2-1/2 in face on edge holds the back 63.5 mm off the wall. A 1 x 2 gives 38.1 mm, EXACTLY the bus bar's height with its cover on, so the wider strip is the same money and the difference between a fit and a scrape | about $3 |
+| M4 x 16 flat head screws | 4, from the front through steel and plywood into the supply's bottom holes, countersunk flush because they sit under a panel: [Everbilt 80298](https://homedepot.com/p/Everbilt-M4-0-7-x-16-mm-Phillips-Flat-Head-Machine-Screws-3-Pack-80298/100338453) or [Prime-Line 9121166](https://www.homedepot.com/p/Prime-Line-Metric-M4-0-7-x-16-mm-Flat-Head-Phillips-Drive-Machine-Screws-9121166/317603646). Not the pan head | about $4 |
+| #6 x 3/8 in wood screws | one small box: bars, fuse holder mounts, cleat blocks, inlet flange, everything mounted from the back without punching through | about $4 |
+| Smoked acrylic, 24 x 24 x 1/8 in | [Sibe-R #2064 light grey/smoke](https://www.amazon.com/SIBE-R-Plastic-Supply-Transparent-Plexiglass/dp/B0731N9NDS); Walmart lists the same sheet at $24.88 | $25 to $35 |
+| Sign standoffs, 1 x 1 in, black | [8 pack, black](https://www.amazon.com/Stainless-Steel-Standoff-Screws-Acrylic/dp/B0GLXVVC4P) or [Outwater black aluminium](https://www.amazon.com/Standoff-Diameter-Barrel-Aluminum-Outwater/dp/B07SXV8YV4); through the acrylic corners into the plywood | about $15 |
+| USB-C to bare wire pigtail | [XMSJSIY 18 AWG](https://www.amazon.com/XMSJSIY-Transmission-Extension-Charging-18AWG-1-2M/dp/B0C1YXM9PF); the Pi's feed from the +5 V bar through the tenth fuse holder | about $10 |
+| ATC fuses, 5 A | [10 pack](https://www.amazon.com/5Amp-BLADE-FUSE-Plus-Parts-House/dp/B01F1RVW62); the Pi's drop, the 10 A ones on hand are for panels | about $7 |
+| | | **about $150** |
 
-Skip the acrylic and it is about $84. Everything else is already on the
-bench: the panels, the supply, the bars, ten fuse holders, the wire, the
-cleat, the M3 kit, the inlet, zip ties, butt connectors, ring terminals.
+Skip the acrylic and it is about $115. The first estimate here was $109: the
+steel is $46 not $30, the plywood only comes as a 2 x 4, and the wood screws
+and the flat heads were missing. Everything else is already on the bench: the
+panels, the supply, the bars, ten fuse holders, the wire, the cleat, the M3
+kit, the inlet, zip ties, butt connectors, ring terminals.
+
+Tools the ledger never listed and the build needs: a drill; a 1/8 to 1/2 in
+step bit, for the fifteen openings in steel on plywood and the four acrylic
+holes, which a twist bit cracks; a countersink for the four M4 heads; a
+centre punch; a jigsaw or coping saw for the inlet's 47 x 27.5 rectangle in
+the foot; and the wire strippers from the August list, still not owned.
 
 ### The order of work
 
-1. Home Depot: plywood, steel, paint, furring strip, M4s. Amazon or Walmart:
-   acrylic, standoffs, pigtail, fuses.
+1. Home Depot: plywood, steel, paint, adhesive, furring strip, flat head
+   M4s, wood screws. Amazon or Walmart: acrylic, standoffs, pigtail, fuses.
 2. Glue the steel to the plywood (construction adhesive, weight it flat
-   overnight), then paint the face and the edges matte black.
-3. On the back: the supply low with M4s, the bars in the middle with M3 kit
-   screws and nuts through the plywood, the fuse holders zip tied to the
-   drops, the Pi on zip ties or foam tape (its holes are 2.7 mm; M3 will
-   not fit), the inlet on its flange at the bottom edge. Bond the steel
-   skin to the -V bar with one ring terminal under a bar screw.
-4. Cables come round the plywood's edge to the front: ribbons along the
-   left edge, drops along the bottom. On the front they run inside the
-   panels' 12 mm shells, crossing at the seams, exactly as they do on the
-   floor now.
+   overnight). Mark the nine cell centres on the steel and drill the fifteen
+   openings from the front with the step bit, the right-hand column's three
+   filed into slots. Then paint the face and the edges matte black.
+3. On the back: the supply low with the four countersunk M4s, its terminals
+   toward the inlet; the bars on one side with wood screws; the fuse holders
+   in a block beside them; the Pi on the other side near the slots, on zip
+   ties or foam tape (its holes are 2.7 mm; M3 will not fit); the inlet in
+   the left foot. Bond the steel skin to the -V bar once.
+4. Each panel's harness and each row's ribbon come up through the opening
+   behind the panel. Nothing runs round the edge or on the border.
 5. Panels on by their magnets, in the order the tile map already
    established. Run the tile map once to confirm.
-6. Cleat on two furring blocks at the top of the back, two feet at the
-   bottom corners, the wall half of the cleat on the wall.
+6. Cleat on two furring blocks at the top of the back, the two feet at the
+   bottom, the wall half of the cleat on the wall.
 7. Acrylic on the four standoffs, and hang it.
 
 What it looks like: a 24 inch square of black glass floating an inch off a
 black plate, the art glowing through it, the 64.8 mm border reading as a
-black mat. `design/wall_model.py` builds exactly this and renders it six
+black mat. `design/wall_model.py` builds exactly this and renders it eight
 ways. From the side, the electronics are visible behind the plate;
 a 24 x 24 sheet of black ACM or foam board as a back cover is a $15 add-on
 for later, and the walnut frame is the add-on after that.

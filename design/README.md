@@ -1,7 +1,8 @@
 # The wall, designed
 
 `wall_model.py` builds the wall in Blender from the parts on the bench and
-renders it six ways. Every number is a constant at the top of the file with
+renders it eight ways: hero, front, the bare skin with its openings, a
+standoff, the mark, the back, exploded, and in the room. Every number is a constant at the top of the file with
 its source beside it. This page is the reasoning.
 
 ```
@@ -14,9 +15,13 @@ its source beside it. This page is the reasoning.
 A 24 inch square of half inch plywood with a sheet of 22 gauge steel glued to
 its face, both painted matte black. The nine panels hold themselves to the
 steel with the magnetic feet that ship in their boxes: nothing is drilled
-into a panel, and any one of them lifts off with a fingernail. The picture
-lands 480 mm square in the middle, leaving a 64.8 mm black border that reads
-as a mat.
+into a panel, and any one of them lifts off with a fingernail. Behind each
+panel, at the centre of its cell, one 12 mm opening through steel and
+plywood takes that panel's own harness to the back; the three cells of the
+right-hand column, where each row's chain starts, get three holes filed
+into a 40 x 12 slot for the ribbon plug. Fifteen holes, all under panels,
+and nothing crosses the border. The picture lands 480 mm square in the
+middle, leaving a 64.8 mm black border that reads as a mat.
 
 A 24 inch sheet of smoked grey acrylic floats an inch in front on four black
 sign standoffs, one at each corner. The standoff barrel sets the geometry:
@@ -24,13 +29,17 @@ sign standoffs, one at each corner. The standoff barrel sets the geometry:
 7.9 mm clear of the LEDs. Off, the whole thing is a square of black glass.
 On, the art is behind it and the panel frames are not visible.
 
-Everything electrical is on the back, in the open: the LRS-350-5 low, the
-two bus bars, nine inline fuse holders, the Pi 5 with its Active Cooler and
-the Triple Bonnet, the inlet, the inrush limiter, the microphone and the lux
-sensor. Two blocks of 1 x 3 furring under the cleat and two feet at the
-bottom corners hold the board 63.5 mm off the wall, which is the gap all of
-that lives in. The tallest thing back there is a bus bar with its cover on,
-at 38.1 mm, so there is 25 mm to spare. A 1 x 2 strip would have left
+Everything electrical is on the back, in the open: the LRS-350-5 low with
+its terminal strip toward the inlet, the two bus bars on one side, nine
+inline fuse holders in a block beside them, the Pi 5 with its Active Cooler
+and the Triple Bonnet on the other side a hand's width from the three slots,
+the inrush limiter, the microphone and the lux sensor. Two blocks of 1 x 3
+furring under the cleat and two feet at the bottom hold the board 63.5 mm
+off the wall, which is the gap all of that lives in. The left foot is 100 mm
+long and carries the mains inlet: the C14 module's cutout goes through its
+bottom face, so socket, switch and fuse drawer face the floor, 6 mm inside
+the board's edge. The tallest thing back there is a bus bar with its cover
+on, at 38.1 mm, so there is 25 mm to spare. A 1 x 2 strip would have left
 exactly none.
 
 The supply's fan has the whole room to breathe into, which is the one thing
@@ -39,8 +48,9 @@ an open back does better than a sealed box.
 The only ornament is the app's seven by seven lattice on the bottom border,
 one tile lit, a stencil and a fingertip of grey paint. It costs nothing.
 
-About $109 over what is already on the bench. The full list, with the order
-of work, is at the end of [PARTS.md](../PARTS.md).
+About $150 over what is already on the bench, $115 without the acrylic. The
+full list with checked prices, the order of work and the tools it needs is
+at the end of [PARTS.md](../PARTS.md).
 
 ## The upgrade path
 
@@ -86,7 +96,7 @@ design feeds the Pi from the 5 V rail on the white paper's authority.
 |---|---|---|
 | Nylon standoffs, panels screwed to a PVC plate | Magnetic feet on a steel skin | The manual says four magnetic feet ship with each panel. Nothing gets drilled and any panel lifts off |
 | A walnut shadow box, brass, an anodised reveal, a vented back | A painted plywood square and four sign standoffs | About a quarter of the money and a day instead of a weekend. The walnut version is kept as the upgrade path |
-| Laser-cut slotted steel | A plain 24 inch sheet, cables round the edge | The slots existed to pass cables through a plate; going round the edge is free and the panels' own 12 mm shells hide the runs on the front |
+| Laser-cut slotted steel | A plain 24 inch sheet with fifteen drilled openings, one behind each panel | The slots existed to pass cables through a plate. A hole at each panel's centre does the same for a step bit's worth of work, and the panel over it hides it. Round the edge was tried first and dropped: a cable crossing the border lies on the visible mat, under the glass |
 | Opal plus smoked acrylic | Smoked only | Two sheets was $50 and the opal's job, hiding the LED grid, is not wanted here: the grid is the point |
 | Sealed box | Open back | The supply has a fan and now has a room to breathe into |
 | Two mains devices | One cord | The Pi is fed from the 5 V rail; the white paper says a non-negotiating supply is a supported way to power it |
@@ -123,15 +133,18 @@ checked against the one in the box. DESIGN is a decision.
 | Fuse holder leads and fuse | 12 in, 14 AWG, ATC 19.1 x 18.5 x 5.1 | VERIFIED | nilight.com |
 | Fuse holder body | 36 x 14 x 14 mm | TYPICAL | |
 | C14 module | approx 50 x 30 x 30 mm, holes 67 mm apart, 5 x 20 fuse | LISTING | Antrader |
-| C14 cutout | 47 x 27.5 mm | TYPICAL | |
+| C14 cutout | 47 x 27.5 mm, through the bottom face of the left foot | TYPICAL | |
 | SL22 10005 | 22 mm max dia, 5 mm max thick, 7.8 mm lead pitch, 10 ohm, 5 A | VERIFIED | Ametherm datasheet |
 | Mini USB mic | 22.2 x 18.3 x 7.0 mm | VERIFIED | Adafruit 3367 |
 | VEML7700 board | 25.5 x 17.7 x 4.6 mm | VERIFIED | Adafruit 4162 |
 | OOK cleat | 12 in long, 1.5 in tall, stands 1/8 in off the wall, 1 in hole pitch | LISTING | OOK 533208 dimension images |
+| Cleat stock | 1.2 mm stamped aluminium, two hooks | TYPICAL | |
 | Plywood board | 24 x 24 in, 1/2 in | LISTING | Home Depot project panel |
 | Steel skin | 24 x 24 in, 22 gauge (0.76 mm) | LISTING | Everbilt sheet metal |
 | Smoked acrylic | 24 x 24 in, 1/8 in, grey tinted cast | LISTING | Sibe-R / Canal Plastics #2064 |
 | Sign standoffs | 1 x 1 in barrel, black | LISTING | four of them, corners |
+| Openings | 15 x 12 mm at the panel centres, the right column's three filed to 40 x 12 slots | DESIGN | a 4-pin harness needs 8 mm; a HUB75 plug is 20.3 x 8.9 |
+| Back layout | supply low, bars left, fuse block beside them, Pi mid right, inlet in the left foot | DESIGN | checked against the openings: nothing sits over a hole |
 | Furring strip | 1 x 3, 3/4 x 2-1/2 in actual | LISTING | the back gap |
 | Pi power without PD | 600 mA USB limit, 1.6 A with `usb_max_current_enable=1`, GPIO feed acknowledged | VERIFIED | Raspberry Pi USB PD white paper |
 
@@ -147,10 +160,13 @@ A ruler on one panel, two minutes, before anything is ordered.
 
 ## What is not in the model
 
-The wiring is suggested, not routed: the drops and ribbons run where they
-would, round the board's edge and then inside the panels' own 12 mm shells,
-but nobody has bent a real 14 AWG lead around a real bus bar yet. The Pi's
-USB-C pigtail exists as a line. How the steel is bonded to the plywood
+The wiring is routed, not dressed: every lead starts on the terminal it
+belongs to (the model reads the supply's screws, the bars' M4s and the
+bonnet's headers out of the borrowed CAD) and ends at its opening or its
+plug, but nobody has bent a real 14 AWG lead around a real bus bar yet, and
+a real build would zip tie the fan of drops into looms. The supply's four M4
+holes are not modelled; take their positions off the datasheet drawing with
+the part in hand. How the steel is bonded to the plywood
 (construction adhesive, weighted flat) is a note, not geometry. And the
 smoked sheet is a shader, not an optical model: how much of the LED grid it
 actually veils depends on the tint you buy, and #2064 grey at about 35
