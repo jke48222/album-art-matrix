@@ -163,17 +163,20 @@ tallest thing on a panel back, most likely the harness plug. Both go into
 
 ## The alternates, 2026-09-07
 
-Four design directions built on this same carcass live in
-[design/ALTERNATES.md](design/ALTERNATES.md), with their own parts table.
-They add about $85 over the build below (cloth, a 3 mm mask sheet, an alloy
-lip, a bezel, an encoder and knob, an addressable strip, a 1/4 in back panel
-and one more furring strip), and they delete the four sign standoffs. Every
-one of them is a new face on the same board, the same fifteen openings and
-the same electronics, so none of what is bought below is wasted by choosing
-one later.
+Four separate objects, not four finishes, live in
+[design/ALTERNATES.md](design/ALTERNATES.md) with their own parts table:
+**sleeve** (a record jacket, open along its top edge), **lean** (a slab in a
+foot, no wall fixing), **system** (a thin plate plus a separate amplifier
+module) and **splay** (a funnel of light). They add about $63 over the build
+below and delete the four sign standoffs.
 
-Two things they change that matter to the list here: the board is cut
-609.6 x 729.8 instead of square, and the steel is cut to 609.6 x 490.
+There is no knob, no tenth panel and no second driver in any of them: the
+spare panel stays a spare. The C14 module with its switch and fuse is placed
+where a hand goes, and it lands somewhere different in each one.
+
+All four use the same nine panels on the same steel with the same fifteen
+openings, so nothing bought below is wasted by choosing one later. Only
+`system` changes the wiring, because its supply and Pi move into a second box.
 
 ## The cheap way, 2026-09-07
 
