@@ -39,3 +39,8 @@ tessera/build-device/
 design/renders/covered.blend
 design/renders/boxed.blend
 design/renders/*.blend1
+design/renders/console.blend
+design/renders/vitrine.blend
+design/renders/instrument.blend
+design/renders/nonet.blend
+design/renders/nonet-*.blend

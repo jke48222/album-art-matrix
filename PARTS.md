@@ -161,6 +161,20 @@ The height of a magnetic foot off a panel back, and the height of the
 tallest thing on a panel back, most likely the harness plug. Both go into
 `design/wall_model.py` before the steel is ordered.
 
+## The alternates, 2026-09-07
+
+Four design directions built on this same carcass live in
+[design/ALTERNATES.md](design/ALTERNATES.md), with their own parts table.
+They add about $85 over the build below (cloth, a 3 mm mask sheet, an alloy
+lip, a bezel, an encoder and knob, an addressable strip, a 1/4 in back panel
+and one more furring strip), and they delete the four sign standoffs. Every
+one of them is a new face on the same board, the same fifteen openings and
+the same electronics, so none of what is bought below is wasted by choosing
+one later.
+
+Two things they change that matter to the list here: the board is cut
+609.6 x 729.8 instead of square, and the steel is cut to 609.6 x 490.
+
 ## The cheap way, 2026-09-07
 
 The walnut design above is the aspiration. This is what gets it hung this
