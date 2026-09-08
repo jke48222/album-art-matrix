@@ -692,7 +692,7 @@ def case(b):
     b.mains((165.0, -S / 2 + 2.0, Z_PLY_BACK - CAVITY / 2), rot=(math.pi / 2, 0, 0))
     b.electronics(psu=(-20.0, -180.0), bars=(-175.0, 150.0), fuse=(-35.0, 40.0),
                   pi=(180.0, 150.0), seat=Z_PLY_BACK)
-    return dict(w=S, h=S, front=front, back=z_back, height=1500.0, label="Case")
+    return dict(w=S, h=S, front=front, back=z_back, height=1500.0, label="Case", switch_down=True)
 
 
 def hearth(b):
@@ -737,7 +737,7 @@ def hearth(b):
     b.mains((shoe[0], shoe[1] - 12.0, shoe[2]), rot=(math.pi / 2, 0, 0))
     b.electronics(psu=(-20.0, -190.0), bars=(-180.0, 160.0), fuse=(-40.0, 45.0),
                   pi=(190.0, 160.0), seat=Z_PLY_BACK)
-    return dict(w=S, h=S, front=z_front, back=z_back, height=1500.0, label="Hearth")
+    return dict(w=S, h=S, front=z_front, back=z_back, height=1500.0, label="Hearth", switch_down=True)
 
 
 def strap(b):
@@ -803,7 +803,7 @@ def strap(b):
     b.electronics(psu=(-20.0, -165.0), bars=(-165.0, 130.0), fuse=(-35.0, 25.0),
                   pi=(175.0, 130.0), seat=Z_PLY_BACK)
     return dict(w=S, h=S + 230.0 + 30.0, front=z_front, back=z_back, height=1500.0,
-                label="Strap", centre_y=115.0, pads=PADS)
+                label="Strap", centre_y=115.0, pads=PADS, switch_down=True)
 
 
 DESIGNS = {"sleeve": sleeve, "lean": lean, "system": system, "splay": splay,
@@ -889,8 +889,12 @@ def main():
         W.aim(b.cam, (span * 2.7, -span * 0.75, C[2] + 0.04), C, lens=50, fstop=11.0)
         W.render(b.sc, os.path.join(args.out, f"{prefix}-side.png"), args.samples)
     if "detail" in views:
+        # a switch that faces the floor has to be photographed from the floor
         t = b.inlet_world
-        W.aim(b.cam, (t[0] + 0.10, t[1] - 0.36, t[2] + 0.20), t, lens=60, fstop=5.6, focus=t)
+        if info.get("switch_down"):
+            W.aim(b.cam, (t[0] + 0.16, t[1] - 0.40, t[2] - 0.26), t, lens=55, fstop=6.3, focus=t)
+        else:
+            W.aim(b.cam, (t[0] + 0.10, t[1] - 0.36, t[2] + 0.20), t, lens=60, fstop=5.6, focus=t)
         W.render(b.sc, os.path.join(args.out, f"{prefix}-detail.png"), args.samples)
     if "back" in views:
         b.lights["back"].hide_render = False
