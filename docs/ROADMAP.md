@@ -51,12 +51,12 @@ games, Claude for Connections sets and crossword clues.
 | 27 | Heardle | The phone plays the first seconds of a song; say it; the sleeve is the reveal. | **wall side done** 2026-09-15: brain/games/heardle.py, journal songs with iTunes previews |
 | 28 | Sliding picture puzzle | A sleeve scrambled into sliding blocks; slide them back. | **wall side done** 2026-09-15: brain/games/pictures.py, a journal sleeve, always solvable |
 | 29 | Cover reveal | A sleeve sharpens over thirty seconds; first to name it wins. | **wall side done** 2026-09-15: brain/games/pictures.py |
-| 30 | Twenty questions with knocks | Knock once for yes, whistle for no; Claude guesses. | planned |
-| 31 | AI pictionary | The image creator draws a secret word; guess by voice. | planned |
+| 30 | Twenty questions with knocks | Knock once for yes, whistle for no; Claude guesses. | **wall side done** 2026-09-15: brain/games/twentyq.py, needs the Claude key |
+| 31 | AI pictionary | The image creator draws a secret word; guess by voice. | **wall side done** 2026-09-15: brain/games/pictionary.py, needs an image key |
 | 32 | Pub quiz | Claude writes a round on a theme; voice answers; scoreboard. | **wall side done** 2026-09-15: brain/games/quiz.py, Claude rounds or two bundled |
 | 33 | Whistle bird | Pitch of your whistle sets the bird's height. | **wall side done** 2026-09-15: brain/games/whistlebird.py on the ear's pitch, the range learnt from the whistler |
 | 34 | Reaction knock | Red, then green, knock; milliseconds on the panel. | **wall side done** 2026-09-15: brain/games/reaction.py, timed on the knock's own clock |
-| 35 | The arcade | Pong with phones as tilt paddles; snake and tetris on the remote. | planned |
+| 35 | The arcade | Pong with phones as tilt paddles; snake and tetris on the remote. | **wall side done** 2026-09-15: brain/games/arcade.py, three games |
 
 ## The picture, later
 
