@@ -40,7 +40,7 @@ games, Claude for Connections sets and crossword clues.
 
 | # | Game | Notes | State |
 | --- | --- | --- | --- |
-| 19 | Wordle | Five-by-six grid, spoken whole-word guesses. | planned |
+| 19 | Wordle | Five-by-six grid, spoken whole-word guesses. | **wall side done** 2026-09-15 with the games shell (brain/games/); the phone's Games screen next |
 | 20 | Connections | Four groups of four; Claude writes the sets. | planned |
 | 21 | Sudoku | On the phone by touch, on the wall as the grid; voice optional. | planned |
 | 22 | Spelling Bee | Seven letters, one in the middle, say words. | planned |

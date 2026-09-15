@@ -194,6 +194,14 @@ class Voice:
             if not text.strip():
                 self._missed(time.monotonic(), "nothing understood")
                 return
+            # a game on the wall gets the first look: "crane" is a guess
+            games = getattr(self.ctrl, "games", None)
+            if games is not None and games.game is not None and not games.game.over:
+                heard = games.hear(text)
+                if heard is not None:
+                    self.last_command = f"game: {text!r}"
+                    self._answer(heard.get("error") or (heard.get("game") or {}).get("message") or "Okay.")
+                    return
             cmd = cmds.match(text)
             if cmd is not None:
                 self.last_command = repr(cmd)

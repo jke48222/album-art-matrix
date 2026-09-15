@@ -53,6 +53,8 @@ is on — no Mac required.
   POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
   GET  /shelf    -> the Discogs collection with plays per release; POST /shelf/sync
   GET  /art/airplay/<key>.jpg -> artwork that arrived over AirPlay, for the phone
+  GET  /game/list  GET /game  POST /game/start {name, options, players}
+  POST /game/move {player, move}  POST /game/hear {player, text}  POST /game/end
   POST /imagine {prompt} -> a picture from words, on the panel; GET /imagine lists them,
        GET /imagine/<id>.png is one, POST /imagine/show {id} shows it again, POST /imagine/forget {id}
   GET  /voice    -> the wake word, the listener and the last thing heard
@@ -87,7 +89,7 @@ JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 PHONE_SIDE = 64
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video",
-         "weather")
+         "weather", "game")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
@@ -202,6 +204,7 @@ class ControlState:
         self.posters = None          # brain/posters.py, TMDB posters for shows
         self.imaginer = None         # brain/imagine.py, pictures from words
         self.airplay = None          # brain/nowplaying/airplay.py, the receiver
+        self.games = None            # brain/games/host.py, one game at a time
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -910,6 +913,16 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
                 return
+            if u.path.startswith("/game"):
+                gh = getattr(ctrl, "games", None)
+                if gh is None:
+                    self._json(200, {"running": False, "games": [], "problem": "games are off on this wall"})
+                    return
+                if u.path.startswith("/game/list"):
+                    self._json(200, {"games": gh.listing(), **gh.status()})
+                    return
+                self._json(200, gh.status())
+                return
             if u.path.startswith("/art/airplay/"):
                 ap = getattr(ctrl, "airplay", None)
                 key = u.path.rsplit("/", 1)[1].split(".")[0]
@@ -1078,6 +1091,33 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     minutes = 30.0
                 ctrl.note(text, max(0.5, min(720.0, minutes)))
                 self._json(200, {"shown": True, "minutes": minutes})
+                return
+            if self.path.startswith("/game/"):
+                gh = getattr(ctrl, "games", None)
+                if gh is None:
+                    self._json(404, {"error": "games are off on this wall"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                player = str(patch.get("player") or "")
+                if self.path.startswith("/game/start"):
+                    players = patch.get("players")
+                    if not isinstance(players, list):
+                        players = [player] if player else None
+                    result = gh.start(str(patch.get("name") or ""), patch.get("options") or {}, players)
+                elif self.path.startswith("/game/move"):
+                    mv = patch.get("move")
+                    result = gh.move(player, mv if isinstance(mv, dict) else {"guess": mv})
+                elif self.path.startswith("/game/hear"):
+                    heard = gh.hear(str(patch.get("text") or ""), player)
+                    result = heard if heard is not None else {"error": "not a move in this game", **gh.status()}
+                elif self.path.startswith("/game/end"):
+                    result = gh.end()
+                else:
+                    self._json(404, {"error": "not found"})
+                    return
+                self._json(404 if result.get("error") else 200, result)
                 return
             if self.path.startswith("/imagine/"):
                 im = getattr(ctrl, "imaginer", None)

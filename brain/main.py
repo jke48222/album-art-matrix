@@ -38,6 +38,8 @@ from .shelf import Shelf
 from .posters import Posters, PosterSource
 from .imagine import Imaginer
 from .nowplaying.airplay import AirPlaySource
+from .games.host import GameHost
+from .games import wordle as _game_wordle  # noqa: F401  (registers itself)
 from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
@@ -398,6 +400,10 @@ def main():
                                 else "no Claude key yet; set one from the phone"))
     # show me, play me, and the earworm finder: by voice or from the phone
     ctrl.shower = Shower(ctrl, asker=ctrl.asker) if ctrl.features.on("show") else None
+    # games: one at a time, the wall the board and the phone the hand
+    ctrl.games = GameHost(ctrl) if ctrl.features.on("games") else None
+    if ctrl.games is not None:
+        print(f"[main] games: {', '.join(g['title'] for g in ctrl.games.listing())}")
     # a picture from words: Claude writes the prompt, an image model draws it
     ctrl.imaginer = None
     if ctrl.features.on("imagine"):
@@ -1014,6 +1020,15 @@ def main():
                         ctrl.dirty.clear()
                     continue
 
+                if mode == "game" and ctrl.games is not None:
+                    tick = time.monotonic()
+                    f = ctrl.games.frame_at(size, tick)
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    # a board changes on a move, not every frame: redraw on
+                    # the nudge, or at a gentle rate for the games that animate
+                    if ctrl.dirty.wait(max(0.02, 1.0 / min(anim_fps, 30.0))):
+                        ctrl.dirty.clear()
+                    continue
                 if mode == "weather" and ctrl.weather is not None:
                     if weather_face is None:
                         weather_face = WeatherFace(size)
