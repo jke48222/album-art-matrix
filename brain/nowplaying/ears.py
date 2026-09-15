@@ -136,6 +136,7 @@ class EarsSource(NowPlayingSource):
     def __init__(self, device: str = "auto", on_change=None):
         self.device = (device or "").strip() or "auto"
         self._on_change = on_change     # the brain's nudge: poll now, not next tick
+        self.knocks = None              # knock.KnockEar, when the wall's switch is on
         self.settings = dict(DEFAULTS)
         self._lock = threading.Lock()
 
