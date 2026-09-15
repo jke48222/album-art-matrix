@@ -199,8 +199,12 @@ class Voice:
             if games is not None and games.game is not None and not games.game.over:
                 heard = games.hear(text)
                 if heard is not None:
+                    # the board shows the move itself; only a refusal is read back
                     self.last_command = f"game: {text!r}"
-                    self._answer(heard.get("error") or (heard.get("game") or {}).get("message") or "Okay.")
+                    if heard.get("error"):
+                        self._answer(heard["error"])
+                    else:
+                        self._open()
                     return
             cmd = cmds.match(text)
             if cmd is not None:

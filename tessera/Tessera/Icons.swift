@@ -18,6 +18,7 @@ enum Glyph: String, CaseIterable, Hashable {
     case palette, crate, gear
     case play, pause, skip, back, nine, lyrics, rewind, forward
     case video
+    case games
 }
 
 struct GlyphShape: View {
@@ -494,6 +495,18 @@ struct GlyphShape: View {
                 ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - 5.5 * u, y: box.minY + 3 * u,
                                                 width: sun * 2, height: sun * 2)),
                          with: .color(.white))
+
+            case .games:
+                // a die: a rounded square and three pips on the diagonal
+                let side = box.width * 0.86
+                let sq = CGRect(x: box.midX - side / 2, y: box.midY - side / 2, width: side, height: side)
+                ctx.stroke(Path(roundedRect: sq, cornerRadius: side * 0.22), with: .color(.white), lineWidth: lw)
+                let pr = side * 0.09
+                for (fx, fy) in [(0.3, 0.3), (0.5, 0.5), (0.7, 0.7)] {
+                    let p = CGPoint(x: sq.minX + sq.width * fx, y: sq.minY + sq.height * fy)
+                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - pr, y: p.y - pr, width: pr * 2, height: pr * 2)),
+                             with: .color(.white))
+                }
 
             case .clock:
                 // a face and two hands
