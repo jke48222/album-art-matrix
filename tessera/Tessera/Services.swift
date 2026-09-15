@@ -107,7 +107,10 @@ struct WallServices: Decodable {
     /// Ask the wall: whether a Claude key is on the wall and how asking has gone.
     struct Claude: Decodable {
         struct Last: Decodable { var q: String; var a: String; var s: Double?; var usd: Double? }
-        var ready: Bool
+        var ready: Bool?
+        var key_set: Bool?
+        /// A key is on the wall, whichever word the wall uses for it.
+        var isReady: Bool { ready ?? key_set ?? false }
         var model: String?
         var answers: Int?
         var cost_usd: Double?
@@ -170,6 +173,30 @@ struct WallServices: Decodable {
     var claude: Claude?
     var ears: Bool
     var rejected: [String]?              // field names the wall would not take
+
+    private enum Keys: String, CodingKey {
+        case spotify, lastfm, listenbrainz, discogs, tmdb, images, airplay, hearing, mac, claude, ears, rejected
+    }
+
+    /// Each block is read on its own: a wall running a different brain
+    /// (an older one, or another builder's) may shape one of them another
+    /// way, and that must not grey out every page. What cannot be read
+    /// reads as "not set up", and the rest of the wall stays reachable.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: Keys.self)
+        spotify = (try? c.decode(Spotify.self, forKey: .spotify)) ?? Spotify(client_id: "", linked: false)
+        lastfm = (try? c.decode(Lastfm.self, forKey: .lastfm)) ?? Lastfm(user: "", key_set: nil)
+        listenbrainz = try? c.decode(Listenbrainz.self, forKey: .listenbrainz)
+        discogs = try? c.decode(Discogs.self, forKey: .discogs)
+        tmdb = try? c.decode(Tmdb.self, forKey: .tmdb)
+        images = try? c.decode(Images.self, forKey: .images)
+        airplay = try? c.decode(Airplay.self, forKey: .airplay)
+        hearing = try? c.decode(Hearing.self, forKey: .hearing)
+        mac = try? c.decode(Mac.self, forKey: .mac)
+        claude = try? c.decode(Claude.self, forKey: .claude)
+        ears = (try? c.decode(Bool.self, forKey: .ears)) ?? false
+        rejected = try? c.decode([String].self, forKey: .rejected)
+    }
 
     private static func call(host: String, path: String, body: [String: Any]? = nil) async -> WallServices? {
         guard !host.isEmpty, let url = URL(string: "http://\(host)\(path)") else { return nil }
@@ -386,8 +413,8 @@ struct ServicesPage: View {
                 } label: {
                     SetupRow(title: "Claude", subtitle: claudeLine,
                              leading: { GlyphMark(symbol: "text.bubble") }) {
-                        StateValue(services?.claude?.ready == true ? "Connected" : "Set up",
-                                   done: services?.claude?.ready == true)
+                        StateValue(services?.claude?.isReady == true ? "Connected" : "Set up",
+                                   done: services?.claude?.isReady == true)
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
@@ -570,8 +597,8 @@ struct ServicesPage: View {
 
     private var claudeLine: String {
         guard let c = services?.claude else { return "Ask the wall anything; the answer is drawn on the panel." }
-        if let p = c.problem, c.ready { return p }
-        if c.ready { return "Ask the wall, by voice or Siri. \(c.answers ?? 0) answered." }
+        if let p = c.problem, c.isReady { return p }
+        if c.isReady { return "Ask the wall, by voice or Siri. \(c.answers ?? 0) answered." }
         return "Ask the wall anything; the answer is drawn on the panel."
     }
 
@@ -1045,7 +1072,7 @@ struct ClaudePage: View {
     @State private var problem: String?
 
     private var claude: WallServices.Claude? { services?.claude }
-    private var ready: Bool { claude?.ready == true }
+    private var ready: Bool { claude?.isReady == true }
     private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSave: Bool { services != nil && typedKey.hasPrefix("sk-ant-") && typedKey.count > 20 }
 
