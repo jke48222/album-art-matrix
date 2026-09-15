@@ -167,6 +167,18 @@ def _itunes_art(term, entity):
         return None
 
 
+def _decode_show(value):
+    """The X-Mac-Show header: base64 JSON with at least a title."""
+    if not value:
+        return None
+    try:
+        import base64
+        d = json.loads(base64.b64decode(value))
+        return d if isinstance(d, dict) and d.get("title") else None
+    except (ValueError, TypeError):
+        return None
+
+
 class AppleMusicSource(NowPlayingSource):
     name = "applemusic"
 
@@ -175,6 +187,7 @@ class AppleMusicSource(NowPlayingSource):
     def __init__(self, endpoint: str = "", mac=None):
         self.endpoint = (endpoint or "").rstrip("/")
         self.mac = mac              # MacMediaSource, when media-control exists
+        self.show = None            # a show the Mac is watching (brain/posters.py)
         self.answering = None       # remote mode: did the reporter answer last time
         self._art_key = None
         self._art_url_cached = None
@@ -304,6 +317,9 @@ class AppleMusicSource(NowPlayingSource):
         # Presence, not music: the away behaviour reads this.
         age = resp.headers.get("X-Phone-Age")
         self.phone_age = float(age) if age is not None else None
+        # a show the Mac is watching rides on the empty answer as a header,
+        # so a brain that does not know about shows sees nothing new
+        self.show = _decode_show(resp.headers.get("X-Mac-Show"))
         if resp.status_code != 200:
             return None
         try:
@@ -316,4 +332,8 @@ class AppleMusicSource(NowPlayingSource):
                              if k in NowPlaying.__dataclass_fields__})
 
     def get_current(self):
-        return self._remote() if self.endpoint else self._local()
+        if self.endpoint:
+            return self._remote()
+        now = self._local()
+        self.show = getattr(self.mac, "show", None) if self.mac is not None else None
+        return now

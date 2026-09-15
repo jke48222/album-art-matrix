@@ -19,10 +19,25 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 
+def square(img: Image.Image) -> Image.Image:
+    """A sleeve is square; a poster or a video thumbnail is not. Cut the
+    square out rather than squash: from a portrait a little above the
+    middle, where the faces are and the title is not; from a landscape the
+    middle."""
+    w, h = img.size
+    if w == h:
+        return img
+    if h > w:
+        top = int((h - w) * 0.35)
+        return img.crop((0, top, w, top + w))
+    left = (w - h) // 2
+    return img.crop((left, 0, left + h, h))
+
+
 def prepare(img: Image.Image, size: int,
             unsharp_radius: float = 1.0, unsharp_percent: int = 60) -> Image.Image:
     """Steps 1-2: downscale with Lanczos, then a light unsharp mask."""
-    img = img.convert("RGB").resize((size, size), Image.LANCZOS)
+    img = square(img.convert("RGB")).resize((size, size), Image.LANCZOS)
     if unsharp_percent > 0:
         img = img.filter(ImageFilter.UnsharpMask(
             radius=unsharp_radius, percent=int(unsharp_percent), threshold=2))

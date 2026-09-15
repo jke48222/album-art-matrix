@@ -196,6 +196,7 @@ class ControlState:
         self.lastfm = None           # LastfmSource
         self.listenbrainz = None     # ListenBrainzSource
         self.shelf = None            # brain/shelf.py, the Discogs collection
+        self.posters = None          # brain/posters.py, TMDB posters for shows
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -500,6 +501,10 @@ class ControlState:
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
                        else {"ready": False, "problem": "asking is off on this wall"}),
+            # posters: whether a TMDB key is set and what was last found
+            "tmdb": (self.posters.status() if getattr(self, "posters", None)
+                     else {"key_set": False, "posters": 0, "known": 0, "last": None,
+                           "problem": "posters are off on this wall"}),
             # the shelf: whose Discogs collection, how many releases, when synced
             "discogs": (self.shelf.status() if getattr(self, "shelf", None)
                         else {"user": "", "token_set": False, "releases": 0,
@@ -537,6 +542,8 @@ class ControlState:
                                      token=store.get("listenbrainz", "token"))
         if "claude" in changed and getattr(self, "asker", None):
             self.asker.configure(api_key=store.get("claude", "api_key"))
+        if "tmdb" in changed and getattr(self, "posters", None):
+            self.posters.configure(api_key=store.get("tmdb", "api_key"))
         if "discogs" in changed and getattr(self, "shelf", None):
             self.shelf.configure(token=store.get("discogs", "token"),
                                  user=store.get("discogs", "user"))
