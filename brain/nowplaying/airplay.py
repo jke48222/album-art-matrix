@@ -48,6 +48,7 @@ from ..art import fetch as art_fetch
 
 PIPE = "/tmp/shairport-sync-metadata"
 RTP_HZ = 44100.0
+ART_WAIT_S = 4.0                 # artwork this late is not coming; find the sleeve by name
 ART_KEEP = 4                     # artworks kept for the phone to fetch
 BUF_MAX = 8 * 1024 * 1024        # a runaway pipe never eats the brain
 
@@ -129,6 +130,8 @@ class AirPlaySource(NowPlayingSource):
         self.error: str | None = None
         self.last_item_at: float | None = None
         self.records = 0
+        self._committed_at: float | None = None
+        self._looked_up: dict = {}      # (title, artist) -> a sleeve found by name
         self._thread = threading.Thread(target=self._loop, name="airplay", daemon=True)
 
     def start(self) -> "AirPlaySource":
@@ -230,6 +233,7 @@ class AirPlaySource(NowPlayingSource):
             # a new song: its artwork is on its way; the old one is not its
             self.art_key = ""
             self._prgr = None
+            self._committed_at = self._clock()
         self._pending = {}
         if self.title:
             self.active = True
@@ -295,13 +299,37 @@ class AirPlaySource(NowPlayingSource):
         with self._lock:
             if not self.active or not self.title:
                 return None
-            key = hashlib.sha1(f"{self.persistent}|{self.title}|{self.artist}|{self.album}|{self.art_key}"
+            art = self.art_url()
+            if art is None and self._committed_at is not None and self._clock() - self._committed_at >= ART_WAIT_S:
+                # no artwork came with the song (some apps send none): find the
+                # sleeve by name, once a song, off this thread
+                song = (self.title, self.artist)
+                if song not in self._looked_up:
+                    self._looked_up[song] = None
+                    while len(self._looked_up) > 64:
+                        self._looked_up.pop(next(iter(self._looked_up)))
+                    threading.Thread(target=self._look_up, args=song, name="airplay-art", daemon=True).start()
+                art = self._looked_up.get(song)
+            key = hashlib.sha1(f"{self.persistent}|{self.title}|{self.artist}|{self.album}|{self.art_key}|{art or ''}"
                                .encode()).hexdigest()[:12]
             pos, total = self.progress()
             return NowPlaying(
                 track_id=f"airplay:{key}", title=self.title, artist=self.artist or "?",
-                album=self.album or "?", art_url=self.art_url(), progress_ms=pos, duration_ms=total,
+                album=self.album or "?", art_url=art, progress_ms=pos, duration_ms=total,
                 is_playing=self.playing)
+
+    def _look_up(self, title: str, artist: str):
+        try:
+            from ..show import find_art
+            found = find_art(f"{artist} {title}".strip()) or {}
+        except Exception as exc:
+            print(f"[airplay] no sleeve for {title!r}: {exc}", flush=True)
+            return
+        url = found.get("art_url")
+        if url:
+            with self._lock:
+                self._looked_up[(title, artist)] = url
+            print(f"[airplay] no artwork came with {title!r}; found its sleeve by name", flush=True)
 
     def status(self) -> dict:
         with self._lock:
@@ -309,5 +337,5 @@ class AirPlaySource(NowPlayingSource):
             return {"pipe": self.pipe, "pipe_exists": os.path.exists(self.pipe), "reading": self.reading,
                     "running": _running(), "state": state, "connected_from": self.client,
                     "user_agent": self.user_agent, "volume": self.volume,
-                    "last": (f"{self.artist} — {self.title}" if self.title else None),
+                    "last": (f"{self.title} by {self.artist}" if self.title and self.artist else self.title or None),
                     "records": self.records, "error": self.error}

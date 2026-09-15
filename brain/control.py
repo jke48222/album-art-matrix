@@ -60,6 +60,10 @@ is on — no Mac required.
   POST /imagine {prompt} -> a picture from words, on the panel; GET /imagine lists them,
        GET /imagine/<id>.png is one, POST /imagine/show {id} shows it again, POST /imagine/forget {id}
   GET  /voice    -> the wake word, the listener and the last thing heard
+  GET  /voice/meter -> the wake word's score and peak, quick, for the phone's meter
+  POST /voice/wakeword {name?, threshold?}   POST /voice/wakeword/forget {name}
+  POST /voice/enroll {phrase, samples?}: teach a wake word of your own   POST /voice/enroll/cancel
+  GET  /airplay  -> the receiver and what is coming in   POST /airplay/restart
   POST /voice/wake  start listening as if the wake word came   POST /voice/say {text}
 
 State persists to ~/.config/album-art-matrix/control.json so the wall comes
@@ -133,6 +137,8 @@ DEFAULTS = {
     "lon": 999.0,
     "place": "",             # the weather's place, as the phone named it
     "weather_units": "f",    # f | c, for the weather face
+    "airplay_receiver": True,  # the wall runs its AirPlay receiver
+    "airplay_name": "Wall",  # what it is called in the AirPlay menu
 }
 
 
@@ -206,6 +212,7 @@ class ControlState:
         self.posters = None          # brain/posters.py, TMDB posters for shows
         self.imaginer = None         # brain/imagine.py, pictures from words
         self.airplay = None          # brain/nowplaying/airplay.py, the receiver
+        self.airplay_receiver = None # brain/nowplaying/receiver.py, shairport-sync itself
         self.games = None            # brain/games/host.py, one game at a time
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
@@ -337,6 +344,10 @@ class ControlState:
                     self._s[k] = _clamp(v, -180.0, 180.0)
                 elif k == "place" and isinstance(v, str):
                     self._s[k] = "".join(c for c in v if c.isprintable())[:64]
+                elif k == "airplay_receiver" and isinstance(v, bool):
+                    self._s[k] = v
+                elif k == "airplay_name" and isinstance(v, str) and v.strip():
+                    self._s[k] = "".join(ch for ch in v if ch.isprintable()).strip()[:40] or "Wall"
                 elif k == "weather_units" and v in ("f", "c"):
                     self._s[k] = v
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
@@ -523,7 +534,9 @@ class ControlState:
             "claude": (self.asker.status() if getattr(self, "asker", None)
                        else {"ready": False, "problem": "asking is off on this wall"}),
             # AirPlay: is shairport-sync there, is a stream on, who is sending
-            "airplay": (self.airplay.status() if getattr(self, "airplay", None)
+            "airplay": ({**self.airplay.status(), "receiver": (self.airplay_receiver.status()
+                         if getattr(self, "airplay_receiver", None) else None)}
+                        if getattr(self, "airplay", None)
                         else {"running": False, "pipe_exists": False, "reading": False, "state": "off",
                               "error": "AirPlay is off on this wall"}),
             # imagine: which image model, whether its key is set, what it cost
@@ -921,6 +934,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, shots)
                 return
 
+            if u.path.startswith("/voice/meter"):
+                v = getattr(ctrl, "voice", None)
+                self._json(200, v.meter() if v is not None else {"state": "off"})
+                return
             if u.path.startswith("/voice"):
                 v = getattr(ctrl, "voice", None)
                 self._json(200, v.status() if v is not None else {"on": False, "state": "off"})
@@ -938,6 +955,12 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(200, {"games": gh.listing(), **gh.status()})
                     return
                 self._json(200, gh.status())
+                return
+            if u.path.startswith("/airplay"):
+                ap = getattr(ctrl, "airplay", None)
+                rx = getattr(ctrl, "airplay_receiver", None)
+                self._json(200, {**(ap.status() if ap is not None else {"state": "off"}),
+                                 "receiver": rx.status() if rx is not None else None})
                 return
             if u.path.startswith("/art/airplay/"):
                 ap = getattr(ctrl, "airplay", None)
@@ -1119,6 +1142,14 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 ctrl.note(text, max(0.5, min(720.0, minutes)))
                 self._json(200, {"shown": True, "minutes": minutes})
                 return
+            if self.path.startswith("/airplay/restart"):
+                rx = getattr(ctrl, "airplay_receiver", None)
+                if rx is None:
+                    self._json(404, {"error": "AirPlay is off on this wall"})
+                    return
+                rx.restart()
+                self._json(200, {"restarting": True, "receiver": rx.status()})
+                return
             if self.path.startswith("/game/"):
                 gh = getattr(ctrl, "games", None)
                 if gh is None:
@@ -1227,6 +1258,48 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 patch = self._body()
                 if patch is None:
+                    return
+                if self.path.startswith("/voice/wakeword/forget"):
+                    r = v.forget_wake(str(patch.get("name", "")))
+                    self._json(404 if r.get("error") else 200, {**v.status(), **r})
+                    return
+                if self.path.startswith("/voice/wakeword"):
+                    out = {}
+                    if patch.get("threshold") is not None:
+                        try:
+                            th = round(max(0.3, min(0.95, float(patch["threshold"]))), 3)
+                        except (TypeError, ValueError):
+                            self._json(400, {"error": "a threshold from 0.3 to 0.95"})
+                            return
+                        if v.wake is not None:
+                            from .voice import wake as wake_mod
+                            v.wake.configure(threshold=th)
+                            wake_mod.save_threshold(v.wake.name, th)
+                        tune = getattr(ctrl, "tuning", None)
+                        if tune is not None:
+                            try:
+                                tune.update({"wake_threshold": th})
+                            except Exception as exc:
+                                print(f"[control] wake threshold not kept: {exc}", flush=True)
+                        out["threshold"] = th
+                    if patch.get("name"):
+                        r = v.set_wake(str(patch["name"]))
+                        if r.get("error"):
+                            self._json(404, {**v.status(), **r})
+                            return
+                        out.update(r)
+                    self._json(200, {**v.status(), **out})
+                    return
+                if self.path.startswith("/voice/enroll/cancel"):
+                    self._json(200, {**v.status(), **v.enroll_cancel()})
+                    return
+                if self.path.startswith("/voice/enroll"):
+                    try:
+                        samples = int(patch.get("samples") or 6)
+                    except (TypeError, ValueError):
+                        samples = 6
+                    r = v.enroll_start(str(patch.get("phrase", "")), samples)
+                    self._json(409 if r.get("error") else 200, {**v.status(), **r})
                     return
                 if self.path.startswith("/voice/wake"):
                     v.wake_now()

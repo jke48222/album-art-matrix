@@ -50,7 +50,7 @@ unsharp_percent = 60    # light unsharp after Lanczos; 0 disables
 # read with the MusicKit credentials deploy.sh copies over. Any adapter left
 # out of this list still runs, after these: a service connected from the
 # phone always has somewhere to be.
-adapters = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
+adapters = ["phone", "airplay", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
 
 # Every key and username in the sections below can be set from the phone
 # instead (Tessera > Settings > Services). What the phone sets is kept in

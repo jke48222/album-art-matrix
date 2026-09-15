@@ -408,6 +408,9 @@ struct VoicePage: View {
     @State private var said = ""
     @State private var busy = false
     @State private var problem: String?
+    @State private var threshold: Double = 0.5
+    @State private var editingThreshold = false
+    @State private var holdThresholdUntil = Date.distantPast
 
     var body: some View {
         SetupPage("Voice",
@@ -417,10 +420,8 @@ struct VoicePage: View {
                     StateValue(status?.state?.capitalized ?? "Off", done: status?.on == true)
                 }
                 Rule()
-                SetupRow(title: "Wake word", subtitle: (status?.wake?.model ?? "").replacingOccurrences(of: "_", with: " ").capitalized
-                         + (status?.wake?.loaded == true ? ", loaded" : ", not loaded")
-                         + (status?.wake?.fires.map { ", fired \($0)x" } ?? "")) {
-                    ActionPill(title: "Listen now", filled: true) { wake() }
+                SetupRow(title: "Listen now", subtitle: "As if the wake word came.") {
+                    ActionPill(title: "Listen", filled: true) { wake() }
                 }
                 Rule()
                 SetupRow(title: "Speech", subtitle: (status?.speech?.model.map { "Whisper \($0)" } ?? "Whisper")
@@ -428,6 +429,54 @@ struct VoicePage: View {
                          + (status?.speech?.last_s.map { String(format: ", %.1f s last time", $0) } ?? "")) { EmptyView() }
             }
             .padding(.top, -12)
+            SetupGroup("Wake word", note: nil) {
+                VStack(alignment: .leading, spacing: 14) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(status?.wake?.label ?? "None").font(.display(28)).foregroundStyle(Ink.ink)
+                        Spacer()
+                        if status?.wake_loading != nil {
+                            Text("Switching").font(.ui(12)).foregroundStyle(Ink.dim)
+                        } else if let f = status?.wake?.fires, f > 0 {
+                            Text("heard \(f)x").font(.machine(11)).foregroundStyle(Ink.faint)
+                        }
+                    }
+                    WakeMeter(accent: accent, threshold: $threshold,
+                              onEditing: { editingThreshold = $0 }, onCommit: { sendThreshold() })
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Sensitivity").font(.ui(13)).foregroundStyle(Ink.dim)
+                            Spacer()
+                            if let d = status?.wake?.default_threshold, abs(threshold - d) > 0.02 {
+                                Button("Default") {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { threshold = d }
+                                    sendThreshold()
+                                }
+                                .font(.ui(12, .semibold)).foregroundStyle(accent)
+                                .padding(.trailing, 8)
+                            }
+                            Text(sensitivityWord).font(.ui(13, .semibold)).foregroundStyle(Ink.ink)
+                        }
+                        Text("Drag the white mark. Further left and it wakes more easily, and by mistake more often.")
+                            .font(.ui(11)).foregroundStyle(Ink.faint)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.horizontal, 16).padding(.vertical, 14)
+                ForEach(status?.wake_choices ?? [], id: \.name) { c in
+                    Rule()
+                    wakeRow(c)
+                }
+                Rule()
+                NavigationLink {
+                    WakeEnrollPage(accent: accent)
+                } label: {
+                    SetupRow(title: "Make your own", subtitle: "Say a phrase of your own to the wall six times. It learns your voice.") {
+                        Image(systemName: "plus.circle").font(.system(size: 18)).foregroundStyle(accent)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
+            }
+            Problem(text: status?.wake_problem)
             SetupGroup("Say it from here", note: "Words as if spoken to the wall, without the microphone.") {
                 KeyField(placeholder: "show the clock", text: $said)
                 Rule()
@@ -435,16 +484,78 @@ struct VoicePage: View {
                          busy: busy, done: nil, accent: accent) { say() }
             }
             Problem(text: problem ?? status?.problem)
-            SetupGroup("Last heard", note: "The wake word is set under Tuning, Voice, with its threshold.") {
+            SetupGroup("Last heard", note: "Each wake word keeps its own sensitivity; Tuning, Voice shows the one in use.") {
                 SetupRow(title: status?.last_text ?? "Nothing yet", subtitle: status?.last_command ?? status?.last_answer ?? "") { EmptyView() }
             }
         }
         .task {
             while !Task.isCancelled {
-                if let s = await VoiceStatus.read(host: wall.host) { status = s }
+                if let s = await VoiceStatus.read(host: wall.host) {
+                    status = s
+                    if !editingThreshold, Date() >= holdThresholdUntil, let th = s.wake?.threshold { threshold = th }
+                }
                 try? await Task.sleep(for: .seconds(2))
             }
         }
+    }
+
+    private var sensitivityWord: String {
+        let d = threshold - (status?.wake?.default_threshold ?? 0.5)
+        return d < -0.07 ? "High" : d > 0.07 ? "Low" : "Medium"
+    }
+
+    private func wakeRow(_ c: VoiceStatus.Choice) -> some View {
+        let on = c.name == status?.wake?.model
+        let sub: String = c.kind == "own"
+            ? "Yours" + (c.quality.map { $0 == "good" ? ", clear of ordinary talk" : $0 == "fair" ? ", fairly clear of talk" : ", close to ordinary talk" } ?? "")
+            : "Built in"
+        return HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(c.label).font(.ui(15, on ? .semibold : .regular)).foregroundStyle(Ink.ink)
+                Text(sub).font(.ui(12)).foregroundStyle(Ink.dim)
+            }
+            Spacer()
+            if on {
+                Image(systemName: "checkmark").font(.system(size: 15, weight: .semibold)).foregroundStyle(accent)
+            } else if status?.wake_loading == c.name {
+                ProgressView().tint(accent)
+            } else if c.kind == "own" {
+                ActionPill(title: "Forget", filled: false) { forget(c.name) }
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 11)
+        .contentShape(Rectangle())
+        .onTapGesture { if !on { choose(c.name) } }
+    }
+
+    private func choose(_ name: String) {
+        let h = wall.host
+        Taps.detent(intensity: 0.5)
+        Task {
+            _ = await VoiceStatus.send(host: h, path: "/voice/wakeword", body: ["name": name])
+            for _ in 0..<12 {
+                try? await Task.sleep(for: .milliseconds(500))
+                if let s = await VoiceStatus.read(host: h) {
+                    status = s
+                    if s.wake_loading == nil { break }
+                }
+            }
+        }
+    }
+
+    private func forget(_ name: String) {
+        let h = wall.host
+        Task {
+            _ = await VoiceStatus.send(host: h, path: "/voice/wakeword/forget", body: ["name": name])
+            if let s = await VoiceStatus.read(host: h) { status = s }
+            Taps.commit()
+        }
+    }
+
+    private func sendThreshold() {
+        holdThresholdUntil = Date().addingTimeInterval(3)        // the wall takes a moment; do not snap back
+        let h = wall.host, th = (threshold * 100).rounded() / 100
+        Task { _ = await VoiceStatus.send(host: h, path: "/voice/wakeword", body: ["threshold": th]) }
     }
 
     private var stateLine: String {
@@ -477,7 +588,16 @@ struct VoicePage: View {
 }
 
 struct VoiceStatus: Decodable {
-    struct Wake: Decodable { var model: String?; var loaded: Bool?; var threshold: Double?; var fires: Int?; var problem: String? }
+    struct Wake: Decodable {
+        var model: String?; var label: String?; var kind: String?; var loaded: Bool?
+        var threshold: Double?; var default_threshold: Double?; var peak: Double?; var fires: Int?
+        var quality: String?; var problem: String?
+    }
+    struct Choice: Decodable { var name: String; var label: String; var kind: String; var quality: String? }
+    var wake_choices: [Choice]?
+    var wake_loading: String?
+    var wake_problem: String?
+    var enroll: EnrollState?
     struct Speech: Decodable { var model: String?; var loaded: Bool?; var last_s: Double?; var problem: String? }
     var on: Bool?
     var state: String?
@@ -495,6 +615,19 @@ struct VoiceStatus: Decodable {
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
         return try? JSONDecoder().decode(VoiceStatus.self, from: data)
+    }
+
+    /// POST with the wall's answer: the status code and the JSON.
+    static func send(host: String, path: String, body: [String: Any]) async -> (Int, [String: Any]) {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)\(path)") else { return (0, [:]) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 20
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
+        guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (0, [:]) }
+        let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        return ((resp as? HTTPURLResponse)?.statusCode ?? 0, json)
     }
 
     static func post(host: String, path: String, body: [String: Any]) async -> Bool {
@@ -736,5 +869,344 @@ extension TaughtList {
         if (resp as? HTTPURLResponse)?.statusCode == 200 { return (true, nil) }
         let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
         return (false, json["error"] as? String ?? "The wall could not learn it.")
+    }
+}
+
+
+// MARK: - The wake word: the live meter, and teaching one of your own
+
+struct EnrollState: Decodable, Equatable {
+    var phrase: String
+    var stage: String
+    var takes: Int
+    var samples: Int
+    var rejected: Int?
+    var message: String
+    var event: String?
+    var event_ago: Double?
+    var talk_left: Double?
+    var talk_s: Double?
+    var level_over: Double?
+    var recording: Bool?
+    var quality: String?
+    var separation: Double?
+    var name: String?
+    var problem: String?
+}
+
+struct VoiceMeter: Decodable {
+    var state: String?
+    var label: String?
+    var score: Double?
+    var peak: Double?
+    var threshold: Double?
+    var fires: Int?
+    var last_fire_ago: Double?
+    var level_over: Double?
+    var enroll: EnrollState?
+
+    static func read(host: String) async -> VoiceMeter? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/voice/meter") else { return nil }
+        var req = URLRequest(url: url); req.timeoutInterval = 3
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(VoiceMeter.self, from: data)
+    }
+}
+
+/// How sure the wall is as you say the wake word: the live score, its
+/// recent peak behind it, and the mark it has to pass.
+/// How sure the wall is as you say the wake word: the live score, its
+/// recent peak behind it, and the white mark it has to pass. The mark is
+/// the sensitivity control: drag it along the bar.
+struct WakeMeter: View {
+    @Environment(WallSession.self) private var wall
+    let accent: Color
+    @Binding var threshold: Double
+    var onEditing: (Bool) -> Void = { _ in }
+    var onCommit: () -> Void = {}
+    @State private var meter: VoiceMeter?
+    @State private var lastFires = -1
+    @State private var heardAt: Date?
+    @State private var glow = 0.0
+    @State private var dragging = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            GeometryReader { geo in
+                let w = geo.size.width
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Ink.sunk).frame(height: 16)
+                    Capsule().fill(accent.opacity(0.28))
+                        .frame(width: max(8, w * CGFloat(min(1, meter?.peak ?? 0))), height: 16)
+                    Capsule().fill(accent)
+                        .frame(width: max(8, w * CGFloat(min(1, meter?.score ?? 0))), height: 16)
+                    Capsule().stroke(accent, lineWidth: 2).frame(height: 16).opacity(glow)
+                    RoundedRectangle(cornerRadius: 2).fill(Ink.ink)
+                        .frame(width: dragging ? 6 : 4, height: dragging ? 34 : 26)
+                        .shadow(color: .black.opacity(0.35), radius: 2, y: 1)
+                        .offset(x: w * CGFloat(threshold) - (dragging ? 3 : 2))
+                        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: dragging)
+                }
+                .frame(width: w, height: 36)
+                .contentShape(Rectangle())
+                .animation(.easeOut(duration: 0.18), value: meter?.score ?? 0)
+                .gesture(
+                    DragGesture(minimumDistance: 0)
+                        .onChanged { g in
+                            if !dragging {
+                                dragging = true
+                                onEditing(true)
+                            }
+                            let t = (min(0.95, max(0.3, Double(g.location.x / max(1, w)))) * 100).rounded() / 100
+                            if Int(t * 20) != Int(threshold * 20) { Taps.detent(intensity: 0.35) }
+                            threshold = t
+                        }
+                        .onEnded { _ in
+                            dragging = false
+                            onEditing(false)
+                            onCommit()
+                        }
+                )
+            }
+            .frame(height: 36)
+            HStack {
+                Text(line).font(.ui(13, .medium)).foregroundStyle(heard ? accent : Ink.dim)
+                Spacer()
+                if let over = meter?.level_over {
+                    Text(over >= 9 ? "hearing you" : "quiet").font(.machine(10)).foregroundStyle(Ink.faint)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Wake word sensitivity")
+        .accessibilityValue("Mark at \(Int((threshold * 100).rounded())). \(line)")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: threshold = max(0.3, threshold - 0.05)      // more sensitive: the mark moves left
+            case .decrement: threshold = min(0.95, threshold + 0.05)
+            @unknown default: break
+            }
+            onCommit()
+        }
+        .task {
+            while !Task.isCancelled {
+                if let m = await VoiceMeter.read(host: wall.host) {
+                    let fires = m.fires ?? 0
+                    if lastFires >= 0, fires > lastFires {
+                        heardAt = Date()
+                        withAnimation(.easeIn(duration: 0.08)) { glow = 1 }
+                        Taps.commit()
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(150))
+                            withAnimation(.easeOut(duration: 1.3)) { glow = 0 }
+                        }
+                    }
+                    lastFires = fires
+                    meter = m
+                }
+                try? await Task.sleep(for: .milliseconds(200))
+            }
+        }
+    }
+
+    private var heard: Bool { heardAt.map { Date().timeIntervalSince($0) < 2.5 } ?? false }
+
+    private var line: String {
+        if heard { return "Heard it." }
+        guard let m = meter else { return "Say it and watch the bar." }
+        switch m.state {
+        case "listening": return "Listening to you."
+        case "thinking", "answering": return "Answering."
+        case "enrolling": return "Learning a new wake word."
+        default: return "Say it and watch the bar."
+        }
+    }
+}
+
+struct WakeEnrollPage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.dismiss) private var dismiss
+    let accent: Color
+    @State private var phrase = ""
+    @State private var enroll: EnrollState?
+    @State private var problem: String?
+    @State private var starting = false
+    @State private var watching = false
+
+    private var typed: String { phrase.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var active: Bool { ["takes", "talk", "building"].contains(enroll?.stage ?? "") }
+
+    var body: some View {
+        SetupPage("Your own wake word",
+                  blurb: "Any short phrase: Hey Wall, Okay Tessera, Wake up. Stand where you usually talk to the wall and say it six times, pausing after each; every take lights a dot on the wall. Then talk normally for ten seconds, so it learns what is not the phrase. It learns the voices it hears, so anyone who will use it can say a take or two.") {
+            if active, let e = enroll {
+                progressCard(e).padding(.top, -12)
+            } else if let e = enroll, e.stage == "done" {
+                doneCard(e).padding(.top, -12)
+            } else {
+                SetupGroup("The phrase", note: "Two or three words work best: something you would not say by accident.") {
+                    KeyField(placeholder: "Hey Wall", text: $phrase)
+                    Rule()
+                    SaveLine(title: starting ? "Starting" : "Start", enabled: typed.count >= 3 && !starting,
+                             busy: starting, done: nil, accent: accent) { start() }
+                }
+                .padding(.top, -12)
+                if let e = enroll, e.stage == "failed" {
+                    Problem(text: e.problem.map { "Could not learn it: \($0)" } ?? "Could not learn it. Try again.")
+                }
+                if let e = enroll, e.stage == "cancelled", e.event == "idle" {
+                    Problem(text: e.message)
+                }
+            }
+            Problem(text: problem)
+        }
+        .task {
+            while !Task.isCancelled {
+                if watching {
+                    if let m = await VoiceMeter.read(host: wall.host), let e = m.enroll {
+                        enroll = e
+                    } else if let s = await VoiceStatus.read(host: wall.host), let e = s.enroll {
+                        enroll = e
+                        if !["takes", "talk", "building"].contains(e.stage) { watching = false }
+                    }
+                }
+                try? await Task.sleep(for: .milliseconds(watching ? 250 : 800))
+            }
+        }
+    }
+
+    private func progressCard(_ e: EnrollState) -> some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("\u{201C}\(e.phrase)\u{201D}").font(.display(30)).foregroundStyle(Ink.ink)
+            HStack(spacing: 10) {
+                ForEach(0..<e.samples, id: \.self) { i in
+                    let lit = i < e.takes
+                    let current = i == e.takes && e.stage == "takes"
+                    let fresh = lit && i == e.takes - 1 && (e.event_ago ?? 9) < 0.6
+                    Circle()
+                        .fill(lit ? accent : Ink.sunk)
+                        .overlay(Circle().stroke(current ? accent : .clear, lineWidth: 2))
+                        .frame(width: 22, height: 22)
+                        .scaleEffect(fresh ? 1.25 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.5), value: e.takes)
+                }
+            }
+            Text(e.message)
+                .font(.ui(17, .medium))
+                .foregroundStyle(["short", "long"].contains(e.event ?? "") && (e.event_ago ?? 9) < 2 ? Ink.signal : Ink.ink)
+                .fixedSize(horizontal: false, vertical: true)
+            if e.stage == "takes" {
+                levelBar(e.level_over, recording: e.recording ?? false)
+            } else if e.stage == "talk" {
+                talkRing(e)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView().tint(accent)
+                    Text("Learning your phrase from the takes.").font(.ui(13)).foregroundStyle(Ink.dim)
+                }
+            }
+            if e.stage != "building" {
+                ActionPill(title: "Stop", filled: false) { cancel() }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
+    }
+
+    private func levelBar(_ over: Double?, recording: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Ink.sunk)
+                    Capsule().fill(recording ? accent : Ink.dim)
+                        .frame(width: max(6, geo.size.width * CGFloat(min(1, max(0, (over ?? 0) / 30)))))
+                        .animation(.easeOut(duration: 0.15), value: over ?? 0)
+                    Rectangle().fill(Ink.ink.opacity(0.6)).frame(width: 2).offset(x: geo.size.width * 9 / 30)
+                }
+            }
+            .frame(height: 10)
+            Text(recording ? "Hearing a take." : "Past the mark, the wall hears you.")
+                .font(.ui(11)).foregroundStyle(Ink.faint)
+        }
+    }
+
+    private func talkRing(_ e: EnrollState) -> some View {
+        let total = e.talk_s ?? 10
+        let left = e.talk_left ?? total
+        return HStack(spacing: 14) {
+            ZStack {
+                Circle().stroke(Ink.sunk, lineWidth: 6)
+                Circle().trim(from: 0, to: CGFloat(1 - left / max(1, total)))
+                    .stroke(accent, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 0.25), value: left)
+                Text("\(Int(left.rounded(.up)))").font(.display(20)).foregroundStyle(Ink.ink)
+            }
+            .frame(width: 64, height: 64)
+            Text("Talk about anything: the weather, dinner, what is playing.")
+                .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func doneCard(_ e: EnrollState) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Image(systemName: "checkmark.circle.fill").font(.system(size: 28)).foregroundStyle(accent)
+                Text("Learnt").font(.display(26)).foregroundStyle(Ink.ink)
+            }
+            Text("\u{201C}\(e.phrase)\u{201D} is the wake word now.").font(.ui(16, .medium)).foregroundStyle(Ink.ink)
+            Text(qualityLine(e.quality)).font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 10) {
+                ActionPill(title: "Done", filled: true) { dismiss() }
+                ActionPill(title: "Teach it again", filled: false) {
+                    phrase = e.phrase
+                    enroll = nil
+                    watching = false
+                }
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
+    }
+
+    private func qualityLine(_ q: String?) -> String {
+        switch q {
+        case "good": return "It stands well apart from ordinary talk. Say it and watch the meter on the Voice page."
+        case "fair": return "It stands apart from talk, though not by much. If it wakes by mistake, move the sensitivity mark right, or teach a longer phrase."
+        default: return "It sounds a lot like ordinary talk to the wall. A longer or less common phrase will work better."
+        }
+    }
+
+    private func start() {
+        guard typed.count >= 3, !starting else { return }
+        starting = true
+        problem = nil
+        let h = wall.host, p = typed
+        Task {
+            let (code, json) = await VoiceStatus.send(host: h, path: "/voice/enroll", body: ["phrase": p, "samples": 6])
+            if code == 200 {
+                if let e = json["enroll"] as? [String: Any], let d = try? JSONSerialization.data(withJSONObject: e),
+                   let st = try? JSONDecoder().decode(EnrollState.self, from: d) {
+                    enroll = st
+                }
+                watching = true
+                Taps.commit()
+            } else {
+                problem = json["error"] as? String ?? "The wall could not start listening."
+            }
+            starting = false
+        }
+    }
+
+    private func cancel() {
+        let h = wall.host
+        Task {
+            _ = await VoiceStatus.send(host: h, path: "/voice/enroll/cancel", body: [:])
+            enroll = nil
+            watching = false
+        }
     }
 }

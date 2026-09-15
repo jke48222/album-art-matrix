@@ -122,6 +122,19 @@ struct WallServices: Decodable {
 
     /// AirPlay: whether shairport-sync is there and who is sending.
     struct Airplay: Decodable {
+        struct Receiver: Decodable {
+            var installed: Bool?
+            var version: String?
+            var on: Bool?
+            var name: String?
+            var port: Int?
+            var running: Bool?
+            var up_s: Int?
+            var restarts: Int?
+            var external: Bool?
+            var problem: String?
+        }
+        var receiver: Receiver?
         var running: Bool?
         var pipe_exists: Bool?
         var reading: Bool?
@@ -1563,64 +1576,99 @@ struct ImagesPage: View {
 
 struct AirPlayPage: View {
     @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
     let accent: Color
     @Binding var services: WallServices?
+    @State private var name = ""
 
     private var ap: WallServices.Airplay? { services?.airplay }
+    private var rx: WallServices.Airplay.Receiver? { ap?.receiver }
+    private var typedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
 
-    private var stateLine: (String, Bool) {
+    private var receiving: (String, Bool) {
         guard let ap else { return ("The wall is not answering.", false) }
-        if ap.running != true { return ("shairport-sync is not running on the Pi.", false) }
+        if let rx {
+            if rx.on == false { return ("Off. Turn it on below.", false) }
+            if rx.installed == false { return ("Not installed on the Pi yet: pi/install-airplay.sh.", false) }
+            if rx.external != true && rx.running != true { return (rx.problem ?? "Starting.", false) }
+        } else if ap.running != true {
+            return ("No receiver on this wall.", false)
+        }
         switch ap.state {
         case "playing": return ("Playing" + (ap.last.map { ": \($0)" } ?? ""), true)
         case "paused": return ("Paused" + (ap.last.map { ": \($0)" } ?? ""), true)
-        default: return ("Ready. Nothing coming in.", true)
+        default: return ("Ready. Pick \u{201C}\(rx?.name ?? "Wall")\u{201D} in the AirPlay menu.", true)
         }
     }
 
     var body: some View {
         SetupPage("AirPlay",
-                  blurb: "The wall is an AirPlay receiver called Wall. Pick it in the AirPlay menu on this phone, a Mac or an Apple TV, alone or in a group with a speaker, and the wall is handed the exact title, artwork and position of whatever plays. No account and no key. The wall does not have to make a sound.") {
-            SetupGroup("Coming in", note: nil) {
-                SetupRow(title: "State", subtitle: stateLine.0) {
-                    StateValue(stateLine.1 ? "On" : "Off", done: stateLine.1)
+                  blurb: "The wall is an AirPlay speaker. Pick it in the AirPlay menu on an iPhone, iPad, Mac or Apple TV and the wall is handed the exact title, artwork and position of whatever plays, from any app. No account and no key. The wall makes no sound of its own, so play to it together with your speaker.") {
+            SetupGroup("Now", note: nil) {
+                SetupRow(title: "Receiving", subtitle: receiving.0) {
+                    StateValue(receiving.1 ? "On" : "Off", done: receiving.1)
                 }
-                if let from = ap?.connected_from, !from.isEmpty {
+                if let from = ap?.connected_from, !from.isEmpty, ap?.state != "idle" {
                     Rule()
-                    SetupRow(title: "From", subtitle: from + (ap?.user_agent.map { " (\($0))" } ?? "")) { EmptyView() }
-                }
-                if let e = ap?.error, ap?.running != true {
-                    Rule()
-                    SetupRow(title: "The wall says", subtitle: e) { EmptyView() }
+                    SetupRow(title: "From", subtitle: from) { EmptyView() }
                 }
             }
             .padding(.top, -12)
 
-            SetupGroup("On the Pi", note: "shairport-sync does the receiving; the wall reads what it writes. Installing it takes sudo, so it is done at the Pi, following docs/AIRPLAY.md in the project.") {
-                SetupRow(title: "shairport-sync", subtitle: ap?.running == true ? "Running." : "Not running.") {
-                    StateValue(ap?.running == true ? "Installed" : "Not yet", done: ap?.running == true)
-                }
-                Rule()
-                SetupRow(title: "The metadata pipe", subtitle: ap?.pipe_exists == true
-                         ? (ap?.reading == true ? "Open, the wall is reading it." : "There. The wall opens it when a stream begins.")
-                         : "Not there yet.") {
-                    StateValue(ap?.pipe_exists == true ? "There" : "Not yet", done: ap?.pipe_exists == true)
-                }
-                Rule()
-                SetupRow(title: "The guide", subtitle: "docs/AIRPLAY.md on GitHub. Opens in Safari.") {
-                    ActionPill(title: "Open", filled: false) {
-                        openURL(URL(string: "https://github.com/jke48222/album-art-matrix/blob/main/docs/AIRPLAY.md")!)
+            SetupGroup("The speaker", note: "Classic AirPlay, run by the wall itself, so every iPhone, iPad, Mac and Apple TV can choose it. Grouping it with HomePods in the Home app needs AirPlay 2, which needs root on the Pi; see docs/AIRPLAY.md.") {
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Be an AirPlay speaker").font(.ui(15)).foregroundStyle(Ink.ink)
+                        Text(speakerLine).font(.ui(12)).foregroundStyle(Ink.dim)
                     }
+                    Spacer()
+                    Toggle("", isOn: Binding(get: { rx?.on ?? true },
+                                             set: { v in wall.send(["airplay_receiver": v]); Taps.detent(intensity: 0.4); refreshSoon() }))
+                        .labelsHidden().tint(accent)
+                }
+                .padding(.horizontal, 16).padding(.vertical, 12)
+                Rule()
+                KeyField(placeholder: rx?.name ?? "Wall", text: $name)
+                Rule()
+                SaveLine(title: "Use this name", enabled: !typedName.isEmpty && typedName != rx?.name,
+                         busy: false, done: typedName.isEmpty ? (rx?.name).map { "Shown as \u{201C}\($0)\u{201D}" } : nil,
+                         accent: accent) { rename() }
+                if let v = rx?.version {
+                    Rule()
+                    SetupRow(title: "shairport-sync", subtitle: v.components(separatedBy: "-").first ?? v) { EmptyView() }
                 }
             }
         }
         .task {
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
-                if Task.isCancelled { break }
                 if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+                try? await Task.sleep(for: .seconds(2))
             }
         }
+    }
+
+    private var speakerLine: String {
+        guard let rx else { return "" }
+        if rx.external == true { return "Run by the Pi's own shairport-sync." }
+        if rx.running == true { return "Up" + (rx.up_s.map { ", \(duration($0))" } ?? "") + ", port \(rx.port ?? 5000)" }
+        if rx.on == false { return "Off" }
+        return rx.problem ?? "Starting"
+    }
+
+    private func duration(_ s: Int) -> String { s < 90 ? "\(s) s" : s < 5400 ? "\(s / 60) min" : "\(s / 3600) h" }
+
+    private func refreshSoon() {
+        let h = wall.host
+        Task {
+            try? await Task.sleep(for: .seconds(1.5))
+            if let fresh = await WallServices.read(host: h) { services = fresh }
+        }
+    }
+
+    private func rename() {
+        guard !typedName.isEmpty else { return }
+        wall.send(["airplay_name": String(typedName.prefix(40))])
+        Taps.commit()
+        name = ""
+        refreshSoon()
     }
 }

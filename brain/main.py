@@ -38,6 +38,7 @@ from .shelf import Shelf
 from .posters import Posters, PosterSource
 from .imagine import Imaginer
 from .nowplaying.airplay import AirPlaySource
+from .nowplaying.receiver import Receiver
 from .games.host import GameHost
 from .games import (wordle, sudoku, spellingbee, letterboxed, connections, strands, crossword,   # noqa: F401
                     contexto, reaction, whistlebird, pictures, heardle, quiz, twentyq, pictionary,
@@ -132,8 +133,12 @@ def build_sources(cfg: dict, ctrl):
                 port=int(cfg.get("control", {}).get("port", 8788)),
                 host=str(acfg.get("host", "")) or None).start()
             sources.append(ctrl.airplay)
-            print("[main] airplay: " + ("reading shairport-sync's pipe" if os.path.exists(ctrl.airplay.pipe)
-                                        else "no metadata pipe yet; install shairport-sync (docs/AIRPLAY.md)"))
+            # the receiver itself: shairport-sync, run and watched by the brain
+            # (pi/install-airplay.sh puts it under ~/opt without root)
+            ctrl.airplay_receiver = Receiver(ctrl.airplay.pipe, settings=ctrl.get,
+                                             binary=str(acfg.get("binary", "")) or None).start()
+            print("[main] airplay: " + ("the receiver starts as " + repr(ctrl.get().get("airplay_name", "Wall"))
+                                        if ctrl.get().get("airplay_receiver", True) else "the receiver is off"))
         elif name == "applemusic":
             endpoint = cfg.get("applemusic", {}).get("endpoint", "")
             if endpoint:
@@ -434,14 +439,24 @@ def main():
     ctrl.voice = None
     if ctrl.ears is not None and ctrl.features.on("voice"):
         vcfg = cfg.get("voice", {})
-        wake = WakeWord(str(vcfg.get("wake_word", "hey_jarvis")),
-                        threshold=float(tune.get("wake_threshold")))
+        from .voice.wake import saved_choice, saved_threshold, save_threshold, threshold_for
+        kept = saved_choice()
+        name = kept or str(vcfg.get("wake_word", "hey_jarvis"))
+        if not name.startswith("own:") and saved_threshold(name) is None:
+            save_threshold(name, float(tune.get("wake_threshold")))   # turned before each word kept its own
+        wake = WakeWord(name, threshold=threshold_for(name))
+        if kept and not wake.loaded:
+            print(f"[main] voice: the kept wake word {kept!r} will not load ({wake.problem}); using the config's")
+            name = str(vcfg.get("wake_word", "hey_jarvis"))
+            wake = WakeWord(name, threshold=threshold_for(name))
         listener = Transcriber(size="base" if tune.get("speech_base") else "tiny")
         ctrl.voice = Voice(ctrl, wake, listener, asker=ctrl.asker, size=size,
                            teacher=getattr(ctrl.ears, "teacher", None), shower=ctrl.shower)
         ctrl.voice.configure(on=tune.get("wake"))
         ctrl.ears.voice = ctrl.voice
-        print("[main] voice: " + (f"listening for {wake.name!r}" if wake.model is not None
+        if abs(wake.threshold - float(tune.get("wake_threshold"))) > 1e-3:
+            tune.update({"wake_threshold": wake.threshold})          # the tuning page shows the word in use
+        print("[main] voice: " + (f"listening for {wake.label!r}" if wake.loaded
                                   else f"no wake word ({wake.problem})"))
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
