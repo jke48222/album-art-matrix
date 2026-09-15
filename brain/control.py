@@ -49,6 +49,8 @@ is on — no Mac required.
   POST /note     -> {text, minutes?}: words on the panel for a while
   POST /earworm  -> {words}: name a song from the words remembered; sleeve up
   POST /show     -> {query}: a cover by name    POST /play {query}: a video by name
+  GET  /weather  -> the forecast the face draws, the place, its age
+  POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
   GET  /voice    -> the wake word, the listener and the last thing heard
   POST /voice/wake  start listening as if the wake word came   POST /voice/say {text}
 
@@ -80,11 +82,12 @@ JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 # copy for a thumbnail. This is that fallback size, not a limit.
 PHONE_SIDE = 64
 
-MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
+MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video",
+         "weather")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
-IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
+IDLES = ("black", "hold", "dim", "ambient", "weather")   # what the wall does in silence
 AWAYS = ("stay", "off")                       # what it does when nobody is home
 
 DEFAULTS = {
@@ -120,6 +123,8 @@ DEFAULTS = {
     "sun_night": 0.25,       # how much light after dark, share of full
     "lat": 999.0,            # 999 = never told; the app sets these once
     "lon": 999.0,
+    "place": "",             # the weather's place, as the phone named it
+    "weather_units": "f",    # f | c, for the weather face
 }
 
 
@@ -306,6 +311,10 @@ class ControlState:
                     self._s[k] = _clamp(v, -90.0, 90.0)
                 elif k == "lon":
                     self._s[k] = _clamp(v, -180.0, 180.0)
+                elif k == "place" and isinstance(v, str):
+                    self._s[k] = "".join(c for c in v if c.isprintable())[:64]
+                elif k == "weather_units" and v in ("f", "c"):
+                    self._s[k] = v
                 elif k in ("match_art", "ticker_loop", "clock_24h"):
                     self._s[k] = bool(v)
                 elif k == "ticker_style" and v in ("across", "up", "tilt"):
@@ -860,6 +869,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 v = getattr(ctrl, "voice", None)
                 self._json(200, v.status() if v is not None else {"on": False, "state": "off"})
                 return
+            if u.path.startswith("/weather"):
+                w = getattr(ctrl, "weather", None)
+                self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
+                return
             if u.path.startswith("/teach"):
                 # the wall's own song library: what it knows and how it learnt it
                 ear = ctrl.ears
@@ -1001,6 +1014,32 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 result = getattr(sh, what)(text)
                 code = 200 if not (isinstance(result, dict) and result.get("error")) else 404
                 self._json(code, result if isinstance(result, dict) else {"said": result})
+                return
+            if self.path.startswith("/weather/"):
+                w = getattr(ctrl, "weather", None)
+                if w is None:
+                    self._json(404, {"error": "the weather is off on this wall"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                if self.path.startswith("/weather/place"):
+                    # a place by name, geocoded once; the face follows within seconds
+                    q = str(patch.get("query") or patch.get("place") or "").strip()
+                    if not q:
+                        self._json(400, {"error": "a place name, please"})
+                        return
+                    found = w.set_place(q)
+                    if found is None:
+                        self._json(404, {"error": f"no place called {q}"})
+                        return
+                    self._json(200, {"place": found, **w.status()})
+                    return
+                if self.path.startswith("/weather/refresh"):
+                    w.refresh()
+                    self._json(200, w.status())
+                    return
+                self._json(404, {"error": "not found"})
                 return
             if self.path.startswith("/voice/"):
                 v = getattr(ctrl, "voice", None)

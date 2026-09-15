@@ -48,6 +48,8 @@ from .voice import Voice
 from .voice.wake import WakeWord
 from .voice.listen import Transcriber
 from .art.horizon import OPEN_S as VOICE_OPEN_S
+from .art.weather import WeatherFace
+from .weather import Weather
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -357,6 +359,12 @@ def main():
                                 else "no Claude key yet; set one from the phone"))
     # show me, play me, and the earworm finder: by voice or from the phone
     ctrl.shower = Shower(ctrl, asker=ctrl.asker) if ctrl.features.on("show") else None
+    # the weather, kept fresh for its face and for the phone
+    ctrl.weather = Weather(ctrl).start() if ctrl.features.on("weather") else None
+    if ctrl.weather is not None:
+        print("[main] weather: " + (f"for {ctrl.weather.where()}" if ctrl.weather.where()
+                                    else "no place set yet; name one from the phone"))
+    weather_face = None
     # the voice: the wake word, then the words, on the ear's stream
     ctrl.voice = None
     if ctrl.ears is not None and ctrl.features.on("voice"):
@@ -738,6 +746,8 @@ def main():
                         idle_now = "dim"
                     elif idle == "ambient":
                         mode, idle_now = "ambient", "ambient"
+                    elif idle == "weather" and ctrl.weather is not None:
+                        mode, idle_now = "weather", "weather"
                 ctrl.idle_now = idle_now
                 if idle_now != idle_prev:
                     # engaging or lifting the override is a repaint, or the
@@ -934,6 +944,23 @@ def main():
                         clip_next = tick + 1.0 / c["fps"]
                     if ctrl.dirty.wait(max(0.0, clip_next
                                            - time.monotonic())):
+                        ctrl.dirty.clear()
+                    continue
+
+                if mode == "weather" and ctrl.weather is not None:
+                    if weather_face is None:
+                        weather_face = WeatherFace(size)
+                        weather_t0 = time.monotonic()
+                    tick = time.monotonic()
+                    where = ctrl.weather.where() or (None, None)
+                    f = weather_face.frame_at(tick - weather_t0, ctrl.weather.current(),
+                                              units=s.get("weather_units", "f"),
+                                              lat=where[0], lon=where[1],
+                                              stale=ctrl.weather.stale(),
+                                              place=s.get("place", ""))
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    # slow weather, slow frames: a third of the animated rate is plenty
+                    if ctrl.dirty.wait(max(0.05, 3.0 / anim_fps)):
                         ctrl.dirty.clear()
                     continue
 
