@@ -255,12 +255,14 @@ and has not been done.
 
 ## The render path
 
-`renderer/art_display.c` is 202 lines. It creates the named pipe, holds it open, and streams raw
-RGB888 frames out of it back to back, expanding to the library's stride if needed and handing each
-frame to the panel library's BCM mapper. Mapping is capped at MAX_MAP_HZ (60 by default) because the
-library has no double buffer, so every map is a small tearing window; a rate-limited frame is parked
-and mapped when its slot opens, never dropped, since the last frame of a burst is usually a
-transition (off, a pushed doodle) that will not be sent again. The main thread calls
+`renderer/art_display.c` creates the named pipe, holds it open, and streams frames out of it back
+to back. It does not hand the brain's bytes to the panel library as they are: it keeps the last frame
+received and, once per scanned frame, draws it again with temporal dithering, a running fraction per
+LED colour, so a pixel can show a fraction of one of the library's 64 brightness slots and a dark
+brown stops breaking into a lone red LED. The library bakes its brightness cap into a table once at
+launch, so the renderer applies the cap itself, live, from each frame's header. It maps exactly once
+per scanned frame by waiting on a swap counter that `pi/hub75-swap-counter.py` adds to the library;
+before that counter the safe rate was 60 Hz and anything faster tore. The main thread calls
 `render_forever()`, which owns the refresh loop.
 
 It compiles and runs on the Pi 5. It includes `<rpihub75/rpihub75.h>` and links `-lrpihub75_gpu`,

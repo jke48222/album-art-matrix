@@ -114,21 +114,10 @@ rpm = 7.5         # one revolution per four bars at 120 BPM
 # the BCM bit-plane refresh, which builds colour depth by rescanning a row, and
 # is a different number from how often new content appears.
 #
-# 60, arrived at the hard way. `scripts/bench_frames.py` says the PRODUCER can
-# do ~540 fps for the slowest animated mode on an M-series Mac, so 120 looked
-# free. It was not: the display path, not the producer, is the binding limit.
-# art_display maps a frame into the same bit-plane buffer the refresh thread is
-# scanning, so each map is a window where the panel can show a half-built
-# frame. At 20 fps that window was rare enough to miss; at 120 it was constant
-# black flashing on the panels.
-#
-# So the renderer now caps mapping at MAX_MAP_HZ (60 by default) and drops the
-# rest, and there is no point asking for frames it will throw away. A dropped
-# frame is invisible; a torn one is not.
-#
-# To find the real ceiling on hardware: raise MAX_MAP_HZ on art_display, raise
-# this to match, and watch for tearing. art_display reports mapped/dropped
-# every ten seconds and the brain reports the rate it sustains.
+# 60. The renderer draws the held frame once per scanned frame on its own
+# (art_display.c, temporal dithering), so a frame the brain sends is shown
+# at the next scan and never torn; this rate only decides how smooth an
+# animation is and how much of a Pi core it costs.
 fps = 60
 
 [control]

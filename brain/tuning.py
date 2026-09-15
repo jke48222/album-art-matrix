@@ -39,8 +39,14 @@ SPECS = [
     ("addr_settle_ns", "Panel", "int", 0, 2000, 25, True,
      "Dark time after every row address change. Kills the ghost a slow row "
      "driver leaves; costs refresh, and it is paid 2048 times a frame."),
-    ("map_hz", "Panel", "int", 10, 120, 5, True,
-     "How often a new frame may be mapped into the buffer the scan reads."),
+    ("temporal_dither", "Panel", "bool", 0, 1, 1, True,
+     "The renderer draws the held picture again at the panel's own frame "
+     "rate and dithers every LED in time, so a colour can sit between two "
+     "of the panel's brightness steps. Dark colours stop breaking into "
+     "single primaries; the dimmest LEDs shimmer."),
+    ("dither_min", "Panel", "float", 0.0, 0.5, 0.05, True,
+     "Fractions of a step under this are rounded instead of dithered, which "
+     "keeps the dimmest LEDs from blinking slowly. 0 dithers everything."),
     ("panel_type", "Panel", "int", 0, 7, 1, True,
      "The panel's row addressing. Wrong ones scramble or ghost rows."),
 
@@ -49,6 +55,11 @@ SPECS = [
      "biased; these pull them back to white."),
     ("gain_g", "Colour", "float", 0.20, 1.0, 0.01, False, "Green, in linear light."),
     ("gain_b", "Colour", "float", 0.20, 1.0, 0.01, False, "Blue, in linear light."),
+    ("nearest_colour", "Colour", "bool", 0, 1, 1, False,
+     "Below a few of the panel's brightness steps a colour's channels drop "
+     "out one at a time, and a dark brown lights as a lone red. On, every "
+     "dark pixel is sent as the nearest colour the panel can actually light. "
+     "Stands down while the temporal dither is on, which does that in time."),
 
     ("black_point", "Dark end", "int", 0, 48, 1, False,
      "At and below this the pixel is off. A photograph's black is noise, "
@@ -116,8 +127,8 @@ BY_NAME = {s[0]: s for s in SPECS}
 
 # what each panel knob is written to, for run_renderer.sh to read at launch
 FILES = {"bit_depth": "bit-depth", "dither": "dither",
-         "addr_settle_ns": "addr-settle-ns", "map_hz": "map-hz",
-         "panel_type": "panel-type"}
+         "addr_settle_ns": "addr-settle-ns", "panel_type": "panel-type",
+         "temporal_dither": "temporal-dither", "dither_min": "dither-min"}
 
 
 def _shipped(cfg: dict) -> dict:
@@ -135,11 +146,12 @@ def _shipped(cfg: dict) -> dict:
         "keep_through_noise": int(ears.get("keep_through_noise", 180)),
         "mic_gain": int(ears.get("mic_gain", 100)),
         "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
-        "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0, "map_hz": 60,
-        "panel_type": 0,
+        "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0,
+        "panel_type": 0, "temporal_dither": True, "dither_min": 0.2,
         "gain_r": float(wb.get("r", 1.0)),
         "gain_g": float(wb.get("g", 0.88)),
         "gain_b": float(wb.get("b", 0.83)),
+        "nearest_colour": True,
         "black_point": int(pipeline.BLACK_POINT),
         "pic_black": int(pipeline.PIC_BLACK),
         "pic_floor": int(pipeline.PIC_FLOOR),
@@ -254,6 +266,11 @@ class Tuning:
         pipeline.LOW_FULL = float(v["low_full"])
         pipeline.LOW_RED = float(v["low_red"])
         pipeline.LOW_BLUE = float(v["low_blue"])
+        # the renderer's temporal dither reaches the same colours in time,
+        # and the two must not both round the same pixel
+        pipeline.NEAREST_COLOUR = bool(v["nearest_colour"]) \
+            and not bool(v["temporal_dither"])
+        pipeline.BIT_DEPTH = int(v["bit_depth"])
         if self.video is not None:
             self.video.unsharp_radius = float(v["unsharp_radius"])
             self.video.unsharp_percent = int(v["unsharp_percent"])
@@ -266,9 +283,12 @@ class Tuning:
                                 keep_s=v["keep_through_noise"],
                                 gain=v["mic_gain"], agc=v["mic_auto_gain"])
         for name, fname in FILES.items():
+            val = v[name]
+            if isinstance(val, bool):      # run_renderer.sh reads 1 or 0
+                val = 1 if val else 0
             try:
                 with open(os.path.join(ROOT, fname), "w") as fh:
-                    fh.write(str(v[name]))
+                    fh.write(str(val))
             except OSError:
                 pass
 

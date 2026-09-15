@@ -29,13 +29,19 @@ def prepare(img: Image.Image, size: int,
     return img
 
 
-BLACK_POINT = 12.0       # sRGB byte value at and below which a pixel is off
+# Every shaping step below is OFF by default (2026-09-15): what the wall is
+# fed is the preview, pixel for pixel, with only the white-balance gains
+# between the two. The lift, the black point and the dark-end lean stay in
+# the code and on the tuning page, their tuned values kept in the comments,
+# for anyone who wants them back.
+BLACK_POINT = 0.0        # sRGB byte at and below which a pixel is off (was 12)
 # The panel holds a level steadily from about a quarter of the way up; below
 # that the renderer's temporal dither turns a dim field into LEDs blinking in
 # and out. Anything dimmer than FLOOR, but not black, is lifted to FLOOR with
-# its colour kept, so a dim grey reads as a dim grey.
-NOISE = 16.0             # below this a pixel is a photograph's noise: off
-FLOOR = 64.0             # the lowest level the panel is steady at
+# its colour kept, so a dim grey reads as a dim grey. Both at 0, the hard
+# lift is the identity.
+NOISE = 0.0              # below this a pixel is a photograph's noise: off (was 16)
+FLOOR = 0.0              # the lowest level the panel is steady at (was 64)
 
 
 @lru_cache(maxsize=32)
@@ -68,10 +74,11 @@ def _wb_lut(gains: tuple, shape: tuple) -> np.ndarray:
 # Pictures: the panel's dark end. See steady(). A cut at 40 was tried and
 # took the rocks and the shadow side of a figure clean off the wall; the
 # lift keeps them, compressed but in order.
-PIC_BLACK = 16      # below this, a photograph's noise: off
-PIC_FLOOR = 64      # the dimmest a lit picture pixel is drawn at (the black
-                    # point below takes it to about 52 as sent: two of the
-                    # panel's 64 steps at the current cap)
+PIC_BLACK = 0       # below this, a photograph's noise: off (was 16)
+PIC_FLOOR = 0       # the dimmest a lit picture pixel is drawn at (was 64: the
+                    # black point below took it to about 52 as sent, two of
+                    # the panel's 64 steps at the current cap). At 0, with
+                    # PIC_BLACK 0, the picture curve is the identity.
 PIC_KNEE = 104      # from here up, as drawn
 
 # The panel's colour at the dark end. Its LEDs sit on short drive windows,
@@ -82,8 +89,102 @@ PIC_KNEE = 104      # from here up, as drawn
 # LOW_FULL. Two numbers to tune by eye, from a photo of the wall.
 LOW_END = 160.0
 LOW_FULL = 40.0
-LOW_RED = 0.93      # red gain at the dark end, relative (0.85 read orange-free but blue)
-LOW_BLUE = 1.15     # blue gain at the dark end, relative (1.35 was overly blue)
+LOW_RED = 1.0       # red gain at the dark end, relative; 1.0 is no lean. Was
+                    # tuned to 0.93 (0.85 read orange-free but blue).
+LOW_BLUE = 1.0      # blue gain at the dark end, relative; 1.0 is no lean. Was
+                    # tuned to 1.15 (1.35 was overly blue).
+
+
+# The panel's own steps. The renderer decodes each byte it is sent (x^2.2),
+# scales it by the panel's brightness cap, truncates that to a byte and rounds
+# the byte to one of BIT_DEPTH lit slots (rpi-gpu-hub75-matrix, tone_map_rgb_bits
+# and byte_to_bcm64). At a cap of 140 that is 35 slots, and the first one
+# needs sRGB 37: below a few slots the three channels drop out one at a time,
+# so a dark brown lights as one slot of red and nothing else, and a dark
+# picture is a field of single primaries. NEAREST_COLOUR picks, for every
+# pixel that wants fewer than NEAR_MAX slots, the slot triple whose colour
+# is nearest (CIELAB) to what was wanted, and sends the bytes that land on
+# exactly those slots. Black beats a lone red; a dim grey beats a lone blue.
+NEAREST_COLOUR = True
+PANEL_CAP = 160          # the renderer's -b; the brain writes it every pass
+BIT_DEPTH = 64           # the renderer's -d
+NEAR_MAX = 8             # pixels wanting fewer slots than this are searched
+
+
+def _srgb_to_linear(b) -> np.ndarray:
+    return np.power(np.asarray(b, dtype=np.float64) / 255.0, 2.2)
+
+
+_XYZ = np.array([[0.4124, 0.3576, 0.1805],
+                 [0.2126, 0.7152, 0.0722],
+                 [0.0193, 0.1192, 0.9505]])
+_WHITE = np.array([0.95047, 1.0, 1.08883])
+
+
+def _lab(lin: np.ndarray) -> np.ndarray:
+    """linear sRGB (..., 3) -> CIELAB, D65."""
+    xyz = lin @ _XYZ.T / _WHITE
+    f = np.where(xyz > 0.008856, np.cbrt(np.maximum(xyz, 0.0)),
+                 7.787 * xyz + 16.0 / 116.0)
+    return np.stack([116.0 * f[..., 1] - 16.0,
+                     500.0 * (f[..., 0] - f[..., 1]),
+                     200.0 * (f[..., 1] - f[..., 2])], axis=-1)
+
+
+@lru_cache(maxsize=8)
+def _panel_tables(cap: int, depth: int):
+    """For one cap: the slots every byte lands on, the byte to send for each
+    slot count (the middle of its run, so the renderer's temporal dither,
+    which nudges a byte by one, cannot knock it off), and the Lab colour of
+    every slot triple up to NEAR_MAX."""
+    v = np.arange(256)
+    byte = np.floor(_srgb_to_linear(v) * cap).astype(np.int64)
+    slots = (byte * depth + 127) // 255
+    top = int(slots.max())
+    send = np.zeros(top + 1, dtype=np.uint8)
+    for n in range(1, top + 1):
+        run = np.nonzero(slots == n)[0]
+        send[n] = run[len(run) // 2]
+    m = min(NEAR_MAX, top) + 1
+    grid = np.stack(np.meshgrid(np.arange(m), np.arange(m), np.arange(m),
+                                indexing="ij"), axis=-1).reshape(-1, 3)
+    return slots, send, top, m, _lab(grid / float(depth))
+
+
+def nearest_colour(out: np.ndarray, cap: int, depth: int) -> np.ndarray:
+    """out: uint8 HxWx3 as it would be sent. Dark pixels are replaced by the
+    bytes that light the nearest slot triple; the rest are left alone, since
+    above NEAR_MAX slots the panel's own rounding is within half a slot."""
+    cap = max(1, min(254, int(cap)))
+    slots, send, top, m, lab_grid = _panel_tables(cap, int(depth))
+    flat = out.reshape(-1, 3)
+    want = _srgb_to_linear(flat) * (cap / 255.0)            # light wanted, of full
+    ideal = want * depth                                     # in slots
+    dark = np.nonzero(ideal.max(axis=1) < (m - 1))[0]
+    if dark.size == 0:
+        return out
+    uniq, inv = np.unique(flat[dark], axis=0, return_inverse=True)
+    uw = _srgb_to_linear(uniq) * (cap / 255.0)
+    target = _lab(uw)
+    lo = np.floor(uw * depth).astype(np.int64)
+    best = None
+    bestd = None
+    for dr in (0, 1):
+        for dg in (0, 1):
+            for db in (0, 1):
+                cand = np.minimum(lo + np.array([dr, dg, db]), m - 1)
+                idx = (cand[:, 0] * m + cand[:, 1]) * m + cand[:, 2]
+                d = ((lab_grid[idx] - target) ** 2).sum(axis=1)
+                if best is None:
+                    best, bestd = cand, d
+                else:
+                    better = d < bestd
+                    best = np.where(better[:, None], cand, best)
+                    bestd = np.where(better, d, bestd)
+    chosen = send[np.minimum(best, top)].astype(np.uint8)
+    res = flat.copy()
+    res[dark] = chosen[inv.reshape(-1)]
+    return res.reshape(out.shape)
 
 
 def steady(arr: np.ndarray, hard: bool = False, floor: bool = True) -> np.ndarray:
@@ -138,6 +239,8 @@ def white_balance(img: Image.Image, gains, hard: bool = False,
     out = np.empty_like(arr)
     for c in range(3):
         out[..., c] = lut[c][arr[..., c]]
+    if NEAREST_COLOUR:
+        out = nearest_colour(out, PANEL_CAP, BIT_DEPTH)
     return out
 
 

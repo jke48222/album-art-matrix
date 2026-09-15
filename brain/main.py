@@ -30,6 +30,7 @@ from .art.fetch import fetch_art
 from .art.lyrics import LyricBook, LyricCanvas
 from .art.nine import NineBuilder
 from . import halo as halo_mod
+from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
@@ -507,6 +508,7 @@ def main():
         if args.once:
             if last_pre is not None:
                 s = ctrl.get()
+                art_pipeline.PANEL_CAP = int(s["panel_brightness"])
                 eff = tuple(g * s["brightness"] for g in tune.gains)
                 sink.show(white_balance(last_pre, eff).tobytes(),
                           pre_wb_img=last_pre)
@@ -537,11 +539,22 @@ def main():
                         fade = max(0.0, min(1.0, 1.0 - el_min / sl["minutes"]))
                 # Calibration multipliers ride on top of the config gains;
                 # identity until a camera has measured the wall. The colour
-                # part is settled first and capped at 1.0, so a correction
-                # can be dialled all the way back to none without a channel
-                # blowing its top; brightness then scales all three equally.
+                # part is settled first and kept under 1.0 by scaling all
+                # three together, so a correction can be dialled back
+                # without a channel blowing its top; brightness then scales
+                # all three equally. Capping each channel on its own was
+                # the cyan wall of 2026-09-15: the three multipliers had
+                # been pushed above 1.0 from the tuning page, each clipped
+                # to 1.0, and the measured gains under them were silently
+                # switched off. Scaled together, only their ratio counts.
+                # the panel's cap decides its steps; the nearest-colour pick
+                # in the pipeline has to know it (see art/pipeline.py)
+                art_pipeline.PANEL_CAP = int(s["panel_brightness"])
                 wbc = (s["wb_r"], s["wb_g"], s["wb_b"])
-                colour = tuple(min(1.0, g * w) for g, w in zip(tune.gains, wbc))
+                colour = tuple(g * w for g, w in zip(tune.gains, wbc))
+                over = max(colour)
+                if over > 1.0:
+                    colour = tuple(c / over for c in colour)
                 eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
                 mode = s["mode"]
 

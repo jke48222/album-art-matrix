@@ -13,23 +13,31 @@
 #   -l 1.0 : spatial dithering on. Turning it off, and halving the bit depth,
 #            were tried against the last-row ghost; neither touched it and
 #            both cost colour, so both are back where they were.
-#   -b 160 : brightness cap 0-254; raise once PSU headroom is confirmed
+#   -b 254 : the library's table at full range. The wall's real cap is applied
+#            by art_display itself (PANEL_CAP below, and live from every
+#            frame's header), because the library bakes -b in once at launch.
 set -euo pipefail
 FIFO="${FRAME_FIFO:-/tmp/album-frame.fifo}"
 [ -p "$FIFO" ] || mkfifo "$FIFO"
 export FRAME_FIFO="$FIFO"
-# Map-rate cap; must cover [animation] fps in config.toml (the brain produces
-# at fps, this decides how many of those map). Set HERE so a tuned value has
-# one home that survives reboots — the systemd unit runs this script.
-MAPHZ="$(cat "$HOME/album-art-matrix/map-hz" 2>/dev/null || echo 60)"
-case "$MAPHZ" in ''|*[!0-9]*) MAPHZ=60 ;; esac
-export MAX_MAP_HZ="${MAX_MAP_HZ:-$MAPHZ}"
-# The panel's own brightness cap, 1-254. The brain writes this file when the
-# cap is changed from the phone and restarts the renderer, because the cap is
-# a launch flag: there is no way to change it in a running panel.
-BRIGHT="$(cat "$HOME/album-art-matrix/panel-brightness" 2>/dev/null || echo 160)"
-case "$BRIGHT" in ''|*[!0-9]*) BRIGHT=160 ;; esac
-[ "$BRIGHT" -ge 1 ] 2>/dev/null && [ "$BRIGHT" -le 254 ] 2>/dev/null || BRIGHT=160
+# The panel's brightness cap, 1-254, written by the brain when it is changed
+# from the phone. It is not the library's -b any more: the library bakes -b
+# into a table once at launch, so it runs at 254 and art_display applies the
+# cap itself, from this file at launch and from every frame's header after
+# that, live, with its dither keeping the fractions (see art_display.c).
+BRIGHT="$(cat "$HOME/album-art-matrix/panel-brightness" 2>/dev/null || echo 254)"
+case "$BRIGHT" in ''|*[!0-9]*) BRIGHT=254 ;; esac
+[ "$BRIGHT" -ge 1 ] 2>/dev/null && [ "$BRIGHT" -le 254 ] 2>/dev/null || BRIGHT=254
+export PANEL_CAP="$BRIGHT"
+# Temporal dithering at the panel's own frame rate (art_display.c): 1 or 0.
+TDITHER="$(cat "$HOME/album-art-matrix/temporal-dither" 2>/dev/null || echo 1)"
+case "$TDITHER" in 0|1) ;; *) TDITHER=1 ;; esac
+export TEMPORAL_DITHER="$TDITHER"
+# Fractions of a slot under this are rounded rather than dithered, so the
+# dimmest LEDs do not blink slowly. 0 dithers everything.
+DMIN="$(cat "$HOME/album-art-matrix/dither-min" 2>/dev/null || echo 0.2)"
+case "$DMIN" in ''|*[!0-9.]*) DMIN=0.2 ;; esac
+export DITHER_MIN="$DMIN"
 # The panel's row addressing, 0-7. This board ghosts the content's colour into
 # the last row of its scan, which is what a wrong addressing looks like, so it
 # is worth sweeping. Written by the brain, same as the cap.
@@ -72,7 +80,7 @@ PMAP="$ROW"; for _ in $(seq 2 "$ROWS"); do PMAP="$PMAP,$ROW"; done
 echo "[renderer] wall ${COLS}x${ROWS} panels = ${W}x${H}, ports=$ROWS chain=$COLS" >&2
 exec "$HOME/album-art-matrix/renderer/art_display" \
   -w "$TILE" -h "$TILE" -p "$ROWS" -c "$COLS" -x "$W" -y "$H" \
-  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b "$BRIGHT" -P "$PMAP"
+  -d "$DEPTH" -f 120 -g 2.2 -t none -l "$DITHER" -b 254 -P "$PMAP"
 
 # The last row. This panel used to ghost the content's own colour into the
 # bottom row of its scan (a red clock left a red line there) on frames whose
