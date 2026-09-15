@@ -761,6 +761,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 hk = getattr(ctrl, "homekit", None)
                 self._json(200, hk.status() if hk is not None else {"enabled": False})
                 return
+            if u.path.startswith("/features"):
+                fe = getattr(ctrl, "features", None)
+                self._json(200, fe.public() if fe is not None else {"features": [], "off": []})
+                return
             if u.path.startswith("/health"):
                 self._json(200, ctrl.health())
                 return
