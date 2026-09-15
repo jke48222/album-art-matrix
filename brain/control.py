@@ -757,6 +757,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     limit = 50
                 self._json(200, {"entries": ctrl.journal_read(limit)})
                 return
+            if u.path.startswith("/homekit"):
+                hk = getattr(ctrl, "homekit", None)
+                self._json(200, hk.status() if hk is not None else {"enabled": False})
+                return
             if u.path.startswith("/health"):
                 self._json(200, ctrl.health())
                 return
@@ -791,6 +795,32 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if self.path.startswith("/homekit/"):
+                # the pairing code, drawn on the panel; and taken down
+                hk = getattr(ctrl, "homekit", None)
+                if hk is None:
+                    self._json(404, {"error": "homekit is off in config.toml"})
+                    return
+                if self.path.startswith("/homekit/show"):
+                    # ?s=900 keeps the code up longer than the default three
+                    # minutes, for a pairing that is being sorted out slowly
+                    try:
+                        secs = float(parse_qs(urlparse(self.path).query).get("s", ["180"])[0])
+                    except ValueError:
+                        secs = 180.0
+                    ok = hk.show_code(max(30.0, min(1800.0, secs)))
+                    self._json(200 if ok else 503, hk.status())
+                    return
+                if self.path.startswith("/homekit/hide"):
+                    hk.hide_code()
+                    self._json(200, hk.status())
+                    return
+                if self.path.startswith("/homekit/refresh"):
+                    ok = hk.refresh()
+                    self._json(200 if ok else 503, hk.status())
+                    return
+                self._json(404, {"error": "not found"})
+                return
             if self.path.startswith("/replay"):
                 patch = self._body()
                 if patch is None:

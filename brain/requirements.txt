@@ -7,6 +7,11 @@ numpy>=1.26
 shazamio
 audioop-lts; python_version >= "3.13"
 
+# HomeKit: the wall in the Home app (brain/homekit.py). The brain runs
+# without it and says so when [homekit] is enabled; the QRCode extra draws
+# the pairing code on the panel.
+HAP-python[QRCode]
+
 # The fallback for videos YouTube refuses the wall's own resolver (VIDEO.md).
 # Optional: the wall runs without it, and says so when a video needs it.
 # Needs updating often; pi/install-ytdlp.sh is the one-liner for that.

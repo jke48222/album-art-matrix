@@ -122,3 +122,22 @@ fps = 60
 
 [control]
 port = 8788     # wall control API (iOS companion posts here)
+
+[homekit]
+# The wall in the Home app, and so on Siri, the Watch and in Control Centre:
+# a light (on, off, brightness, a colour for the ambient face), a television
+# (the faces as inputs, driven by the Control Centre remote), and two sensors
+# (sound in the room, music on the wall) for automations. Pairing lives in
+# ~/.config/album-art-matrix/homekit.state; delete it to unpair. While
+# unpaired the wall draws its setup code on the panel for three minutes at
+# boot, and POST /homekit/show draws it again. Needs HAP-python (in
+# requirements.txt). Automations and Siri on a HomePod need a home hub.
+enabled = false
+name = "Wall"       # what Siri calls the light; the rest are "<name> Remote", "<name> Sound", "<name> Music"
+port = 51826
+# The setup code. Set one: the library keeps keys and pairings across
+# restarts but not the code, so without this every restart draws a new one.
+# Eight digits as xxx-xx-xxx, nothing obvious (HomeKit refuses 000-00-000,
+# 123-45-678 and the like).
+pincode = "371-22-984"
+log = "info"        # "debug" logs every request the phone makes, for a pairing that will not take
