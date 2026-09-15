@@ -196,6 +196,47 @@ class Imaginer:
         return COST.get((self.provider, self.model, self.quality)) or COST.get((self.provider, self.model, "*"))
 
     # ---- the deed ------------------------------------------------------------------------------
+    def draw(self, prompt: str, expanded: str | None = None) -> Image.Image:
+        """The picture for a prompt, in hand, not shown and not kept: the
+        games' way in (AI pictionary). Raises with the reason when it
+        cannot."""
+        prompt = " ".join((prompt or "").split())
+        if not prompt:
+            raise ValueError("describe the picture")
+        if not self.ready:
+            raise RuntimeError("no image key on the wall yet")
+        with self._lock:
+            now = self._clock()
+            if self.busy:
+                raise RuntimeError("still drawing the last one")
+            if now - self._last_at < MIN_GAP_S:
+                raise RuntimeError(f"one picture every {int(MIN_GAP_S)} seconds")
+            self._last_at = now
+            self.busy = True
+        try:
+            size = int(getattr(getattr(self.ctrl, "wall", None), "width", 64) or 64)
+            expanded = expanded or self.expand(prompt, size)
+            try:
+                raw = self._openai(expanded) if self.provider == "openai" else self._google(expanded)
+            except Exception as exc:
+                self.problem = f"{type(exc).__name__}: {str(exc)[:160]}"
+                print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
+                raise RuntimeError(f"the image model said no: {str(exc)[:120]}") from exc
+            try:
+                img = Image.open(io.BytesIO(raw)).convert("RGB")
+                img.load()
+            except Exception as exc:
+                self.problem = f"bad image: {exc}"
+                raise RuntimeError("the image came back unreadable") from exc
+            usd = self._cost()
+            with self._lock:
+                self.count += 1
+                if usd:
+                    self.cost_usd += usd
+            return img
+        finally:
+            self.busy = False
+
     def imagine(self, prompt: str) -> dict:
         prompt = " ".join((prompt or "").split())
         if not prompt:
