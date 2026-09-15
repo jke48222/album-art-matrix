@@ -18,7 +18,7 @@ is on — no Mac required.
                    phone's PKCE sign-in; the wall polls Spotify from then on
   POST /spotify/unlink -> forget the Spotify account
   POST /services   -> {spotify: {client_id}, lastfm: {api_key, user},
-                   listenbrainz: {user}, acoustid: {api_key, device}}: any
+                   listenbrainz: {user}, ears: {device}}: any
                    subset; kept in services.json, applied at once. This is
                    how every service gets connected from the phone alone.
   POST /video    -> {url, sound?, loop?}: a YouTube link, or any link ffmpeg
@@ -131,6 +131,14 @@ class ControlState:
         self._lock = threading.Lock()
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
+        self.loop_beat = None        # main loop: last pass, for /health
+        self.quiet_since = None      # main loop: when the music stopped
+        self.idle_now = None         # main loop: idle face in force (black|dim|ambient)
+        # dirty = redraw what is up; repoll = something may be PLAYING that
+        # was not a moment ago (the phone pushed, the ear heard), so the
+        # main loop leaves its render stint and asks the chain now.
+        self.repoll = threading.Event()
+        self.news = threading.Event()        # the poller has a fresh answer
         self.now_showing = {}        # main loop writes {title, artist, album}
         # Where the song is, so a client can run the same clock we do rather
         # than being told a number that is already stale by the time it lands.
@@ -168,7 +176,7 @@ class ControlState:
         self.spotify = None          # SpotifySource
         self.lastfm = None           # LastfmSource
         self.listenbrainz = None     # ListenBrainzSource
-        self.acoustid = None         # AcoustidSource
+        self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
         self.source = None           # the whole chain, for /nowplaying
@@ -192,6 +200,11 @@ class ControlState:
     def get(self) -> dict:
         with self._lock:
             return dict(self._s)
+
+    def nudge(self):
+        """A source changed its mind: poll again now, not next tick."""
+        self.repoll.set()
+        self.dirty.set()
 
     def _merge(self, patch: dict, persist: bool = True) -> dict:
         rejected = {}
@@ -389,22 +402,33 @@ class ControlState:
     def services(self) -> dict:
         """What the app shows on its Services page. No secrets: the Spotify
         client id is public by design (PKCE); keys come back as yes/no."""
-        sp, lf, lb, ac, ap = (self.spotify, self.lastfm, self.listenbrainz,
-                              self.acoustid, self.apple)
-        ears = ac.status() if ac else {
-            "key_set": False, "device": "", "mic": None, "tools": False,
-            "listening": False, "heard_s": None, "problem": None}
+        sp, lf, lb, ear, ap = (self.spotify, self.lastfm, self.listenbrainz,
+                               self.ears, self.apple)
+        hearing = ear.status() if ear else {
+            "engine": "shazam", "on": False, "tools": False, "device": "",
+            "mic": None, "listening": False, "state": "off", "level_db": None,
+            "floor_db": None, "gate_db": None, "gate_open": False,
+            "loud_s": None, "quiet_s": None, "heard_s": None, "heard": None,
+            "attempts": 0, "matches": 0, "settings": {},
+            "problem": "this wall has no ears"}
         return {
             "spotify": {"client_id": sp.client_id if sp else "",
                         "linked": bool(sp and sp.linked)},
             "lastfm": {"user": lf.user if lf else "",
                        "key_set": bool(lf and lf.api_key)},
             "listenbrainz": {"user": lb.user if lb else ""},
-            "acoustid": ears,
+            "hearing": hearing,
+            # the ear's earlier shape, for a phone not rebuilt yet. There is
+            # no key any more, so a key is always "set".
+            "acoustid": {"key_set": True, "device": hearing["device"],
+                         "mic": hearing["mic"], "tools": hearing["tools"],
+                         "listening": hearing["listening"],
+                         "heard_s": hearing["heard_s"],
+                         "problem": hearing["problem"]},
             "phone": {"age_s": (self.pushed.phone_age if self.pushed else None)},
             "mac": {"endpoint": (ap.endpoint if ap else ""),
                     "answering": (ap.answering if ap else None)},
-            "ears": bool(ears["key_set"] and ears["tools"]),
+            "ears": bool(hearing["tools"] and hearing["mic"]),
         }
 
     def apply_services(self, patch: dict) -> dict:
@@ -421,13 +445,13 @@ class ControlState:
                                   store.get("lastfm", "user"))
         if "listenbrainz" in changed and self.listenbrainz:
             self.listenbrainz.configure(store.get("listenbrainz", "user"))
-        if "acoustid" in changed and self.acoustid:
-            self.acoustid.configure(store.get("acoustid", "api_key"),
-                                    store.get("acoustid", "device"))
+        if ("ears" in changed or "acoustid" in changed) and self.ears:
+            self.ears.configure(device=store.get("ears", "device")
+                                or store.get("acoustid", "device"))
         if changed:
             print(f"[control] services set from the phone: "
                   f"{', '.join(changed)}")
-            self.dirty.set()
+            self.nudge()
         return rejected
 
     # ---- video ----------------------------------------------------------
@@ -510,6 +534,9 @@ class ControlState:
         return {"fps": round(self.fps_last, 1), "temp_c": temp,
                 "throttled": throttled,
                 "uptime_s": int(time.monotonic() - _T0),
+                "loop_age_s": (None if self.loop_beat is None else round(time.monotonic() - self.loop_beat, 1)),
+                "quiet_s": (None if self.quiet_since is None else int(time.monotonic() - self.quiet_since)),
+                "idle": self.idle_now,
                 "mode": self.get()["mode"],
                 "ytdlp": ytdlp_v}
 
@@ -1025,7 +1052,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 ctrl.pushed.push(data)
                 ctrl.last_client = time.monotonic()
-                ctrl.dirty.set()          # show the new song now, not next poll
+                ctrl.nudge()              # show the new song now, not next poll
                 self._empty(204)
                 return
 

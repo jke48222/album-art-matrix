@@ -2,6 +2,11 @@ requests>=2.31
 Pillow>=10.0
 numpy>=1.26
 
+# The wall's ears: Shazam signatures, built in Rust. audioop-lts is the
+# module pydub (inside shazamio) still imports and Python 3.13 removed.
+shazamio
+audioop-lts; python_version >= "3.13"
+
 # The fallback for videos YouTube refuses the wall's own resolver (VIDEO.md).
 # Optional: the wall runs without it, and says so when a video needs it.
 # Needs updating often; pi/install-ytdlp.sh is the one-liner for that.

@@ -18,6 +18,10 @@ FIELDS = {
     "lastfm": {"api_key": r"^[0-9A-Za-z]{16,64}$",
                "user": r"^[^\s/]{1,64}$"},
     "listenbrainz": {"user": r"^[^\s/]{1,64}$"},
+    "ears": {"device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
+    # the ear's old name. Still accepted, so a phone that has not been
+    # rebuilt can keep sending its AcoustID key without being refused;
+    # nothing reads the key now.
     "acoustid": {"api_key": r"^[0-9A-Za-z_-]{6,64}$",
                  "device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
 }

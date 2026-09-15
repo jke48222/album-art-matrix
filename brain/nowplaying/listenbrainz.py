@@ -24,12 +24,16 @@ API = "https://api.listenbrainz.org/1/user/{user}/playing-now"
 UA = "album-art-matrix/1.0 (github.com/jke48222/album-art-matrix)"
 
 
+CACHE_S = 5.0     # seconds one answer stands before the service is asked again
+
+
 class ListenBrainzSource(NowPlayingSource):
     name = "listenbrainz"
 
     def __init__(self, user: str = ""):
         self.user = (user or "").strip()
         self._backoff_until = 0.0
+        self._asked_at, self._last = 0.0, None
         self._art_key = None
         self._art_url = None
 
@@ -41,6 +45,7 @@ class ListenBrainzSource(NowPlayingSource):
         if user is not None:
             self.user = user.strip()
         self._backoff_until = 0.0
+        self._asked_at, self._last = 0.0, None
         self._art_key = self._art_url = None
 
     def _art(self, key, title, artist, album, release_mbid):
@@ -63,6 +68,16 @@ class ListenBrainzSource(NowPlayingSource):
         return url
 
     def get_current(self):
+        # The chain asks every couple of seconds; the service is asked at
+        # most every CACHE_S and the last answer stands in between.
+        now = time.time()
+        if now - self._asked_at < CACHE_S:
+            return self._last
+        self._asked_at = now
+        self._last = self._fetch()
+        return self._last
+
+    def _fetch(self):
         if not self.user or time.time() < self._backoff_until:
             return None
         resp = requests.get(API.format(user=urllib.parse.quote(self.user)),

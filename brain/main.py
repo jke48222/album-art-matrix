@@ -13,6 +13,7 @@ doesn't shift color. A control change wakes the loop instantly (dirty event).
 """
 import argparse
 import sys
+import threading
 import time
 
 if sys.version_info < (3, 11):
@@ -28,12 +29,13 @@ from .art.effects import Ambient
 from .art.fetch import fetch_art
 from .art.lyrics import LyricBook, LyricCanvas
 from .art.nine import NineBuilder
+from . import halo as halo_mod
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .sun import sun_factor
-from .nowplaying.acoustid import AcoustidSource
+from .nowplaying.ears import EarsSource
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -64,7 +66,7 @@ def make_sink(cfg: dict, override: str | None = None, wall=None):
     raise ValueError(f"unknown sink type: {kind}")
 
 
-DEFAULT_ORDER = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "acoustid"]
+DEFAULT_ORDER = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
 
 
 def build_sources(cfg: dict, ctrl):
@@ -76,7 +78,9 @@ def build_sources(cfg: dict, ctrl):
       spotify      the API, for any device; tokens arrive from the phone
       lastfm       Spotify, Tidal and Deezer reporting through one account
       listenbrainz the open ledger; reading it needs no key at all
-      acoustid     the wall's own microphone, for anything out loud
+      ears         the wall's own microphone, for anything out loud; last
+                   in line, but the chain lets a source that can hear music
+                   playing outrank one that only remembers a paused song
     Every adapter is built whether or not it has its details yet: the phone
     hands them over later (POST /services) and the adapter starts answering
     with no restart. config.toml's list is the order of preference; anything
@@ -85,6 +89,7 @@ def build_sources(cfg: dict, ctrl):
     store = Services(cfg)
     ctrl.services_store = store
     order = [str(n) for n in cfg.get("nowplaying", {}).get("adapters", DEFAULT_ORDER)]
+    order = ["ears" if n == "acoustid" else n for n in order]   # the ear's old name
     order += [n for n in DEFAULT_ORDER if n not in order]
     sources = []
     for name in order:
@@ -130,12 +135,14 @@ def build_sources(cfg: dict, ctrl):
             ctrl.listenbrainz = lb
             sources.append(lb)
             print(f"[main] listenbrainz: {'following ' + lb.user if lb.configured else 'not set up'}")
-        elif name == "acoustid":
-            ac = AcoustidSource(store.get("acoustid", "api_key"),
-                                store.get("acoustid", "device") or "auto")
-            ctrl.acoustid = ac
-            sources.append(ac)
-            print(f"[main] acoustid: {'listening' if ac.status()['listening'] else 'key set, waiting for a microphone' if ac.configured else 'no key yet'}")
+        elif name == "ears":
+            ear = EarsSource(store.get("ears", "device")
+                             or store.get("acoustid", "device") or "auto",
+                             on_change=ctrl.nudge)
+            ctrl.ears = ear
+            sources.append(ear)
+            st = ear.status()
+            print(f"[main] ears: {'opening the microphone' if st['tools'] else st['problem']}")
         else:
             print(f"[main] adapter {name!r} unknown — skipping")
     if not sources:
@@ -143,16 +150,63 @@ def build_sources(cfg: dict, ctrl):
     return sources
 
 
+def _is_shown(now, last_track, showing) -> bool:
+    """Is this the song already on the wall? By id first; by name when two
+    sources report the same song under different ids."""
+    if now.track_id == last_track:
+        return True
+    if not showing:
+        return False
+    def plain(x):
+        return (x or "").strip().lower()
+    return plain(now.title) == plain(showing.get("title")) \
+        and plain(now.artist) == plain(showing.get("artist"))
+
+
+class _Poller(threading.Thread):
+    """Asks the source chain on its own thread. A poll can take seconds when
+    a source is slow (the Mac's account helper, a scrobbler across the
+    internet), and for as long as the render loop made that call itself the
+    wall froze for the duration: an ambient face stuttering every two
+    seconds, the phone's requests queueing behind a lookup. Now the loop
+    only ever reads `latest`. `wake` (ctrl.repoll) brings the next poll
+    forward, which is what a phone push or the ear's hit does; `news`
+    (ctrl.news) tells the loop an answer is in."""
+
+    def __init__(self, source, interval, wake, news):
+        super().__init__(daemon=True, name="poll")
+        self.source, self.interval, self.wake, self.news = source, interval, wake, news
+        self.latest = None
+        self.asked_at = None
+
+    def run(self):
+        while True:
+            try:
+                now = self.source.get_current()
+            except Exception as exc:
+                print(f"[poll] {exc}")
+                now = None
+            self.latest, self.asked_at = now, time.monotonic()
+            self.news.set()
+            self.wake.wait(self.interval)
+            self.wake.clear()
+
+
 class _FrameTee:
     """Wraps the sink so the control API always has the current frame
     (pre-white-balance when available — that's what the phone previews)."""
 
-    def __init__(self, sink, ctrl, size):
+    def __init__(self, sink, ctrl, size, halo=None):
         self._sink, self._ctrl, self._size = sink, ctrl, size
+        self._halo = halo
 
     def show(self, rgb888: bytes, pre_wb_img=None):
         self._ctrl.last_frame = (pre_wb_img.tobytes()
                                  if pre_wb_img is not None else rgb888)
+        # every mode reaches the wall through here, so the halo hangs off this
+        # one call and follows album art, video and effects alike
+        if self._halo is not None and pre_wb_img is not None:
+            self._halo.show(pre_wb_img)
         self._sink.brightness = self._ctrl.get()["panel_brightness"]
         if self._ctrl.tuning is not None:
             self._sink.dither = self._ctrl.tuning.get("dither")
@@ -204,15 +258,23 @@ def main():
     }, frame_len=size * size * 3, wall=wall)
     source = SourceChain(build_sources(cfg, ctrl))
     ctrl.source = source
+    poller = _Poller(source, poll_s, wake=ctrl.repoll, news=ctrl.news)
+    poller.start()
+    if args.once:
+        ctrl.news.wait(20)               # one pass wants an answer to show
     # a link from the phone: fetched and decoded on its own threads
     ctrl.video = VideoPlayer(size, ctrl.dirty, on_media=ctrl.video_media,
                              unsharp_radius=tune.get("unsharp_radius"),
                              unsharp_percent=tune.get("unsharp_percent"))
     ctrl.tuning = tune
     tune.video = ctrl.video
+    tune.ears = ctrl.ears          # the Hearing knobs land on the ear
     tune.apply()
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
-    sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size)
+    halo = halo_mod.from_config(cfg)
+    sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
+    if halo is not None:
+        print(f"[main] halo: {halo.count} LEDs")
 
     print(f"[main] adapters: {[s.name for s in source.sources]}, "
           f"wall {wall}, poll {poll_s:.0f}s, "
@@ -310,6 +372,7 @@ def main():
             ctrl.dirty.clear()
 
     while True:
+        ctrl.loop_beat = time.monotonic()      # /health: the loop is alive
         # ---- phone asked to re-show something from the journal ----------
         if ctrl.replay is not None:
             entry, ctrl.replay = ctrl.replay, None
@@ -329,17 +392,33 @@ def main():
         # Not while a video is on: a poll can cost two seconds, and a
         # picture that freezes for two seconds every five is not a video.
         # The song is still there when the video ends.
+        # The answer comes from the poller's thread, so a slow source never
+        # stalls the picture. Not while a video is on: the song is still
+        # there when the video ends.
+        ctrl.news.clear()
         if not (ctrl.video is not None and ctrl.video.busy
                 and ctrl.get()["mode"] == "video"):
-            now = source.get_current()
+            now = poller.latest
+            # A paused source keeps the wall only when it is the song the
+            # wall is already on: the thing that just stopped. A phone left
+            # paused on some other song while a record played is not news;
+            # when the record ends the wall goes quiet the way it does for
+            # everything else, and the idle face follows in its own time.
+            if now is not None and not now.is_playing and last_track is not None \
+                    and not _is_shown(now, last_track, ctrl.now_showing):
+                now = None
 
         # Silence is a state worth having an opinion about. A wall left on a
         # frozen sleeve all night is a different object from one that quietly
         # goes dark, so this is the owner's call, not ours.
-        if now is not None and now.is_playing:
+        # Music that can be shown resets the quiet clock. A playing answer
+        # with no sleeve (a video on the Mac) keeps the last sleeve up but
+        # is quiet for this purpose, so the idle face still follows.
+        if now is not None and now.is_playing and now.art_url:
             quiet_since = None
         elif quiet_since is None:
             quiet_since = time.monotonic()
+        ctrl.quiet_since = quiet_since         # /health: how long the room has been quiet
 
         # ---- nobody home ------------------------------------------------
         # Presence is the phone talking to the reporter, or the app talking
@@ -442,7 +521,8 @@ def main():
         poll_end = time.monotonic() + max(1.5, poll_s)
         try:
             # a pending replay bails out of the render loop immediately
-            while time.monotonic() < poll_end and ctrl.replay is None:
+            while time.monotonic() < poll_end and ctrl.replay is None \
+                    and not ctrl.news.is_set():
                 s = ctrl.get()
                 sl = ctrl.sleep      # snapshot: the API thread can null this
                 fade = 1.0                       # sleep fade scales brightness
@@ -526,6 +606,7 @@ def main():
                         idle_now = "dim"
                     elif idle == "ambient":
                         mode, idle_now = "ambient", "ambient"
+                ctrl.idle_now = idle_now
                 if idle_now != idle_prev:
                     # engaging or lifting the override is a repaint, or the
                     # dimmed sleeve never shows and black outlives the silence

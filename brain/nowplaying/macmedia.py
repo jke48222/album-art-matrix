@@ -30,6 +30,13 @@ from .applemusic import _itunes_art
 
 CANDIDATES = ("/opt/homebrew/bin/media-control", "/usr/local/bin/media-control")
 SKIP = {"com.apple.Music"}          # the Apple Music adapter's, not ours
+# A browser tab playing something longer than this is a show or a stream,
+# not a song, and the wall has no business wearing its thumbnail. Music in
+# a browser (YouTube Music, SoundCloud) is song-length and still comes in.
+BROWSERS = {"com.google.Chrome", "com.apple.Safari", "org.mozilla.firefox",
+            "company.thebrowser.Browser", "com.microsoft.edgemac",
+            "com.brave.Browser", "com.operasoftware.Opera", "com.vivaldi.Vivaldi"}
+BROWSER_SHOW_MS = 20 * 60 * 1000
 WAIT_FOR_ART_S = 6.0                # a new item's artwork loads a beat late
 
 APPS = {
@@ -163,6 +170,14 @@ class MacMediaSource(NowPlayingSource):
         duration = d.get("duration")
         duration_ms = (int(duration * 1000)
                        if isinstance(duration, (int, float)) and duration > 0 else None)
+        # A browser tab is music only when it says who made it: YouTube Music,
+        # SoundCloud and YouTube itself all name an artist. A show or a stream
+        # names nothing but its title, and macOS then hands over the browser's
+        # own icon as the artwork, which is what a Paramount+ episode looked
+        # like on the wall. Longer than a song is a show whatever it says.
+        if bundle in BROWSERS and ((not artist and not album)
+                                   or (duration_ms and duration_ms > BROWSER_SHOW_MS)):
+            return None
         if progress is not None and duration_ms:
             progress = min(progress, duration_ms)
 

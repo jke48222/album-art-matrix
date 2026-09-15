@@ -259,16 +259,16 @@ wall, in a 63.5 mm gap, next to a fan. A microphone there hears the fan. Run a
 short USB extension and zip tie the mic at the **bottom edge of the board**
 facing into the room, or just below the edge where nothing sees it.
 
-Then check the Pi can see it, because it currently has no capture device at
-all:
+Then check the Pi can see it:
 
 ```bash
 arecord -l          # the mic should appear as card 1 or 2
 ```
 
-`config.toml` already has `[acoustid] device = "auto"`, which takes the first
-USB microphone in that list, and the key is already set. Plugging this in is
-what turns the wall's ears on.
+`config.toml` has `[ears] device = "auto"`, which takes the first USB
+microphone in that list; there is no key to set, the wall names what it hears
+through Shazam. Plugging this in is what turns the wall's ears on. The gate,
+the clip length and the microphone gain are Hearing knobs on the phone.
 
 **TCS34725 colour sensors: neither one goes in the wall.** They are the bench
 instrument for the white balance measurement in section 8, and they run on the

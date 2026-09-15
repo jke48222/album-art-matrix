@@ -19,6 +19,9 @@ from .applemusic import _itunes_art
 API = "https://ws.audioscrobbler.com/2.0/"
 
 
+CACHE_S = 5.0     # seconds one answer stands before the service is asked again
+
+
 class LastfmSource(NowPlayingSource):
     name = "lastfm"
 
@@ -26,6 +29,7 @@ class LastfmSource(NowPlayingSource):
         self.api_key = (api_key or "").strip()
         self.user = (user or "").strip()
         self._backoff_until = 0.0
+        self._asked_at, self._last = 0.0, None
         self._art_key = None
         self._art_url = None
 
@@ -40,6 +44,7 @@ class LastfmSource(NowPlayingSource):
         if user is not None:
             self.user = user.strip()
         self._backoff_until = 0.0
+        self._asked_at, self._last = 0.0, None
         self._art_key = self._art_url = None
 
     def _art(self, title, artist, album, lastfm_url):
@@ -55,6 +60,16 @@ class LastfmSource(NowPlayingSource):
         return url
 
     def get_current(self):
+        # The chain asks every couple of seconds; the service is asked at
+        # most every CACHE_S and the last answer stands in between.
+        now = time.time()
+        if now - self._asked_at < CACHE_S:
+            return self._last
+        self._asked_at = now
+        self._last = self._fetch()
+        return self._last
+
+    def _fetch(self):
         if not self.api_key or not self.user or time.time() < self._backoff_until:
             return None
         resp = requests.get(API, params={

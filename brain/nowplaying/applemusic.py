@@ -41,6 +41,9 @@ STATE_JSON = os.path.expanduser(
 # rewritten on track changes, so 20 minutes of silence outlasts almost any
 # song while still letting a corpse expire.
 STATE_JSON_TTL_S = 20 * 60
+ACCOUNT_SONG_S = 300.0     # how long an account-view track counts as on when its length is unknown
+ACCOUNT_CACHE_S = 10.0     # how long one helper answer stands
+ACCOUNT_SEEN = os.path.expanduser("~/.config/album-art-matrix/account_seen.json")
 
 # NB: "st" is a reserved word in macOS 27 AppleScript — hence pstate.
 OSA_META = '''
@@ -64,6 +67,24 @@ end tell
 
 def _helper_python():
     return "/usr/bin/python3" if os.path.exists("/usr/bin/python3") else sys.executable
+
+
+def _load_seen():
+    try:
+        with open(ACCOUNT_SEEN) as fh:
+            d = json.load(fh)
+        return (str(d["tid"]), float(d["at"]))
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def _save_seen(acct):
+    try:
+        os.makedirs(os.path.dirname(ACCOUNT_SEEN), exist_ok=True)
+        with open(ACCOUNT_SEEN, "w") as fh:
+            json.dump({"tid": acct[0], "at": acct[1]}, fh)
+    except OSError:
+        pass
 
 
 def _run_helper(*args, timeout=20):
@@ -158,6 +179,8 @@ class AppleMusicSource(NowPlayingSource):
         self._art_key = None
         self._art_url_cached = None
         self._warned = False
+        self._acct = None           # (track id, when the account view first showed it)
+        self._acct_cache = (0.0, None, None)   # (asked at, args, parsed answer)
 
     # ---- artwork (the widget's fallback ladder, simplified) ------------
     def _art_url(self, title, artist, album):
@@ -208,15 +231,38 @@ class AppleMusicSource(NowPlayingSource):
         return now, (info["title"], info["artist"])
 
     def _tier2_account(self, mac_track="", mac_artist=""):
-        out = _run_helper("--nowplaying", mac_track, mac_artist)
-        if not out:
+        # The helper asks Apple; asked every two seconds it would be asking
+        # too often for an answer that changes once a song.
+        asked, args, cached = self._acct_cache
+        if time.time() - asked < ACCOUNT_CACHE_S and args == (mac_track, mac_artist):
+            s = cached
+        else:
+            out = _run_helper("--nowplaying", mac_track, mac_artist)
+            s = None
+            if out:
+                try:
+                    s = json.loads(out)
+                except json.JSONDecodeError:
+                    s = None
+            self._acct_cache = (time.time(), (mac_track, mac_artist), s)
+        if not s:
             return None
-        try:
-            s = json.loads(out)
-        except json.JSONDecodeError:
+        tid = f"applemusic:{s.get('artist')}|{s.get('track')}"
+        # "Recently played" never says whether it is still playing. A track
+        # counts as on for one song's length after it first shows up here and
+        # is a memory after that, so a song played in the afternoon cannot
+        # claim the wall all evening. Same rule as applemusic_account.py.
+        now_t = time.time()
+        if self._acct is None:
+            self._acct = _load_seen()        # a restart must not re-arm an old song
+        if self._acct is None or self._acct[0] != tid:
+            self._acct = (tid, now_t)
+            _save_seen(self._acct)
+        song_s = (float(s.get("duration_ms") or 0) / 1000.0) or ACCOUNT_SONG_S
+        if now_t - self._acct[1] > song_s + 15:
             return None
         return NowPlaying(
-            track_id=f"applemusic:{s.get('artist')}|{s.get('track')}",
+            track_id=tid,
             title=s.get("track", "?"), artist=s.get("artist", "?"),
             album=s.get("album", "?"), art_url=s.get("art"),
             progress_ms=None, duration_ms=None, is_playing=True,

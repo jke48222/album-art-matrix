@@ -50,13 +50,16 @@ unsharp_percent = 60    # light unsharp after Lanczos; 0 disables
 # read with the MusicKit credentials deploy.sh copies over. Any adapter left
 # out of this list still runs, after these: a service connected from the
 # phone always has somewhere to be.
-adapters = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "acoustid"]
+adapters = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
 
 # Every key and username in the sections below can be set from the phone
 # instead (Tessera > Settings > Services). What the phone sets is kept in
 # ~/.config/album-art-matrix/services.json on the wall and wins over this
 # file, so nobody needs a computer to connect a service.
-poll_seconds = 5.0
+# The phone's push and the wall's own ears wake the loop the moment they
+# have news; this is the pace for everything polled (a Mac, Last.fm,
+# ListenBrainz), and those two keep a five-second memory so 2 s costs little.
+poll_seconds = 2.0
 
 [applemusic]
 # "" = brain runs on this Mac and reads Music/MusicKit directly.
@@ -90,12 +93,12 @@ user = ""
 # SoundCloud, Amazon Music and more) reaches the wall this way.
 user = ""
 
-[acoustid]
-# The wall's own microphone. Key: acoustid.org/new-application (or from the
-# phone). The Pi's bootstrap installs the tools (libchromaprint-tools,
-# alsa-utils). "auto" picks the first USB microphone `arecord -l` lists;
-# name one instead if there are several (plughw:1,0 is usual).
-api_key = ""
+[ears]
+# The wall's own microphone, named by Shazam (shazamio: no key, no account,
+# and not an offered API, so it can break the day Apple changes it). "auto"
+# picks the first USB microphone `arecord -l` lists; name one instead if
+# there are several (plughw:2,0 is usual). Everything else about hearing,
+# the gate, the clip length, the gain, is a Hearing knob on the phone.
 device = "auto"
 
 [sink]

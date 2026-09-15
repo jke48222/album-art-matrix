@@ -80,6 +80,37 @@ SPECS = [
     ("video_floor", "Video", "bool", 0, 1, 1, False,
      "Give video the same shadow lift a still sleeve gets. Off keeps its "
      "blacks black, which is what a night scene needs."),
+
+    # The ear's knobs live here too: same store, same page on the phone,
+    # nothing to restart. Levels are dB below the microphone's ceiling.
+    ("hearing", "Hearing", "bool", 0, 1, 1, False,
+     "Listen to the room through the wall's microphone and name what is "
+     "playing. Off leaves the microphone open for the level meter only."),
+    ("listen_for", "Hearing", "float", 3.0, 12.0, 0.5, False,
+     "Seconds of the room sent to be named. Shorter answers sooner, longer "
+     "is surer; the answer itself takes about two more."),
+    ("room_gate", "Hearing", "int", -80, -20, 1, False,
+     "How loud the room must be before the wall listens. The Hearing page "
+     "shows the live level and the quiet-room floor next to this."),
+    ("quiet_before_letting_go", "Hearing", "int", 3, 90, 1, False,
+     "Seconds of quiet before a heard song is let go and the wall falls back "
+     "to its other sources. The gaps between a record's tracks are two or three."),
+    ("listen_again_every", "Hearing", "int", 10, 120, 5, False,
+     "While a song is up, how often the wall checks whether the record has "
+     "moved on. A gap between tracks triggers a check on its own."),
+    ("retry_after_miss", "Hearing", "int", 2, 30, 1, False,
+     "Seconds before another try when the room is loud but nothing was "
+     "named. Every miss also makes the next clip longer, up to 12 s, "
+     "which is what a noisy room needs."),
+    ("keep_through_noise", "Hearing", "int", 30, 600, 30, False,
+     "Once a song is named, how long the wall keeps it while the room stays "
+     "loud but nothing can be named again, as with a TV on or people "
+     "talking. Quiet still lets go sooner."),
+    ("mic_gain", "Hearing", "int", 0, 100, 5, False,
+     "The microphone's own gain."),
+    ("mic_auto_gain", "Hearing", "bool", 0, 1, 1, False,
+     "Let the microphone ride its own gain. Off keeps the level meter and "
+     "the gate honest: with it on, a quiet room is slowly turned up."),
 ]
 BY_NAME = {s[0]: s for s in SPECS}
 
@@ -93,7 +124,17 @@ def _shipped(cfg: dict) -> dict:
     """Where a knob starts: config.toml if it says, else the code's own."""
     wb = cfg.get("whitebalance", {})
     pipe = cfg.get("pipeline", {})
+    ears = cfg.get("ears", {})
     return {
+        "hearing": bool(ears.get("on", True)),
+        "listen_for": float(ears.get("listen_for", 6.0)),
+        "room_gate": int(ears.get("room_gate", -52)),
+        "quiet_before_letting_go": int(ears.get("quiet_before_letting_go", 10)),
+        "listen_again_every": int(ears.get("listen_again_every", 25)),
+        "retry_after_miss": int(ears.get("retry_after_miss", 4)),
+        "keep_through_noise": int(ears.get("keep_through_noise", 180)),
+        "mic_gain": int(ears.get("mic_gain", 100)),
+        "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
         "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0, "map_hz": 60,
         "panel_type": 0,
         "gain_r": float(wb.get("r", 1.0)),
@@ -120,6 +161,7 @@ class Tuning:
         self.defaults = _shipped(cfg)
         self.values = dict(self.defaults)
         self.video = None            # the VideoPlayer, when there is one
+        self.ears = None             # the EarsSource, when the wall has one
         try:
             with open(PATH) as fh:
                 saved = json.load(fh)
@@ -215,6 +257,14 @@ class Tuning:
         if self.video is not None:
             self.video.unsharp_radius = float(v["unsharp_radius"])
             self.video.unsharp_percent = int(v["unsharp_percent"])
+        if self.ears is not None:
+            self.ears.configure(on=v["hearing"], clip_s=v["listen_for"],
+                                gate_db=v["room_gate"],
+                                silence_s=v["quiet_before_letting_go"],
+                                relisten_s=v["listen_again_every"],
+                                retry_s=v["retry_after_miss"],
+                                keep_s=v["keep_through_noise"],
+                                gain=v["mic_gain"], agc=v["mic_auto_gain"])
         for name, fname in FILES.items():
             try:
                 with open(os.path.join(ROOT, fname), "w") as fh:
