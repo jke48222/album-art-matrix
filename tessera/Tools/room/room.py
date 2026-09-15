@@ -1,17 +1,21 @@
 # The room, rendered: the mockup's framing, one to one, with a real record
-# player on the table. Outputs, by mode (argument after --):
-#   base    the still the app sits on, 3x, from the final camera
-#   light   how the wall's light falls, alone, for tinting in the app
-#   spin    one turn of the record, transparent, cropped, 54 frames
-#   intro   the opening: lid up, the mark assembles, lid closes, pull back
-#   geom    where the wall face and the record are, in the base image
-import bpy, math, os, sys, json, random
+# player on the table: the Tessera TT-900WW, turntable and speakers, a 1:1
+# replica (ChatGPT's model, vendored as tt900-white.blend). Outputs, by mode
+# (argument after --): base, light, recshade, needle, geom (the still and
+# its layers); overhead, overshade, overlight, overgeom (from above); dive,
+# divelight (the way in to the record); intro, lightfilm (the film opening);
+# mark, marklight (the mark opening). See README.md.
+import bpy, bmesh, math, os, sys, json, random
 from mathutils import Vector, Matrix
 from bpy_extras.object_utils import world_to_camera_view
 
 S = os.path.dirname(os.path.abspath(__file__))
 COVER = os.path.join(S, "cover.jpg")
 MODE = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "base"
+MODES = {"base", "light", "recshade", "needle", "geom", "overhead", "overshade", "overlight", "overgeom",
+         "dive", "divelight", "intro", "lightfilm", "mark", "marklight"}
+if MODE not in MODES:
+    sys.exit(f"room.py: no mode {MODE!r} (the TT-900 has no dust cover, so cover and the badge passes are gone)")
 random.seed(7)
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -126,69 +130,103 @@ box("console", (1.5, 0.60, tz - 0.035), (0, -0.32, (tz - 0.035) / 2), table_m)
 
 px, py = 0.0, -0.33
 top = tz
-plinth = box("plinth", (0.46, 0.37, 0.058), (px, py, top + 0.029), lacquer, bevel=0.005)
-for dx, dy in ((-0.20, -0.15), (0.20, -0.15), (-0.20, 0.15), (0.20, 0.15)):
-    cyl("foot", 0.016, 0.010, (px + dx, py + dy, top - 0.005), rubber, verts=48)
-pc = (px - 0.03, py)
-cyl("platter", 0.153, 0.014, (pc[0], pc[1], top + 0.058 + 0.007), alu, verts=160, bevel=0.0015)
-cyl("strobe", 0.1545, 0.006, (pc[0], pc[1], top + 0.058 + 0.007), alu, verts=160)
-cyl("slipmat", 0.145, 0.0028, (pc[0], pc[1], top + 0.058 + 0.0154), felt, verts=160)
-rec = cyl("record", 0.150, 0.0022, (pc[0], pc[1], top + 0.058 + 0.0179), vinyl, verts=200)
-lab = cyl("label", 0.0505, 0.0008, (0, 0, 0.0015), label_m, verts=96); lab.parent = rec
-cyl("spindle", 0.0036, 0.018, (pc[0], pc[1], top + 0.058 + 0.024), chrome, verts=32)
-cyl("puck", 0.019, 0.005, (px - 0.19, py + 0.135, top + 0.058 + 0.0025), alu, verts=48)
-cyl("power", 0.011, 0.007, (px - 0.19, py - 0.14, top + 0.058 + 0.0035), alu, verts=48)
-cyl("led", 0.0018, 0.0005, (px - 0.17, py - 0.155, top + 0.058 + 0.0003), amber, verts=16)
-bx, by = px + 0.165, py + 0.115
-cyl("arm_base", 0.024, 0.012, (bx, by, top + 0.058 + 0.006), black, verts=64)
-cyl("arm_pivot", 0.011, 0.026, (bx, by, top + 0.058 + 0.025), chrome, verts=48)
-tip = (pc[0] + 0.105, py - 0.06, top + 0.058 + 0.029)     # the headshell 3 mm off the vinyl
-piv = (bx, by, top + 0.058 + 0.036)
+
+# The deck: the Tessera TT-900WW, turntable and both speakers at 1:1, appended
+# from tt900-white.blend and stood on the table. The model is in metres, the
+# turntable's footprint centred on its root, the feet on z = 0.
+TT900 = os.path.join(S, "tt900-white.blend")
+with bpy.data.libraries.load(TT900, link=False) as (src, dst):
+    dst.collections = [c for c in src.collections if c == "Tessera TT-900WW"]
+deck_coll = dst.collections[0]
+sc.collection.children.link(deck_coll)
+deck_root = bpy.data.objects["Tessera_TT_900WW"]
+deck_root.location = (px, py, top)
+bpy.context.view_layer.update()
+MM = 0.001
+def deck(name):
+    return bpy.data.objects["WW | " + name]
+def deck_point(x, y, z):
+    """A point given in the model's own millimetres, placed in the room."""
+    return Vector((px + x * MM, py + y * MM, top + z * MM))
+# the names the passes below ask for
+for old, new in (("Turntable | straight-edge lacquer plinth", "plinth"), ("Platter | ABS rim", "platter"),
+                 ("Slipmat | felt", "slipmat"), ("Center spindle", "spindle"),
+                 ("Tonearm rest post", "armrest"), ("Tonearm rest clip", "cradle")):
+    deck(old).name = new
+
+# the record on the mat: a twelve inch, a little over the 280 mm platter
+pc = (px - 43 * MM, py + 4 * MM)
+MAT_TOP = top + 0.0570                      # the felt's face; the mat's print sits 0.03 mm over it
+# 270 mm rather than a twelve inch: it sits inside the 280 mm platter and never
+# hangs off the deck; the label and the groove scale with it
+REC_R = 0.135
+LABEL_R = REC_R * 0.0505 / 0.150
+rec = cyl("record", REC_R, 0.0022, (pc[0], pc[1], MAT_TOP + 0.00005 + 0.0011), vinyl, verts=200)
+REC_TOP = MAT_TOP + 0.00005 + 0.0022
+lab = cyl("label", LABEL_R, 0.0008, (0, 0, 0.0015), label_m, verts=96); lab.parent = rec
+
+# The arm. The model is built parked in its rest, so the rest is no turn at
+# all; the turret's hex housing and bearing turn with the arm, and the arm
+# proper also tilts about the bearing, which is how it lifts. Both groups are
+# re-parented about the pivot with an identity parent inverse, so a pose is
+# one matrix each.
+ARM_TILTS = ["Tonearm straight shaft", "Tonearm upper sleeve", "Tonearm counterweight axle", "Tonearm rear weight",
+             "Tonearm weight end face", "Headshell", "Headshell finger lift", "Ceramic cartridge",
+             "Red stylus carrier", "Stylus cantilever"] + sorted(
+    o.name[5:] for o in deck_coll.objects if o.name.startswith("WW | Headshell recessed screw"))
+ARM_TURNS = ["Tonearm upper hex housing", "Tonearm yaw bearing"]
+piv = tuple(deck_point(145, 101, 77))         # the turret's axis, at the bearing
+tip = tuple(deck_point(132.8, -104.0, 56.8))  # the stylus, parked
+TIP_REST_Z = tip[2]
+STYLUS_R = 0.00022          # the cantilever's radius: its underside, not its axis, meets the vinyl
 dx, dy, dz = tip[0] - piv[0], tip[1] - piv[1], tip[2] - piv[2]
-L = math.sqrt(dx * dx + dy * dy + dz * dz)
-mid = ((piv[0] + tip[0]) / 2, (piv[1] + tip[1]) / 2, (piv[2] + tip[2]) / 2)
 ARM_DX, ARM_DY = dx, dy
-# the arm is built about its pivot, with the pivot at the origin, and the
-# pivot is then carried to its post: no parent inverse to get stale
-armpivot = bpy.data.objects.new("armpivot", None); bpy.context.collection.objects.link(armpivot)
-armpivot.location = (0, 0, 0)
-rel = lambda p: (p[0] - piv[0], p[1] - piv[1], p[2] - piv[2])
-arm_parts = [
-    cyl("tonearm", 0.0036, L, rel(mid), chrome, rot=(0, math.acos(dz / L), math.atan2(dy, dx)), verts=24),
-    box("headshell", (0.03, 0.012, 0.008), rel((tip[0], tip[1], tip[2] - 0.003)), alu, bevel=0.001),
-    box("cartridge", (0.016, 0.010, 0.006), rel((tip[0] + 0.004, tip[1], tip[2] - 0.009)), black, bevel=0.0006),
-    cyl("stylus", 0.0006, 0.006, rel((tip[0] + 0.010, tip[1], tip[2] - 0.013)), chrome, rot=(0, math.radians(35), 0), verts=8),
-]
-cw = (piv[0] - dx * 0.24, piv[1] - dy * 0.24, piv[2] + 0.001)
-arm_parts.append(cyl("counterweight", 0.011, 0.02, rel(cw), chrome, rot=(0, math.pi / 2, math.atan2(dy, dx)), verts=48))
-for o in arm_parts:
-    o.parent = armpivot; o.matrix_parent_inverse = Matrix.Identity(4)
-armpivot.location = piv
-cyl("cue", 0.0035, 0.024, (bx - 0.032, by - 0.014, top + 0.058 + 0.02), chrome, verts=16)
-cyl("antiskate", 0.006, 0.008, (bx + 0.03, by - 0.018, top + 0.058 + 0.004), black, verts=32)
-# where the arm sleeps: a post with a cradle, off the record's edge
-REST = math.radians(23)
-cyl("armrest", 0.005, 0.019, (0.152, -0.402, top + 0.058 + 0.0095), black, verts=24)
-box("cradle", (0.014, 0.010, 0.006), (0.152, -0.402, top + 0.058 + 0.022), black)
-# the lift is a tilt about the bearing, not a rise of the whole arm: the
-# stylus comes up, the counterweight dips a little, the pivot stays put
+REST = 0.0
+armpivot = bpy.data.objects.new("armpivot", None); sc.collection.objects.link(armpivot)
+armturn = bpy.data.objects.new("armturn", None); sc.collection.objects.link(armturn)
+def rig(names, holder):
+    parts = []
+    for n in names:
+        o = deck(n)
+        mw = o.matrix_world.copy()
+        o.parent = holder; o.matrix_parent_inverse = Matrix.Identity(4)
+        o.matrix_basis = Matrix.Translation(-Vector(piv)) @ mw
+        parts.append(o)
+    return parts
+arm_parts = rig(ARM_TILTS, armpivot) + rig(ARM_TURNS, armturn)
+# the rest's hook is closed over the arm in the model; open it to a cradle,
+# so the arm lifts straight out of it instead of through its top
+cr = bpy.data.objects["cradle"]
+bm = bmesh.new(); bm.from_mesh(cr.data)
+bmesh.ops.delete(bm, geom=[v for v in bm.verts if v.co.z > 0.0715], context='VERTS')
+bm.to_mesh(cr.data); bm.free(); cr.data.update()
+
 ARM_ACROSS = Vector((ARM_DY, -ARM_DX, 0)).normalized()     # across the arm, level
-def arm_pose(angle, lift=0.0):
-    tilt = -math.asin(max(-1.0, min(1.0, lift / L)))
-    armpivot.matrix_world = (Matrix.Translation(Vector(piv)) @ Matrix.Rotation(angle, 4, 'Z')
-                             @ Matrix.Rotation(tilt, 4, ARM_ACROSS))
-bpy.ops.mesh.primitive_cube_add(size=1, location=(px, py, top + 0.058 + 0.05))
-lid = bpy.context.active_object; lid.name = "dustcover"; lid.scale = (0.462, 0.372, 0.10)
-bpy.ops.object.transform_apply(scale=True)
-import bmesh
-bm = bmesh.new(); bm.from_mesh(lid.data)
-bmesh.ops.delete(bm, geom=[f for f in bm.faces if f.normal.z < -0.9], context='FACES')
-bm.to_mesh(lid.data); bm.free(); lid.data.update()
-sol = lid.modifiers.new("shell", 'SOLIDIFY'); sol.thickness = 0.0035; sol.offset = -1
-lb = lid.modifiers.new("edge", 'BEVEL'); lb.width = 0.004; lb.segments = 3
-lid.data.materials.append(acrylic); bpy.ops.object.shade_smooth_by_angle()
-bpy.context.scene.cursor.location = (px, py + 0.186, top + 0.058)
-bpy.ops.object.origin_set(type='ORIGIN_CURSOR')
+TIP_LOCAL = Vector(tip) - Vector(piv)
+def tilt_for(height):
+    """The tilt about the bearing that puts the stylus at this height."""
+    want = height - piv[2]
+    f = lambda t: (Matrix.Rotation(t, 4, ARM_ACROSS) @ TIP_LOCAL).z
+    lo, hi = -0.35, 0.35
+    rising = f(hi) > f(lo)
+    for _ in range(60):
+        m = (lo + hi) / 2
+        if (f(m) < want) == rising: lo = m
+        else: hi = m
+    return (lo + hi) / 2
+def arm_pose(angle, height=None):
+    """The arm turned by angle about the turret (negative swings it in over
+    the record) with the stylus at height; parked in its cradle by default."""
+    h = TIP_REST_Z if height is None else height
+    turn = Matrix.Translation(Vector(piv)) @ Matrix.Rotation(angle, 4, 'Z')
+    armturn.matrix_world = turn
+    armpivot.matrix_world = turn @ Matrix.Rotation(tilt_for(h), 4, ARM_ACROSS)
+# the swing that brings the stylus nearest the spindle: the needle's search
+# stays on the near side of it, where the radius falls as the arm swings in
+A_MIN = math.atan2(pc[1] - piv[1], pc[0] - piv[0]) - math.atan2(ARM_DY, ARM_DX)
+while A_MIN > 0: A_MIN -= 2 * math.pi
+while A_MIN <= -2 * math.pi: A_MIN += 2 * math.pi
+arm_pose(REST)
 
 side = 0.56; cz = 1.54                   # high enough that the opened cover stays under it
 N = 64; T = 512; cell = T // N
@@ -212,24 +250,10 @@ box("wallframe", (side + 0.056, 0.03, side + 0.056), (0, -0.015, cz), frame_m)
 bpy.ops.mesh.primitive_plane_add(size=side, location=(0, -0.031, cz), rotation=(math.pi / 2, 0, 0))
 face = bpy.context.active_object; face.name = "ledface"; face.data.materials.append(led_m)
 
-# the mark: nine small plates on the front of the dust cover, a badge, the
-# middle one the bright one, as the app draws it. They belong to the cover.
-HINGE = (px, py + 0.186, top + 0.058)
-# on the top of the cover, at its left, toward the back: raised tiles, so
-# their faces show from the seat where a flat print would foreshorten away
-BADGE = (-0.160, -0.075)                  # x, y from the hinge, on the top
+# the TT-900 has no dust cover; its Tessera prints are part of the model
 plates = []
-for i in range(9):
-    gx, gy = i % 3 - 1, 1 - i // 3
-    local = (BADGE[0] + gx * 0.042, BADGE[1] + gy * 0.042, 0.10 + 0.003)
-    p = box(f"plate{i}", (0.030, 0.030, 0.006), (HINGE[0] + local[0], HINGE[1] + local[1], HINGE[2] + local[2]),
-            plate_mid if i == 4 else plate_m, bevel=0.0008)
-    p.location = local; p.parent = lid; p.matrix_parent_inverse = Matrix.Identity(4)
-    plates.append((p, local))
-LID_UP = math.radians(-78)                # nearly upright, the badge square to the seat
 def hide_cover():
-    lid.hide_render = True
-    for p, h in plates: p.hide_render = True
+    pass
 
 def area(loc, rot, energy, size):
     bpy.ops.object.light_add(type='AREA', location=loc)
@@ -259,25 +283,15 @@ def ndc(p):
 def face_quad():
     return [ndc((sx * side / 2, -0.031, cz + sz * side / 2)) for sx, sz in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
 def label_ellipse():
-    m = lab.matrix_world; c = m @ Vector((0, 0, 0)); ax = m @ Vector((0.0505, 0, 0)); ay = m @ Vector((0, 0.0505, 0))
+    m = lab.matrix_world; c = m @ Vector((0, 0, 0)); ax = m @ Vector((LABEL_R, 0, 0)); ay = m @ Vector((0, LABEL_R, 0))
     c2, a2, b2 = ndc(c), ndc(ax), ndc(ay); return [c2[0], c2[1], a2[0] - c2[0], a2[1] - c2[1], b2[0] - c2[0], b2[1] - c2[1]]
 def record_quad():
     # the square the record sits in, on its own plane: the app draws the
     # pressing through it, so the disc lands on the platter in perspective
     m = rec.matrix_world; z = 0.0011
-    return [ndc(m @ Vector((sx * 0.150, sy * 0.150, z))) for sx, sy in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
+    return [ndc(m @ Vector((sx * REC_R, sy * REC_R, z))) for sx, sy in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
 def badge_quads():
-    out = []
-    for p, h in plates:
-        m = p.matrix_world
-        out.append([ndc(m @ Vector((sx * 0.015, sy * 0.015, 0.003))) for sx, sy in ((-1, 1), (1, 1), (1, -1), (-1, -1))])
-    return out
-def cover_border(pad=0.02):
-    pts = []
-    for o in [lid] + [p for p, h in plates]:
-        pts += [world_to_camera_view(sc, cam, o.matrix_world @ v.co) for v in o.data.vertices]
-    x0, x1 = min(p.x for p in pts), max(p.x for p in pts); y0, y1 = min(p.y for p in pts), max(p.y for p in pts)
-    return (max(0, x0 - pad), max(0, y0 - pad), min(1, x1 + pad), min(1, y1 + pad))
+    return []
 
 def fcurves(obj):
     try: return list(obj.animation_data.action.fcurves)
@@ -297,7 +311,6 @@ def ease_all(obj, kind='BEZIER'):
 
 def set_final():
     cam.location = SEAT[0]; aim(cam, SEAT[1])
-    lid.rotation_euler = (0, 0, 0)
     arm_pose(REST)
     bpy.context.view_layer.update()
 
@@ -312,13 +325,13 @@ PROBE = bool(os.environ.get("PROBE"))
 # LEAD-1 the swing in (arm up), LEAD onward the groove positions.
 LEAD, TRACK, LIFTS = 10, 32, 5
 UP = 0.010
-R_IN, R_OUT = 0.146, 0.064
+R_IN, R_OUT = REC_R * 0.146 / 0.150, REC_R * 0.064 / 0.150
 def stylus_radius(angle):
     c, s_ = math.cos(angle), math.sin(angle)
     x = piv[0] + ARM_DX * c - ARM_DY * s_; y = piv[1] + ARM_DX * s_ + ARM_DY * c
     return math.hypot(x - pc[0], y - pc[1])
 def angle_for(radius):
-    lo, hi = -0.7, REST                     # radius grows with the angle
+    lo, hi = A_MIN, REST                     # radius grows with the angle
     for _ in range(48):
         m = (lo + hi) / 2
         if stylus_radius(m) < radius: lo = m
@@ -328,6 +341,15 @@ A_IN, A_OUT = angle_for(R_IN), angle_for(R_OUT)
 def needle_angle(i):
     if i < LEAD: return REST + (A_IN - REST) * (i / (LEAD - 1))
     return angle_for(R_IN + (R_OUT - R_IN) * ((i - LEAD) / (TRACK - 1)))
+def needle_height(i, l):
+    """Where the stylus is for a render: on the cradle it rises from where
+    it lies to the full lift; everywhere else it is on the record's face,
+    lifted by a fraction of UP."""
+    k = l / (LIFTS - 1)
+    if i == 0: return TIP_REST_Z + (REC_TOP + STYLUS_R + UP - TIP_REST_Z) * k
+    return REC_TOP + STYLUS_R + UP * k
+def pose_needle(i, l):
+    arm_pose(needle_angle(i), needle_height(i, l))
 def needle_poses():
     out = []
     for l in range(LIFTS): out.append((0, l))
@@ -338,7 +360,7 @@ def needle_poses():
 def needle_border():
     pts = []
     for i, l in ((0, 0), (0, LIFTS - 1), (LEAD, 0), (LEAD, LIFTS - 1), (LEAD + TRACK - 1, 0), (LEAD + TRACK - 1, LIFTS - 1), (LEAD // 2, LIFTS - 1)):
-        arm_pose(needle_angle(i), UP * l / (LIFTS - 1)); bpy.context.view_layer.update()
+        pose_needle(i, l); bpy.context.view_layer.update()
         for o in arm_parts:
             pts += [world_to_camera_view(sc, cam, o.matrix_world @ v.co) for v in o.data.vertices]
     pad = 0.02                               # room for the shadow, more below it
@@ -347,10 +369,10 @@ def needle_border():
 
 if MODE == "needle":
     for o in bpy.data.objects:
-        if o.type == 'MESH' and o.name not in ("tonearm", "headshell", "cartridge", "stylus", "counterweight"): o.hide_render = True
+        if o.type == 'MESH' and o not in arm_parts: o.hide_render = True
     hide_cover()
     # what the arm's shadow falls on stays, as a catcher: only the shadow shows
-    for name in ("record", "label", "slipmat", "platter", "strobe", "plinth", "top", "cradle", "armrest"):
+    for name in ("record", "label", "slipmat", "platter", "plinth", "top", "cradle", "armrest", "spindle", "WW | Platter upper edge", "WW | Tonearm rotating pedestal", "WW | Tonearm hex mounting plinth", "WW | Tonearm base groove", "WW | Cue platform", "WW | Cue platform support"):
         o = bpy.data.objects.get(name)
         if o: o.hide_render = False; o.is_shadow_catcher = True
     sc.render.film_transparent = True
@@ -367,7 +389,7 @@ if MODE == "needle":
     for i, l in needle_poses():
         f = os.path.join(S, "room-needle", "needle-%02d-%d.png" % (i, l))
         if os.path.exists(f): continue
-        arm_pose(needle_angle(i), UP * l / (LIFTS - 1)); bpy.context.view_layer.update()
+        pose_needle(i, l); bpy.context.view_layer.update()
         sc.render.filepath = f; bpy.ops.render.render(write_still=True)
 
 if MODE == "base":
@@ -379,7 +401,7 @@ if MODE == "base":
     sc.render.filepath = os.path.join(S, "room-base.png"); bpy.ops.render.render(write_still=True)
 
 if MODE == "light":
-    face.visible_camera = False
+    face.visible_camera = False; back.visible_camera = False
     for o in arm_parts: o.hide_render = True
     hide_cover()
     for o in bpy.data.objects:
@@ -390,54 +412,12 @@ if MODE == "light":
     sc.render.resolution_x, sc.render.resolution_y = (390, 844) if PROBE else (1170, 2532)
     sc.render.filepath = os.path.join(S, "room-light.png"); bpy.ops.render.render(write_still=True)
 
-if MODE == "cover":
-    keep = {lid.name}
-    for o in bpy.data.objects:
-        if o.type == 'MESH' and o.name not in keep: o.hide_render = True
-    for name in ("plinth", "platter", "strobe", "record", "label", "slipmat", "top"):
-        o = bpy.data.objects.get(name)
-        if o: o.hide_render = False; o.is_shadow_catcher = True
-    face.data.materials[0] = face_dark
-    e = amber.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]; e.default_value = 1.2
-    e2 = amber_soft.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]; e2.default_value = 0.35
-    sc.render.film_transparent = True
-    sc.render.resolution_x, sc.render.resolution_y = 1170, 2532
-    bx0, by0, bx1, by1 = cover_border(pad=0.09)
-    sc.render.use_border = True; sc.render.use_crop_to_border = True
-    sc.render.border_min_x, sc.render.border_max_x = bx0, bx1
-    sc.render.border_min_y, sc.render.border_max_y = by0, by1
-    json.dump({"cover": [bx0, 1 - by1, bx1, 1 - by0]}, open(os.path.join(S, "room-cover.json"), "w"))
-    sc.cycles.samples = 16 if PROBE else 128
-    sc.render.filepath = os.path.join(S, "room-cover.png"); bpy.ops.render.render(write_still=True)
-
-if MODE == "badge":
-    # the plates alone, white, on the closed cover: the app tints them with
-    # the wall's colour, and they keep their bevels and their shading
-    keep = {p.name for p, h in plates}
-    for o in bpy.data.objects:
-        if o.type == 'MESH' and o.name not in keep: o.hide_render = True
-    lid.hide_render = False; lid.is_shadow_catcher = True
-    for i, (p, h) in enumerate(plates): p.hide_render = False; p.data.materials[0] = plate_white_lit if i == 4 else plate_white
-    sc.render.film_transparent = True
-    sc.render.resolution_x, sc.render.resolution_y = 1170, 2532
-    pts = []
-    for p, h in plates: pts += [world_to_camera_view(sc, cam, p.matrix_world @ v.co) for v in p.data.vertices]
-    pad = 0.012
-    bx0, bx1 = max(0, min(q.x for q in pts) - pad), min(1, max(q.x for q in pts) + pad)
-    by0, by1 = max(0, min(q.y for q in pts) - pad), min(1, max(q.y for q in pts) + pad)
-    sc.render.use_border = True; sc.render.use_crop_to_border = True
-    sc.render.border_min_x, sc.render.border_max_x = bx0, bx1
-    sc.render.border_min_y, sc.render.border_max_y = by0, by1
-    json.dump({"badge_box": [bx0, 1 - by1, bx1, 1 - by0]}, open(os.path.join(S, "room-badge.json"), "w"))
-    sc.cycles.samples = 16 if PROBE else 128
-    sc.render.filepath = os.path.join(S, "room-badge.png"); bpy.ops.render.render(write_still=True)
-
 if MODE == "recshade":
     # the record and its label in matte white, lit by the room, with the
     # platter and plinth as catchers: what the pressing is multiplied by
     for o in bpy.data.objects:
         if o.type == 'MESH' and o.name not in ("record", "label"): o.hide_render = True
-    for name in ("platter", "strobe", "slipmat", "plinth", "spindle"):
+    for name in ("platter", "slipmat", "plinth", "spindle"):
         o = bpy.data.objects.get(name)
         if o: o.hide_render = False; o.is_shadow_catcher = True
     for o in arm_parts: o.hide_render = True
@@ -464,7 +444,7 @@ if MODE == "recshade":
 # there from the seat: the camera rises and tilts down over the deck as the
 # cover swings up; played backwards, it is the way out.
 OVER_H, OVER_DY = 0.694, 0.167
-OVER = (pc[0], pc[1] - OVER_DY, top + 0.058 + 0.018 + OVER_H)
+OVER = (pc[0], pc[1] - OVER_DY, REC_TOP - 0.001 + OVER_H)
 DIVE_N = 36
 def add_floor():
     # the seat never sees the floor, so the room has none; from above, and
@@ -476,16 +456,13 @@ def face_visible():
     return all(p.z > 0.05 for p in pts) and any(-0.2 < p.x < 1.2 and -0.2 < p.y < 1.2 for p in pts)
 def set_over():
     cam.location = OVER; cam.rotation_euler = (0, 0, 0)
-    lid.rotation_euler = (LID_UP, 0, 0); arm_pose(REST)
+    arm_pose(REST)
     bpy.context.view_layer.update()
 def dive_path():
     cam.location = SEAT[0]; aim(cam, SEAT[1], frame=1)
     cam.location = OVER; cam.rotation_euler = (0, 0, 0)
     cam.keyframe_insert("location", frame=DIVE_N); cam.keyframe_insert("rotation_euler", frame=DIVE_N)
     ease_all(cam)
-    lid.rotation_euler = (0, 0, 0); lid.keyframe_insert("rotation_euler", frame=3)
-    lid.rotation_euler = (LID_UP, 0, 0); lid.keyframe_insert("rotation_euler", frame=DIVE_N - 6)
-    ease_all(lid)
     arm_pose(REST)
     sc.frame_start, sc.frame_end = 1, DIVE_N
     sc.frame_set(1); bpy.context.view_layer.update()
@@ -507,7 +484,7 @@ if MODE in ("overhead", "overshade", "overlight", "overgeom"):
     if MODE == "overshade":
         for o in bpy.data.objects:
             if o.type == 'MESH' and o.name not in ("record", "label"): o.hide_render = True
-        for name in ("platter", "strobe", "slipmat", "plinth", "spindle", lid.name):
+        for name in ("platter", "slipmat", "plinth", "spindle"):
             o = bpy.data.objects.get(name)
             if o: o.hide_render = False; o.is_shadow_catcher = True
         for pl, h in plates: pl.hide_render = True
@@ -527,7 +504,7 @@ if MODE in ("overhead", "overshade", "overlight", "overgeom"):
     if MODE == "overlight":
         for o in bpy.data.objects:
             if o.type == 'LIGHT': o.hide_render = True
-        face.visible_camera = False
+        face.visible_camera = False; back.visible_camera = False
         for pl, h in plates: pl.hide_render = True
         wbg.inputs[1].default_value = 0.0
         face.data.materials[0] = white_led
@@ -540,7 +517,7 @@ if MODE in ("overhead", "overshade", "overlight", "overgeom"):
                 "over_record": [min(p[0] for p in rn), min(p[1] for p in rn), max(p[0] for p in rn), max(p[1] for p in rn)]}
         json.dump(geom, open(os.path.join(S, "room-overgeom.json"), "w")); print("OVERGEOM", json.dumps(geom))
 
-if MODE in ("dive", "divelight", "divebadge"):
+if MODE in ("dive", "divelight"):
     sc.render.resolution_x, sc.render.resolution_y = (390, 844) if PROBE else (780, 1688)
     if MODE in ("dive", "divelight"): add_floor()
     dive_path()
@@ -562,22 +539,13 @@ if MODE in ("dive", "divelight", "divebadge"):
     if MODE == "divelight":
         for o in bpy.data.objects:
             if o.type == 'LIGHT': o.hide_render = True
-        face.visible_camera = False
+        face.visible_camera = False; back.visible_camera = False
         for pl, h in plates: pl.hide_render = True
         wbg.inputs[1].default_value = 0.0
         face.data.materials[0] = white_led
         sc.render.film_transparent = False
         sc.cycles.samples = 16 if PROBE else 32
         prefix = "light_"
-    if MODE == "divebadge":
-        keep = {p.name for p, h in plates}
-        for o in bpy.data.objects:
-            if o.type == 'MESH' and o.name not in keep: o.hide_render = True
-        lid.hide_render = False; lid.is_shadow_catcher = True
-        for i, (p, h) in enumerate(plates): p.hide_render = False; p.data.materials[0] = plate_white_lit if i == 4 else plate_white
-        sc.render.film_transparent = True
-        sc.cycles.samples = 16 if PROBE else 32
-        prefix = "plates_"
     if os.environ.get("DIVE_PROBE"):
         for f in [int(x) for x in os.environ["DIVE_PROBE"].split(",")]:
             sc.frame_set(f); bpy.context.view_layer.update()
@@ -594,7 +562,7 @@ if MODE in ("dive", "divelight", "divebadge"):
 # real geometry as the lights come up. The camera never leaves the seat, so
 # the last frame is the still.
 MARK_N = 96
-if MODE in ("mark", "marklight", "markbadge"):
+if MODE in ("mark", "marklight"):
     set_final()
     random.seed(11)
     sc.render.resolution_x, sc.render.resolution_y = (390, 844) if PROBE else (780, 1688)
@@ -685,22 +653,13 @@ if MODE in ("mark", "marklight", "markbadge"):
         for p, h in plates: p.hide_render = True; p.animation_data_clear()
         for m in marks: m.data.materials[0] = mark_glow
         wbg.inputs[1].default_value = 0.0
-        face.data.materials[0] = white_led; face.visible_camera = False
+        face.data.materials[0] = white_led; face.visible_camera = False; back.visible_camera = False
         st = white_led.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
         st.default_value = 0.0; st.keyframe_insert("default_value", frame=70)
         st.default_value = 2.5; st.keyframe_insert("default_value", frame=92)
         sc.render.film_transparent = False
         sc.cycles.samples = 16 if PROBE else 32
         prefix = "light_"
-    if MODE == "markbadge":
-        keep = {m.name for m in marks} | {p.name for p, h in plates}
-        for o in bpy.data.objects:
-            if o.type == 'MESH' and o.name not in keep: o.hide_render = True
-        lid.hide_render = False; lid.is_shadow_catcher = True; lid.animation_data_clear()
-        wf.animation_data_clear(); wf.hide_render = True          # keyframed, so it must be told twice
-        for i, (p, h) in enumerate(plates): p.data.materials[0] = plate_white_lit if i == 4 else plate_white
-        sc.cycles.samples = 16 if PROBE else 32
-        prefix = "plates_"
     if os.environ.get("MARK_PROBE"):
         for f in [int(x) for x in os.environ["MARK_PROBE"].split(",")]:
             sc.frame_set(f); bpy.context.view_layer.update()
@@ -709,64 +668,31 @@ if MODE in ("mark", "marklight", "markbadge"):
         os.makedirs(os.path.join(S, "room-" + MODE), exist_ok=True)
         sc.render.filepath = os.path.join(S, "room-" + MODE, prefix); bpy.ops.render.render(animation=True)
 
+# The film opening's camera: close over the turntable's front left, on the
+# Tessera print on the plinth, drifting in; then back to the seat.
+LOGO = deck_point(-151, -124, 41)
+def opening_camera():
+    cam.location = LOGO + Vector((0.12, -0.40, 0.28)); aim(cam, LOGO + Vector((0.015, 0.015, 0)), frame=1)
+    cam.location = LOGO + Vector((0.05, -0.27, 0.19)); aim(cam, LOGO, frame=62)
+    cam.location = SEAT[0]; aim(cam, SEAT[1], frame=108)
+    ease_all(cam)
+
 if MODE == "lightfilm":
-    face.visible_camera = False
+    face.visible_camera = False; back.visible_camera = False
     # the opening's light pass: the room lit by a white wall alone, nothing
     # else, black elsewhere; the app tints it with the sleeve and screens it
     arm_pose(REST)
     for o in bpy.data.objects:
         if o.type == 'LIGHT': o.hide_render = True
-    for pl, h in plates: pl.hide_render = True
     wbg.inputs[1].default_value = 0.0
     face.data.materials[0] = white_led
     sc.render.film_transparent = False
     sc.cycles.samples = 32
     sc.render.resolution_x, sc.render.resolution_y = 780, 1688
-    lid.rotation_euler = (LID_UP, 0, 0); lid.keyframe_insert("rotation_euler", frame=58)
-    lid.rotation_euler = (0, 0, 0); lid.keyframe_insert("rotation_euler", frame=84)
-    ease_all(lid)
-    rx = Matrix.Rotation(LID_UP, 3, 'X')
-    badge_w = Vector(HINGE) + rx @ Vector((BADGE[0], BADGE[1], 0.103))
-    inward = rx @ Vector((0, 0, -1))
-    close_at = badge_w + inward * 0.60 + Vector((0, 0, 0.04))
-    cam.location = close_at; aim(cam, badge_w, frame=64)
-    cam.location = SEAT[0]; aim(cam, SEAT[1], frame=108)
-    ease_all(cam)
+    opening_camera()
     sc.frame_start, sc.frame_end = 1, 108
     os.makedirs(os.path.join(S, "room-lightfilm"), exist_ok=True)
     sc.render.filepath = os.path.join(S, "room-lightfilm", "light_"); bpy.ops.render.render(animation=True)
-
-if MODE == "badgefilm":
-    # the opening's plates alone, white, per frame: the app tints them
-    arm_pose(REST)
-    for o in bpy.data.objects:
-        if o.type == 'MESH' and o.name not in {p.name for p, h in plates}: o.hide_render = True
-    for i, (p, h) in enumerate(plates): p.hide_render = False; p.data.materials[0] = plate_white_lit if i == 4 else plate_white
-    sc.render.film_transparent = True
-    sc.cycles.samples = 24
-    sc.render.resolution_x, sc.render.resolution_y = 780, 1688
-    lid.rotation_euler = (LID_UP, 0, 0); lid.keyframe_insert("rotation_euler", frame=58)
-    lid.rotation_euler = (0, 0, 0); lid.keyframe_insert("rotation_euler", frame=84)
-    ease_all(lid)
-    rx = Matrix.Rotation(LID_UP, 3, 'X')
-    badge_w = Vector(HINGE) + rx @ Vector((BADGE[0], BADGE[1], 0.103))
-    inward = rx @ Vector((0, 0, -1))
-    close_at = badge_w + inward * 0.60 + Vector((0, 0, 0.04))
-    cam.location = close_at; aim(cam, badge_w, frame=64)
-    cam.location = SEAT[0]; aim(cam, SEAT[1], frame=108)
-    ease_all(cam)
-    for i, (p, home) in enumerate(plates):
-        away = (home[0] + random.uniform(-0.26, 0.26), home[1] + random.uniform(-0.30, -0.02), home[2] + random.uniform(-0.12, 0.30))
-        p.location = away; p.scale = (0.05, 0.05, 0.05)
-        p.rotation_euler = (random.uniform(-2.5, 2.5), random.uniform(-2.5, 2.5), random.uniform(-2.5, 2.5))
-        f0 = 2 + i * 3
-        for k in ("location", "scale", "rotation_euler"): p.keyframe_insert(k, frame=f0)
-        p.location = home; p.scale = (1, 1, 1); p.rotation_euler = (0, 0, 0)
-        for k in ("location", "scale", "rotation_euler"): p.keyframe_insert(k, frame=f0 + 24)
-        ease_all(p)
-    sc.frame_start, sc.frame_end = 1, 108
-    os.makedirs(os.path.join(S, "room-badgefilm"), exist_ok=True)
-    sc.render.filepath = os.path.join(S, "room-badgefilm", "badge_"); bpy.ops.render.render(animation=True)
 
 if MODE == "geom":
     sc.render.resolution_x, sc.render.resolution_y = 1170, 2532
@@ -774,64 +700,31 @@ if MODE == "geom":
     rn = [ndc(rec.matrix_world @ v.co) for v in rec.data.vertices]
     rx = [p[0] for p in rn]; ry = [p[1] for p in rn]
     bx0, by0, bx1, by1 = needle_border()
-    cx0, cy0, cx1, cy1 = cover_border(pad=0.09)
     geom = {"face": corners, "record": [min(rx), min(ry), max(rx), max(ry)], "label": label_ellipse(),
             "needle": [bx0, 1 - by1, bx1, 1 - by0], "lead": LEAD, "track": TRACK, "lifts": LIFTS,
-            "cover": [cx0, 1 - cy1, cx1, 1 - cy0], "placard": ndc((0, -0.64, tz - 0.035))[1],
-            "badge": badge_quads(), "record_quad": record_quad()}
+            "placard": ndc((0, -0.64, tz - 0.035))[1],
+            "record_quad": record_quad()}
     json.dump(geom, open(os.path.join(S, "room-geometry.json"), "w")); print("GEOM", json.dumps(geom)); print("ANGLES", math.degrees(A_IN), math.degrees(A_OUT), "rest", math.degrees(REST))
 
 if MODE == "intro":
     arm_pose(REST)
-    # the wall is a hole with light behind it: the app draws the live wall
-    # through it, and the room is lit as if by a white wall
-    # lit exactly as the still is: the wall dark (the app adds its light from
-    # the light film), the record and label holes for the app's pressing,
-    # the plates left to their own film for the app to tint
+    # lit exactly as the still is: the wall dark and a hole for the live wall
+    # (the app adds its light from the light film), the record and label
+    # holes for the app's pressing
     face.data.materials[0] = face_dark; face.is_holdout = True
     rec.is_holdout = True; lab.is_holdout = True
-    for pl, h in plates: pl.hide_render = True
-    # the wall's own light, kept low here: at ten it reflected in the raised
-    # glass as a white sheen that bleached the live wall behind it
-    white_led.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"].default_value = 2.5
     back.is_shadow_catcher = True                     # the app's background shows through the wall
     sc.render.film_transparent = True
     sc.cycles.samples = 16 if PROBE else 48
     sc.render.resolution_x, sc.render.resolution_y = (390, 844) if PROBE else (780, 1688)
-    lid.rotation_euler = (LID_UP, 0, 0); lid.keyframe_insert("rotation_euler", frame=58)
-    lid.rotation_euler = (0, 0, 0); lid.keyframe_insert("rotation_euler", frame=84)
-    ease_all(lid)
-    # the close shot is on the badge itself: where it is with the cover up,
-    # seen from straight in front through the glass, the wall behind
-    rx = Matrix.Rotation(LID_UP, 3, 'X')
-    badge_w = Vector(HINGE) + rx @ Vector((BADGE[0], BADGE[1], 0.103))
-    inward = rx @ Vector((0, 0, -1))
-    close_at = badge_w + inward * 0.60 + Vector((0, 0, 0.04))
-    cam.location = close_at; aim(cam, badge_w, frame=64)              # the badge dead centre
-    cam.location = SEAT[0]; aim(cam, SEAT[1], frame=108)
-    ease_all(cam)
-    # the plates fly in, in the cover's own space, and settle as its badge
-    for i, (p, home) in enumerate(plates):
-        away = (home[0] + random.uniform(-0.26, 0.26), home[1] + random.uniform(-0.30, -0.02), home[2] + random.uniform(-0.12, 0.30))
-        p.location = away; p.scale = (0.05, 0.05, 0.05)
-        p.rotation_euler = (random.uniform(-2.5, 2.5), random.uniform(-2.5, 2.5), random.uniform(-2.5, 2.5))
-        f0 = 2 + i * 3
-        for k in ("location", "scale", "rotation_euler"): p.keyframe_insert(k, frame=f0)
-        p.location = home; p.scale = (1, 1, 1); p.rotation_euler = (0, 0, 0)
-        for k in ("location", "scale", "rotation_euler"): p.keyframe_insert(k, frame=f0 + 24)
-        ease_all(p)
-    e = plate_mid.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
-    e2 = plate_m.node_tree.nodes["Principled BSDF"].inputs["Emission Strength"]
-    for f, v in ((1, 0.0), (30, 0.0), (46, 1.6), (56, 0.6), (108, 0.6)):
-        e.default_value = v; e.keyframe_insert("default_value", frame=f)
-    for f, v in ((1, 0.0), (24, 0.0), (44, 0.5), (56, 0.2), (108, 0.2)):
-        e2.default_value = v; e2.keyframe_insert("default_value", frame=f)
+    opening_camera()
     sc.frame_start, sc.frame_end = 1, 108
-    # where the wall and the label are in every frame, for the app to draw on
+    # where the wall and the record are in every frame, for the app to draw on;
+    # the wall is out of shot while the camera is close on the deck
     track = []
     for f in range(1, 109):
         sc.frame_set(f); bpy.context.view_layer.update()
-        track.append({"face": face_quad(), "label": label_ellipse(), "badge": badge_quads(), "record": record_quad()})
+        track.append({"face": face_quad() if face_visible() else None, "label": label_ellipse(), "badge": [], "record": record_quad()})
     json.dump({"fps": 30, "frames": track}, open(os.path.join(S, "room-intro-track.json"), "w"))
     if os.environ.get("INTRO_PROBE"):
         for f in [int(x) for x in os.environ["INTRO_PROBE"].split(",")]:
