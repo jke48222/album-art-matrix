@@ -23,7 +23,9 @@ FIELDS = {
                      "token": r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"},
     "ears": {"device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
     # Ask the wall (brain/ask.py): an Anthropic API key, set from the phone
-    "claude": {"api_key": r"^sk-ant-[A-Za-z0-9_\-]{20,200}$"},
+    "claude": {"api_key": r"^sk-ant-[A-Za-z0-9_\-]{20,200}$",
+               # a key made at the organisation level must name a workspace
+               "workspace": r"^wrkspc_[A-Za-z0-9_\-]{4,80}$"},
     # imagine (brain/imagine.py): which image model draws, and its key
     "images": {"provider": r"^(openai|google)$",
                "api_key": r"^[A-Za-z0-9_\-]{20,300}$",

@@ -5,7 +5,9 @@ One bridge, four things behind it:
 
     Wall          a light. On, off, brightness, and a colour, which is the
                   ambient face's colour. "Hey Siri, wall to thirty percent."
-    Wall Remote   a television. The faces are its inputs, and the Apple TV
+    Wall Remote   a television. Every face is an input, the weather, the
+                  games and the last picture drawn from words among them,
+                  and the Apple TV
                   Remote in Control Centre drives it: the arrows change the
                   face, play/pause turns the ears on and off, back goes to
                   the art, info runs the song's name across, and the volume
@@ -71,8 +73,12 @@ FACES = [
     (5, "Lyrics", "lyrics"),
     (6, "Nine", "nine"),
     (7, "Ticker", "ticker"),
+    (8, "Weather", "weather"),
+    (9, "Games", "game"),
+    (10, "Imagine", "imagine"),
 ]
 FACE_MODES = [m for _, _, m in FACES]
+CYCLE_MODES = FACE_MODES[:8]           # the arrow keys step through these
 
 SOUND_HOLD_S = 30.0    # "sound in the room" stays on this long after the gate shuts
 CODE_SHOW_S = 180.0    # how long the pairing code stays on the panel
@@ -349,8 +355,15 @@ class HomeKit:
 
     def _tv_input(self, ident):
         mode = next((m for i, _, m in FACES if i == int(ident)), None)
-        if mode:
-            self.ctrl.apply({"mode": mode})
+        if not mode:
+            return
+        if mode == "imagine":
+            # the last picture drawn from words comes back with its reveal
+            im = getattr(self.ctrl, "imaginer", None)
+            if im is not None and im.last:
+                im.show_again(im.last["id"])
+                return
+        self.ctrl.apply({"mode": mode})
 
     def _tv_volume(self, value):
         s = self.ctrl.get()
@@ -359,11 +372,77 @@ class HomeKit:
 
     def _step(self, d: int):
         s = self.ctrl.get()
-        i = FACE_MODES.index(s["mode"]) if s["mode"] in FACE_MODES else -1
-        self.ctrl.apply({"mode": FACE_MODES[(i + d) % len(FACE_MODES)]})
+        i = CYCLE_MODES.index(s["mode"]) if s["mode"] in CYCLE_MODES else -1
+        self.ctrl.apply({"mode": CYCLE_MODES[(i + d) % len(CYCLE_MODES)]})
+
+    def _game_key(self, key: int) -> bool:
+        """The remote as a game controller while a game is on: the arrows
+        steer, select is drop or submit or again, back puts the game down.
+        True when the key was the game's."""
+        gh = getattr(self.ctrl, "games", None)
+        g = getattr(gh, "game", None) if gh is not None else None
+        if g is None:
+            return False
+        if key in (K_BACK, K_EXIT):
+            gh.end()
+            return True
+        if g.over:
+            if key in (K_SELECT, K_PLAY):
+                gh.move(None, {"again": True})
+            return key in (K_SELECT, K_PLAY, K_UP, K_DOWN, K_LEFT, K_RIGHT)
+        arrows = {K_UP: "up", K_DOWN: "down", K_LEFT: "left", K_RIGHT: "right"}
+        name = g.name
+        if name in ("snake", "sliding"):
+            if key in arrows:
+                gh.move(None, {"dir": arrows[key]})
+                return True
+        elif name == "tetris":
+            moves = {K_LEFT: "left", K_RIGHT: "right", K_UP: "rotate", K_DOWN: "down", K_SELECT: "drop"}
+            if key in moves:
+                gh.move(None, {"move": moves[key]})
+                return True
+        elif name == "pong":
+            if key in (K_UP, K_DOWN):
+                y = g.paddles[0] + (-0.12 if key == K_UP else 0.12)
+                gh.move(g.players[0], {"paddle": max(0.0, min(1.0, y))})
+                return True
+        elif name == "reaction":
+            if key in (K_SELECT, K_PLAY):
+                gh.move(None, {"tap": True} if g.phase in ("red", "green") else {"go": True})
+                return True
+        elif name == "twentyq":
+            if key in (K_UP, K_SELECT):
+                gh.move(None, {"answer": "yes"}); return True
+            if key in (K_DOWN,):
+                gh.move(None, {"answer": "no"}); return True
+        elif name == "heardle":
+            if key == K_RIGHT:
+                gh.move(None, {"skip": True}); return True
+        elif name == "quiz":
+            if key in (K_RIGHT, K_SELECT):
+                gh.move(None, {"next": True}); return True
+        elif name == "connections":
+            if key == K_SELECT:
+                gh.move(None, {"submit": True}); return True
+            if key == K_LEFT:
+                gh.move(None, {"clear": True}); return True
+            if key == K_RIGHT:
+                gh.move(None, {"shuffle": True}); return True
+        elif name == "strands":
+            if key == K_SELECT:
+                gh.move(None, {"hint": True}); return True
+        elif name == "crossword":
+            if key == K_SELECT:
+                gh.move(None, {"check": True}); return True
+        elif name == "letterboxed":
+            if key == K_LEFT:
+                gh.move(None, {"undo": True}); return True
+        return key in arrows or key == K_SELECT
 
     def _tv_key(self, key):
         key = int(key)
+        if self._game_key(key):
+            return
         if key in (K_RIGHT, K_DOWN, K_NEXT):
             self._step(+1)
         elif key in (K_LEFT, K_UP, K_PREV):
@@ -373,12 +452,11 @@ class HomeKit:
         elif key == K_SELECT:
             self.ctrl.nudge()                  # ask the sources again, now
         elif key == K_PLAY:
-            tune = getattr(self.ctrl, "tuning", None)
-            if tune is not None:
-                try:
-                    tune.update({"hearing": not bool(tune.get("hearing"))})
-                except Exception as exc:
-                    print(f"[homekit] hearing: {exc}", flush=True)
+            # play/pause: the wall goes dark and comes back, as two knocks do
+            try:
+                self.ctrl.knock_toggle("the remote")
+            except Exception as exc:
+                print(f"[homekit] play: {exc}", flush=True)
         elif key == K_INFO:
             ns = self.ctrl.now_showing or {}
             if ns.get("title"):

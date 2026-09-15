@@ -397,7 +397,8 @@ def main():
     ctrl.asker = None
     if ctrl.features.on("ask"):
         ctrl.asker = Asker(ctrl, api_key=ctrl.services_store.get("claude", "api_key"),
-                           model=str(cfg.get("ask", {}).get("model", "claude-opus-5")))
+                           model=str(cfg.get("ask", {}).get("model", "claude-opus-5")),
+                           workspace=ctrl.services_store.get("claude", "workspace"))
         print("[main] ask: " + ("key set" if ctrl.asker.ready
                                 else "no Claude key yet; set one from the phone"))
     # show me, play me, and the earworm finder: by voice or from the phone

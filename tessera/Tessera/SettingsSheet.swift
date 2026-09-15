@@ -40,13 +40,31 @@ struct SettingsSheet: View {
                         row("sun.max", "Light", "\(Int(wall.state.brightness * 100))%") { LightPage(accent: accent) }
                         row("sunset", "Follow the sun", wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : "Off") { SunPage(accent: accent) }
                         row("moon.zzz", "Sleep", sleepValue) { SleepPage(accent: accent) }
-                        row("cloud.sun", "Weather", wall.state.place.isEmpty ? "No place yet" : wall.state.place) { WeatherPage(accent: accent) }
-                        row("paintbrush.pointed", "Imagine", "A picture from words") { ImaginePage(accent: accent) }
                         row("sunrise", "Wake up", wall.state.wakeEnabled ? wakeValue : "Off") { WakePage(accent: accent) }
                         row("pause.circle", "Nothing playing", idleName) { idlePage }
                         row("lock.iphone", "Lock screen", wall.live.enabled ? "Showing the wall" : "Off") { LockScreenPage(accent: accent) }
                     }
                     .padding(.top, 26)
+
+                    Text("What the wall can do")
+                        .font(.displayMid(20))
+                        .foregroundStyle(Ink.ink)
+                        .padding(.top, 34)
+
+                    SettingsList {
+                        row("text.bubble", "Ask the wall", "A question, answered on the panel") { AskPage(accent: accent) }
+                        row("note.text", "Notes", "Words on the panel for a while") { NotePage(accent: accent) }
+                        row("photo.on.rectangle", "Show me", "A cover or a video, by name") { ShowPage(accent: accent) }
+                        row("ear.badge.waveform", "Earworm", "Name a song from the words you remember") { EarwormPage(accent: accent) }
+                        row("paintbrush.pointed", "Imagine", "A picture from words") { ImaginePage(accent: accent) }
+                        row("cloud.sun", "Weather", wall.state.place.isEmpty ? "No place yet" : wall.state.place) { WeatherPage(accent: accent) }
+                        row("dice", "Games", "Nineteen, on the wall and the phone") { GamesPageWrapper(accent: accent) }
+                        row("waveform", "Voice", "The wake word, and what it heard") { VoicePage(accent: accent) }
+                        row("homekit", "HomeKit", "The wall in the Home app") { HomeKitPage(accent: accent) }
+                        row("opticaldisc", "The shelf", "Your records, from Discogs") { ShelfPage(accent: accent) }
+                        row("music.mic", "Teach the wall", "Its own song library") { TeachPage(accent: accent) }
+                    }
+                    .padding(.top, 14)
 
                     Text("Other settings")
                         .font(.displayMid(20))
@@ -1746,5 +1764,15 @@ struct WallImagined: Decodable {
         req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
         guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
         return (resp as? HTTPURLResponse)?.statusCode == 200
+    }
+}
+
+
+/// The Games sheet, reached from Settings as a page rather than from the
+/// faces as a sheet: the same list, the same screens.
+struct GamesPageWrapper: View {
+    let accent: Color
+    var body: some View {
+        GamesSheetBody(accent: accent)
     }
 }

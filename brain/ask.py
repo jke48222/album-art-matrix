@@ -74,10 +74,14 @@ def system_prompt(size: int) -> str:
 
 
 class Asker:
-    def __init__(self, ctrl, api_key: str = "", model: str = MODEL):
+    def __init__(self, ctrl, api_key: str = "", model: str = MODEL, workspace: str = ""):
         self.ctrl = ctrl
         self.model = model or MODEL
         self.api_key = (api_key or "").strip()
+        # a key made at the organisation level must name the workspace it
+        # spends from (Console > Settings > Workspaces, "wrkspc_...")
+        self.workspace = (workspace or "").strip()
+        self.history: list[dict] = []          # the last questions and answers, newest first
         self._client = None
         self._lock = threading.Lock()
         self.problem = None
@@ -85,9 +89,15 @@ class Asker:
         self.cost_usd = 0.0
         self.last = None                    # {"q", "a", "s", "usd", "tools"}
 
-    def configure(self, api_key=None):
+    def configure(self, api_key=None, workspace=None):
         if api_key is not None and api_key.strip() != self.api_key:
             self.api_key = api_key.strip()
+            self._client = None
+            self.problem = None
+        if workspace is not None and workspace.strip() != self.workspace:
+            self.workspace = workspace.strip()
+            self._client = None
+            self.problem = None
             self._client = None
             self.problem = None
 
@@ -98,7 +108,8 @@ class Asker:
     def _client_(self):
         if self._client is None:
             import anthropic
-            self._client = anthropic.Anthropic(api_key=self.api_key)
+            headers = {"anthropic-workspace-id": self.workspace} if self.workspace else None
+            self._client = anthropic.Anthropic(api_key=self.api_key, default_headers=headers)
         return self._client
 
     # ---- the tools ------------------------------------------------------------------------
@@ -192,14 +203,16 @@ class Asker:
             self.problem = f"Claude answered {exc.status_code}"
             return "Claude could not answer just now."
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             return "Something went wrong asking."
         usd = usage_in * PRICE_IN + usage_out * PRICE_OUT
         self.cost_usd += usd
         self.answers += 1
         self.problem = None
         self.last = {"q": question, "a": answer, "s": round(time.monotonic() - t0, 2),
-                     "usd": round(usd, 4), "tools": used}
+                     "usd": round(usd, 4), "tools": used, "ts": int(time.time())}
+        self.history.insert(0, dict(self.last))
+        del self.history[12:]
         print(f"[ask] {question!r} -> {answer!r} in {self.last['s']} s, "
               f"{usage_in}+{usage_out} tokens, ${usd:.4f}, tools {used}", flush=True)
         return answer or "I have nothing to say to that."
@@ -232,7 +245,7 @@ class Asker:
             return {"title": got.title, "artist": got.artist, "confidence": got.confidence,
                     "alternatives": [{"title": g.title, "artist": g.artist} for g in got.alternatives]}
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             print(f"[ask] earworm: {self.problem}", flush=True)
             return None
 
@@ -266,7 +279,7 @@ class Asker:
             got = resp.parsed_output
             return [(g.theme, [w.strip().lower() for w in g.words]) for g in got.groups]
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             print(f"[ask] connections: {self.problem}", flush=True)
             return None
 
@@ -305,7 +318,7 @@ class Asker:
                         and len(set(words + [span])) == len(words) + 1:
                     return got.theme.strip(), span, words
             except Exception as exc:
-                self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+                self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
                 print(f"[ask] strands: {self.problem}", flush=True)
                 return None
         return None
@@ -342,7 +355,7 @@ class Asker:
             qs = [q for q in qs if q[0] and q[1]][:n]
             return (got.theme.strip(), qs) if len(qs) >= 5 else None
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             print(f"[ask] quiz: {self.problem}", flush=True)
             return None
 
@@ -371,7 +384,7 @@ class Asker:
             out = {c.word.strip().lower(): c.clue.strip() for c in resp.parsed_output.clues}
             return out if all(w in out for w in words) else None
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             print(f"[ask] clues: {self.problem}", flush=True)
             return None
 
@@ -395,10 +408,11 @@ class Asker:
                     + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
             return text or None
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             print(f"[ask] image prompt: {self.problem}", flush=True)
             return None
 
     def status(self) -> dict:
         return {"ready": self.ready, "model": self.model, "answers": self.answers,
-                "cost_usd": round(self.cost_usd, 4), "last": self.last, "problem": self.problem}
+                "cost_usd": round(self.cost_usd, 4), "last": self.last, "problem": self.problem,
+                "workspace_set": bool(self.workspace), "history": list(self.history)}

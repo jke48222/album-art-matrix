@@ -106,9 +106,11 @@ struct WallServices: Decodable {
     struct Mac: Decodable { var endpoint: String; var answering: Bool? }
     /// Ask the wall: whether a Claude key is on the wall and how asking has gone.
     struct Claude: Decodable {
-        struct Last: Decodable { var q: String; var a: String; var s: Double?; var usd: Double? }
+        struct Last: Decodable { var q: String; var a: String; var s: Double?; var usd: Double?; var ts: Int? }
         var ready: Bool?
         var key_set: Bool?
+        var workspace_set: Bool?
+        var history: [Last]?
         /// A key is on the wall, whichever word the wall uses for it.
         var isReady: Bool { ready ?? key_set ?? false }
         var model: String?
@@ -1069,13 +1071,22 @@ struct ClaudePage: View {
     @Binding var services: WallServices?
 
     @State private var key = ""
+    @State private var workspace = ""
     @State private var busy = false
     @State private var problem: String?
 
     private var claude: WallServices.Claude? { services?.claude }
     private var ready: Bool { claude?.isReady == true }
     private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool { services != nil && typedKey.hasPrefix("sk-ant-") && typedKey.count > 20 }
+    private var typedWorkspace: String { workspace.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool {
+        guard services != nil else { return false }
+        if typedKey.hasPrefix("sk-ant-") && typedKey.count > 20 { return true }
+        return typedWorkspace.hasPrefix("wrkspc_") && typedWorkspace.count > 10
+    }
+    private var needsWorkspace: Bool {
+        (claude?.problem ?? "").contains("workspace") && claude?.workspace_set != true
+    }
 
     var body: some View {
         SetupPage("Claude",
@@ -1083,20 +1094,24 @@ struct ClaudePage: View {
             SetupGroup("Your key", note: "An Anthropic API key. It is kept on the wall and used for nothing but these questions; each answer costs about a cent.") {
                 KeyField(placeholder: ready ? "API key (one is on the wall)" : "API key, sk-ant-...", text: $key)
                 Rule()
-                SetupRow(title: "Need a key?", subtitle: "Opens the Anthropic console in Safari.") {
+                KeyField(placeholder: claude?.workspace_set == true ? "Workspace id (one is on the wall)" : "Workspace id, wrkspc_... (only if the wall asks)", text: $workspace)
+                Rule()
+                SetupRow(title: "Need a key?", subtitle: "Opens the Anthropic console in Safari. A key made inside a workspace needs nothing else; a key made at the organisation level also needs that workspace's id, from Settings, Workspaces.") {
                     ActionPill(title: "Get a key", filled: false) {
                         openURL(URL(string: "https://console.anthropic.com/settings/keys")!)
                     }
                 }
                 Rule()
                 SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
+                         done: (ready && typedKey.isEmpty && typedWorkspace.isEmpty) ? (claude?.workspace_set == true ? "Key and workspace on the wall" : "Key on the wall") : nil,
                          accent: accent) { save() }
             }
             .padding(.top, -12)
-            Problem(text: problem ?? claude?.problem)
+            Problem(text: problem ?? (needsWorkspace
+                ? "Your key was made at the organisation level, so the wall also needs the workspace id it spends from. In the Anthropic console: Settings, Workspaces, open one, copy its id (wrkspc_...) and paste it above."
+                : claude?.problem))
 
-            SetupGroup("Asking", note: "Say the wake word, wait for the line, then talk. Commands (off, clock, lyrics, brighter, a timer, show me a cover) are done on the wall itself; anything else is a question. Shortcut recipes for Siri are in docs/ASK.md.") {
+            SetupGroup("Asking", note: "Say the wake word, wait for the line, then talk. Commands (off, clock, lyrics, brighter, a timer, show me a cover) are done on the wall itself; anything else is a question. Ask from this phone under Settings, Ask the wall. Shortcut recipes for Siri are in docs/ASK.md.") {
                 SetupRow(title: "Model", subtitle: claude?.model ?? "claude-opus-5") { EmptyView() }
                 Rule()
                 SetupRow(title: "Answered", subtitle: answeredLine) { EmptyView() }
@@ -1125,11 +1140,14 @@ struct ClaudePage: View {
     private func save() {
         guard canSave, !busy else { return }
         busy = true
+        var patch: [String: String] = [:]
+        if !typedKey.isEmpty { patch["api_key"] = typedKey }
+        if !typedWorkspace.isEmpty { patch["workspace"] = typedWorkspace }
         Task {
-            let (fresh, why) = await ServiceSave.send(["claude": ["api_key": typedKey]], to: wall.host)
+            let (fresh, why) = await ServiceSave.send(["claude": patch], to: wall.host)
             if let fresh { services = fresh }
             problem = why
-            if why == nil { Taps.commit(); key = "" }
+            if why == nil { Taps.commit(); key = ""; workspace = "" }
             busy = false
         }
     }
