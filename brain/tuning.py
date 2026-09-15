@@ -128,8 +128,9 @@ SPECS = [
      "while it listens to you; a command is done on the wall, a question "
      "goes to Claude and comes back as words on the panel."),
     ("wake_threshold", "Voice", "float", 0.3, 0.95, 0.05, False,
-     "How sure the wake word model has to be. Lower wakes more readily "
-     "and more often by mistake; the Voice page shows the live score."),
+     "How sure the wake word in use has to be. Lower wakes more readily "
+     "and more often by mistake; the Voice page shows the live score. "
+     "Each wake word keeps its own."),
     ("speech_base", "Voice", "bool", 0, 1, 1, False,
      "Use the larger speech model. Surer of names and about twice as slow: "
      "two and a half seconds a sentence instead of one and a half."),
@@ -228,6 +229,7 @@ class Tuning:
                     self.values[k] = self._clean(k, v)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             pass
+        self._wake_threshold_seen = self.values.get("wake_threshold")
         self.apply()
 
     # ---- reading -------------------------------------------------------
@@ -346,10 +348,16 @@ class Tuning:
             voice = getattr(self.ears, "voice", None)
             if voice is not None:
                 voice.configure(on=v["wake"])
-                if voice.wake is not None:
+                if voice.wake is not None and v["wake_threshold"] != self._wake_threshold_seen:
+                    # the knob is the wake word in use: a turn is kept for that
+                    # word, and any other knob leaves the word's own alone
                     voice.wake.configure(threshold=v["wake_threshold"])
+                    if getattr(voice.wake, "name", None):
+                        from .voice import wake as wake_mod
+                        wake_mod.save_threshold(voice.wake.name, v["wake_threshold"])
                 if voice.transcriber is not None:
                     voice.transcriber.configure(size="base" if v["speech_base"] else "tiny")
+        self._wake_threshold_seen = v["wake_threshold"]
         for name, fname in FILES.items():
             val = v[name]
             if isinstance(val, bool):      # run_renderer.sh reads 1 or 0

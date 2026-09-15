@@ -6,6 +6,7 @@ NowPlaying answers, the progress clock, the artwork's URL, pause and end.
 import base64
 import io
 import os
+import time
 import sys
 
 from PIL import Image
@@ -76,7 +77,7 @@ def test_a_stream_becomes_a_playing_answer_with_art_and_a_clock():
     assert src.art(key)[1] == "image/png"
     st = src.status()
     assert st["state"] == "playing" and st["connected_from"] == "Jalen's iPhone" and st["volume"] == -15.0
-    assert st["last"] == "Frank Ocean — Nights" and st["pipe_exists"] is False
+    assert st["last"] == "Nights by Frank Ocean" and st["pipe_exists"] is False
     # art arriving after the title changes the id, so the wall re-shows with the sleeve
     before = src.get_current().track_id
     src.handle("ssnc", "PICT", b"")
@@ -119,3 +120,28 @@ def test_a_malformed_record_does_not_wedge_the_parser():
     assert p.feed(bad) == []
     got = p.feed(item("ssnc", "pbeg"))
     assert [c for _, c, _ in got] == ["pbeg"]
+
+
+def test_a_song_without_artwork_gets_its_sleeve_by_name(monkeypatch):
+    import brain.show as show
+    calls = []
+    monkeypatch.setattr(show, "find_art", lambda q: calls.append(q) or {"art_url": "https://is1.example/nights.jpg"})
+    clock = [100.0]
+    src = AirPlaySource(pipe="/nonexistent", host="w.local", clock=lambda: clock[0])
+    for t, c, d in Parser().feed(item("ssnc", "pbeg") + item("ssnc", "mdst", b"1") + item("core", "minm", b"Nights")
+                                 + item("core", "asar", b"Frank Ocean") + item("core", "asal", b"Blonde")
+                                 + item("ssnc", "mden", b"1")):
+        src.handle(t, c, d)
+    first = src.get_current()
+    assert first.art_url is None and calls == []                       # a moment for the real artwork
+    clock[0] += 5.0
+    src.get_current()
+    for _ in range(100):
+        if src.get_current().art_url:
+            break
+        time.sleep(0.02)
+    now = src.get_current()
+    assert now.art_url == "https://is1.example/nights.jpg" and calls == ["Frank Ocean Nights"]
+    assert now.track_id != first.track_id                               # the wall shows it
+    src.get_current()
+    assert len(calls) == 1                                               # once a song

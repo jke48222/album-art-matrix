@@ -20,9 +20,9 @@ app. Nothing here is a promise about a date.
 | 7 | Knock twice | Two knocks on the frame toggle the wall; whistle as the fallback. | **done** 2026-09-15, numbers to tune with real knocks |
 | 8 | Teach the wall a song | A local fingerprint library (Olaf) seeded from iTunes previews and room recordings, asked before Shazam. | **done** 2026-09-15, own fingerprinter (no Olaf on this Pi) |
 | 9 | Ask the wall | A spoken question, answered by Claude with the wall's own state attached, shown as short lines on the panel. Via a Siri Shortcut or the wall's ears. | **done** 2026-09-15, needs the Claude key |
-| 10 | The wall's own ears | Wake word (openWakeWord) plus whisper.cpp on the Pi; short commands stay local. | **done** 2026-09-15, "hey Jarvis" until a "hey wall" head is trained |
+| 10 | The wall's own ears | Wake word (openWakeWord) plus whisper.cpp on the Pi; short commands stay local. | **done** 2026-09-15; the wake word is chosen on the phone or taught by voice (docs/VOICE.md) |
 | 11 | Leave a note | "Hey Siri, tell the wall back at six" puts words on the panel through a Shortcut. | **done** 2026-09-15 |
-| 12 | AirPlay to the wall | The Pi is an AirPlay 2 receiver; any Apple device in the group hands over exact title, art and position. | **brain side done** 2026-09-15: brain/nowplaying/airplay.py and docs/AIRPLAY.md; shairport-sync and nqptp still to be installed with sudo |
+| 12 | AirPlay to the wall | The wall is an AirPlay speaker; any Apple device playing to it hands over the exact title, art and position. | **done** 2026-09-15: classic AirPlay run by the brain, no root; grouping with HomePods needs AirPlay 2 and sudo (docs/AIRPLAY.md) |
 | 13 | The shelf | Discogs collection sync: a corner mark on streamed songs you own on vinyl; pressing details and price when a record plays. | **done** 2026-09-15: brain/shelf.py, the mark in brain/art/mark.py, a Discogs page in the app; waiting for the token |
 | 14 | Earworm finder | Say the words you remember; Claude names the song; the sleeve goes up. | **done** 2026-09-15, needs the Claude key |
 | 15 | Show me, play me | "Show the Blond cover" (iTunes search, frame mode); "play the Gameboy video" (YouTube search, video mode). | **done** 2026-09-15 |

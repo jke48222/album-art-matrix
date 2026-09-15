@@ -311,3 +311,90 @@ def test_show_answer_from_a_shortcut():
     assert v.state == "answering"
     assert v.show_answer("Another")                # a newer answer takes the face
     assert v._face_answer.text == "Another"
+
+
+# ---- a wake word of your own, taught through the voice -----------------------------------------
+def test_teaching_a_wake_word_through_the_voice(tmp_path, monkeypatch):
+    from brain.voice import enroll as E
+    from brain.voice import wake as W
+
+    code = np.random.default_rng(11).standard_normal((40, 96)).astype(np.float32)
+
+    def fake_embed(pcm):                       # a symbol per 100 ms of pcm, a vector per symbol
+        pcm = np.asarray(pcm, dtype=np.int16)
+        n = max(1, int((len(pcm) / 16000 - E.WIN_S) / E.HOP_S) + 1)
+        rng = np.random.default_rng(len(pcm))
+        out = []
+        for i in range(n):
+            c = int((i * E.HOP_S + E.WIN_S / 2) * 16000)
+            out.append(code[(int(pcm[min(c, len(pcm) - 1)]) // 100) % 40]
+                       + rng.standard_normal(96).astype(np.float32) * 0.25)
+        return np.array(out, dtype=np.float32)
+
+    class Loaded:
+        def __init__(self, name, threshold=0.5, wake_dir=None, front=None):
+            self.name, self.label, self.threshold, self.loaded, self.problem = name, name, threshold, True, None
+            self.fires, self.score, self.last_fire = 0, 0.0, 0.0
+
+        def feed(self, chunk, now):
+            return False
+
+        def peak(self, now=None):
+            return 0.0
+
+        def configure(self, **kw):
+            pass
+
+        def status(self):
+            return {"model": self.name, "loaded": True}
+
+    borrowed = []
+    monkeypatch.setattr(W, "make_embedder", lambda front=None: borrowed.append(front) or fake_embed)
+    monkeypatch.setattr(W, "WakeWord", Loaded)
+    monkeypatch.setattr(W, "models_dir", lambda: None)
+    monkeypatch.setattr(W, "CHOICE_PATH", str(tmp_path / "wake.json"))
+
+    v = Voice(FakeCtrl(), FakeWake(), FakeTranscriber(""), asker=None, size=64, log=lambda s: None)
+    v.wake_dir = str(tmp_path / "own")
+    assert v.enroll_start("Hey  Wall", samples=3)["enroll"]["stage"] == "takes"
+    assert v.state == "enrolling" and v.enroll_start("again")["error"]
+    assert v.enroll_start.__self__ is v and Voice.enroll_start(v, "x")["error"]      # too short a phrase
+    t = 100.0
+
+    def feed(symbols, voiced):
+        nonlocal t
+        for sym in symbols:
+            t += 0.1
+            v.feed(np.full(1600, 100 * sym, dtype=np.int16).tobytes(), -20.0 if voiced else -50.0, -50.0, t)
+
+    frames = []
+    for _ in range(3):
+        feed([1] * 10, False)
+        feed([5, 9, 13, 17, 21], True)
+        frames.append(v.frame(t, 64))
+        feed([1] * 10, False)
+    assert v.enroller.stage == "talk" and len(v.enroller.takes) == 3
+    assert v.meter()["enroll"]["talk_left"] is not None
+    big = v.frame(t, 192)
+    assert big is not None and big.shape == (192, 192, 3)
+    rng = np.random.default_rng(2)
+    feed([int(rng.choice([2, 3, 23, 30, 31])) for _ in range(101)], True)
+    t0 = time.monotonic()
+    while v.enroller.stage not in ("done", "failed") and time.monotonic() - t0 < 10:
+        time.sleep(0.02)
+    e = v.enroller
+    assert e.stage == "done", e.problem
+    assert v.wake.name == "own:hey-wall" and W.saved_choice(str(tmp_path / "wake.json")) == "own:hey-wall"
+    assert borrowed == [None]                  # the fake wake word has no front end to lend
+    st = v.status()
+    assert any(c["name"] == "own:hey-wall" and c["label"] == "Hey Wall" for c in st["wake_choices"])
+    assert st["enroll"]["stage"] == "done" and st["enroll"]["quality"] in ("good", "fair", "poor")
+    assert all(f is not None and f.shape == (64, 64, 3) for f in frames)
+    assert v.forget_wake("own:hey-wall")["error"]            # in use
+    e.finished_at -= 4.0                                     # three seconds on, the wall is its own again
+    assert v.frame(t, 64) is None and v.state == "idle"
+
+    # taught again, then walked away from: it stops, and the wall listens again
+    assert v.enroll_start("Okay Tessera", samples=3)["enroll"]["stage"] == "takes"
+    feed([1] * int(E.IDLE_S * 10 + 5), False)
+    assert v.state == "idle" and v.enroller.stage == "cancelled" and v.status()["enroll"]["event"] == "idle"

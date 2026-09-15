@@ -1,105 +1,65 @@
 # AirPlay to the wall
 
-The Pi becomes an AirPlay receiver called **Wall**. Pick it in the AirPlay
-menu on an iPhone, a Mac or an Apple TV, alone or in a group with a real
-speaker, and the wall is handed the exact title, artist, album, artwork and
-position of whatever plays. No account, no key, no guessing. The wall does
-not have to make a sound.
+The wall is an AirPlay speaker called **Wall**. Pick it in the AirPlay menu
+on an iPhone, iPad, Mac or Apple TV, alone or together with another speaker,
+and the wall is handed the exact title, artist, album, artwork and position
+of whatever plays, from any app. No account, no key, no guessing. The wall
+makes no sound of its own.
 
-The brain's side is built (`brain/nowplaying/airplay.py`): it reads
-shairport-sync's metadata pipe and answers in the source chain right after
-the phone and before the ears. What is left is installing shairport-sync,
-which needs sudo on the Pi.
+## How it runs
 
-## Install
+- `pi/install-airplay.sh` unpacks Debian's shairport-sync 4.3.7 under
+  `~/opt/shairport-sync`, with the two libraries the Pi does not have
+  (libconfig11, libmosquitto1). No root: Debian builds classic AirPlay
+  (`4.3.7-libdaemon-OpenSSL-Avahi-ALSA-jack-pa-dummy-stdout-pipe-soxr-...-metadata-...`),
+  which needs no nqptp and no privileged port, and it announces itself
+  through the avahi daemon the Pi already runs. Run the script again to
+  update.
+- The brain starts it (`brain/nowplaying/receiver.py`) with a config of its
+  own in `~/.config/album-art-matrix/shairport-sync.conf`: the name from the
+  phone, the dummy output, cover art on, the metadata pipe
+  `/tmp/shairport-sync-metadata`. It restarts it when it stops, with a
+  growing pause, restarts it when the name changes, stops it when the phone
+  turns the speaker off, and stops it with the brain. A shairport-sync the
+  system already runs is left alone and read the same way.
+- `brain/nowplaying/airplay.py` reads the pipe: title, artist, album,
+  length, the artwork bytes, the position, pause, resume and end, the
+  sender's name. It answers in the source chain right after the phone. The
+  artwork is served at `GET /art/airplay/<key>.jpg` for the phone. When a
+  song arrives with no artwork (some apps send none), the sleeve is found
+  by name after four seconds.
 
-Debian trixie ships shairport-sync 4.3.7. On the Pi:
+## From the phone
 
-```bash
-sudo apt install shairport-sync
-```
-
-## Configure
-
-Edit `/etc/shairport-sync.conf`. Three sections matter; the file's own
-comments explain the rest.
-
-```
-general =
-{
-  name = "Wall";
-  output_backend = "dummy";   // "alsa" instead to play through a USB DAC
-};
-
-metadata =
-{
-  enabled = "yes";
-  include_cover_art = "yes";
-  pipe_name = "/tmp/shairport-sync-metadata";
-  pipe_timeout = 5000;
-};
-
-sessioncontrol =
-{
-  allow_session_interruption = "yes";
-  session_timeout = 20;
-};
-```
-
-`dummy` receives the stream and discards the sound, which is what a wall
-wants when the room's speaker is in the same AirPlay group. For a DAC on
-the Pi use `alsa` and set `alsa = { output_device = "hw:1"; };` to the card
-`aplay -l` lists.
-
-Then:
-
-```bash
-sudo systemctl enable --now shairport-sync
-```
-
-The brain's config needs nothing: `[airplay]` in `config.toml` can name a
-different pipe, and `[features] airplay = false` turns the source off.
+Settings, Services, AirPlay: whether the wall is receiving and from whom, a
+switch to stop being a speaker, and the name it shows in the AirPlay menu.
 
 ## Check
 
-- `ls -l /tmp/shairport-sync-metadata` shows a pipe (`p` at the start of
-  the mode) once shairport-sync has started.
-- `curl -s localhost:8788/services | python3 -m json.tool` has an `airplay`
-  block: `running` (the process), `pipe_exists`, `reading` (the brain has the
-  pipe open; it opens the moment a stream begins), `state`, and
-  `connected_from` (the device's name) while something plays.
-- Play a song to Wall from an iPhone. The brain logs
-  `[main] Frank Ocean — Nights (Blonde)` and the sleeve goes up as soon as
-  the artwork arrives, a beat after the title. The Services page on the
-  phone shows AirPlay's state.
-
-## AirPlay 2 and nqptp
-
-Debian's 4.3.7 is an AirPlay 2 build (its help text names port 7000 for
-AirPlay 2), and an AirPlay 2 build wants `nqptp`, the timing daemon, running
-beside it; without it shairport-sync warns at start and AirPlay 2 sessions
-do not work. Debian has no nqptp package, so it is built from source, which
-takes a few minutes on the Pi:
-
 ```bash
-sudo apt install --no-install-recommends build-essential git autoconf automake libtool
-git clone https://github.com/mikebrady/nqptp.git
-cd nqptp
-autoreconf -fi
-./configure --with-systemd-startup
-make
-sudo make install
-sudo systemctl enable --now nqptp
-sudo systemctl restart shairport-sync
+curl -s localhost:8788/airplay | python3 -m json.tool
 ```
 
-With nqptp up the wall can sit in a group with HomePods and other AirPlay 2
-speakers and is picked from the Home app as well as the AirPlay menu. The
-metadata pipe and the brain's reader are the same either way.
+`receiver.running` is true and `receiver.name` is the name. Play something
+to it and `state` says playing, with `connected_from` the device. From a
+Mac, `dns-sd -B _raop._tcp local.` lists it as `...@Wall`.
 
-## Artwork
+## Tested
 
-The artwork arrives as bytes on the pipe. The brain keeps the last few and
-serves them at `GET /art/airplay/<key>.jpg` (or `.png`) on the control port,
-which is the `art_url` in the journal, so the phone's history and the
-room's sleeve fetch it the same way they fetch a streamed song's cover.
+On 2026-09-15, on the Pi: the Mac listed it as an AirPlay speaker called
+Wall, and a song played to it from an Apple device (AirPlay/980.77.1) came
+through whole, title and artist read, with no fault. pyatv, a Python
+AirPlay sender, is the one thing that trips it: pyatv sends raw PCM (L16),
+this shairport-sync hands that to its ALAC decoder, and the decoder faults
+within seconds. The brain starts the receiver again two seconds later.
+Apple devices send ALAC.
+
+## AirPlay 2
+
+Grouping the wall with HomePods in the Home app, and choosing it there,
+needs AirPlay 2: shairport-sync built from source with `--with-airplay-2`
+and nqptp running beside it. nqptp listens on ports 319 and 320, which takes
+root, so that build is done at the Pi with sudo, following
+<https://github.com/mikebrady/shairport-sync/blob/master/BUILD.md>. The
+brain's own receiver steps aside for a system shairport-sync by itself, and
+the metadata pipe and its reader are the same either way.
