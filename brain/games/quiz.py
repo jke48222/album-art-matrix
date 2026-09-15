@@ -16,8 +16,8 @@ import re
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, GREEN, INK, WHITE, YELLOW, blank, fill, header, scale_for, text,
-                    text_centred, fit_text)
+from .board import (BLACK, DIM, EDGE, FAINT, GREEN, INK, RED, WHITE, YELLOW, arc, banner, blank, fill, header, mix,
+                    progress, scale_for, scoreboard, text, text_centred, fit_text, wrap_text, text_right)
 from .pictures import _fold
 
 SECONDS = 20.0
@@ -168,42 +168,39 @@ class Quiz(Game):
 
     def frame_at(self, size: int, t: float):
         self.tick()
-        c = blank(size)
         s = scale_for(size)
+        big = size > 96
         if self.over:
             ranked = sorted(self.scores.items(), key=lambda kv: -kv[1])
-            y = 4 * s
-            text_centred(c, "SCORES", size // 2, y, DIM, s)
-            y += 10 * s
-            for p, sc in ranked[: 4 if size <= 96 else 8]:
-                text(c, fit_text(p, size // 2, s), 3 * s, y, INK, s)
-                text(c, str(sc), size - 3 * s - 6 * s * len(str(sc)), y, YELLOW, s)
-                y += 9 * s
-            return c
-        text_centred(c, f"Q{self.i + 1}", size // 2, 6 * s, INK, 2 * s)
+            return scoreboard(size, self.theme if big else "Scores", [(p, str(sc)) for p, sc in ranked], self.age(), YELLOW)
+        c = blank(size)
+        cx = size // 2
+        cy = (size // 2 - 6 * s) if not big else 58
+        r = 15 * s if not big else 30
         if self.phase == "question":
             frac = max(0.0, 1.0 - (self._clock() - self.t_q) / self.seconds)
-            fill(c, 2 * s, size // 2 - s, size - 4 * s, 2 * s, FAINT)
-            fill(c, 2 * s, size // 2 - s, int((size - 4 * s) * frac), 2 * s, YELLOW if frac > 0.25 else (200, 80, 60))
-            if size > 96:
-                # the question, wrapped, at 1x
-                words = self.question.split()
-                lines, line = [], ""
-                for w in words:
-                    if len(line) + len(w) + 1 > 30:
-                        lines.append(line); line = w
-                    else:
-                        line = (line + " " + w).strip()
-                if line:
-                    lines.append(line)
-                y = size // 2 + 8
-                for ln in lines[:5]:
-                    text_centred(c, ln, size // 2, y, INK, 1)
+            arc(c, cx, cy, r, 0, 360, FAINT, 2 if not big else 4)
+            if frac > 0:
+                arc(c, cx, cy, r, 0, 360 * frac, YELLOW if frac > 0.25 else RED, 2 if not big else 4)
+            text_centred(c, str(self.i + 1), cx, cy - 7 * s, INK, 2 * s)
+            if big:
+                lines = wrap_text(self.question, size - 14, 1)[:5]
+                y = cy + r + 10
+                for ln in lines:
+                    text_centred(c, ln, cx, y, INK, 1)
                     y += 9
             else:
-                text_centred(c, f"{len(self.answered)}/{len(self.players)}", size // 2, size // 2 + 6 * s, DIM, s)
+                text_centred(c, f"{len(self.answered)}/{len(self.players)}", cx, cy + r + 4, DIM, 1)
         else:
             q, accept = self.questions[self.i]
-            text_centred(c, fit_text(accept[0].upper(), size - 4 * s, s), size // 2, size // 2 + 2 * s, GREEN, s)
-        header(c, size, fit_text(self.theme, 100, 1), f"{self.i + 1}/{len(self.questions)}", s)
+            arc(c, cx, cy, r, 0, 360, mix(GREEN, BLACK, 0.4), 2 if not big else 4)
+            text_centred(c, str(self.i + 1), cx, cy - 7 * s, DIM, 2 * s)
+            ans = accept[0].upper()
+            sc = 2 if big and len(ans) <= 14 else 1
+            text_centred(c, fit_text(ans, size - 6 * s, sc), cx, cy + r + (8 if big else 4), GREEN, sc)
+            if big:
+                right = [p for p, (_, ok) in self.answered.items() if ok]
+                text_centred(c, fit_text(", ".join(right) if right else "nobody", size - 12, 1), cx, size - 12, DIM, 1)
+        header(c, size, fit_text(self.theme.upper(), 110, 1), f"{self.i + 1}/{len(self.questions)}", s, accent=YELLOW)
         return c
+

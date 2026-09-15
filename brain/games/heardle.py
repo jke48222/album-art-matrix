@@ -20,8 +20,8 @@ import re
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, GREEN, INK, WHITE, YELLOW, blank, fill, header, scale_for, text,
-                    text_centred, fit_text)
+from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, SLATE2, WHITE, YELLOW, banner, blank, disc, fill, glow,
+                    header, mix, rounded, scale_for, text, text_centred, fit_text)
 from ..art.fetch import fetch_art
 from ..art.pipeline import prepare
 from .pictures import _fold
@@ -158,36 +158,53 @@ class Heardle(Game):
 
     def frame_at(self, size: int, t: float):
         s = scale_for(size)
+        big = size > 96
         if self.over:
             sleeve = self._sleeve(size)
             if sleeve is not None:
                 import numpy as np
                 f = np.asarray(sleeve, dtype=np.uint8).copy()
-                if size > 96:
-                    text_centred(f, fit_text(self.song["title"], size - 8, 1), size // 2, size - 10, WHITE, 1)
+                banner(f, size, f"{self.song['artist']} — {self.song['title']}" if big else self.song["title"],
+                       INK, mix(GREEN, BLACK, 0.55) if self.won else (40, 30, 30))
                 return f
             c = blank(size)
             text_centred(c, fit_text(self.song["title"].upper(), size - 4, s), size // 2, size // 2 - 8 * s, INK, s)
             text_centred(c, fit_text(self.song["artist"], size - 4, s), size // 2, size // 2 + 2 * s, DIM, s)
             return c
         c = blank(size)
-        # six bars, their widths the seconds; unlocked bright, used dim
         total = sum(STEPS)
         x = 2 * s
         width = size - 4 * s
-        y = size // 2 - 3 * s
+        y = size // 2 - 4 * s
+        h = 8 * s
+        playing = bool(self.playing_until and self._clock() < self.playing_until)
         for i, sec in enumerate(STEPS):
             w = max(2 * s, int(width * sec / total) - s)
-            colour = YELLOW if i < self.step + 1 else FAINT
             if i < len(self.tries):
-                colour = DIM if self.tries[i][2] else (150, 60, 50)
-            fill(c, x, y, w, 6 * s, colour)
+                colour = mix(SLATE2, WHITE, 0.15) if self.tries[i][2] else mix(RED, BLACK, 0.35)
+            elif i <= self.step:
+                colour = YELLOW
+            else:
+                colour = FAINT
+            rounded(c, x, y, w, h, colour, 1 if not big else 3)
+            if big and i <= self.step and i >= len(self.tries):
+                fill(c, x + 3, y, w - 6, 1, mix(colour, WHITE, 0.2))
             x += w + s
-        # the needle while the phone plays
-        if self.playing_until and self._clock() < self.playing_until:
+        # the needle while the phone plays, with a little light around it
+        if playing:
             frac = 1.0 - (self.playing_until - self._clock()) / max(1.0, float(self.seconds))
             px = 2 * s + int((size - 4 * s) * frac * self.seconds / total)
-            fill(c, px, y - 2 * s, s, 10 * s, WHITE)
-        text_centred(c, f"{self.seconds}s", size // 2, size // 2 + 6 * s, INK, s)
-        header(c, size, "Heardle", f"try {len(self.tries) + 1} of 6", s)
+            glow(c, px, y + h / 2, 6 * s, WHITE, 0.35)
+            fill(c, px, y - 2 * s, s, h + 4 * s, WHITE)
+        text_centred(c, f"{self.seconds}s", size // 2, y + h + 4 * s, INK, s)
+        # the six tries as dots under
+        dx = size // 2 - 6 * 3 * s // 2 + s
+        for i in range(len(STEPS)):
+            colour = (mix(RED, BLACK, 0.3) if not self.tries[i][2] else DIM) if i < len(self.tries) else FAINT
+            disc(c, dx + i * 3 * s + s, y + h + 14 * s, 0.9 * s, colour)
+        if big and self.tries:
+            last = self.tries[-1]
+            text_centred(c, fit_text("skipped" if last[2] else f"not {last[0]}", size - 12, 1), size // 2, size - 12, DIM, 1)
+        header(c, size, "HEARDLE", f"try {len(self.tries) + 1} of 6", s, accent=YELLOW)
         return c
+

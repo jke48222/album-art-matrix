@@ -18,8 +18,8 @@ from functools import lru_cache
 import numpy as np
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, RED, YELLOW, WHITE, blank, fill, header, scale_for, text,
-                    text_centred, fit_text, text_width)
+from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, YELLOW, WHITE, banner, blank, ease_out, fill, header,
+                    mix, scale_for, text, text_centred, fit_text, text_width)
 
 VECTORS = os.path.join(os.path.dirname(__file__), "words", "vectors50.npz")
 _WORD = re.compile(r"^(?:(?:the word is|try|how about|maybe|is it|guess)\s+)?([a-z]+)[.!?]*$")
@@ -137,22 +137,38 @@ class Contexto(Game):
     def frame_at(self, size: int, t: float):
         c = blank(size)
         s = scale_for(size)
+        big = size > 96
         if self.over:
             text_centred(c, fit_text(self.secret.upper(), size - 4, s), size // 2, size // 2 - 8 * s, INK, s)
             text_centred(c, "found" if self.won else "given up", size // 2, size // 2 + 2 * s, DIM, s)
-        elif not self.guesses:
+            banner(c, size, f"{len(self.guesses)} guesses", INK, mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
+        elif not self.latest:
             text_centred(c, "say a", size // 2, size // 2 - 8 * s, DIM, s)
             text_centred(c, "word", size // 2, size // 2, INK, s)
         else:
             w, r, _ = self.latest
-            big = 3 * s if len(str(r)) <= 3 else 2 * s
-            text_centred(c, str(r), size // 2, size // 2 - 5 * big, colour_of(r), big)
+            col = colour_of(r)
+            pop = ease_out(self.age() / 0.3)
+            big_s = (3 if len(str(r)) <= 3 else 2) * s
+            big_s = max(1, int(round(big_s * (0.6 + 0.4 * pop))))
+            text_centred(c, str(r), size // 2, size // 2 - 5 * s - 3 * big_s, col, big_s)
             text_centred(c, fit_text(w.upper(), size - 4, s), size // 2, size // 2 + 3 * s, INK, s)
-            # the bar: how close, on a log scale from 20000 to 1
+            # the closeness bar: red far away, yellow nearer, green close; a marker at the rank
+            bar_y, bar_h, bx, bw = size - 4 * s, 2 * s, 2 * s, size - 4 * s
+            thirds = bw // 3
+            fill(c, bx, bar_y, thirds, bar_h, mix(RED, BLACK, 0.5))
+            fill(c, bx + thirds, bar_y, thirds, bar_h, mix(YELLOW, BLACK, 0.5))
+            fill(c, bx + 2 * thirds, bar_y, bw - 2 * thirds, bar_h, mix(GREEN, BLACK, 0.5))
             frac = 1.0 - min(1.0, max(0.0, np.log10(max(1, r)) / np.log10(20000)))
-            fill(c, 2 * s, size - 3 * s, size - 4 * s, s, (40, 40, 44))
-            fill(c, 2 * s, size - 3 * s, int((size - 4 * s) * frac), s, colour_of(r))
-            if self.best is not None and size > 96:
-                text(c, f"best {self.best}", 6, size - 16, DIM, 1)
-        header(c, size, "Contexto", f"{len(self.guesses)} guesses", s)
+            mx = bx + int((bw - s) * frac)
+            fill(c, mx, bar_y - s, s, bar_h + 2 * s, WHITE)
+            if big:
+                y = size - 34
+                for gw_, gr, _ in self.guesses[:2]:
+                    text(c, fit_text(gw_, 90, 1), 6, y, DIM, 1)
+                    text(c, str(gr), size - 6 - text_width(str(gr), 1), y, colour_of(gr), 1)
+                    y += 9
+        header(c, size, "CONTEXTO", f"{len(self.guesses)} guesses" + (f", best {self.best}" if self.best else "") if not self.over else "",
+               s, accent=GREEN)
         return c
+

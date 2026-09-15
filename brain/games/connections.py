@@ -20,8 +20,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, INK, WHITE, BLUE, PURPLE, GREEN, YELLOW, blank, fill, header, text,
-                    text_centred, fit_text, letter_tile, text_width)
+from .board import (BLACK, DIM, FAINT, INK, SLATE, SLATE2, WHITE, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
+                    ease_out, fill, header, mix, rounded, text, text_centred, fit_text, tile, text_width)
 
 COLOURS = [YELLOW, GREEN, BLUE, PURPLE]
 NAMES = ["yellow", "green", "blue", "purple"]
@@ -93,6 +93,7 @@ class Connections(Game):
         self.mistakes = 0
         self.tries: list[list[str]] = []
         self.message = "Find four that go together."
+        self.shook_at = None
 
     def _from_claude(self, asker, rng: random.Random):
         try:
@@ -197,6 +198,8 @@ class Connections(Game):
             return {"group": best, "theme": theme, "colour": NAMES[best]}
         self.mistakes += 1
         self.message = "One away." if best_n == 3 else "Not a group."
+        import time as _time
+        self.shook_at = _time.monotonic()
         if self.mistakes >= 4:
             self.finish(won=False, message="Four mistakes. " + "; ".join(f"{t}: {', '.join(g)}" for t, g in self.groups
                                                                        if self.groups.index((t, g)) not in self.found))
@@ -220,35 +223,47 @@ class Connections(Game):
 
     # ---- the wall --------------------------------------------------------------------------------
     def frame_at(self, size: int, t: float):
+        import math
+        import time as _time
         c = blank(size)
         big = size > 96
         s = 3 if big else 1
-        top = 2 if not big else 14
-        row_h = 15 if not big else 44
+        top = 0 if not big else 18
+        bar_h = 13 if not big else 40
         y = top
-        for gi in self.found:
+        # a wrong submission shakes the loose tiles for a moment
+        shake = 0
+        if self.shook_at is not None:
+            since = _time.monotonic() - self.shook_at
+            if since < 0.45:
+                shake = int(round(math.sin(since * 40) * (1 if not big else 3) * (1 - since / 0.45)))
+        for k, gi in enumerate(self.found):
             theme, words = self.groups[gi]
-            fill(c, 2 * s, y, size - 4 * s, row_h - (1 if not big else 4), COLOURS[gi])
-            text_centred(c, fit_text(theme.upper(), size - 8 * s, 1 if not big else 2), size // 2, y + (2 if not big else 6), BLACK, 1 if not big else 2)
-            if big:
-                text_centred(c, fit_text(", ".join(w.upper() for w in words), size - 12, 1), size // 2, y + 26, BLACK, 1)
-            else:
-                text_centred(c, fit_text(" ".join(w[:3].upper() for w in words), size - 6, 1), size // 2, y + 9, BLACK, 1)
-            y += row_h
+            grow = ease_out(self.age() / 0.4) if k == len(self.found) - 1 else 1.0
+            h = max(2, int((bar_h - (1 if not big else 4)) * grow))
+            tile(c, 2 * s, y + (bar_h - (1 if not big else 4) - h) // 2, size - 4 * s, h, COLOURS[gi], s)
+            if grow > 0.7:
+                text_centred(c, fit_text(theme.upper(), size - 8 * s, 1), size // 2, y + (3 if not big else 8), BLACK, 1)
+                if big:
+                    text_centred(c, fit_text(", ".join(w.upper() for w in words), size - 8 * s, 1), size // 2, y + 22,
+                                 mix(COLOURS[gi], BLACK, 0.5), 1)
+            y += bar_h
         loose = [w for w in self.words if w not in self._found_words()]
-        # loose words as a grid of short labels: at 64 the first four letters, at 192 whole words
-        cols = 4
+        cols = 4 if big else 2
         cell_w = (size - 4 * s) // cols
-        cell_h = row_h
+        cell_h = bar_h if big else 8
         for i, w in enumerate(loose):
             r, col = divmod(i, cols)
-            x = 2 * s + col * cell_w
+            x = 2 * s + col * cell_w + shake
             yy = y + r * cell_h
-            if yy + cell_h > size:
+            if yy + cell_h > size - (0 if not self.over else 16):
                 break
             picked = w in self.picked
-            fill(c, x, yy, cell_w - s, cell_h - (1 if not big else 4), (48, 48, 54) if picked else (24, 24, 28))
+            tile(c, x, yy, cell_w - s, cell_h - (1 if not big else 4), INK if picked else SLATE2, s)
             label = w.upper() if big else w[:4].upper()
-            text(c, fit_text(label, cell_w - 3 * s, 1), x + s, yy + (4 if not big else 18), WHITE if picked else DIM, 1)
-        header(c, size, "Connections", f"{4 - self.mistakes} mistakes left" if not self.over else self.message[:30], s)
+            text_centred(c, fit_text(label, cell_w - 3 * s, 1), x + (cell_w - s) // 2, yy + (0 if not big else 15),
+                         BLACK if picked else INK, 1)
+        if self.over:
+            banner(c, size, self.message[:40], INK, mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
+        header(c, size, "CONNECTIONS", f"{4 - self.mistakes} mistakes left" if not self.over else "", s, accent=PURPLE)
         return c

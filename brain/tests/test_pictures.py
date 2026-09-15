@@ -61,6 +61,7 @@ def test_sliding(tmp_path):
         # solve it: undo the scramble by search is overkill; walk the tiles home with a solver
         solve(host)
         assert g.over and g.won and g.message.startswith("Back in")
+        g.changed_at -= 2.0                                   # past the wash of light
         sharp = host.frame_at(size)
         cell = size // 3
         want = np.asarray(g.sleeve.resize((size, size)) if g.sleeve.size[0] != size else g.sleeve)

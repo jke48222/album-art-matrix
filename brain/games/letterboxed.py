@@ -19,8 +19,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, INK, WHITE, YELLOW, blank, disc, fill, header, text, text_centred,
-                    fit_text)
+from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, fill, header,
+                    line, mix, text, text_centred, fit_text)
 from .words import common, common_set
 
 _WORD = re.compile(r"^(?:(?:the word is|try|then|and then|next)\s+)?([a-z]+)[.!?]*$")
@@ -192,23 +192,27 @@ class LetterBoxed(Game):
     def frame_at(self, size: int, t: float):
         c = blank(size)
         big = size > 96
-        s = 3 if big else 1
+        s = 2 if big else 1
         pts = self._spots(size)
         m = 12 if not big else 34
         x0, y0, x1, y1 = m, m + (0 if not big else 6), size - m - 1, size - m - 1 + (0 if not big else 6)
-        fill(c, x0, y0, x1 - x0, 1, FAINT); fill(c, x0, y1, x1 - x0 + 1, 1, FAINT)
-        fill(c, x0, y0, 1, y1 - y0, FAINT); fill(c, x1, y0, 1, y1 - y0, FAINT)
-        # the lines the words draw, the current word bright
+        # the box
+        for (ax, ay, bx, by) in ((x0, y0, x1, y0), (x1, y0, x1, y1), (x0, y1, x1, y1), (x0, y0, x0, y1)):
+            line(c, (ax, ay), (bx, by), EDGE if big else FAINT, 2 if big else 1)
+        # the lines the words draw, the current word bright and thicker
         for wi, w in enumerate(self.words):
-            colour = YELLOW if wi == len(self.words) - 1 else DIM
+            last = wi == len(self.words) - 1
+            colour = YELLOW if last else mix(YELLOW, BLACK, 0.55)
             for a, b in zip(w, w[1:]):
-                self._line(c, pts[a], pts[b], colour)
+                line(c, pts[a], pts[b], colour, (3 if last else 2) if big else 1)
         for ch, (x, y) in pts.items():
             used = ch in self.used
-            disc(c, x + 0.5, y + 0.5, 2.5 * s if big else 2.0, WHITE if used else FAINT)
+            disc(c, x + 0.5, y + 0.5, (4.0 if big else 2.0), WHITE if used else SLATE2, soft=0.8 if big else 0.0)
+            if big and not used:
+                disc(c, x + 0.5, y + 0.5, 2.2, EDGE)
             side = self.side_of[ch]
             gw, gh = 5 * s, 7 * s
-            off = 6 if not big else 14
+            off = 6 if not big else 12
             tx, ty = x - gw // 2, y - gh // 2
             if side == 0:
                 ty = y - off - gh
@@ -220,16 +224,13 @@ class LetterBoxed(Game):
                 tx = x - off - gw
             text(c, ch.upper(), tx, ty, INK if not used else DIM, s)
         if self.words:
-            text_centred(c, fit_text(self.words[-1].upper(), (x1 - x0) - 6, s), size // 2, size // 2 - 3 * s + (0 if not big else 6), INK, s)
-        header(c, size, "Letter Boxed", f"{len(self.letters - self.used)} to go" if not self.over else self.message, s)
+            text_centred(c, fit_text(self.words[-1].upper(), (x1 - x0) - 8, s), size // 2,
+                         (y0 + y1) // 2 - 3 * s, INK, s)
+            if big and len(self.words) > 1:
+                text_centred(c, fit_text(" ".join(w.upper() for w in self.words[:-1]), (x1 - x0) - 12, 1), size // 2,
+                             (y0 + y1) // 2 + 12, DIM, 1)
+        if self.over:
+            banner(c, size, self.message, BLACK, YELLOW)
+        header(c, size, "LETTER BOXED", f"{len(self.letters - self.used)} to go" if not self.over else "", s, accent=YELLOW)
         return c
 
-    @staticmethod
-    def _line(c, a, b, colour):
-        (x0, y0), (x1, y1) = a, b
-        n = max(abs(x1 - x0), abs(y1 - y0), 1)
-        for k in range(n + 1):
-            x = round(x0 + (x1 - x0) * k / n)
-            y = round(y0 + (y1 - y0) * k / n)
-            if 0 <= y < c.shape[0] and 0 <= x < c.shape[1]:
-                c[y, x] = colour

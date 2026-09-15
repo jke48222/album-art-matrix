@@ -18,7 +18,8 @@ import numpy as np
 from PIL import Image
 
 from . import Game, register
-from .board import BLACK, DIM, GREEN, INK, WHITE, YELLOW, blank, fill, header, scale_for, text_centred, fit_text
+from .board import (BLACK, DIM, GREEN, INK, WHITE, YELLOW, banner, blank, breathe, disc, fill, header, mix,
+                    progress, scale_for, text_centred, fit_text)
 from ..art.pipeline import prepare
 from .pictures import _fold
 
@@ -122,16 +123,21 @@ class Pictionary(Game):
         s = scale_for(size)
         if self.picture is None:
             c = blank(size)
-            dots = int(t * 2) % 4
-            text_centred(c, "drawing" + "." * dots, size // 2, size // 2 - 4 * s, DIM, s)
+            # three dots breathing while the model draws
+            for k in range(3):
+                b = breathe(t + k * 0.3, 1.2)
+                disc(c, size // 2 + (k - 1) * 6 * s, size // 2, (1.0 + 1.2 * b) * s, mix(DIM, INK, b))
+            text_centred(c, "drawing", size // 2, size // 2 + 8 * s, DIM, s)
+            header(c, size, "PICTIONARY", "", s, accent=YELLOW)
             return c
         if size not in self.faces:
             self.faces[size] = np.asarray(prepare(self.picture, size, unsharp_percent=0), dtype=np.uint8)
         f = self.faces[size].copy()
         if self.over:
-            fill(f, 0, size - 9 * s, size, 9 * s, BLACK)
-            text_centred(f, fit_text(self.word.upper(), size - 4, s), size // 2, size - 8 * s, GREEN if self.won else YELLOW, s)
+            banner(f, size, f"a {self.word}" if not self.won else f"{self.winner or self.players[0]}: {self.word}",
+                   INK, mix(GREEN, BLACK, 0.55) if self.won else (40, 40, 30))
         else:
             frac = min(1.0, self.elapsed() / self.seconds)
-            fill(f, 0, size - s, int(size * (1.0 - frac)), s, WHITE)
+            progress(f, 0, size - s, size, s, 1.0 - frac, WHITE, (20, 20, 24))
         return f
+

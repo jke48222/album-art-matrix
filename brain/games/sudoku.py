@@ -23,7 +23,8 @@ import re
 import numpy as np
 
 from . import Game, register
-from .board import BLACK, DIM, EDGE, INK, RED, WHITE, blank, fill, header, text
+from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, SLATE, WHITE, banner, blank, fill, header, mix,
+                    text, scale_for)
 
 DIGITS_3X5 = {
     "1": ["010", "110", "010", "010", "111"],
@@ -304,32 +305,39 @@ class Sudoku(Game):
         c = blank(size)
         big = size > 96
         cell = 21 if big else 7
-        x0 = y0 = (size - 9 * cell) // 2 if not big else (size - 9 * cell) // 2
-        if big:
-            y0 = max(y0, 14)
-            x0 = (size - 9 * cell) // 2
+        x0 = (size - 9 * cell) // 2
+        y0 = (size - 9 * cell) // 2 if not big else 18
+        # the chosen cell's row, column and box, faintly, then the cell
+        if self.chosen is not None and not self.over:
+            cr, cc = divmod(self.chosen, 9)
+            fill(c, x0, y0 + cr * cell, 9 * cell, cell, (14, 16, 24))
+            fill(c, x0 + cc * cell, y0, cell, 9 * cell, (14, 16, 24))
+            fill(c, x0 + (cc // 3) * 3 * cell, y0 + (cr // 3) * 3 * cell, 3 * cell, 3 * cell, (16, 18, 28))
+            fill(c, x0 + cc * cell, y0 + cr * cell, cell, cell, CHOSEN)
         for i in range(81):
             r, col = divmod(i, 9)
             x, y = x0 + col * cell, y0 + r * cell
-            if i == self.chosen and not self.over:
-                fill(c, x, y, cell, cell, CHOSEN)
             v = self.grid[i]
             if v:
                 colour = WHITE if self.puzzle[i] else RED if i in self.wrong else ACCENT
                 if big:
-                    text(c, str(v), x + (cell - 10) // 2, y + (cell - 14) // 2, colour, 2)
+                    text(c, str(v), x + (cell - 10) // 2 + 1, y + (cell - 14) // 2, colour, 2)
                 else:
                     rows = DIGITS_3X5[str(v)]
                     for dy, row in enumerate(rows):
                         for dx, bit in enumerate(row):
                             if bit == "1":
                                 c[y + 1 + dy, x + 2 + dx] = colour
-        # the lines: faint between cells, brighter between boxes
+        # the lines: faint between cells, firm between boxes
         for k in range(10):
             strong = k % 3 == 0
-            colour = EDGE if strong else (34, 34, 38)
+            colour = EDGE if strong else (28, 28, 34)
+            thick = (2 if big else 1) if strong else 1
             pos = k * cell
-            fill(c, x0 + pos - (1 if k == 9 else 0), y0, 1, 9 * cell, colour)
-            fill(c, x0, y0 + pos - (1 if k == 9 else 0), 9 * cell, 1, colour)
-        header(c, size, f"Sudoku, {self.rating}", "solved" if self.over else f"{sum(1 for x in self.grid if x == 0)} left", 3 if big else 1)
+            fill(c, x0 + pos - (thick if k == 9 else 0), y0, thick, 9 * cell, colour)
+            fill(c, x0, y0 + pos - (thick if k == 9 else 0), 9 * cell, thick, colour)
+        left = sum(1 for x in self.grid if x == 0)
+        if self.over:
+            banner(c, size, "Solved.", INK, mix((40, 120, 70), BLACK, 0.45))
+        header(c, size, "SUDOKU", f"{self.rating}, {left} left" if not self.over else "", 3 if big else 1, accent=ACCENT)
         return c
