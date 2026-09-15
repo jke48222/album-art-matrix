@@ -117,14 +117,15 @@ def test_knocks_over_music_need_more():
     """With the gate open the bar is higher: a soft tap fails, a real knock passes."""
     hits = []
     det = KnockDetector(on_double=hits.append, log=lambda s: None)
-    # a knock's first 10 ms sit about 4 dB under its nominal level, so these
-    # land at roughly 18 and 30 dB over a room at -36; the bar over music is 26
-    s = knock(knock(noise(4.0, -36.0), 1.5, dbfs=-14.0), 1.9, dbfs=-14.0)
+    # a knock's first 10 ms sit 7 to 9 dB under its nominal level (the decay
+    # and the clipping), so these land at roughly 19 and 30 dB over a room at
+    # -40; the bar over music is the 20 of the knob plus 6
+    s = knock(knock(noise(4.0, -40.0), 1.5, dbfs=-14.0), 1.9, dbfs=-14.0)
     feed(det, s, gate_open=True)
     assert hits == []
     hits = []
     det = KnockDetector(on_double=hits.append, log=lambda s: None)
-    s = knock(knock(noise(4.0, -36.0), 1.5, dbfs=-2.0), 1.9, dbfs=-2.0)
+    s = knock(knock(noise(4.0, -40.0), 1.5, dbfs=-2.0), 1.9, dbfs=-2.0)
     feed(det, s, gate_open=True)
     assert len(hits) == 1
 
