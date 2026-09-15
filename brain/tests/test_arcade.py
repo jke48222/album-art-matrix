@@ -84,8 +84,8 @@ def test_snake(tmp_path):
     clock[0] = 10.0                                                        # straight into the top wall
     g.step()
     assert g.over and g.score >= 1 and g.message.endswith("Say again.")
-    assert host.hear("again") is None or True
-    assert host.move(None, {"again": True})["again"] and not host.game.over
+    again = host.move(None, {"again": True})
+    assert again["running"] and not host.game.over and host.game.score == 0    # the host starts it over
 
 
 def test_tetris(tmp_path):

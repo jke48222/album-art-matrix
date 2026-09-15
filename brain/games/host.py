@@ -102,6 +102,9 @@ class GameHost:
             if g is None:
                 return {"error": "no game is on"}
             if g.over:
+                if (move or {}).get("again"):
+                    # the same game again, same players, same options
+                    return self.start(g.name, g.options, g.players)
                 return {"error": "that game is over", **self.status()}
             who = self._who(player)
             try:
