@@ -214,7 +214,12 @@ class LiveDrawing:
                 if stage == "failed":
                     self._words(f, size, "could not draw", (200, 90, 80))
                 elif stage == "waiting":
-                    self._sweep(f, size, t, 0.16)
+                    # alive while the model thinks: a slow breath of light in
+                    # the middle and two bands crossing each other
+                    breath = 0.5 - 0.5 * np.cos(t * 2.0)
+                    self._glow(f, size, 10 + 8 * breath)
+                    self._sweep(f, size, t, 0.30)
+                    self._sweep(f, size, -t * 0.7 + 0.8, 0.14)
                     if size > 96:
                         self._words(f, size, self.prompt, (120, 118, 112))
                 return f
@@ -234,6 +239,14 @@ class LiveDrawing:
             elif stage == "failed":
                 self._words(out, size, "could not draw", (200, 90, 80))
             return out
+
+    @staticmethod
+    def _glow(f: np.ndarray, size: int, level: float):
+        """A soft light in the middle of the canvas, `level` at its heart."""
+        ys, xs = np.mgrid[0:size, 0:size].astype(np.float32)
+        d = np.sqrt((xs + 0.5 - size / 2) ** 2 + (ys + 0.5 - size / 2) ** 2) / (size * 0.55)
+        a = np.clip(1 - d, 0, 1) ** 2 * level
+        f[...] = np.clip(f.astype(np.float32) + a[..., None] * np.array([1.0, 0.94, 0.82], np.float32), 0, 255).astype(np.uint8)
 
     @staticmethod
     def _sweep(f: np.ndarray, size: int, t: float, strength: float):
