@@ -1,0 +1,16 @@
+// The "Tessera Codex" build: the same app under its own identifiers, so it
+// can live on the phone beside "Tessera" with its own settings.
+//
+// An app extension's identifier has to begin with its app's identifier and a
+// dot, so one setting cannot simply append ".codex" to every target: the app
+// gets com.jalenedusei.tessera.codex and each extension hangs off that. The
+// suffix is looked up per target through a nested reference, which xcconfig
+// allows: $(CODEX_SUFFIX_$(TARGET_NAME)).
+//
+// Passed by tessera/Tools/install.sh codex as -xcconfig; never used by the
+// ordinary build.
+CODEX_SUFFIX_Tessera =
+CODEX_SUFFIX_TesseraWidgets = .widgets
+CODEX_SUFFIX_TesseraShare = .share
+PRODUCT_BUNDLE_IDENTIFIER = com.jalenedusei.tessera.codex$(CODEX_SUFFIX_$(TARGET_NAME))
+INFOPLIST_KEY_CFBundleDisplayName = Tessera Codex

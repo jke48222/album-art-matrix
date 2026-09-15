@@ -32,6 +32,7 @@ from .art.nine import NineBuilder
 from . import halo as halo_mod
 from . import homekit as homekit_mod
 from .features import Features
+from .scrobble import Scrobbler
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
@@ -281,6 +282,13 @@ def main():
     # is off, and the brain runs the same either way
     ctrl.homekit = (homekit_mod.from_config(cfg, ctrl)
                     if ctrl.features.on("homekit") else None)
+    # the ear's records, written to ListenBrainz; its own thread, its own queue
+    ctrl.scrobbler = (Scrobbler.from_config(cfg, ctrl).start()
+                      if ctrl.features.on("scrobble") else None)
+    if ctrl.scrobbler is not None:
+        print("[main] scrobble: " + ("token set, following the ear"
+                                     if ctrl.scrobbler.configured
+                                     else "no ListenBrainz token yet; set one from the phone"))
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
     if halo is not None:

@@ -91,7 +91,16 @@ user = ""
 # The open ledger. Reading it needs no key, only the username; anything a
 # scrobbler can post there (Web Scrobbler in a browser covers YouTube Music,
 # SoundCloud, Amazon Music and more) reaches the wall this way.
+# Writing (the records the ear names, brain/scrobble.py) needs the user
+# token from listenbrainz.org/settings. Type it on the phone's ListenBrainz
+# page; it is kept in services.json, not here.
 user = ""
+
+[scrobble]
+# What the wall reports to ListenBrainz. Only the ear is offered: the
+# streaming services report themselves, and the Mac and the phone are not
+# the wall's to report. Turn the whole thing off with [features] scrobble.
+sources = ["ears"]
 
 [ears]
 # The wall's own microphone, named by Shazam (shazamio: no key, no account,

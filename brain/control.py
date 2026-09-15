@@ -13,7 +13,9 @@ is on — no Mac required.
   POST /push    -> what the phone is playing: {track, artist, album, id?,
                    playing, progress_ms, duration_ms, art?}; 40 s TTL
   GET  /nowplaying -> what the chain currently answers, or 204
-  GET  /services   -> which music services the wall can use, and their state
+  GET  /services   -> which music services the wall can use, and their state;
+                      "listenbrainz" carries the scrobbler's state too (token_set,
+                      valid, playing, last_listen, queued, problem)
   POST /spotify/tokens -> {access_token, refresh_token, expires_in} from the
                    phone's PKCE sign-in; the wall polls Spotify from then on
   POST /spotify/unlink -> forget the Spotify account
@@ -416,7 +418,14 @@ class ControlState:
                         "linked": bool(sp and sp.linked)},
             "lastfm": {"user": lf.user if lf else "",
                        "key_set": bool(lf and lf.api_key)},
-            "listenbrainz": {"user": lb.user if lb else ""},
+            # reading needs the username; writing (the ear's listens) needs
+            # the token, and the scrobbler says how that is going
+            "listenbrainz": {"user": lb.user if lb else "",
+                             **(self.scrobbler.status() if getattr(self, "scrobbler", None)
+                                else {"token_set": False, "valid": None, "user_name": None,
+                                      "sources": [], "playing": None, "last_listen": None,
+                                      "queued": 0, "submitted": 0,
+                                      "problem": "scrobbling is off on this wall"})},
             "hearing": hearing,
             # the ear's earlier shape, for a phone not rebuilt yet. There is
             # no key any more, so a key is always "set".
@@ -445,6 +454,9 @@ class ControlState:
                                   store.get("lastfm", "user"))
         if "listenbrainz" in changed and self.listenbrainz:
             self.listenbrainz.configure(store.get("listenbrainz", "user"))
+        if "listenbrainz" in changed and getattr(self, "scrobbler", None):
+            self.scrobbler.configure(user=store.get("listenbrainz", "user"),
+                                     token=store.get("listenbrainz", "token"))
         if ("ears" in changed or "acoustid" in changed) and self.ears:
             self.ears.configure(device=store.get("ears", "device")
                                 or store.get("acoustid", "device"))
@@ -557,6 +569,40 @@ class ControlState:
                     fh.writelines(lines[-JOURNAL_MAX:])
         except OSError:
             pass
+
+    def journal_mark(self, title: str, artist: str, since_ts: int, patch: dict) -> int:
+        """Add to the entries for a song written since `since_ts` (a small
+        slack before it, since the sleeve goes up before the ear's clock
+        is settled). Returns how many were marked. Rewrites the file: it is
+        small (JOURNAL_MAX lines) and this happens a few times a night."""
+        def plain(x):
+            return (x or "").strip().lower()
+        try:
+            with open(JOURNAL_PATH) as fh:
+                lines = fh.readlines()
+        except OSError:
+            return 0
+        marked, out = 0, []
+        for ln in lines:
+            try:
+                e = json.loads(ln)
+            except json.JSONDecodeError:
+                out.append(ln)
+                continue
+            if e.get("ts", 0) >= since_ts - 30 and plain(e.get("title")) == plain(title) \
+                    and plain(e.get("artist")) == plain(artist):
+                e.update(patch)
+                marked += 1
+                out.append(json.dumps(e) + "\n")
+            else:
+                out.append(ln)
+        if marked:
+            try:
+                with open(JOURNAL_PATH, "w") as fh:
+                    fh.writelines(out)
+            except OSError:
+                return 0
+        return marked
 
     def journal_read(self, limit: int = 50) -> list[dict]:
         try:
