@@ -27,7 +27,9 @@ import subprocess
 import threading
 import time
 
+import numpy as np
 import requests
+from PIL import Image
 
 from .art.fetch import fetch_art
 from .art.pipeline import prepare
@@ -105,6 +107,13 @@ class Shower:
         pre = prepare(img, ctrl.wall.width,
                       unsharp_radius=tune.get("unsharp_radius") if tune else 1.0,
                       unsharp_percent=tune.get("unsharp_percent") if tune else 60)
+        return self.show_frame(pre, seconds)
+
+    def show_frame(self, frame, seconds: float) -> bool:
+        """A frame already at the wall's size (a PIL image or an array),
+        as it is, in the frame face for a while."""
+        ctrl = self.ctrl
+        pre = frame if hasattr(frame, "tobytes") and not hasattr(frame, "shape") else Image.fromarray(np.asarray(frame, dtype=np.uint8))
         px = ctrl.wall.fit(pre.tobytes())
         if px is None:
             return False
@@ -171,15 +180,31 @@ class Shower:
             return {"error": "I could not place those words."}
         found = find_art(f"{got['artist']} {got['title']}") or {}
         art = found.get("art_url")
-        shown = bool(art and self._put_up(art, EARWORM_S))
-        if shown:
-            # the name runs under the sleeve once it comes down
-            name = f"{got['title']} - {got['artist']}"
-            t = threading.Timer(EARWORM_S + 0.5, lambda: self.ctrl.apply(
-                {"ticker_text": name[:120], "ticker_loop": False, "ticker_style": "across",
-                 "mode": "ticker"}))
-            t.daemon = True
-            t.start()
+        shown = False
+        if art:
+            # the sleeve with the name on a band along its foot, the artist
+            # under the title at 192, for a while
+            try:
+                from .games.board import banner, INK, mix, BLACK, fit_text, text_centred
+                ctrl = self.ctrl
+                tune = getattr(ctrl, "tuning", None)
+                pre = prepare(fetch_art(art), ctrl.wall.width,
+                              unsharp_radius=tune.get("unsharp_radius") if tune else 1.0,
+                              unsharp_percent=tune.get("unsharp_percent") if tune else 60)
+                f = np.asarray(pre, dtype=np.uint8).copy()
+                size = f.shape[0]
+                if size > 96:
+                    band = 26
+                    f[size - band:] = (f[size - band:] * 0.25).astype(np.uint8)
+                    f[size - band] = (f[size - band] * 0.5 + 60).astype(np.uint8)
+                    text_centred(f, fit_text(got["title"], size - 8, 2), size // 2, size - band + 4, INK, 2)
+                    text_centred(f, fit_text(got["artist"], size - 8, 1), size // 2, size - 9, (170, 166, 156), 1)
+                else:
+                    banner(f, size, got["title"], INK, (18, 18, 24))
+                shown = self.show_frame(f, EARWORM_S + 6.0)
+            except Exception as exc:
+                print(f"[show] earworm sleeve: {exc}", flush=True)
+                shown = bool(self._put_up(art, EARWORM_S))
         self.last = {"what": "earworm", **got, "art_url": art}
         print(f"[show] earworm {words!r} -> {got['artist']} - {got['title']} "
               f"({got.get('confidence')})", flush=True)

@@ -236,8 +236,24 @@ final class SpeechMove {
 // MARK: - The sheet: the games, and the one that is on
 
 struct GamesSheet: View {
-    @Environment(WallSession.self) private var wall
     @Environment(\.dismiss) private var dismiss
+    let accent: Color
+
+    var body: some View {
+        NavigationStack {
+            GamesSheetBody(accent: accent)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+        }
+        .preferredColorScheme(.dark)
+    }
+}
+
+/// The games: the one that is on, the list to start, the scores. Inside a
+/// navigation stack of the caller's, a sheet from the faces or a page from
+/// Settings.
+struct GamesSheetBody: View {
+    @Environment(WallSession.self) private var wall
     let accent: Color
     @AppStorage("games.player") private var player = ""
     @State private var cards: [GameCard] = []
@@ -250,7 +266,6 @@ struct GamesSheet: View {
     private var columns: [GridItem] { Array(repeating: GridItem(.flexible(), spacing: 10), count: 2) }
 
     var body: some View {
-        NavigationStack {
             ZStack {
                 Ink.ground.ignoresSafeArea()
                 ScrollView {
@@ -317,8 +332,6 @@ struct GamesSheet: View {
                     .padding(.horizontal, 16).padding(.vertical, 18)
                 }
             }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
             .alert("Your name", isPresented: $editingName) {
                 TextField("You", text: $player)
                 Button("Done") {}
@@ -330,8 +343,6 @@ struct GamesSheet: View {
                     try? await Task.sleep(for: .seconds(2))
                 }
             }
-        }
-        .preferredColorScheme(.dark)
     }
 
     /// The game that is on: the wall's own frame, large, and its line.

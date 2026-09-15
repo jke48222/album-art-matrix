@@ -44,6 +44,8 @@ is on — no Mac required.
   GET  /features -> the [features] switches and their state
   GET  /teach    -> the wall's own song library: songs, how learnt, matches
   POST /teach/learn {title, artist}   POST /teach/forget {id}   POST /teach/clear
+  GET  /ask      -> how asking is going and the last questions and answers
+  GET  /note     -> the note on the panel, if one is    GET /show -> the last thing shown by name
   POST /ask      -> {text, reply?: "wall"|"text"}: a question for Claude; the
                    answer comes back and goes on the panel unless reply is text
   POST /note     -> {text, minutes?}: words on the panel for a while
@@ -244,6 +246,7 @@ class ControlState:
             self._note_ret = here if here not in ("frame", "clip", "timer", "video", "ticker") else "art"
         self.apply({"ticker_text": text, "ticker_loop": True, "ticker_style": "across",
                     "mode": "ticker"})
+        self._note_text = text
         self._note_until = time.monotonic() + minutes * 60.0
         t = threading.Timer(minutes * 60.0, self._note_over)
         t.daemon = True
@@ -254,9 +257,19 @@ class ControlState:
         if until is None or time.monotonic() < until - 1.0:
             return                                 # a later note took over
         self._note_until = None
+        self._note_text = None
         if self.get()["mode"] == "ticker":
             self.apply({"mode": getattr(self, "_note_ret", None) or "art"})
         self._note_ret = None
+
+    def note_status(self) -> dict:
+        """The note on the panel, if one is: its words and the seconds left."""
+        until = getattr(self, "_note_until", None)
+        left = None if until is None else max(0, int(until - time.monotonic()))
+        text = getattr(self, "_note_text", None)
+        if not left:
+            text = None
+        return {"text": text, "seconds_left": left}
 
     def knock_toggle(self, why: str, want: str | None = None) -> str:
         """Two knocks on the frame, or a whistle: off, or back to the face
@@ -557,7 +570,8 @@ class ControlState:
             self.scrobbler.configure(user=store.get("listenbrainz", "user"),
                                      token=store.get("listenbrainz", "token"))
         if "claude" in changed and getattr(self, "asker", None):
-            self.asker.configure(api_key=store.get("claude", "api_key"))
+            self.asker.configure(api_key=store.get("claude", "api_key"),
+                                 workspace=store.get("claude", "workspace"))
         if "images" in changed and getattr(self, "imaginer", None):
             self.imaginer.configure(provider=store.get("images", "provider") or None,
                                     api_key=store.get("images", "api_key"),
@@ -963,6 +977,17 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self.wfile.write(data)
                     return
                 self._json(200, {**im.status(), "images": im.listing()})
+                return
+            if u.path.startswith("/ask"):
+                a = getattr(ctrl, "asker", None)
+                self._json(200, a.status() if a is not None else {"ready": False, "problem": "asking is off on this wall"})
+                return
+            if u.path.startswith("/note"):
+                self._json(200, ctrl.note_status())
+                return
+            if u.path.startswith("/show"):
+                sh = getattr(ctrl, "shower", None)
+                self._json(200, {"last": getattr(sh, "last", None)} if sh is not None else {"last": None})
                 return
             if u.path.startswith("/shelf"):
                 sh = getattr(ctrl, "shelf", None)

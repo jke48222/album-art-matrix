@@ -7,9 +7,11 @@ ear, and everything it hears grows out of it.
     collapse   the picture folds to a one pixel line in the ink of the last
                sleeve (its brightest saturated colour), top and bottom
                meeting in the middle
-    listening  the line's brightness follows the voice, fast up, slow down,
-               and its ends fray by a pixel or two on the louder syllables
-    thinking   a bright bead runs the line left to right, once every 1.2 s
+    listening  the line's brightness follows the voice, fast up, slow down;
+               it ripples along its length as the voice rises, still at
+               both ends like a plucked string, with a soft light under it
+    thinking   a bright bead runs the line left to right with a tail of
+               light, once every 1.2 s, while the line breathes
     opening    the line opens vertically into the next picture: the answer,
                or the face a command asked for
     missed     the line goes dashed for a moment and closes to black; the
@@ -104,28 +106,63 @@ class Horizon:
         return np.maximum(f, line)
 
     def listening(self, t: float, ink, level_db=None, floor_db=None) -> np.ndarray:
+        """The line, alive with the voice: it brightens with the level, and
+        ripples along its length as the voice rises, the ends held still,
+        with a soft light under it that grows with the sound."""
         k = self._follow(level_db, floor_db, t)
         f = self._line(k, ink)
-        # the ends fray on the loud syllables: a pixel or two above and below
-        if level_db is not None and floor_db is not None and level_db - floor_db > FRAY_DB + 12:
-            fray = 1 if self.size <= 96 else 3
-            col = (np.array(ink, dtype=np.float32) * k * 0.5).astype(np.uint8)
-            for x in list(range(0, 4 * fray)) + list(range(self.size - 4 * fray, self.size)):
-                f[self.mid - self.thick // 2 - fray:self.mid - self.thick // 2, x] = col
-                f[self.mid + (self.thick + 1) // 2:self.mid + (self.thick + 1) // 2 + fray, x] = col
+        size = self.size
+        amp = max(0.0, (k - IDLE_LEVEL) / (FULL_LEVEL - IDLE_LEVEL))
+        col = np.array(ink, dtype=np.float32)
+        y_mid = self.mid - self.thick // 2
+        # the glow: a few rows either side, fading, stronger with the voice
+        reach = (2 if size <= 96 else 6)
+        for d in range(1, reach + 1):
+            g = k * (0.10 + 0.30 * amp) * (1 - (d - 1) / reach) ** 2
+            for yy in (y_mid - d, y_mid + self.thick - 1 + d):
+                if 0 <= yy < size:
+                    f[yy] = np.maximum(f[yy], (col * g).astype(np.uint8))
+        if amp > 0.03:
+            # the ripple: the line displaced by a wave whose height follows
+            # the voice, still at both ends like a plucked string
+            xs = np.arange(size, dtype=np.float32)
+            env = np.sin(np.pi * xs / max(1, size - 1))
+            wave = (np.sin(xs / size * 2 * np.pi * 2.2 + t * 7.0) * 0.6
+                    + np.sin(xs / size * 2 * np.pi * 5.1 - t * 11.0) * 0.4)
+            height = amp * (2.5 if size <= 96 else 8.0)
+            off = wave * env * height
+            for x in range(size):
+                yy = int(round(y_mid + off[x]))
+                for d in range(self.thick):
+                    y = yy + d
+                    if 0 <= y < size:
+                        f[y, x] = np.maximum(f[y, x], (col * min(1.0, k * 1.05)).astype(np.uint8))
+                # the trace between the resting line and the wave, faint
+                lo, hi = sorted((y_mid, yy))
+                if hi - lo > 1:
+                    f[lo + 1:hi, x] = np.maximum(f[lo + 1:hi, x], (col * k * 0.22).astype(np.uint8))
         return f
 
     def thinking(self, t: float, ink) -> np.ndarray:
-        f = self._line(0.40, ink)
+        """A bright bead runs the line with a tail of light behind it, and
+        the line itself breathes a little while it waits."""
+        breath = 0.36 + 0.06 * math.sin(t * 2.5)
+        f = self._line(breath, ink)
         phase = (t % BEAD_PERIOD_S) / BEAD_PERIOD_S
         x = int(phase * (self.size + self.bead)) - self.bead
         col = np.array(ink, dtype=np.float32)
         y0 = self.mid - self.thick // 2
+        reach = 1 if self.size <= 96 else 3
         for i in range(self.bead):
             xx = x + i
             if 0 <= xx < self.size:
-                bright = 0.55 + 0.45 * (i / max(1, self.bead - 1))
+                bright = 0.45 + 0.55 * (i / max(1, self.bead - 1)) ** 2
                 f[y0:y0 + self.thick, xx] = (col * bright).astype(np.uint8)
+                for d in range(1, reach + 1):
+                    g = bright * 0.35 * (1 - (d - 1) / reach)
+                    for yy in (y0 - d, y0 + self.thick - 1 + d):
+                        if 0 <= yy < self.size:
+                            f[yy, xx] = np.maximum(f[yy, xx], (col * g).astype(np.uint8))
         return f
 
     def opening(self, picture: np.ndarray, t: float, ink) -> np.ndarray:

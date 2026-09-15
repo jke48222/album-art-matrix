@@ -91,22 +91,46 @@ class AnswerFace:
     def done(self, t: float) -> bool:
         return t >= self.total_s
 
+    TYPE_CPS = 40                        # characters a second, as it types
+
     def frame_at(self, t: float) -> np.ndarray:
         f = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-        page = self.pages[self.page_at(t)]
+        cur = self.page_at(t)
+        page = self.pages[cur]
         line_h = (7 + LEADING) * self.scale
         y = self.margin
+        # the words type themselves onto the panel, a page at a time
+        into = t - cur * self.page_s
+        shown = int(into * self.TYPE_CPS)
+        total = sum(len(ln) for ln in page)
+        dim = tuple(int(c * 0.35) for c in self.ink)
+        left = shown
+        last_x, last_y = self.margin, y
         for line in page:
-            draw_text(f, line, self.margin, y, self.ink, self.scale)
+            take = max(0, min(len(line), left))
+            if take:
+                draw_text(f, line[:take], self.margin, y, self.ink, self.scale)
+            last_x = self.margin + text_width(line[:take], self.scale) + (self.scale if take else 0)
+            last_y = y
+            left -= len(line)
+            if left < 0:
+                break
             y += line_h
+        # the cursor: a block while typing, blinking after, gone after a moment
+        typing = shown < total
+        if typing or (into - total / self.TYPE_CPS) < 1.2:
+            on = typing or int(into * 3) % 2 == 0
+            if on:
+                cw, ch = 3 * self.scale, 7 * self.scale
+                x0 = min(self.size - cw - 1, last_x)
+                f[last_y:last_y + ch, x0:x0 + cw] = self.ink if typing else dim
         # more pages: a row of dots at the bottom right, the current one lit
         if len(self.pages) > 1:
             n = len(self.pages)
-            cur = self.page_at(t)
             dot = self.scale
             x = self.size - self.margin - n * (dot + 1)
             yy = self.size - self.margin - dot
             for i in range(n):
-                col = self.ink if i == cur else tuple(int(c * 0.25) for c in self.ink)
+                col = self.ink if i == cur else dim
                 f[yy:yy + dot, x + i * (dot + 1):x + i * (dot + 1) + dot] = col
         return f
