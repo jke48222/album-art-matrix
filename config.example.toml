@@ -123,6 +123,26 @@ fps = 60
 [control]
 port = 8788     # wall control API (iOS companion posts here)
 
+[features]
+# One switch per feature, so one thing can be tested at a time, or two builds
+# run with the same things turned off. A feature reads its switch at the
+# moment it would act; a name left out is on. GET /features lists them.
+# homekit = true
+# scrobble = true
+# knock = true
+# teach = true
+# ask = true
+# voice = true
+# note = true
+# airplay = true
+# shelf = true
+# earworm = true
+# show = true
+# imagine = true
+# weather = true
+# posters = true
+# games = true
+
 [homekit]
 # The wall in the Home app, and so on Siri, the Watch and in Control Centre:
 # a light (on, off, brightness, a colour for the ambient face), a television

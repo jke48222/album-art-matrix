@@ -31,6 +31,7 @@ from .art.lyrics import LyricBook, LyricCanvas
 from .art.nine import NineBuilder
 from . import halo as halo_mod
 from . import homekit as homekit_mod
+from .features import Features
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
@@ -273,9 +274,13 @@ def main():
     tune.ears = ctrl.ears          # the Hearing knobs land on the ear
     tune.apply()
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
+    # [features] in config.toml: a switch per feature, asked at the moment a
+    # feature would act, so one thing can be tested at a time
+    ctrl.features = Features(cfg)
     # the Home app's view of the wall, on its own thread; None when [homekit]
     # is off, and the brain runs the same either way
-    ctrl.homekit = homekit_mod.from_config(cfg, ctrl)
+    ctrl.homekit = (homekit_mod.from_config(cfg, ctrl)
+                    if ctrl.features.on("homekit") else None)
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
     if halo is not None:
