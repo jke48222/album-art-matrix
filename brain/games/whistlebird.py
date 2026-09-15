@@ -18,7 +18,8 @@ import random
 import time
 
 from . import Game, register
-from .board import BLACK, DIM, GREEN, INK, WHITE, YELLOW, blank, fill, header, scale_for, text, text_centred
+from .board import (BLACK, DIM, GREEN, INK, ORANGE, WHITE, YELLOW, banner, blank, disc, ease_out, fill, header,
+                    mix, rounded, scale_for, text, text_centred)
 
 PITCH_HOLD_S = 0.35         # how long the last whistle steers after it stops
 SINK_PER_S = 0.22           # of the height, per second, when silent
@@ -144,26 +145,44 @@ class WhistleBird(Game):
 
     def frame_at(self, size: int, t: float):
         self.step()
-        c = blank(size)
         s = scale_for(size)
-        # the ground line
-        fill(c, 0, size - s, size, s, (60, 90, 50))
+        c = blank(size)
+        # a night sky, a few faint stars that scroll slowly, the ground
+        c[...] = (6, 8, 18)
+        rng = random.Random(3)
+        for _ in range(14 if s == 1 else 40):
+            sx, sy = rng.randrange(size), rng.randrange(size - 6 * s)
+            sx = (sx - int(self.distance * size * 0.15)) % size
+            c[sy, sx] = (26, 28, 44)
+        fill(c, 0, size - 2 * s, size, 2 * s, (48, 78, 40))
+        fill(c, 0, size - 2 * s, size, 1, (70, 110, 56))
         gap_px = int(GAP * size)
         pipe_w = 5 * s
         for p in self.pipes:
             x = int(p[0] * size)
             gy = int(p[1] * size)
-            fill(c, x, 0, pipe_w, max(0, gy - gap_px // 2), GREEN)
-            fill(c, x, gy + gap_px // 2, pipe_w, size - (gy + gap_px // 2) - s, GREEN)
-            fill(c, x - s, gy - gap_px // 2 - 2 * s, pipe_w + 2 * s, 2 * s, (60, 120, 60))
-            fill(c, x - s, gy + gap_px // 2, pipe_w + 2 * s, 2 * s, (60, 120, 60))
+            top_h = max(0, gy - gap_px // 2)
+            bot_y = gy + gap_px // 2
+            for (py, ph) in ((0, top_h), (bot_y, size - bot_y - 2 * s)):
+                if ph <= 0:
+                    continue
+                fill(c, x, py, pipe_w, ph, GREEN)
+                fill(c, x, py, 1 if s == 1 else 2, ph, mix(GREEN, WHITE, 0.25))
+                fill(c, x + pipe_w - (1 if s == 1 else 2), py, 1 if s == 1 else 2, ph, mix(GREEN, BLACK, 0.4))
+            rounded(c, x - s, top_h - 2 * s, pipe_w + 2 * s, 2 * s, mix(GREEN, WHITE, 0.1), 1)
+            rounded(c, x - s, bot_y, pipe_w + 2 * s, 2 * s, mix(GREEN, WHITE, 0.1), 1)
         bx, by = int(0.25 * size), int(self.y * (size - 2 * s))
-        fill(c, bx - 2 * s, by - s, 4 * s, 3 * s, YELLOW)
-        fill(c, bx + 2 * s, by, s, s, (240, 120, 40))            # the beak
-        fill(c, bx - s, by, s, s, BLACK)                          # the eye
-        text(c, str(self.score), 2 * s, 2 * s, INK, s)
+        flap = int(t * 8) % 2 == 0 and not self.dead
+        rounded(c, bx - 2 * s, by - s, 5 * s, 3 * s, YELLOW, 1)
+        fill(c, bx - 2 * s, by + (0 if flap else s), 2 * s, s, mix(YELLOW, BLACK, 0.3))     # the wing
+        fill(c, bx + 3 * s, by, s, s, ORANGE)                                                  # the beak
+        fill(c, bx + s, by - s, s, s, WHITE)
+        fill(c, bx + s, by - s, 1 if s == 1 else 2, 1 if s == 1 else 2, BLACK)                   # the eye
+        pop = 1.0 + 0.5 * (1.0 - ease_out(self.age() / 0.3)) if self.age() < 0.3 and self.score else 1.0
+        text_centred(c, str(self.score), size // 2, 2 * s, INK, max(1, int(round(s * pop))))
         if self.dead:
-            text_centred(c, "again?", size // 2, size // 2, INK, s)
+            banner(c, size, f"{self.score}. again?", INK, (40, 30, 30))
         elif self.lo is None:
             text_centred(c, "whistle", size // 2, size - 10 * s, DIM, s)
         return c
+

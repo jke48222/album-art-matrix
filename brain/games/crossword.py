@@ -18,7 +18,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, WHITE, YELLOW, blank, fill, header, text, letter_tile)
+from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, SLATE, SLATE2, WHITE, YELLOW, banner, blank, fill, header,
+                    mix, rounded, text, letter_tile)
 from .words import common
 
 N = 5
@@ -272,22 +273,29 @@ class Crossword(Game):
         gap = 1 if not big else 2
         gw = N * cell + (N - 1) * gap
         x0 = (size - gw) // 2
-        y0 = (size - gw) // 2 if not big else 18
+        y0 = (size - gw) // 2 if not big else 20
         lit = set(next((s["cells"] for s in self.slots if s["id"] == self.chosen), []))
         for r in range(N):
             for col in range(N):
                 x = x0 + col * (cell + gap)
                 y = y0 + r * (cell + gap)
                 if (r, col) in self.blacks:
-                    fill(c, x, y, cell, cell, (14, 14, 16))
+                    rounded(c, x, y, cell, cell, (14, 14, 18), 1 if not big else 3)
                     continue
-                back = (40, 44, 60) if (r, col) in lit and not self.over else (26, 26, 30)
+                back = mix(SLATE2, YELLOW, 0.22) if (r, col) in lit and not self.over else SLATE2
                 ch = self.grid.get((r, col), "")
                 ink = RED if (r, col) in self.wrong else INK
                 letter_tile(c, x, y, cell, ch, back, ink, 1 if not big else 3)
                 if big:
                     n = next((s["n"] for s in self.slots if s["cells"][0] == (r, col)), None)
                     if n is not None:
-                        text(c, str(n), x + 2, y + 1, DIM, 1)
-        header(c, size, "Mini", self.message[:24], 3 if big else 1)
+                        text(c, str(n), x + 2, y + 2, DIM, 1)
+        if self.over:
+            banner(c, size, "Solved.", INK, mix((40, 120, 70), BLACK, 0.45))
+        elif big and self.chosen:
+            clue = self.clues.get(self.chosen, "")
+            text(c, f"{self.chosen}  " + clue, 6, size - 12, DIM, 1) if len(clue) < 26 else \
+                text(c, f"{self.chosen}  " + clue[:24] + ".", 6, size - 12, DIM, 1)
+        header(c, size, "MINI", self.message[:22] if not self.over else "", 3 if big else 1, accent=YELLOW)
         return c
+

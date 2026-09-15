@@ -79,7 +79,8 @@ def test_snake(tmp_path):
     assert g.score == 1 and len(g.body) == 4
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
-        assert ((f[..., 1] > 120) & (f[..., 0] < 130)).sum() >= 4 * (size // 32) ** 2
+        greenish = (f[..., 1] > 60) & (f[..., 1] > f[..., 0]) & (f[..., 1] > f[..., 2])
+        assert greenish.sum() >= 3 * (size // 32) ** 2
         save(f, "snake", size, scale)
     clock[0] = 10.0                                                        # straight into the top wall
     g.step()

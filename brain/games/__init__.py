@@ -51,6 +51,7 @@ class Game:
         self.started = time.time()
         self.finished: float | None = None
         self.seq = 0
+        self.changed_at = time.monotonic()   # for the boards' reveals and settles
 
     # ---- what a game fills in ----------------------------------------------------------
     def setup(self):
@@ -98,8 +99,13 @@ class Game:
 
     def changed(self):
         self.seq += 1
+        self.changed_at = time.monotonic()
         if self.host is not None:
             self.host.changed()
+
+    def age(self) -> float:
+        """Seconds since the last change: what a reveal animates on."""
+        return time.monotonic() - self.changed_at
 
     @classmethod
     def describe(cls) -> dict:

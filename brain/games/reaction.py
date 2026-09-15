@@ -17,8 +17,8 @@ import random
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, RED, WHITE, blank, fill, header, text_centred, scale_for,
-                    text_width)
+from .board import (BLACK, DIM, GREEN, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, glow, header, mix,
+                    text_centred, scale_for, text_width)
 
 WAIT_MIN_S, WAIT_MAX_S = 2.0, 5.0
 SHOW_S = 2.5                      # the number stays this long before the next round
@@ -138,20 +138,30 @@ class ReactionKnock(Game):
         self.tick()
         c = blank(size)
         s = scale_for(size)
+        who = self.players[self.turn]
         if self.phase == "red":
-            fill(c, 0, 0, size, size, (150, 20, 20))
+            c[...] = mix((150, 20, 20), (110, 12, 12), breathe(t, 1.6))
+            text_centred(c, "wait", size // 2, size // 2 - 4 * s, mix(WHITE, (150, 20, 20), 0.35), s)
         elif self.phase == "green":
-            fill(c, 0, 0, size, size, (30, 150, 50))
+            c[...] = (30, 150, 50)
+            glow(c, size / 2, size / 2, size * 0.5, (120, 240, 140), 0.25)
+            text_centred(c, "KNOCK", size // 2, size // 2 - 4 * s, WHITE, s)
         elif self.phase == "shown" or self.over:
-            label = f"{self.last_ms}" if self.last_ms is not None else "SOON"
-            big_s = 4 * s if len(label) <= 3 else 3 * s
             if self.last_ms is None:
-                big_s = 2 * s
-            text_centred(c, label, size // 2, size // 2 - 4 * big_s, INK if self.last_ms is not None else RED, big_s)
-            if self.last_ms is not None:
-                text_centred(c, "ms", size // 2, size // 2 + 4 * big_s, DIM, s)
+                text_centred(c, "too", size // 2, size // 2 - 9 * s, RED, s)
+                text_centred(c, "soon", size // 2, size // 2, RED, s)
+            else:
+                col = GREEN if self.last_ms < 250 else YELLOW if self.last_ms < 400 else RED
+                label = str(self.last_ms)
+                big_s = (4 if len(label) <= 3 else 3) * s
+                text_centred(c, label, size // 2, size // 2 - 4 * big_s, col, big_s)
+                text_centred(c, "ms", size // 2, size // 2 + 4 * big_s - 3 * s, DIM, s)
+            if self.over:
+                banner(c, size, self.message, INK, (40, 40, 44))
         else:
             text_centred(c, "KNOCK", size // 2, size // 2 - 8 * s, INK, s)
             text_centred(c, "on green", size // 2, size // 2 + 2 * s, DIM, s)
-        header(c, size, "Reaction", f"{self.players[self.turn]} {len(self.times[self.players[self.turn]]) + 1}/{self.rounds}" if not self.over else "done", s)
+        header(c, size, "REACTION", f"{who} {len(self.times[who]) + 1}/{self.rounds}" if not self.over else "", s,
+               accent=GREEN)
         return c
+

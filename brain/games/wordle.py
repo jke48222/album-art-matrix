@@ -18,8 +18,9 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, GREEN, GREY, INK, YELLOW, WHITE, blank, grid_geometry,
-                    header, letter_tile, scale_for, text_centred, fit_text)
+from .board import (BLACK, DIM, EDGE, FAINT, GREEN, GREY, INK, SLATE, YELLOW, WHITE, banner, blank,
+                    breathe, ease_in_out, fill, grid_geometry, header, letter_tile, mix, outline, scale_for,
+                    text_centred, fit_text, tile)
 from .words import answers5, valid5
 
 ROWS, COLS = 6, 5
@@ -67,6 +68,7 @@ class Wordle(Game):
         self.keys: dict[str, str] = {}
         self.turn = 0                  # whose guess it is, among the players
         self.message = "Say a five-letter word."
+        self.revealed_at = None        # when the last row landed, for the flip
 
     # ---- moves ---------------------------------------------------------------------------------
     def apply(self, move: dict, player: str) -> dict:
@@ -90,6 +92,8 @@ class Wordle(Game):
             return {"error": self.message, "not_a_word": guess}
         marks = mark(guess, self.answer)
         self.rows.append((guess, marks))
+        import time as _time
+        self.revealed_at = _time.monotonic()
         rank = {"x": 0, "y": 1, "g": 2}
         for ch, mk in zip(guess, marks):
             if rank[mk] >= rank.get(self.keys.get(ch, "x"), -1) or ch not in self.keys:
@@ -115,23 +119,53 @@ class Wordle(Game):
         return list(answers5())
 
     # ---- the wall --------------------------------------------------------------------------------
+    FLIP_STEP, FLIP_S = 0.14, 0.42
+
     def frame_at(self, size: int, t: float):
+        import time as _time
         c = blank(size)
         s = scale_for(size)
+        big = size > 96
         cell, gap = 9 * s, 1 * s
-        top = 2 if size <= 96 else 14
+        top = 2 if not big else 18
         x0, y0, cell, gap = grid_geometry(size, COLS, ROWS, cell, gap, top=top)
         colours = {"g": GREEN, "y": YELLOW, "x": GREY}
+        now = _time.monotonic()
+        since = (now - self.revealed_at) if self.revealed_at else 99.0
+        cursor = mix(EDGE, INK, 0.35 * breathe(t))
         for r in range(ROWS):
             for col in range(COLS):
                 x = x0 + col * (cell + gap)
                 y = y0 + r * (cell + gap)
                 if r < len(self.rows):
                     word, marks = self.rows[r]
-                    letter_tile(c, x, y, cell, word[col], colours[marks[col]], INK, s)
+                    back = colours[marks[col]]
+                    if r == len(self.rows) - 1 and since < self.FLIP_STEP * COLS + self.FLIP_S:
+                        # the flip: the tile squeezes flat, then opens in its colour
+                        f = (since - col * self.FLIP_STEP) / self.FLIP_S
+                        if f < 0:
+                            letter_tile(c, x, y, cell, word[col], SLATE, INK, s)
+                            continue
+                        if f < 1:
+                            k = ease_in_out(abs(f * 2 - 1))          # 1 -> 0 -> 1
+                            h = max(1, int(cell * k))
+                            yy = y + (cell - h) // 2
+                            tile(c, x, yy, cell, h, SLATE if f < 0.5 else back, s)
+                            if k > 0.75:
+                                letter_tile(c, x, yy, h, "", None, INK, s)
+                                gw, gh = 5 * s, 7 * s
+                                if h >= gh:
+                                    from .board import text
+                                    text(c, word[col].upper(), x + (cell - gw) // 2, yy + (h - gh) // 2, INK, s)
+                            continue
+                    letter_tile(c, x, y, cell, word[col], back, INK, s)
+                elif r == len(self.rows) and not self.over:
+                    letter_tile(c, x, y, cell, "", SLATE, INK, s)
+                    outline(c, x, y, cell, cell, cursor, 1 if s == 1 else 3, 1)
                 else:
-                    letter_tile(c, x, y, cell, "", None, INK, s, edge=EDGE if r == len(self.rows) and not self.over else (40, 40, 44))
-        if self.over and size > 96:
-            text_centred(c, fit_text(self.message, size - 8, 1), size // 2, size - 10, WHITE if self.won else DIM, 1)
-        header(c, size, "Wordle", f"{ROWS - len(self.rows)} left" if not self.over else self.answer.upper(), s)
+                    letter_tile(c, x, y, cell, "", SLATE, INK, s)
+        if self.over:
+            banner(c, size, self.message if self.won else f"It was {self.answer.upper()}.", INK if self.won else DIM,
+                   mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
+        header(c, size, "WORDLE", f"{ROWS - len(self.rows)} left" if not self.over else "", s, accent=GREEN)
         return c

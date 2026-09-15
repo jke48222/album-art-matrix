@@ -23,8 +23,9 @@ import random
 import time
 
 from . import Game, register
-from .board import (BLACK, BLUE, DIM, FAINT, GREEN, INK, ORANGE, PURPLE, RED, WHITE, YELLOW, blank, fill,
-                    header, scale_for, text, text_centred)
+from .board import (BLACK, BLUE, CYAN, DIM, EDGE, FAINT, GREEN, INK, ORANGE, PURPLE, RED, SLATE, WHITE, YELLOW,
+                    banner, blank, disc, fill, glow, header, mix, outline, rounded, scale_for, text, text_centred,
+                    text_right, tile)
 
 DIRS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 
@@ -46,6 +47,7 @@ class Pong(Game):
         self.score = [0, 0]
         self.last_t = time.monotonic()
         self._clock = time.monotonic
+        self.trail: list[list[float]] = []
         self.serve(self.rng.choice((-1, 1)))
         self.message = "Tilt to move."
 
@@ -111,6 +113,8 @@ class Pong(Game):
                         self.changed()
                     return
         self.ball = [x, y]
+        self.trail.append([x, y])
+        del self.trail[:-6]
 
     def state(self) -> dict:
         self.step()
@@ -122,17 +126,25 @@ class Pong(Game):
         c = blank(size)
         s = scale_for(size)
         for k in range(0, size, 4 * s):
-            fill(c, size // 2, k, s, 2 * s, FAINT)
+            fill(c, size // 2 - (0 if s == 1 else 1), k, s, 2 * s, FAINT)
         ph = int(self.pad_h * size)
         for side, x in ((0, s), (1, size - 2 * s)):
             y = int(self.paddles[side] * size) - ph // 2
-            fill(c, x, max(0, y), s, ph, INK)
+            rounded(c, x, max(0, y), s, ph, INK, 1 if s == 1 else 1)
+        for i, (tx, ty) in enumerate(self.trail[:-1]):
+            f = (i + 1) / max(1, len(self.trail))
+            fill(c, int(tx * (size - 2 * s)), int(ty * (size - 2 * s)), 2 * s, 2 * s, mix(BLACK, YELLOW, 0.35 * f))
         bx, by = int(self.ball[0] * (size - 2 * s)), int(self.ball[1] * (size - 2 * s))
+        if s > 1:
+            glow(c, bx + s, by + s, 5 * s, YELLOW, 0.3)
         fill(c, bx, by, 2 * s, 2 * s, YELLOW)
-        text(c, str(self.score[0]), size // 2 - 8 * s, 2 * s, DIM, s)
-        text(c, str(self.score[1]), size // 2 + 3 * s, 2 * s, DIM, s)
+        text_right(c, str(self.score[0]), size // 2 - 4 * s, 2 * s, DIM, 2 if s == 1 else 3)
+        text(c, str(self.score[1]), size // 2 + 4 * s, 2 * s, DIM, 2 if s == 1 else 3)
+        if self._clock() < self.wait_until and not self.over:
+            disc(c, size / 2, size / 2, 2 * s, mix(INK, BLACK, 0.4))
+        if self.over:
+            banner(c, size, self.message, INK, (40, 40, 44))
         return c
-
 
 @register
 class Snake(Game):
@@ -214,14 +226,29 @@ class Snake(Game):
         self.step()
         c = blank(size)
         cell = size // self.N
-        for i, (x, y) in enumerate(self.body):
-            fill(c, x * cell, y * cell, cell, cell, GREEN if i else (120, 220, 90))
+        if cell >= 3:
+            for y in range(self.N):
+                for x in range(self.N):
+                    if (x + y) % 2 == 0:
+                        fill(c, x * cell, y * cell, cell, cell, (9, 9, 12))
+        n = len(self.body)
+        for i, (x, y) in enumerate(reversed(self.body)):
+            f = (i + 1) / n
+            col = mix((30, 70, 34), GREEN, f)
+            rounded(c, x * cell, y * cell, cell, cell, col, 1 if cell >= 4 else 0)
+        hx, hy = self.body[0]
+        rounded(c, hx * cell, hy * cell, cell, cell, (140, 230, 100), 1 if cell >= 4 else 0)
+        if cell >= 4:
+            ex = hx * cell + (cell - 2 if self.dir[0] > 0 else 1 if self.dir[0] < 0 else cell // 2)
+            ey = hy * cell + (cell - 2 if self.dir[1] > 0 else 1 if self.dir[1] < 0 else cell // 2)
+            fill(c, ex, ey, 1, 1, BLACK)
         fx, fy = self.food
-        fill(c, fx * cell, fy * cell, cell, cell, RED)
+        disc(c, fx * cell + cell / 2, fy * cell + cell / 2, cell / 2, RED)
+        fill(c, fx * cell + cell // 2, fy * cell, 1, 1, GREEN)
+        text(c, str(self.score), 2, 2, INK, 1 if cell < 4 else 2)
         if self.over:
-            text_centred(c, "again?", size // 2, size // 2, INK, scale_for(size))
+            banner(c, size, f"{self.score}. again?", INK, (40, 30, 30))
         return c
-
 
 PIECES = {
     "I": [(0, 1), (1, 1), (2, 1), (3, 1)], "O": [(1, 0), (2, 0), (1, 1), (2, 1)],
@@ -260,6 +287,7 @@ class Tetris(Game):
         self._clock = time.monotonic
         self.last_fall = self._clock()
         self.piece = None
+        self.cleared = None                  # (rows, when) for the flash
         self._spawn()
         self.message = "Go."
 
@@ -289,6 +317,9 @@ class Tetris(Game):
             if 0 <= y < self.H:
                 self.well[y][x] = self.piece["kind"]
         full = [y for y in range(self.H) if all(self.well[y])]
+        if full:
+            import time as _time
+            self.cleared = (list(full), _time.monotonic())
         for y in full:
             del self.well[y]
             self.well.insert(0, [None] * self.W)
@@ -377,28 +408,45 @@ class Tetris(Game):
         return ["left", "right", "rotate", "down", "drop", "again"]
 
     def frame_at(self, size: int, t: float):
+        import time as _time
         self.step()
         c = blank(size)
-        cell = 3 if size <= 96 else 9
-        x0 = (size - self.W * cell) // 2
+        big = size > 96
+        cell = 3 if not big else 9
+        x0 = (size - self.W * cell) // 2 - (0 if not big else 14)
         y0 = (size - self.H * cell) // 2
-        fill(c, x0 - 1, y0, 1, self.H * cell, FAINT)
-        fill(c, x0 + self.W * cell, y0, 1, self.H * cell, FAINT)
+        fill(c, x0 - 1, y0, 1, self.H * cell, EDGE)
+        fill(c, x0 + self.W * cell, y0, 1, self.H * cell, EDGE)
+        fill(c, x0 - 1, y0 + self.H * cell, self.W * cell + 2, 1, EDGE)
         for y, row in enumerate(self.well):
             for x, kind in enumerate(row):
                 if kind:
-                    fill(c, x0 + x * cell, y0 + y * cell, cell, cell, COLOURS[kind])
+                    tile(c, x0 + x * cell, y0 + y * cell, cell, cell, COLOURS[kind], 3 if big else 1, r=0 if not big else 1)
+        if self.cleared and _time.monotonic() - self.cleared[1] < 0.25:
+            for y in self.cleared[0]:
+                fill(c, x0, y0 + y * cell, self.W * cell, cell, WHITE)
         if self.piece and not self.over:
             gy = self.ghost_y()
             for x, y in self._cells(dict(self.piece, y=gy)):
                 if 0 <= y < self.H:
-                    fill(c, x0 + x * cell, y0 + y * cell, cell, cell, (40, 40, 46))
+                    outline(c, x0 + x * cell, y0 + y * cell, cell, cell, mix(COLOURS[self.piece["kind"]], BLACK, 0.55), 0, 1)
             for x, y in self._cells(self.piece):
                 if 0 <= y < self.H:
-                    fill(c, x0 + x * cell, y0 + y * cell, cell, cell, COLOURS[self.piece["kind"]])
-        if size > 96:
-            text(c, str(self.score), x0 + self.W * cell + 6, 6, INK, 1)
-            text(c, f"L{self.level}", x0 + self.W * cell + 6, 16, DIM, 1)
+                    tile(c, x0 + x * cell, y0 + y * cell, cell, cell, COLOURS[self.piece["kind"]], 3 if big else 1,
+                         r=0 if not big else 1)
+        if big:
+            px = x0 + self.W * cell + 8
+            text(c, "NEXT", px, y0 + 2, DIM, 1)
+            nxt = self.bag[-1] if self.bag else None
+            if nxt:
+                for x, y in PIECES[nxt]:
+                    tile(c, px + x * 6, y0 + 12 + y * 6, 6, 6, COLOURS[nxt], 3, r=1)
+            text(c, str(self.score), px, y0 + 40, INK, 1)
+            text(c, f"{self.lines} ln", px, y0 + 50, DIM, 1)
+            text(c, f"L{self.level}", px, y0 + 60, DIM, 1)
+        else:
+            text(c, str(self.score), 2, 2, DIM, 1)
         if self.over:
-            text_centred(c, "again?", size // 2, size // 2, INK, scale_for(size))
+            banner(c, size, f"{self.score}. again?", INK, (40, 30, 30))
         return c
+

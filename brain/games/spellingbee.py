@@ -21,8 +21,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, INK, YELLOW, WHITE, FAINT, blank, disc, fill, header, text, text_centred,
-                    text_width, fit_text)
+from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, fill, header,
+                    hexagon, mix, progress, text, text_centred, text_width, fit_text)
 from .words import common
 
 RANKS = [(0.0, "Beginner"), (0.02, "Good Start"), (0.05, "Moving Up"), (0.08, "Good"), (0.15, "Solid"),
@@ -134,32 +134,43 @@ class SpellingBee(Game):
         return list(self.answers)
 
     def frame_at(self, size: int, t: float):
+        import math
         c = blank(size)
         big = size > 96
         s = 3 if big else 1
-        # the hive: seven cells, the centre one yellow
-        r = 6 * s if not big else 16
-        cx, cy = size // 2, (size // 2 - 6) if not big else 62
-        spots = [(0, 0)] + [(round(2.1 * r * __import__("math").cos(k * 3.14159 / 3 + 0.5236)),
-                            round(2.1 * r * __import__("math").sin(k * 3.14159 / 3 + 0.5236))) for k in range(6)]
+        r = 19 if big else 6                        # a cell's radius
+        cx = size // 2
+        cy = (size // 2 - 5) if not big else 82
+        step = r * 1.9
+        spots = [(0, 0)] + [(round(step * math.cos(k * math.pi / 3)), round(step * math.sin(k * math.pi / 3)))
+                            for k in range(6)]
         letters = [self.centre] + list(self.others)
+        pop = ease_out(self.age() / 0.35) if self.age() < 0.35 else 1.0
         for (dx, dy), ch in zip(spots, letters):
             x, y = cx + dx, cy + dy
-            disc(c, x, y, r, YELLOW if ch == self.centre else FAINT)
+            centre = ch == self.centre
+            rr = r * (0.85 + 0.15 * pop) if centre else r
+            hexagon(c, x + 0.5, y + 0.5, rr, HONEY if centre else SLATE2, pointy=False)
+            if big:
+                hexagon(c, x + 0.5, y + 0.5, rr - 1.5, HONEY if centre else SLATE, pointy=False)
+                hexagon(c, x + 0.5, y + 0.5, rr - 1.5 - 0.01, HONEY if centre else SLATE2, pointy=False)
             gw, gh = 5 * s, 7 * s
-            text(c, ch.upper(), x - gw // 2, y - gh // 2, BLACK if ch == self.centre else INK, s)
-        # the rank bar along the bottom, the latest words in the space left
+            text(c, ch.upper(), x - gw // 2 + 1, y - gh // 2 + 1, BLACK if centre else INK, s)
         share = self.points / self.total if self.total else 0.0
-        bar_y = size - 3 * s
-        fill(c, 2 * s, bar_y, size - 4 * s, s, FAINT)
-        fill(c, 2 * s, bar_y, int((size - 4 * s) * min(1.0, share)), s, YELLOW)
+        rank = rank_of(self.points, self.total)
         if big:
-            y = cy + 2.1 * r + r + 8
-            for word, _ in self.found[:4]:
-                text_centred(c, word.upper(), cx, int(y), INK, 1)
+            y = cy + int(step) + r + 8
+            for word, _ in self.found[:3]:
+                text_centred(c, word.upper(), cx, y, INK if word == self.found[0][0] else DIM, 1)
                 y += 9
-            header(c, size, "Spelling Bee", f"{self.points} pts, {rank_of(self.points, self.total)}", s)
+            progress(c, 8, size - 12, size - 16, 3, share, HONEY, FAINT, WHITE)
+            text(c, rank, 8, size - 22, DIM, 1)
+            text(c, f"{self.points} pts", size - 8 - text_width(f"{self.points} pts", 1), size - 22, INK, 1)
         else:
             if self.found:
                 text_centred(c, fit_text(self.found[0][0].upper(), size - 4, 1), cx, size - 12, INK, 1)
+            progress(c, 2, size - 3, size - 4, 1, share, HONEY, FAINT)
+        if self.over:
+            banner(c, size, self.message, BLACK, HONEY)
+        header(c, size, "SPELLING BEE", f"{len(self.found)} of {len(self.answers)}" if not self.over else "", s, accent=HONEY)
         return c

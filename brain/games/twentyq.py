@@ -11,8 +11,8 @@ question too: knock if it is right.
 from __future__ import annotations
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, RED, WHITE, YELLOW, blank, fill, header, scale_for, text,
-                    text_centred, fit_text)
+from .board import (BLACK, DIM, GREEN, HONEY, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, header, mix,
+                    scale_for, text, text_centred, fit_text, wrap_text)
 
 MAX_Q = 20
 
@@ -139,27 +139,26 @@ class TwentyQuestions(Game):
     def frame_at(self, size: int, t: float):
         c = blank(size)
         s = scale_for(size)
+        big = size > 96
         n = len(self.history) + (0 if self.over else 1)
         if self.over:
-            text_centred(c, "GOT IT" if self.won else "YOU WIN", size // 2, size // 2 - 8 * s, GREEN if self.won else YELLOW, s)
+            text_centred(c, "GOT IT" if self.won else "YOU WIN", size // 2, size // 2 - 9 * s, GREEN if self.won else HONEY, s)
             text_centred(c, fit_text(self.guessing or "", size - 4, s) if self.won else f"{len(self.history)} asked",
                          size // 2, size // 2 + 2 * s, INK, s)
+            banner(c, size, f"in {len(self.history)}", INK, mix(GREEN, BLACK, 0.55) if self.won else (40, 40, 30))
             return c
-        text_centred(c, f"{n}", size // 2, size // 2 - 12 * s, INK, 2 * s)
-        text_centred(c, "?", size // 2, size // 2 + 4 * s, YELLOW if self.guessing else DIM, 2 * s)
-        if size > 96 and self.current:
-            words = self.current.split()
-            lines, line = [], ""
-            for w in words:
-                if len(line) + len(w) + 1 > 30:
-                    lines.append(line); line = w
-                else:
-                    line = (line + " " + w).strip()
-            if line:
-                lines.append(line)
-            y = size - 12 - 9 * min(3, len(lines))
-            for ln in lines[:3]:
-                text_centred(c, ln, size // 2, y, INK, 1)
+        big_s = 3 * s if not big else 4
+        text_centred(c, str(n), size // 2, 8 if not big else 34, INK, big_s)
+        q_col = HONEY if self.guessing else mix(DIM, INK, breathe(t, 2.0))
+        text_centred(c, "?", size // 2, 36 if not big else 76, q_col, 2 * s)
+        if big and self.current:
+            lines = wrap_text(self.current, size - 16, 1)[:4]
+            y = size - 14 - 9 * len(lines)
+            for ln in lines:
+                text_centred(c, ln, size // 2, y, INK if self.guessing else DIM, 1)
                 y += 9
-        header(c, size, "Twenty questions", f"{n} of {MAX_Q}", s)
+        elif not big and self.thinking:
+            text_centred(c, "...", size // 2, size - 10, DIM, 1)
+        header(c, size, "TWENTY QUESTIONS", f"{n} of {MAX_Q}", s, accent=HONEY)
         return c
+

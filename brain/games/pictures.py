@@ -26,7 +26,8 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 from . import Game, register
-from .board import BLACK, DIM, FAINT, INK, WHITE, blank, fill, header, scale_for, text, text_centred, fit_text
+from .board import (BLACK, DIM, FAINT, INK, SLATE, WHITE, banner, blank, ease_out, fill, header, mix, progress,
+                    scale_for, shade, text, text_centred, fit_text)
 from ..art.fetch import fetch_art
 from ..art.pipeline import prepare
 
@@ -166,19 +167,27 @@ class Sliding(Game):
         n = self.n
         cell = size // n
         off = (size - cell * n) // 2
-        for pos, tile in enumerate(self.tiles):
+        seam = 1 if size <= 96 else 2
+        for pos, tilei in enumerate(self.tiles):
             pr, pc = divmod(pos, n)
-            if tile == n * n - 1 and not self.over:
-                continue                                              # the gap
-            tr, tc = divmod(tile, n)
-            block = src[tr * cell:(tr + 1) * cell, tc * cell:(tc + 1) * cell]
             y, x = off + pr * cell, off + pc * cell
+            if tilei == n * n - 1 and not self.over:
+                fill(c, x, y, cell, cell, SLATE)
+                fill(c, x + cell // 2 - seam, y + cell // 2 - seam, 2 * seam, 2 * seam, FAINT)
+                continue
+            tr, tc = divmod(tilei, n)
+            block = src[tr * cell:(tr + 1) * cell, tc * cell:(tc + 1) * cell]
             c[y:y + cell, x:x + cell] = block
             if not self.over:
-                c[y, x:x + cell] = (c[y, x:x + cell] // 2)             # a seam
-                c[y:y + cell, x] = (c[y:y + cell, x] // 2)
+                shade(c, x, y, cell, seam, 0.45)
+                shade(c, x, y, seam, cell, 0.45)
+                shade(c, x, y + cell - seam, cell, seam, 0.75)
+                shade(c, x + cell - seam, y, seam, cell, 0.75)
+        if self.over and self.age() < 0.6:
+            # a wash of light as the picture comes back whole
+            a = 1.0 - ease_out(self.age() / 0.6)
+            c[...] = np.clip(c.astype(np.float32) + 160 * a, 0, 255).astype(np.uint8)
         return c
-
 
 @register
 class Reveal(Game):
@@ -250,12 +259,12 @@ class Reveal(Game):
         src = self.sleeve if self.sleeve.size[0] == size else self.sleeve.resize((size, size), Image.LANCZOS)
         if self.over:
             f = np.asarray(src, dtype=np.uint8).copy()
-            if size > 96:
-                text_centred(f, fit_text(self.entry.get("artist", ""), size - 8, 1), size // 2, size - 20, WHITE, 1)
-                text_centred(f, fit_text(self.entry.get("album") or self.entry.get("title", ""), size - 8, 1), size // 2, size - 10, WHITE, 1)
+            who = self.winner or (self.players[0] if self.won else "")
+            label = (f"{self.entry.get('artist', '')} — {self.entry.get('album') or self.entry.get('title', '')}"
+                     if size > 96 else (self.entry.get("album") or self.entry.get("title", "")))
+            banner(f, size, label, INK, mix((40, 120, 70), BLACK, 0.45) if self.won else (40, 30, 30))
             return f
         frac = min(1.0, self.elapsed() / self.seconds)
-        # the radius falls from a fifth of the panel to nothing; twenty steps
         step = int(frac * 20)
         key = (size, step)
         if key not in self.blurred:
@@ -264,5 +273,6 @@ class Reveal(Game):
             self.blurred[key] = np.asarray(img, dtype=np.uint8)
         f = self.blurred[key].copy()
         s = scale_for(size)
-        fill(f, 0, size - s, int(size * frac), s, WHITE)          # the clock along the bottom
+        progress(f, 0, size - s, size, s, frac, WHITE, (20, 20, 24), head=None)
         return f
+

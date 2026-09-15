@@ -23,8 +23,8 @@ import re
 import time
 
 from . import Game, register
-from .board import (BLACK, BLUE, DIM, FAINT, INK, WHITE, YELLOW, blank, fill, header, text, letter_tile,
-                    text_centred, fit_text)
+from .board import (BLACK, BLUE, DIM, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, breathe, disc, fill,
+                    glow, header, line, mix, text, letter_tile, text_centred, fit_text)
 from .words import common_set
 
 ROWS, COLS = 8, 6
@@ -252,32 +252,41 @@ class Strands(Game):
     def frame_at(self, size: int, t: float):
         c = blank(size)
         big = size > 96
-        s = 3 if big else 1
-        cell = 7 * s if not big else 21
-        gap = 1 if not big else 3
+        s = 2 if big else 1
+        cell = 7 if not big else 21
+        gap = 1 if not big else 2
         gw = COLS * cell + (COLS - 1) * gap
         gh = ROWS * cell + (ROWS - 1) * gap
         x0 = (size - gw) // 2
-        y0 = (size - gh) // 2 if not big else 14
+        y0 = (size - gh) // 2 if not big else 16
+        def centre(r, cc):
+            return (x0 + cc * (cell + gap) + cell / 2, y0 + r * (cell + gap) + cell / 2)
         colour = {}
+        # the paths first, as lines between centres, then the letters over them
         for w in self.found:
-            for r, cc in self.path_of(w):
-                colour[(r, cc)] = YELLOW if w == self.spangram else BLUE
+            col = YELLOW if w == self.spangram else BLUE
+            path = self.path_of(w)
+            for (r, cc) in path:
+                colour[(r, cc)] = col
+            for a, b in zip(path, path[1:]):
+                line(c, centre(*a), centre(*b), mix(col, BLACK, 0.35), 5 if big else 1)
         hinted = set(tuple(p) for p in (self.path_of(self.hinted) if self.hinted else []))
         for r in range(ROWS):
             for cc in range(COLS):
-                x = x0 + cc * (cell + gap)
-                y = y0 + r * (cell + gap)
+                x, y = centre(r, cc)
                 back = colour.get((r, cc))
                 if back is None and (r, cc) in hinted:
-                    fill(c, x, y, cell, cell, (60, 60, 30))
-                    back = None
-                ch = self.grid[r][cc]
+                    glow(c, x, y, cell * 0.9, YELLOW, 0.25 + 0.25 * breathe(t, 1.6))
                 if big:
-                    letter_tile(c, x, y, cell, ch, back, BLACK if back else INK, 2)
-                else:
-                    if back:
-                        fill(c, x, y, cell, cell, back)
-                    text(c, ch.upper(), x + 1, y, BLACK if back else INK, 1)
-        header(c, size, fit_text(self.theme, 110, 1), f"{len(self.words) + 1 - len(self.found)} to go" if not self.over else "done", s)
+                    disc(c, x, y, cell / 2 - 0.5, back or SLATE2, soft=0.8)
+                elif back:
+                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell, back)
+                ch = self.grid[r][cc]
+                gw_, gh_ = 5 * s, 7 * s
+                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 1), int(y - gh_ / 2) + (1 if big else 0),
+                     BLACK if back else INK, s)
+        if self.over:
+            banner(c, size, self.message, BLACK, YELLOW)
+        header(c, size, "STRANDS", fit_text(self.theme, 100, 1) if not self.over else "", s, accent=BLUE)
         return c
+
