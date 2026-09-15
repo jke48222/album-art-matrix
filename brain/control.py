@@ -52,6 +52,8 @@ is on — no Mac required.
   GET  /weather  -> the forecast the face draws, the place, its age
   POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
   GET  /shelf    -> the Discogs collection with plays per release; POST /shelf/sync
+  POST /imagine {prompt} -> a picture from words, on the panel; GET /imagine lists them,
+       GET /imagine/<id>.png is one, POST /imagine/show {id} shows it again, POST /imagine/forget {id}
   GET  /voice    -> the wake word, the listener and the last thing heard
   POST /voice/wake  start listening as if the wake word came   POST /voice/say {text}
 
@@ -197,6 +199,7 @@ class ControlState:
         self.listenbrainz = None     # ListenBrainzSource
         self.shelf = None            # brain/shelf.py, the Discogs collection
         self.posters = None          # brain/posters.py, TMDB posters for shows
+        self.imaginer = None         # brain/imagine.py, pictures from words
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -501,6 +504,10 @@ class ControlState:
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
                        else {"ready": False, "problem": "asking is off on this wall"}),
+            # imagine: which image model, whether its key is set, what it cost
+            "images": (self.imaginer.status() if getattr(self, "imaginer", None)
+                       else {"ready": False, "provider": "openai", "images": 0,
+                             "problem": "drawing from words is off on this wall"}),
             # posters: whether a TMDB key is set and what was last found
             "tmdb": (self.posters.status() if getattr(self, "posters", None)
                      else {"key_set": False, "posters": 0, "known": 0, "last": None,
@@ -542,6 +549,9 @@ class ControlState:
                                      token=store.get("listenbrainz", "token"))
         if "claude" in changed and getattr(self, "asker", None):
             self.asker.configure(api_key=store.get("claude", "api_key"))
+        if "images" in changed and getattr(self, "imaginer", None):
+            self.imaginer.configure(provider=store.get("images", "provider") or None,
+                                    api_key=store.get("images", "api_key"))
         if "tmdb" in changed and getattr(self, "posters", None):
             self.posters.configure(api_key=store.get("tmdb", "api_key"))
         if "discogs" in changed and getattr(self, "shelf", None):
@@ -894,6 +904,29 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
                 return
+            if u.path.startswith("/imagine"):
+                im = getattr(ctrl, "imaginer", None)
+                if im is None:
+                    self._json(200, {"ready": False, "images": [], "problem": "drawing from words is off on this wall"})
+                    return
+                tail = u.path[len("/imagine"):].strip("/")
+                if tail.endswith(".png"):
+                    path = im.image_path(tail[:-4])
+                    if path is None:
+                        self._json(404, {"error": "no such picture"})
+                        return
+                    with open(path, "rb") as fh:
+                        data = fh.read()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/png")
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "max-age=86400")
+                    self.send_header("Access-Control-Allow-Origin", "*")
+                    self.end_headers()
+                    self.wfile.write(data)
+                    return
+                self._json(200, {**im.status(), "images": im.listing()})
+                return
             if u.path.startswith("/shelf"):
                 sh = getattr(ctrl, "shelf", None)
                 if sh is None:
@@ -1023,6 +1056,24 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     minutes = 30.0
                 ctrl.note(text, max(0.5, min(720.0, minutes)))
                 self._json(200, {"shown": True, "minutes": minutes})
+                return
+            if self.path.startswith("/imagine/"):
+                im = getattr(ctrl, "imaginer", None)
+                if im is None:
+                    self._json(404, {"error": "drawing from words is off on this wall"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                image_id = str(patch.get("id") or "").strip()
+                if self.path.startswith("/imagine/show"):
+                    result = im.show_again(image_id)
+                elif self.path.startswith("/imagine/forget"):
+                    result = im.forget(image_id)
+                else:
+                    self._json(404, {"error": "not found"})
+                    return
+                self._json(404 if result.get("error") else 200, result)
                 return
             if self.path.startswith("/earworm") or self.path.startswith("/show") \
                     or self.path.startswith("/play") or self.path.startswith("/imagine"):

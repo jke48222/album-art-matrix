@@ -35,6 +35,7 @@ from .features import Features
 from .scrobble import Scrobbler
 from .shelf import Shelf
 from .posters import Posters, PosterSource
+from .imagine import Imaginer
 from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
@@ -381,6 +382,20 @@ def main():
                                 else "no Claude key yet; set one from the phone"))
     # show me, play me, and the earworm finder: by voice or from the phone
     ctrl.shower = Shower(ctrl, asker=ctrl.asker) if ctrl.features.on("show") else None
+    # a picture from words: Claude writes the prompt, an image model draws it
+    ctrl.imaginer = None
+    if ctrl.features.on("imagine"):
+        icfg = cfg.get("imagine", {})
+        ctrl.imaginer = Imaginer(
+            ctrl, shower=ctrl.shower or Shower(ctrl, asker=ctrl.asker), asker=ctrl.asker,
+            provider=ctrl.services_store.get("images", "provider") or str(icfg.get("provider", "openai")),
+            api_key=ctrl.services_store.get("images", "api_key"),
+            openai_model=str(icfg.get("openai_model", "gpt-image-1")),
+            google_model=str(icfg.get("google_model", "imagen-4.0-generate-001")),
+            quality=str(icfg.get("quality", "low")))
+        st = ctrl.imaginer.status()
+        print(f"[main] imagine: {st['provider']} {st['model']} " + ("(key set)" if st["ready"]
+                                                                   else "(no key yet; set one from the phone)"))
     # the weather, kept fresh for its face and for the phone
     ctrl.weather = Weather(ctrl).start() if ctrl.features.on("weather") else None
     if ctrl.weather is not None:

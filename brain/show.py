@@ -10,8 +10,10 @@
                                  sleeve goes up for eight seconds with the
                                  name running under it, the phone gets the
                                  alternatives
-    imagine("a purple elephant") a picture from words: item 16, not built
-                                 here yet, so it says so
+    imagine("a purple elephant") a picture from words, by brain/imagine.py:
+                                 Claude writes the prompt for a panel, an
+                                 image model draws it, the frame face shows
+                                 it for ten minutes
 
 Everything returns a dict: {"error": words} when nothing could be done,
 which the voice reads out and the phone shows, or the thing that was done.
@@ -88,12 +90,17 @@ class Shower:
 
     # ---- the frame face, for a while --------------------------------------------------------
     def _put_up(self, art_url: str, seconds: float) -> bool:
-        ctrl = self.ctrl
         try:
             img = fetch_art(art_url)
         except Exception as exc:
             print(f"[show] art: {exc}", flush=True)
             return False
+        return self.show_image(img, seconds)
+
+    def show_image(self, img, seconds: float) -> bool:
+        """A picture already in hand (a found sleeve, an imagined one): the
+        sleeve pipeline at the wall's size, then the frame face for a while."""
+        ctrl = self.ctrl
         tune = getattr(ctrl, "tuning", None)
         pre = prepare(img, ctrl.wall.width,
                       unsharp_radius=tune.get("unsharp_radius") if tune else 1.0,
@@ -179,4 +186,7 @@ class Shower:
         return {"shown": shown, **got, "art_url": art}
 
     def imagine(self, prompt: str) -> dict:
-        return {"error": "Drawing from words is not built on this wall yet."}
+        im = getattr(self.ctrl, "imaginer", None)
+        if im is None:
+            return {"error": "Drawing from words is off on this wall."}
+        return im.imagine(prompt)
