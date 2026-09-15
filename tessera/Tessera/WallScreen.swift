@@ -35,6 +35,7 @@ struct IPodWallScreen: View {
     /// The opening film plays once per launch, over the spot the iPod
     /// lands on. `-nointro` on the launch line skips it.
     @State private var introDone = !IntroFlip.available || CommandLine.arguments.contains("-nointro")
+        || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
     @AppStorage("intro.replay") private var replay = false
 
     var body: some View {
@@ -91,7 +92,7 @@ struct IPodWallScreen: View {
             // latches it on and the pill in Settings goes dead
             guard on else { return }
             replay = false
-            if IntroFlip.available { introDone = false }
+            if IntroFlip.available, !StingFilm.styles.contains(UserDefaults.standard.string(forKey: "intro.style") ?? "film") { introDone = false }
         }
         .fullScreenCover(isPresented: $zoomed) {
             ZStack(alignment: .topTrailing) {
@@ -140,7 +141,7 @@ struct IPodWallScreen: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            TesseraMark(accent: accent, lit: roomLight, side: 17)
+            RecordMark(accent: accent, lit: roomLight, side: 17)
             Text("TESSERA")
                 .font(.display(18))
                 .kerning(3.0)
@@ -250,7 +251,7 @@ enum Design: String, CaseIterable {
 }
 
 struct WallScreen: View {
-    @AppStorage("design") private var design = Design.ipod.rawValue
+    @AppStorage("design") private var design = Design.room.rawValue
     let light: Lighting
     @Binding var dragLight: Double?
     @Binding var onPanel: Bool
@@ -259,7 +260,7 @@ struct WallScreen: View {
     var onArchive: () -> Void = {}
 
     var body: some View {
-        switch Design(rawValue: design) ?? .ipod {
+        switch Design(rawValue: design) ?? .room {
         case .classic:
             ClassicWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
                               onSetup: onSetup, onStudio: onStudio)

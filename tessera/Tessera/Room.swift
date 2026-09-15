@@ -103,13 +103,63 @@ struct Room: View {
     /// frame: twelve averages and hue conversions, done once, not per eval.
     private static var cachedKey: Int = 0
     private static var cachedTones: [Color]? = nil
-    static func tones(_ px: [UInt8]?) -> [Color]? {
-        guard let px, let side = Panel.square(px.count) else { return nil }
+    private static var cachedPaletteKey: Int = 0
+    private static var cachedPalette: [Color]? = nil
+
+    private static func hash(_ px: [UInt8]) -> Int {
         var h = 0
         for i in stride(from: 0, to: px.count, by: 97) { h = h &* 31 &+ Int(px[i]) }
+        return h
+    }
+
+    /// The colours the room is lit with, from the same reading the light is
+    /// poured from: the mean of the nine sampled regions, voiced the same
+    /// way, then the top row's and the bottom row's. This is the accent
+    /// everything tinted takes, so the name, the keys, the badge and the
+    /// wall's light agree with the background rather than with a histogram.
+    static func palette(_ px: [UInt8]?) -> [Color]? {
+        guard let px, let side = Panel.square(px.count) else { return nil }
+        let h = hash(px)
+        if h == cachedPaletteKey, let cachedPalette { return cachedPalette }
+        let rows = spots.map { region(px, side, $0.0, $0.1) }
+        func mean(_ rs: ArraySlice<(Double, Double, Double)>) -> (Double, Double, Double) {
+            let n = Double(rs.count)
+            return (rs.reduce(0) { $0 + $1.0 } / n, rs.reduce(0) { $0 + $1.1 } / n, rs.reduce(0) { $0 + $1.2 } / n)
+        }
+        // an accent has to read as a colour on its own, so unlike the
+        // gradient's tones a dark frame's mean is lifted to a usable brightness
+        let out = [voiced(mean(rows[0..<9]), floorLift: 0.06, floorBri: 0.62),
+                   voiced(mean(rows[0..<3]), floorLift: 0.08, floorBri: 0.50),
+                   voiced(mean(rows[6..<9]), floorLift: 0.04, floorBri: 0.40)]
+        cachedPaletteKey = h
+        cachedPalette = out
+        return out
+    }
+
+    /// Where the mesh points sit; the bottom row goes to ground so the
+    /// floor of the screen stays a floor.
+    private static let spots: [(Double, Double)] = [
+        (0.08, 0.10), (0.50, 0.08), (0.92, 0.10),
+        (0.08, 0.42), (0.50, 0.38), (0.92, 0.42),
+        (0.08, 0.75), (0.50, 0.80), (0.92, 0.75),
+    ]
+
+    static func tones(_ px: [UInt8]?) -> [Color]? {
+        guard let px, let side = Panel.square(px.count) else { return nil }
+        let h = hash(px)
         if h == cachedKey, let cachedTones { return cachedTones }
 
-        func region(_ cx: Double, _ cy: Double) -> (Double, Double, Double) {
+        var out = spots.enumerated().map { (i, s) in
+            voiced(region(px, side, s.0, s.1), floorLift: i < 3 ? 0.10 : 0.05)
+        }
+        out.append(contentsOf: [Ink.ground, Ink.ground, Ink.ground])
+
+        cachedKey = h
+        cachedTones = out
+        return out
+    }
+
+    private static func region(_ px: [UInt8], _ side: Int, _ cx: Double, _ cy: Double) -> (Double, Double, Double) {
             // The patch is a fraction of the wall, not a count of LEDs: ten
             // pixels of a 64 panel is a sixth of it, and of a 192 wall a
             // sixteenth, which sampled a different thing on each.
@@ -126,34 +176,17 @@ struct Room: View {
                 }
             }
             return (r / n / 255, g / n / 255, b / n / 255)
-        }
+    }
 
-        /// The pop: hold the hue, raise the chroma, lift the floor. A dim
-        /// region keeps its identity instead of averaging into brown.
-        func voiced(_ c: (Double, Double, Double), floorLift: Double) -> Color {
+    /// The pop: hold the hue, raise the chroma, lift the floor. A dim
+    /// region keeps its identity instead of averaging into brown.
+    private static func voiced(_ c: (Double, Double, Double), floorLift: Double, floorBri: Double = 0) -> Color {
             let ui = UIColor(red: c.0, green: c.1, blue: c.2, alpha: 1)
             var hue: CGFloat = 0, sat: CGFloat = 0, bri: CGFloat = 0, a: CGFloat = 0
             ui.getHue(&hue, saturation: &sat, brightness: &bri, alpha: &a)
             return Color(hue: hue,
                          saturation: min(1, sat * 1.6 + 0.06),
-                         brightness: min(1, bri * 1.15 + floorLift))
-        }
-
-        // Sample where the mesh points sit; the bottom row goes to ground so
-        // the floor of the screen stays a floor.
-        let spots: [(Double, Double)] = [
-            (0.08, 0.10), (0.50, 0.08), (0.92, 0.10),
-            (0.08, 0.42), (0.50, 0.38), (0.92, 0.42),
-            (0.08, 0.75), (0.50, 0.80), (0.92, 0.75),
-        ]
-        var out = spots.enumerated().map { (i, s) in
-            voiced(region(s.0, s.1), floorLift: i < 3 ? 0.10 : 0.05)
-        }
-        out.append(contentsOf: [Ink.ground, Ink.ground, Ink.ground])
-
-        cachedKey = h
-        cachedTones = out
-        return out
+                         brightness: min(1, max(floorBri, bri * 1.15 + floorLift)))
     }
 
     private var a: Color { palette.first ?? Ink.tile }

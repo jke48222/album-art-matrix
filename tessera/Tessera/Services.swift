@@ -15,13 +15,51 @@ struct WallServices: Decodable {
     struct Spotify: Decodable { var client_id: String; var linked: Bool }
     struct Lastfm: Decodable { var user: String; var key_set: Bool? }
     struct Listenbrainz: Decodable { var user: String }
-    struct Acoustid: Decodable {
-        var key_set: Bool
-        var device: String
-        var mic: String?
+    /// The wall's ears: a microphone read all the time, Shazam naming the
+    /// last few seconds when the room is loud enough. Levels are dB below
+    /// the microphone's ceiling, so they are negative and louder is higher.
+    struct Hearing: Decodable {
+        struct Heard: Decodable {
+            var title: String
+            var artist: String
+            var album: String
+            var at_s: Int?          // where in the song the record is now
+            var length_s: Int?
+        }
+        /// A song from the ear's past: heard faintly and waiting, the last
+        /// one it put on the wall, or one of the recent few.
+        struct Past: Decodable {
+            var title: String
+            var artist: String
+            var album: String
+            var heard_s: Int?       // pending: seconds since the faint hearing
+            var named_s: Int?       // last_heard: seconds since it went up
+            var ended_s: Int?       // last_heard: seconds since it was let go
+            var why: String?        // last_heard: why it was let go
+            var ago_s: Int?         // recent: seconds since it was named
+            var times: Int?         // recent: how many times running
+        }
+        var on: Bool
         var tools: Bool
+        var device: String?
+        var mic: String?
         var listening: Bool
+        var state: String           // off, no_tools, no_mic, quiet, listening, asking, heard
+        var level_db: Double?
+        var floor_db: Double?
+        var gate_db: Double?
+        var gate_open: Bool
+        var loud_s: Int?
+        var quiet_s: Int?
+        var window_s: Double?       // the clip the next ask will send
+        var misses: Int?
         var heard_s: Int?
+        var heard: Heard?
+        var pending: Past?          // heard once, no catalogue record: not on the wall yet
+        var last_heard: Past?
+        var recent: [Past]?
+        var attempts: Int?
+        var matches: Int?
         var problem: String?
     }
     struct Mac: Decodable { var endpoint: String; var answering: Bool? }
@@ -29,7 +67,7 @@ struct WallServices: Decodable {
     var spotify: Spotify
     var lastfm: Lastfm
     var listenbrainz: Listenbrainz?      // older walls do not send these
-    var acoustid: Acoustid?
+    var hearing: Hearing?
     var mac: Mac?
     var ears: Bool
     var rejected: [String]?              // field names the wall would not take
@@ -81,9 +119,6 @@ struct WallServices: Decodable {
         if !lastfm.isEmpty { patch["lastfm"] = lastfm }
         if !DeveloperKeys.listenbrainzUser.isEmpty, (current.listenbrainz?.user ?? "").isEmpty {
             patch["listenbrainz"] = ["user": DeveloperKeys.listenbrainzUser]
-        }
-        if !DeveloperKeys.acoustidAPIKey.isEmpty, current.acoustid?.key_set != true {
-            patch["acoustid"] = ["api_key": DeveloperKeys.acoustidAPIKey, "device": "auto"]
         }
         if patch.isEmpty { return current }
         return await save(host: host, patch) ?? current
@@ -238,11 +273,11 @@ struct ServicesPage: View {
                 .buttonStyle(PressStyle(scale: 0.99))
                 Rule()
                 NavigationLink {
-                    EarsPage(accent: accent, services: $services)
+                    HearingPage(accent: accent, services: $services)
                 } label: {
                     SetupRow(title: "The wall's ears", subtitle: earsLine,
                              leading: { GlyphMark(symbol: "ear") }) {
-                        StateValue(earsState, done: services?.acoustid?.listening == true)
+                        StateValue(earsState, done: services?.hearing?.listening == true)
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
@@ -343,14 +378,18 @@ struct ServicesPage: View {
     }
 
     private var earsLine: String {
-        guard let a = services?.acoustid else { return "Anything played out loud in the room." }
-        if a.listening { return "Listening. Anything played out loud in the room." }
-        if a.key_set && a.mic == nil { return "Key saved. Waiting for a microphone on the wall." }
-        return "Anything played out loud. Needs a free key and a microphone."
+        guard let h = services?.hearing else { return "Anything played out loud in the room, named by Shazam." }
+        if let heard = h.heard { return "Hearing \(heard.artist), \(heard.title)." }
+        if !h.on { return "Off. Anything played out loud in the room, when on." }
+        if h.listening { return h.gate_open ? "Listening to the room." : "Listening. The room is quiet." }
+        if h.mic == nil { return "Waiting for a microphone on the wall." }
+        return "Anything played out loud in the room."
     }
     private var earsState: String {
-        guard let a = services?.acoustid else { return "Set up" }
-        return a.listening ? "Listening" : (a.key_set ? "Waiting" : "Set up")
+        guard let h = services?.hearing else { return "Set up" }
+        if h.heard != nil { return "Heard" }
+        if !h.on { return "Off" }
+        return h.listening ? "Listening" : (h.mic == nil ? "No mic" : "Waiting")
     }
 
     private var otherNote: String {
@@ -696,107 +735,6 @@ struct ListenBrainzPage: View {
             if let fresh { services = fresh }
             problem = why
             if why == nil { Taps.commit() }
-            busy = false
-        }
-    }
-}
-
-// MARK: - The wall's ears (AcoustID)
-
-struct EarsPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var key = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var ears: WallServices.Acoustid? { services?.acoustid }
-    private var keyBaked: Bool { !DeveloperKeys.acoustidAPIKey.isEmpty }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-    private var blurb: String {
-        "For anything played out loud in the room, from any app or any speaker: the wall listens for a few seconds, then asks AcoustID what it heard. "
-            + (keyBaked ? "Needs only a USB microphone on the wall." : "Needs a free key and a USB microphone on the wall.")
-    }
-
-    var body: some View {
-        SetupPage("The wall's ears", blurb: blurb) {
-            if !keyBaked {
-            SetupGroup("Key", note: "AcoustID keys come with a MusicBrainz account. Sign in, register an application (any name), copy its API key.") {
-                KeyField(placeholder: ears?.key_set == true ? "API key (one is on the wall)" : "API key", text: $key)
-                Rule()
-                SetupRow(title: "Need a key?", subtitle: "Opens acoustid.org in Safari.") {
-                    ActionPill(title: "Get a key", filled: false) {
-                        openURL(URL(string: "https://acoustid.org/new-application")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall",
-                         enabled: services != nil && !typedKey.isEmpty,
-                         busy: busy,
-                         done: (ears?.key_set == true && typedKey.isEmpty) ? "Key on the wall" : nil,
-                         accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem)
-            }
-
-            SetupGroup("On the wall", note: keyBaked ? "The key is built in. Plug a USB microphone into the wall and it is picked up on its own."
-                                                     : "Plug a USB microphone into the wall and it is picked up on its own.") {
-                fact("Microphone", ears?.mic ?? "None found yet", warn: ears?.mic == nil)
-                Rule()
-                fact("Listening tools", ears?.tools == true ? "Ready" : "Missing on the wall", warn: ears?.tools != true)
-                Rule()
-                fact("Listening", listeningWords, warn: ears?.listening != true)
-                if let p = ears?.problem, !p.isEmpty {
-                    Rule()
-                    fact("Last problem", p, warn: true)
-                }
-                Rule()
-                HStack {
-                    Button("Check again") {
-                        Task { services = await WallServices.read(host: wall.host) }
-                    }
-                    .buttonStyle(PressStyle(scale: 0.97))
-                    .font(.ui(13, .medium))
-                    .foregroundStyle(accent)
-                    Spacer()
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-        }
-        .task { if keyBaked, ears?.key_set != true { services = await WallServices.seeded(host: wall.host) } }
-    }
-
-    private var listeningWords: String {
-        guard let e = ears else { return "The wall is not answering." }
-        if e.listening {
-            if let s = e.heard_s { return s < 120 ? "Yes. Heard a song \(s) s ago." : "Yes. Nothing heard for a while." }
-            return "Yes"
-        }
-        if !e.key_set { return "No. Needs the key first." }
-        return "No"
-    }
-
-    private func fact(_ name: String, _ value: String, warn: Bool = false) -> some View {
-        SetupRow(title: name, subtitle: nil) {
-            Text(value).font(.ui(14)).foregroundStyle(warn ? Ink.signal : Ink.dim)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-
-    private func save() {
-        guard !typedKey.isEmpty, !busy else { return }
-        busy = true
-        Task {
-            let (fresh, why) = await ServiceSave.send(["acoustid": ["api_key": typedKey, "device": "auto"]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { key = ""; Taps.commit() }
             busy = false
         }
     }

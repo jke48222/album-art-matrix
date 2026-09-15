@@ -110,7 +110,7 @@ struct ClassicWallScreen: View {
 
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
-            TesseraMark(accent: accent, lit: roomLight, side: 17)
+            RecordMark(accent: accent, lit: roomLight, side: 17)
             Text("TESSERA")
                 .font(.display(18))
                 .kerning(3.0)

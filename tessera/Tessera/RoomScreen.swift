@@ -67,6 +67,9 @@ struct RoomWallScreen: View {
     @State private var zoomed = CommandLine.arguments.contains("-zoomed")
     /// The needle is down: the record turns.
     @State private var needleDown = false
+    /// After the sting in the room: how far the picture has come in from
+    /// coarse cells, 1 when it is simply there.
+    @Environment(\.glitchIn) private var glitchIn
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, ten times a second while the stand-in ticks, and
     // a system player read is an XPC call.
@@ -75,10 +78,10 @@ struct RoomWallScreen: View {
     @State private var hasLocalItem = false
     /// How far into the song, 0 to 1, read once a second; nil with no record on.
     @State private var songProgress: Double? = nil
-    @State private var introDone = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro")
+    @State private var introDone = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro") || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
     /// The opening has faded and the room is itself: only then does the
     /// needle set off, so the move is seen and not lost in the crossfade.
-    @State private var introSettled = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro")
+    @State private var introSettled = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro") || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
     @State private var introKey = 0
     /// The sleeve of the song that is on, for the record's label.
     @State private var sleeve = SleeveArt()
@@ -125,10 +128,16 @@ struct RoomWallScreen: View {
             ZStack(alignment: .topLeading) {
                 // the app's own background is the room's back wall: the render
                 // leaves the wall clear but for its shadows
-                if introDone, close == .none || close == .lifting { picture(fit: fit, g: g, size: geo.size) }
+                if introDone, close == .none || close == .lifting {
+                    // the glitch-in goes on the picture alone, which holds no
+                    // UIKit views: over the whole page it made placeholders of them
+                    ZStack(alignment: .topLeading) { picture(fit: fit, g: g, size: geo.size) }
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .topLeading)
+                        .modifier(GlitchIn(progress: glitchIn))
+                }
                 if !zoomed {
                     chrome(size: geo.size, fit: fit, g: g)
-                        .opacity(introDone && close == .none ? 1 : 0)
+                        .opacity((introDone && close == .none ? 1 : 0) * min(1, glitchIn * 1.6))
                         .animation(.easeInOut(duration: 0.25), value: close == .none)
                         .allowsHitTesting(close == .none)
                 }
@@ -209,7 +218,7 @@ struct RoomWallScreen: View {
             // latches it on and the pill in Settings goes dead
             guard on else { return }
             replay = false
-            if IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
+            if !StingFilm.styles.contains(introStyle), IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
         }
         .onDisappear { pressingTask?.cancel(); pressingRequest = UUID() }
         .onChange(of: wall.state.title) { _, _ in sleeve.refresh(title: wall.state.title, artist: wall.state.artist, album: wall.state.album, host: wall.host) }
@@ -456,13 +465,9 @@ struct RoomWallScreen: View {
                 .offset(x: fit.origin.x, y: fit.origin.y)
                 .allowsHitTesting(false)
             let face = rect(g.face, in: fit)
-            // the bloom behind the wall: the colour spilling onto the back wall
-            RadialGradient(colors: [accent.opacity(0.45 * light.room), second.opacity(0.18 * light.room), .clear],
-                           center: .center, startRadius: face.width * 0.35, endRadius: face.width * 1.7)
-                .frame(width: face.width * 3.6, height: face.width * 3.6)
-                .position(x: face.midX, y: face.midY)
-                .blendMode(.screen)
-                .allowsHitTesting(false)
+            // No bloom around the wall, and the light passes no longer see the
+            // back wall: behind the wall is the app's own background, the
+            // sleeve's gradient, exactly as the opening shows it.
             // the wall itself, over its own light
             RoomPanel(px: light.reading.px, duty: duty)
                 .frame(width: face.width, height: face.height)
@@ -491,8 +496,20 @@ struct RoomWallScreen: View {
         if NeedleDemo.on { return NeedleDemo.sample().playing }
         // A paused phone used to keep the arm moving: the wall's last word
         // still said "playing", because the app only ever pushed while it
-        // was. When this phone holds the song, this phone decides.
-        return hasLocalItem ? localPlaying : wall.state.songPlaying
+        // was. When this phone holds the song, this phone decides. When the
+        // wall is on a song this phone is not holding (heard through a
+        // speaker, a Mac, a scrobbler), the wall decides.
+        return phoneHoldsTheSong ? localPlaying : wall.state.songPlaying
+    }
+
+    /// Is the song on the wall this phone's own? True with no wall song
+    /// named yet, so a phone alone still drives the room.
+    private var phoneHoldsTheSong: Bool {
+        guard hasLocalItem, let item = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem else { return false }
+        let wallTitle = (wall.state.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if wallTitle.isEmpty { return true }
+        return SleeveMatch.same(item.title ?? "", wallTitle)
+            && SleeveMatch.same(item.artist ?? "", wall.state.artist ?? "")
     }
 
     /// Where the song is, 0 to 1: this phone's player while it plays, else
@@ -505,12 +522,12 @@ struct RoomWallScreen: View {
             guard let item = m.nowPlayingItem, item.playbackDuration > 1 else { return nil }
             return min(1, max(0, m.currentPlaybackTime / item.playbackDuration))
         }()
-        if localPlaying, let local { return local }
+        if localPlaying, let local, phoneHoldsTheSong { return local }
         if let t = wall.state.title, !t.isEmpty {
             if let f = wall.state.songFraction { return f }
             if wall.state.songPlaying { return 0 }
         }
-        if m.playbackState == .paused, let local { return local }
+        if m.playbackState == .paused, let local, phoneHoldsTheSong { return local }
         return nil
     }
 
@@ -524,7 +541,7 @@ struct RoomWallScreen: View {
         // pale thing on the wall whatever the record is.
         let word = light.steadyAccent.toned(forDark: true)
         HStack(alignment: .center, spacing: 12) {
-            TesseraMark(accent: word, lit: max(0.6, light.room), side: 17)
+            RecordMark(accent: word, lit: max(0.6, light.room), side: 17)
                 .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
             Text("TESSERA").font(.display(18)).kerning(3.0).foregroundStyle(word)
                 .shadow(color: .black.opacity(0.45), radius: 5, y: 1)

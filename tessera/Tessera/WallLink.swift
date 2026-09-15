@@ -570,9 +570,22 @@ final class WallSession {
            Panel.square(data.count) != nil {
             // Only publish when the bytes actually changed. Two identical
             // frames must leave the screen perfectly still.
-            if data != frame { frame = data }
+            if data != frame {
+                frame = data
+                // a new picture usually means a new song: ask for the words
+                // now, not at the next one-second tick (throttled, since an
+                // animated face changes its picture on every pull)
+                let now = CACurrentMediaTime()
+                if now - lastWordsPull > 0.7, !probing {
+                    lastWordsPull = now
+                    probing = true
+                    await pollState()
+                    probing = false
+                }
+            }
         }
     }
+    @ObservationIgnored private var lastWordsPull: CFTimeInterval = 0
 
     /// Put a moving thing on the wall. The brain loops it until a mode
     /// change; up to 240 frames at up to 24 fps is its whole appetite.

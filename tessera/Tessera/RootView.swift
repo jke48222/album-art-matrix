@@ -65,20 +65,41 @@ struct RootView: View {
     /// A screen has something over the whole of itself (a board, an
     /// opening): the page marks step out of the way rather than sit on it.
     @State private var marksHidden = false
+    /// The Record sting as the opening, laid over everything until it is
+    /// done; see StingOpening.swift. Off unless Settings chose it.
+    @AppStorage("intro.style") private var introStyle = "sting"
+    @State private var sting: StingPhase = {
+        // once, for phones that had the film or the mark saved: this build's
+        // opening is the sting; Settings still offers the others
+        let d = UserDefaults.standard
+        if !d.bool(forKey: "intro.sting.migrated") {
+            d.set(true, forKey: "intro.sting.migrated")
+            if !StingFilm.styles.contains(d.string(forKey: "intro.style") ?? "") { d.set("sting", forKey: "intro.style") }
+        }
+        return StingFilm.plays(d.string(forKey: "intro.style") ?? "sting") ? .film : .done
+    }()
+    @State private var stingKey = 0
+    /// The glitch-in's progress; 1 whenever no opening is running.
+    @State private var glitch: Double = 1
 
     private var duty: Double { dragLight ?? wall.state.brightness }
     private var isOff: Bool { wall.state.mode == "off" }
 
     private var lighting: Lighting {
         let reading = FrameRenderer.read(wall.frame)
+        // the room's own colours, from the same reading its light is poured
+        // from, before the brain's colour or the histogram: what the
+        // background looks like is what everything is tinted with
+        let room = Room.palette(reading.px)
         let accent: Color = {
+            if let c = room?.first { return c }
             if let hex = wall.state.artColors.first, let c = Color(wallHex: hex) { return c }
             // the sleeve's own palette before the app's amber: a grey sleeve
             // lends grey, and only a dark wall lends nothing
             return reading.palette.first ?? reading.glow
         }()
         return Lighting(reading: reading, accent: accent, duty: duty, isOff: isOff,
-                        palette: stablePalette.isEmpty ? reading.palette : stablePalette)
+                        palette: stablePalette.isEmpty ? (room ?? reading.palette) : stablePalette)
     }
 
     var body: some View {
@@ -118,6 +139,9 @@ struct RootView: View {
             .scrollIndicators(.hidden)
             .scrollDisabled(onPanel)
             .ignoresSafeArea(edges: .horizontal)
+            // after the sting in the room, the room's picture glitches in; the
+            // pages themselves are never wrapped in the effect (see GlitchIn)
+            .environment(\.glitchIn, glitch)
             // the page marks own the strip at the foot: a page's controls
             // end above them instead of running underneath (the room, which
             // ignores the safe area, keeps its own clearance)
@@ -126,8 +150,14 @@ struct RootView: View {
 
             PageTesserae(page: page ?? 0, accent: light.roomBright ? Ink.ground : light.steadyAccent, lit: light.room)
                 .padding(.bottom, 8)
-                .opacity(marksHidden ? 0 : 1)
+                .opacity(marksHidden || sting != .done ? 0 : 1)
                 .animation(.easeInOut(duration: 0.2), value: marksHidden)
+
+            if sting != .done {
+                StingOpening(style: introStyle, light: light, surge: arrival, phase: $sting)
+                    .id(stingKey)
+                    .zIndex(3)
+            }
         }
         .environment(worn)
         .preferredColorScheme(.dark)
@@ -156,9 +186,20 @@ struct RootView: View {
             showSetup = false
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showOnboarding = true }
         }
+        .onChange(of: sting) { _, phase in
+            guard case .glitch = phase else { return }
+            glitch = 0
+            DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.9)) { glitch = 1 } }
+        }
         .onChange(of: replay) { _, on in
             // the opening plays on the wall screen, so Settings steps aside
             if on { showSetup = false }
+            // the sting is the root's to replay; the screens' own openings
+            // put the switch back themselves
+            guard on, StingFilm.plays(introStyle) else { return }
+            replay = false
+            stingKey += 1
+            sting = .film
         }
         .fullScreenCover(isPresented: $showStudio) {
             StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
@@ -203,7 +244,7 @@ struct RootView: View {
             guard Date().timeIntervalSince(paletteAt) > 1.2 else { return }
             paletteAt = Date()
             withAnimation(.easeInOut(duration: 1.0)) {
-                stablePalette = lighting.reading.palette
+                stablePalette = Room.palette(lighting.reading.px) ?? lighting.reading.palette
             }
         }
         .onChange(of: wall.arrivalKey) { _, new in

@@ -1138,13 +1138,13 @@ struct AboutPage: View {
     /// The room's own colour, so the tuning page's controls are lit the same
     /// as everything else. Defaulted, because About is opened without it.
     var accent: Color = Ink.moss
-    @AppStorage("design") private var design = Design.ipod.rawValue
+    @AppStorage("design") private var design = Design.room.rawValue
     @AppStorage("onboarding.again") private var onboardingAgain = false
     @AppStorage("intro.replay") private var replay = false
     /// Found once, open from then on. See the tap target at the foot of
     /// this page.
     @AppStorage("tuning.unlocked") private var tuningUnlocked = false
-    @AppStorage("intro.style") private var introStyle = "film"
+    @AppStorage("intro.style") private var introStyle = "sting"
 
     var body: some View {
         SetupPage("Tessera",
@@ -1165,13 +1165,18 @@ struct AboutPage: View {
                     ActionPill(title: "Show") { onboardingAgain = true }
                 }
                 Rule()
-                SetupRow(title: "Play the opening", subtitle: "The iPod or room opening, again.") {
+                SetupRow(title: "Play the opening", subtitle: "The opening, again.") {
                     ActionPill(title: "Play") { replay = true }
                 }
                 Rule()
-                SetupRow(title: "Room opening", subtitle: introStyle == "mark" ? "The mark builds on the wall and becomes the panel." : "The film: the cover, the badge, the pull back.") {
+                SetupRow(title: "Opening", subtitle: introStyle == "mark" ? "The mark builds on the wall and becomes the panel."
+                         : introStyle == "sting" ? "The Record sting, on black."
+                         : introStyle == "sting-room" ? "The Record sting in the room's light; then the app glitches in."
+                         : "The iPod or room film: the cover, the badge, the pull back.") {
                     HStack(spacing: 6) {
-                        ActionPill(title: "Film", filled: introStyle != "mark") { introStyle = "film" }
+                        ActionPill(title: "Sting", filled: introStyle == "sting") { introStyle = "sting" }
+                        ActionPill(title: "In room", filled: introStyle == "sting-room") { introStyle = "sting-room" }
+                        ActionPill(title: "Film", filled: !["mark", "sting", "sting-room"].contains(introStyle)) { introStyle = "film" }
                         ActionPill(title: "Mark", filled: introStyle == "mark") { introStyle = "mark" }
                     }
                 }
