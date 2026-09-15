@@ -852,10 +852,14 @@ struct WeatherPage: View {
     @State private var report: WallWeather?
 
     private var typed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var isF: Bool { wall.state.weatherUnits == "f" }
 
     var body: some View {
         SetupPage("Weather",
-                  blurb: "A face that is the weather: the sun crossing where the real sun is, the moon with tonight's phase, clouds that drift, rain that falls with the forecast. From Open-Meteo, free, for a place you name once.") {
+                  blurb: "A face that is the weather: the sky the colour of the hour, the sun crossing where the real sun is, the moon with tonight's phase, clouds that drift, rain that falls with the forecast. From Open-Meteo, free, for a place you name once.") {
+            if let now = report?.now {
+                hero(now)
+            }
             SetupGroup("Where", note: wall.state.place.isEmpty ? "Name a town or a city." : "The wall follows this place.") {
                 KeyField(placeholder: wall.state.place.isEmpty ? "A town or a city" : wall.state.place, text: $query)
                 Rule()
@@ -863,8 +867,26 @@ struct WeatherPage: View {
                          done: (typed.isEmpty && !wall.state.place.isEmpty) ? wall.state.place : nil,
                          accent: accent) { setPlace() }
             }
-            .padding(.top, -12)
+            .padding(.top, report?.now == nil ? -12 : 0)
             Problem(text: problem ?? report?.problem)
+
+            if let hours = report?.hours, !hours.isEmpty {
+                SetupGroup("The next hours", note: nil) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(hours.prefix(6).enumerated()), id: \.offset) { _, h in
+                            VStack(spacing: 6) {
+                                Text(hourLabel(h.t)).font(.machine(11)).foregroundStyle(Ink.dim)
+                                Image(systemName: symbol(code: h.code, day: h.is_day ?? true))
+                                    .font(.system(size: 18)).foregroundStyle(Ink.ink)
+                                    .frame(height: 24)
+                                Text(h.temp.map { degrees($0) } ?? "").font(.ui(14, .semibold)).foregroundStyle(Ink.ink)
+                            }
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 14)
+                }
+            }
 
             SetupGroup("Degrees", note: nil) {
                 ChoiceRow(title: "Fahrenheit", subtitle: nil, value: "f", selected: wall.state.weatherUnits,
@@ -874,17 +896,8 @@ struct WeatherPage: View {
                           accent: accent) { wall.send(["weather_units": $0]); Taps.detent(intensity: 0.4) }
             }
 
-            SetupGroup("Right now", note: report?.now == nil ? nil : "As the wall has it, \(report?.age_s ?? 0) s old.") {
-                if let now = report?.now {
-                    SetupRow(title: tempLine(now), subtitle: sceneLine(now)) { EmptyView() }
-                    Rule()
-                    SetupRow(title: "High and low", subtitle: hiLo(now)) { EmptyView() }
-                } else {
-                    SetupRow(title: wall.state.place.isEmpty ? "No place yet" : "No weather yet",
-                             subtitle: wall.state.place.isEmpty ? "Name one above." : "Give it a moment.") { EmptyView() }
-                }
-                Rule()
-                SetupRow(title: "Put it on the wall", subtitle: "The weather face, now. It is also a choice under Nothing playing.") {
+            SetupGroup("On the wall", note: report?.now == nil ? (wall.state.place.isEmpty ? "Name a place above." : "Give the wall a moment to fetch it.") : "As the wall has it, \(report?.age_s ?? 0) s old. It is also a choice under Nothing playing.") {
+                SetupRow(title: "Put it on the wall", subtitle: "The weather face, now.") {
                     ActionPill(title: wall.state.mode == "weather" ? "Showing" : "Show", filled: wall.state.mode != "weather") {
                         wall.send(["mode": "weather"]); Taps.commit()
                     }
@@ -899,27 +912,96 @@ struct WeatherPage: View {
         }
     }
 
-    private func degrees(_ c: Double) -> String {
-        let v = wall.state.weatherUnits == "f" ? c * 9 / 5 + 32 : c
-        return "\(Int(v.rounded()))°"
+    /// The weather as a card: the wall's own frame, the temperature large,
+    /// the words for the sky, the day's range, and the small facts.
+    private func hero(_ now: WallWeather.Now) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
+                    .frame(width: 112, height: 112)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(wall.state.place.isEmpty ? "Here" : wall.state.place).font(.ui(12, .semibold)).foregroundStyle(accent)
+                    HStack(alignment: .firstTextBaseline, spacing: 2) {
+                        Text(now.temp.map { degrees($0, sign: false) } ?? "--").font(.display(44)).foregroundStyle(Ink.ink)
+                        Text("°").font(.display(30)).foregroundStyle(Ink.dim).baselineOffset(14)
+                    }
+                    Text(sceneWords(report?.scene, day: now.is_day ?? true)).font(.ui(15, .medium)).foregroundStyle(Ink.ink)
+                    if let h = now.high, let l = now.low {
+                        Text("High \(degrees(h))  ·  Low \(degrees(l))").font(.ui(12)).foregroundStyle(Ink.dim)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(spacing: 0) {
+                fact("thermometer.medium", "Feels", now.feels.map { degrees($0) } ?? "--")
+                fact("wind", "Wind", now.wind_kmh.map { "\(Int($0.rounded())) km/h" } ?? "--")
+                fact("sunrise", "Sunrise", now.sunrise.map { clock($0) } ?? "--")
+                fact("sunset", "Sunset", now.sunset.map { clock($0) } ?? "--")
+            }
+        }
+        .padding(14)
+        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
+        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(accent.opacity(0.35), lineWidth: 1))
     }
 
-    private func tempLine(_ now: WallWeather.Now) -> String {
-        var line = degrees(now.temp ?? 0)
-        if let f = now.feels { line += ", feels " + degrees(f) }
-        return line
+    private func fact(_ symbol: String, _ label: String, _ value: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: symbol).font(.system(size: 13)).foregroundStyle(Ink.dim)
+            Text(value).font(.ui(13, .semibold)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.8)
+            Text(label).font(.machine(10)).foregroundStyle(Ink.faint)
+        }
+        .frame(maxWidth: .infinity)
     }
 
-    private func sceneLine(_ now: WallWeather.Now) -> String {
-        let scene = (report?.scene ?? "").replacingOccurrences(of: "_", with: " ")
-        var parts = [scene.isEmpty ? "" : scene, now.is_day == true ? "day" : "night"]
-        if let w = now.wind_kmh { parts.append("wind \(Int(w.rounded())) km/h") }
-        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
+    private func degrees(_ c: Double, sign: Bool = true) -> String {
+        let v = isF ? c * 9 / 5 + 32 : c
+        return "\(Int(v.rounded()))" + (sign ? "°" : "")
     }
 
-    private func hiLo(_ now: WallWeather.Now) -> String {
-        guard let h = now.high, let l = now.low else { return "Not yet" }
-        return degrees(h) + " and " + degrees(l)
+    private func clock(_ unix: Double) -> String {
+        let d = Date(timeIntervalSince1970: unix)
+        let f = DateFormatter(); f.dateFormat = "h:mm"
+        return f.string(from: d)
+    }
+
+    private func hourLabel(_ unix: Double?) -> String {
+        guard let unix else { return "" }
+        let f = DateFormatter(); f.dateFormat = "ha"
+        return f.string(from: Date(timeIntervalSince1970: unix)).lowercased()
+    }
+
+    private func sceneWords(_ scene: String?, day: Bool) -> String {
+        switch scene {
+        case "clear": return day ? "Clear sky" : "Clear night"
+        case "mostly_clear": return "Mostly clear"
+        case "partly_cloudy": return "Partly cloudy"
+        case "overcast": return "Overcast"
+        case "fog": return "Fog"
+        case "drizzle": return "Drizzle"
+        case "rain": return "Rain"
+        case "freezing": return "Freezing rain"
+        case "snow": return "Snow"
+        case "showers": return "Showers"
+        case "thunder": return "Thunderstorms"
+        default: return ""
+        }
+    }
+
+    private func symbol(code: Int?, day: Bool) -> String {
+        switch code ?? 0 {
+        case 0: return day ? "sun.max" : "moon.stars"
+        case 1, 2: return day ? "cloud.sun" : "cloud.moon"
+        case 3: return "cloud"
+        case 45, 48: return "cloud.fog"
+        case 51, 53, 55: return "cloud.drizzle"
+        case 56, 57, 66, 67: return "cloud.sleet"
+        case 61, 63, 65: return "cloud.rain"
+        case 71, 73, 75, 77, 85, 86: return "cloud.snow"
+        case 80, 81, 82: return "cloud.heavyrain"
+        case 95, 96, 99: return "cloud.bolt.rain"
+        default: return "cloud"
+        }
     }
 
     private func setPlace() {
@@ -945,6 +1027,14 @@ struct WallWeather: Decodable {
         var wind_kmh: Double?
         var high: Double?
         var low: Double?
+        var sunrise: Double?
+        var sunset: Double?
+    }
+    struct Hour: Decodable {
+        var t: Double?
+        var temp: Double?
+        var code: Int?
+        var is_day: Bool?
     }
     var place: String?
     var units: String?
@@ -953,6 +1043,7 @@ struct WallWeather: Decodable {
     var scene: String?
     var problem: String?
     var now: Now?
+    var hours: [Hour]?
 
     static func read(host: String) async -> WallWeather? {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/weather") else { return nil }

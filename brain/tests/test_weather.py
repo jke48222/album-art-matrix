@@ -115,8 +115,11 @@ CONDITIONS = [("clear day", 0, True), ("clear night", 0, False), ("partly cloudy
 
 def test_eight_conditions_at_both_sizes():
     from PIL import Image
+    from brain.sun import sun_times
     now = 1_760_000_000
     lat, lon = 33.95, -84.55
+    rise, set_ = sun_times(lat, lon, now)
+    noon, midnight = (rise + set_) / 2, set_ + 4 * 3600          # the real day at this place
     for size, scale in ((64, 3), (192, 1)):
         frames = []
         for name, code, day in CONDITIONS:
@@ -126,11 +129,11 @@ def test_eight_conditions_at_both_sizes():
             fx["current"]["temperature_2m"] = 3.0 if code == 73 else 21.4
             d = parse_forecast(fx, fetched=now)
             face = WeatherFace(size)
-            f = face.frame_at(2.5, d, units="f", lat=lat, lon=lon, stale=(code == 3), place="x",
-                              now=now + 5000 - 20000)
+            when = noon if day else midnight
+            f = face.frame_at(2.5, d, units="f", lat=lat, lon=lon, stale=(code == 3), place="x", now=when)
             assert f.shape == (size, size, 3) and f.dtype == np.uint8
             assert f.max() > 40, name                                # something is drawn
-            f2 = face.frame_at(3.5, d, units="f", lat=lat, lon=lon, now=now + 5000 - 20000)
+            f2 = face.frame_at(3.5, d, units="f", lat=lat, lon=lon, now=when)
             if code in (2, 63, 73, 95, 45):
                 assert (f != f2).any(), name                         # it moves
             frames.append(f)
