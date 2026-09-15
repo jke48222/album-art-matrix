@@ -14,9 +14,10 @@ the most detailed and takes minutes).
 
 OpenAI streams the picture as it forms: three partial images, then the
 final one. The wall goes into its "imagine" face the moment the words
-arrive and shows each partial as it lands, crossfading from the last,
-with a soft band of light sweeping across while the model is still at
-work, so the picture is seen being drawn. Every image is brought to the
+arrive: a pencil wanders the dark canvas while the model thinks, and each
+partial that lands is drawn the way a picture is drawn, its lines
+sketched first in a warm ink and then the colour painted in along the
+same sweep, so the picture is seen being drawn. Every image is brought to the
 wall's size in linear light with a gentle stretch, so fine bright detail
 keeps its brightness. The finished picture stays for ten minutes, or
 until something else is chosen, and is kept at full size with its prompt
@@ -44,7 +45,7 @@ MIN_GAP_S = 10.0
 SHOW_S = 600.0
 KEEP = 200                       # pictures kept; the oldest go
 PARTIALS = 3                     # partial images asked of OpenAI while it draws
-FADE_S = 0.9                     # a new partial crossfades from the last over this
+FADE_S = 2.4                     # a new partial is sketched then painted over this
 
 OPENAI_URL = "https://api.openai.com/v1/images/generations"
 GOOGLE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:predict"
@@ -119,11 +120,20 @@ def _ease(t: float) -> float:
 
 
 class LiveDrawing:
-    """What the wall shows while a picture is being drawn, and after: the
-    partial images as they land, crossfading, a band of light sweeping
-    across while the model is still at work, the finished picture held
-    for a while. One of these lives on the Imaginer; the render loop asks
-    it for frames in mode "imagine"."""
+    """What the wall shows while a picture is being drawn, and after.
+
+    While the model thinks, a pencil wanders the dark canvas leaving a
+    fading trail, and a breath of light rises and falls in the middle.
+    Each partial image that lands is drawn the way a picture is drawn:
+    first its lines, sketched in a warm ink along a ragged sweep from the
+    top left, over the last picture gone dim; then the colour is painted
+    in along the same sweep and the lines dissolve into it. A thin line at
+    the foot counts the passes. The finished picture is held for a while.
+    One of these lives on the Imaginer; the render loop asks it for frames
+    in mode "imagine"."""
+
+    REVEAL_S = 2.4                  # sketch then paint, for each partial
+    SKETCH_SHARE = 0.5              # the sketch's share of the reveal
 
     def __init__(self, clock=None):
         self._clock = clock or time.monotonic
@@ -138,6 +148,10 @@ class LiveDrawing:
         self.hold_s = SHOW_S
         self.quick = False
         self._frames: dict[tuple[int, int], np.ndarray] = {}
+        self._edges: dict[tuple[int, int], np.ndarray] = {}
+        self._orders: dict[int, np.ndarray] = {}
+        self._trail: dict[int, np.ndarray] = {}
+        self._trail_at: dict[int, float] = {}
         self._lock = threading.Lock()
 
     # ---- what happens ----------------------------------------------------------------------
@@ -148,7 +162,7 @@ class LiveDrawing:
             self.images, self.final, self.problem = [], None, None
             self.t0 = self.updated_at = now
             self.done_at = None
-            self._frames = {}
+            self._frames, self._edges, self._trail = {}, {}, {}
 
     def partial(self, img: Image.Image):
         with self._lock:
@@ -172,7 +186,7 @@ class LiveDrawing:
     def clear(self):
         with self._lock:
             self.stage = "idle"
-            self._frames = {}
+            self._frames, self._edges, self._trail = {}, {}, {}
 
     def busy(self) -> bool:
         return self.stage in ("waiting", "partial")
@@ -193,7 +207,7 @@ class LiveDrawing:
                 "of": PARTIALS, "elapsed": round(self.elapsed(), 1), "problem": self.problem,
                 "done_ago": round(self._clock() - self.done_at, 1) if self.done_at else None}
 
-    # ---- the frames ------------------------------------------------------------------------------
+    # ---- the pieces of a frame -----------------------------------------------------------------
     def _frame(self, k: int, size: int) -> np.ndarray:
         key = (k, size)
         f = self._frames.get(key)
@@ -202,6 +216,67 @@ class LiveDrawing:
             self._frames[key] = f
         return f
 
+    def _edge(self, k: int, size: int) -> np.ndarray:
+        """The picture's lines, 0..1: where its luminance changes fastest,
+        the strongest twelfth of the panel kept, so it reads as a sketch
+        and not a smear."""
+        key = (k, size)
+        e = self._edges.get(key)
+        if e is None:
+            f = self._frame(k, size).astype(np.float32)
+            lum = f[..., 0] * 0.299 + f[..., 1] * 0.587 + f[..., 2] * 0.114
+            gx = np.zeros_like(lum)
+            gy = np.zeros_like(lum)
+            gx[:, 1:-1] = lum[:, 2:] - lum[:, :-2]
+            gy[1:-1, :] = lum[2:, :] - lum[:-2, :]
+            mag = np.sqrt(gx * gx + gy * gy)
+            cut = float(np.percentile(mag, 88))
+            top = float(np.percentile(mag, 99.5)) or 1.0
+            e = np.clip((mag - cut) / max(1.0, top - cut), 0.0, 1.0) ** 0.7
+            self._edges[key] = e
+        return e
+
+    def _order(self, size: int) -> np.ndarray:
+        """When each pixel gets drawn, 0..1: a sweep from the top left made
+        ragged with a little noise, so the sketch grows like a hand's."""
+        o = self._orders.get(size)
+        if o is None:
+            ys, xs = np.mgrid[0:size, 0:size].astype(np.float32)
+            sweep = (xs + ys * 0.85) / (size * 1.85)
+            rng = np.random.default_rng(7)
+            coarse = rng.random((max(3, size // 12), max(3, size // 12))).astype(np.float32)
+            noise = np.asarray(Image.fromarray(coarse, mode="F").resize((size, size), Image.BICUBIC), dtype=np.float32)
+            o = np.clip(sweep * 0.86 + noise * 0.14, 0.0, 1.0)
+            self._orders[size] = o
+        return o
+
+    @staticmethod
+    def _smooth(x: np.ndarray) -> np.ndarray:
+        x = np.clip(x, 0.0, 1.0)
+        return x * x * (3 - 2 * x)
+
+    def _reveal(self, prev: np.ndarray, cur: np.ndarray, edges: np.ndarray, order: np.ndarray, f: float) -> np.ndarray:
+        """The frame `f` (0..1) of the way through drawing `cur` over `prev`:
+        the sketch first, then the paint."""
+        share = self.SKETCH_SHARE
+        # the last picture goes dim as the pencil works over it, not all at once
+        dim = 1.0 - 0.45 * min(1.0, f / share)
+        base = prev.astype(np.float32) * dim
+        ink = np.array([255.0, 238.0, 205.0], np.float32)
+        if f < share:
+            p = f / share
+            drawn = self._smooth((p * 1.15 - order) / 0.12)                   # the pencil's front
+            lines = (edges * drawn)[..., None]
+            out = base * (1 - lines * 0.9) + ink * lines
+        else:
+            q = (f - share) / (1 - share)
+            painted = self._smooth((q * 1.2 - order) / 0.24)[..., None]         # the brush's front, soft
+            out = base * (1 - painted) + cur.astype(np.float32) * painted
+            lines = (edges * (1 - q) ** 1.5)[..., None]
+            out = out * (1 - lines * 0.6) + ink * lines * (1 - painted * 0.85)
+        return np.clip(out, 0, 255).astype(np.uint8)
+
+    # ---- the frame -------------------------------------------------------------------------------
     def frame_at(self, size: int, now: float | None = None) -> np.ndarray:
         now = self._clock() if now is None else now
         with self._lock:
@@ -214,31 +289,51 @@ class LiveDrawing:
                 if stage == "failed":
                     self._words(f, size, "could not draw", (200, 90, 80))
                 elif stage == "waiting":
-                    # alive while the model thinks: a slow breath of light in
-                    # the middle and two bands crossing each other
-                    breath = 0.5 - 0.5 * np.cos(t * 2.0)
-                    self._glow(f, size, 10 + 8 * breath)
-                    self._sweep(f, size, t, 0.30)
-                    self._sweep(f, size, -t * 0.7 + 0.8, 0.14)
+                    breath = 0.5 - 0.5 * np.cos(t * 1.6)
+                    self._glow(f, size, 6 + 8 * breath)
+                    self._pencil(f, size, now, t)
                     if size > 96:
                         self._words(f, size, self.prompt, (120, 118, 112))
                 return f
-            cur = self._frame(n - 1, size).astype(np.float32)
-            fade = FADE_S * (0.6 if self.quick else 1.0)
-            if since < fade:
-                k = _ease(since / fade)
-                prev = (self._frame(n - 2, size).astype(np.float32) if n >= 2
-                        else np.full((size, size, 3), 5.0, dtype=np.float32))
-                cur = prev * (1 - k) + cur * k
-            out = np.clip(cur, 0, 255).astype(np.uint8)
+            reveal = self.REVEAL_S * (0.5 if self.quick else 1.0)
+            cur = self._frame(n - 1, size)
+            if since < reveal:
+                prev = (self._frame(n - 2, size) if n >= 2 else np.full((size, size, 3), 5, dtype=np.uint8))
+                out = self._reveal(prev, cur, self._edge(n - 1, size), self._order(size), since / reveal)
+            else:
+                out = cur.copy()
             if stage == "partial":
-                self._sweep(out, size, t, 0.10)
-                # a thin line at the foot: how many of the partials are in
+                self._sweep(out, size, t, 0.05)
                 w = int(size * n / (PARTIALS + 1))
                 out[size - 1, :w] = (230, 226, 216)
             elif stage == "failed":
                 self._words(out, size, "could not draw", (200, 90, 80))
             return out
+
+    def _pencil(self, f: np.ndarray, size: int, now: float, t: float):
+        """A pencil wandering the canvas while the model thinks: a point of
+        light on a smooth, aimless path, and the trail it leaves fading."""
+        trail = self._trail.get(size)
+        if trail is None:
+            trail = np.zeros((size, size), dtype=np.float32)
+            self._trail[size] = trail
+            self._trail_at[size] = now
+        dt = min(0.2, max(0.0, now - self._trail_at.get(size, now)))
+        self._trail_at[size] = now
+        trail *= float(np.exp(-dt / 1.4))
+        s = 1 if size <= 96 else 3
+        # the path: a few sines against each other, never the same twice
+        steps = max(1, int(dt / 0.01))
+        for k in range(steps):
+            tt = t - dt + dt * (k + 1) / steps
+            x = size / 2 + size * (0.33 * np.sin(0.9 * tt) + 0.11 * np.sin(2.7 * tt + 1.0))
+            y = size / 2 + size * (0.28 * np.sin(0.7 * tt + 2.0) + 0.12 * np.cos(2.1 * tt))
+            xi, yi = int(x), int(y)
+            if 0 <= xi < size and 0 <= yi < size:
+                trail[max(0, yi - s + 1):yi + s, max(0, xi - s + 1):xi + s] = np.maximum(
+                    trail[max(0, yi - s + 1):yi + s, max(0, xi - s + 1):xi + s], 1.0)
+        ink = np.array([255.0, 238.0, 205.0], np.float32)
+        f[...] = np.clip(f.astype(np.float32) + trail[..., None] * ink * 0.75, 0, 255).astype(np.uint8)
 
     @staticmethod
     def _glow(f: np.ndarray, size: int, level: float):

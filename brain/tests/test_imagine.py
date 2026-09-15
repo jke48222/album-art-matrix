@@ -240,12 +240,14 @@ def test_streaming_partials_reach_the_live_face_and_pictionary(tmp_path):
     live = LiveDrawing(clock=lambda: 0.0)
     live.start("a thing")
     f = live.frame_at(64, 0.4)
-    assert f.shape == (64, 64, 3) and f.max() > 20 and f.max() < 140          # the sweep and the breath
+    assert f.shape == (64, 64, 3) and f.max() > 20 and f.mean() < 40          # the pencil on a dark canvas
     live.partial(Image.open(io.BytesIO(p1)).convert("RGB"))
     live.updated_at = 1.0
-    mid = live.frame_at(64, 1.0 + FADE_S / 2)
+    sketch = live.frame_at(64, 1.0 + FADE_S * 0.3)
+    mid = live.frame_at(64, 1.0 + FADE_S * 0.7)
     after = live.frame_at(64, 1.0 + FADE_S + 1.0)
-    assert after[32, 32][2] > 150 and mid[32, 32][2] < after[32, 32][2]        # fading in
+    assert after[32, 32][2] > 150 and mid[32, 32][2] <= after[32, 32][2]       # painted in
+    assert sketch.mean() < after.mean()                                          # the sketch is sparse
     assert after[63, :16].mean() > 150                                          # the foot line, one of four
     live.finish(Image.open(io.BytesIO(final)).convert("RGB"))
     live.updated_at = live.done_at = 5.0
