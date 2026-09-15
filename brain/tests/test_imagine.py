@@ -240,7 +240,7 @@ def test_streaming_partials_reach_the_live_face_and_pictionary(tmp_path):
     live = LiveDrawing(clock=lambda: 0.0)
     live.start("a thing")
     f = live.frame_at(64, 0.4)
-    assert f.shape == (64, 64, 3) and f.max() > 20 and f.max() < 120          # the sweep, nothing else
+    assert f.shape == (64, 64, 3) and f.max() > 20 and f.max() < 140          # the sweep and the breath
     live.partial(Image.open(io.BytesIO(p1)).convert("RGB"))
     live.updated_at = 1.0
     mid = live.frame_at(64, 1.0 + FADE_S / 2)
