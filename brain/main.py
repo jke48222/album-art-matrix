@@ -40,6 +40,7 @@ from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .sun import sun_factor
 from .nowplaying.ears import EarsSource
+from .nowplaying.knock import KnockEar
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -289,6 +290,14 @@ def main():
         print("[main] scrobble: " + ("token set, following the ear"
                                      if ctrl.scrobbler.configured
                                      else "no ListenBrainz token yet; set one from the phone"))
+    # the switch: two knocks on the frame, or a whistle, heard by the ear
+    if ctrl.ears is not None and ctrl.features.on("knock"):
+        ctrl.ears.knocks = KnockEar(ctrl, knock=tune.get("knock"),
+                                    sensitivity_db=tune.get("knock_sensitivity"),
+                                    whistle=tune.get("whistle"))
+        print("[main] knock: two knocks or a whistle switch the wall "
+              f"(knock {'on' if tune.get('knock') else 'off'}, "
+              f"whistle {'on' if tune.get('whistle') else 'off'})")
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
     if halo is not None:

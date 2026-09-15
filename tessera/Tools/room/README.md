@@ -40,7 +40,10 @@ Modes:
   wall's colour and screens it over the still. The back wall is out of camera
   in every light pass, so the light lands on the table, deck, speakers and
   frame and never washes the wall: behind the wall the app shows its own
-  background, the sleeve's gradient, the same one the sting opening sits on.
+  background, the sleeve's gradient, the same one the sting opening sits on. Staging
+  writes the light stills with their own alpha, clear where they add no
+  light: the room picture is screened inside a layer of its own under the
+  glitch-in, where an opaque black light pass blacks out the wall.
 - `recshade`: the record and label matte white, with the deck as shadow
   catcher; the app multiplies the pressing under it (`RecordShade`, with
   `record_box`). `RecordSpec` is the still's own record crop cut with the

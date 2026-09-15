@@ -372,9 +372,9 @@ DIRECTIONS = [
          sting="Laying", sting_desc="The unlit lattice fades up, then the nine tiles are set "
               "one at a time, left to right along the bar and down the stem, each landing a "
               "little large and settling. The letters of the name close up from wide tracking."),
-    # icon_scale 1.0: the lattice runs to the icon's edge (half a gutter of
-    # air, the lattice's own rhythm), the way the wall fills its frame.
-    dict(slug="record", name="Record", kept=True, mark=record, hero="white", icon_scale=1.0,
+    # icon_scale 0.78: a clear black margin inside the home-screen icon's
+    # rounded shape (full bleed, 1.0, read too big)
+    dict(slug="record", name="Record", kept=True, mark=record, hero="white", icon_scale=0.78,
          word=dict(font="Technor-Bold.otf", text="TESSERA", size=58, tracking=5.5), wm="wm-fade",
          idea="A record, tessellated, on its unlit lattice. Nine by nine cells, the spindle "
               "hole the centre cell; each lit tile is sized by how much of the disc sits under "

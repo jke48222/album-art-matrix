@@ -97,6 +97,16 @@ SPECS = [
     ("hearing", "Hearing", "bool", 0, 1, 1, False,
      "Listen to the room through the wall's microphone and name what is "
      "playing. Off leaves the microphone open for the level meter only."),
+    ("knock", "Hearing", "bool", 0, 1, 1, False,
+     "Two knocks on the frame turn the wall off, and two more bring back "
+     "the face it had. The microphone hears them through the board."),
+    ("knock_sensitivity", "Hearing", "int", 10, 40, 1, False,
+     "How far over the last second's level a knock has to jump, in dB. "
+     "Lower catches softer knocks and more false ones; the log shows every "
+     "candidate with its numbers."),
+    ("whistle", "Hearing", "bool", 0, 1, 1, False,
+     "A whistle bending up turns the wall on, bending down turns it off. "
+     "For a frame that does not carry a knock."),
     ("listen_for", "Hearing", "float", 3.0, 12.0, 0.5, False,
      "Seconds of the room sent to be named. Shorter answers sooner, longer "
      "is surer; the answer itself takes about two more."),
@@ -145,6 +155,9 @@ def _shipped(cfg: dict) -> dict:
         "retry_after_miss": int(ears.get("retry_after_miss", 4)),
         "keep_through_noise": int(ears.get("keep_through_noise", 180)),
         "mic_gain": int(ears.get("mic_gain", 100)),
+        "knock": bool(ears.get("knock", True)),
+        "knock_sensitivity": int(ears.get("knock_sensitivity", 20)),
+        "whistle": bool(ears.get("whistle", True)),
         "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
         "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0,
         "panel_type": 0, "temporal_dither": True, "dither_min": 0.2,
@@ -282,6 +295,10 @@ class Tuning:
                                 retry_s=v["retry_after_miss"],
                                 keep_s=v["keep_through_noise"],
                                 gain=v["mic_gain"], agc=v["mic_auto_gain"])
+            if getattr(self.ears, "knocks", None) is not None:
+                self.ears.knocks.configure(knock=v["knock"],
+                                           sensitivity_db=v["knock_sensitivity"],
+                                           whistle=v["whistle"])
         for name, fname in FILES.items():
             val = v[name]
             if isinstance(val, bool):      # run_renderer.sh reads 1 or 0

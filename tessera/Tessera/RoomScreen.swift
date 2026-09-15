@@ -443,9 +443,12 @@ struct RoomWallScreen: View {
             }
             // the wall's light on the room, from the second render, laid over
             // everything on the table as well as the room, so the deck, the
-            // cover, the arm and the mark on the glass all take it together:
-            // the sleeve's first colour where the wall throws it, a second
-            // colour under that
+            // speakers and the arm all take it together: the sleeve's first
+            // colour where the wall throws it, a second colour under that.
+            // The light carries its own alpha, clear wherever it adds nothing:
+            // this picture sits in a layer of its own under the glitch-in, where a
+            // screen blend cannot reach the app's background behind the wall, and
+            // an opaque black light pass blacked the wall out.
             Image("RoomLight")
                 .resizable()
                 .interpolation(.high)

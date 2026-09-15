@@ -63,17 +63,32 @@ def spec(base, shade, box, imageset, name):
     W, H = B.size; x0, y0 = round(box[0] * W), round(box[1] * H)
     r, g, b, _ = B.crop((x0, y0, x0 + Sh.width, y0 + Sh.height)).split()
     Image.merge("RGBA", (r, g, b, Sh.getchannel("A"))).save(os.path.join(A, imageset + ".imageset", name)); print("   spec", imageset)
+def light(src, imageset, name):
+    # A light pass carries its own alpha: clear where it adds no light, its
+    # premultiplied colour the render's own. Screened inside a layer of its own
+    # (the room picture under the glitch-in), an opaque black pass blacks out
+    # the app background behind the wall.
+    import numpy as np
+    s = os.path.join(R, src)
+    if not os.path.exists(s):
+        print("   MISSING", src); return
+    a = np.asarray(Image.open(s).convert("RGB")).astype(float)
+    m = a.max(axis=2)
+    rgb = np.where(m[..., None] > 0, a * 255.0 / np.maximum(m[..., None], 1.0), 0.0)
+    Image.fromarray(np.dstack([np.clip(np.round(rgb), 0, 255), np.round(m)]).astype(np.uint8), "RGBA").save(
+        os.path.join(A, imageset + ".imageset", name))
+    print("   light", imageset)
 geo = json.load(open(os.path.join(R, "room-geometry.json")))
 for f in ("room-recshade.json", "room-overgeom.json", "room-overshade.json"):
     geo.update(json.load(open(os.path.join(R, f))))
 for k in ("cover", "badge", "badge_box"): geo.pop(k, None)
 json.dump(geo, open(os.path.join(APP, "room-geometry.json"), "w")); print("   geometry", sorted(geo))
 put("room-base.png", "RoomBase", "room-base@3x.png")
-put("room-light.png", "RoomLight", "room-light@3x.png")
+light("room-light.png", "RoomLight", "room-light@3x.png")
 put("room-recshade.png", "RecordShade", "RecordShade@3x.png")
 spec("room-base.png", "room-recshade.png", geo["record_box"], "RecordSpec", "RecordSpec@3x.png")
 put("room-overhead.png", "OverheadBase", "OverheadBase@3x.png")
-put("room-overlight.png", "OverheadLight", "OverheadLight@3x.png")
+light("room-overlight.png", "OverheadLight", "OverheadLight@3x.png")
 put("room-overshade.png", "OverheadShade", "OverheadShade@3x.png")
 spec("room-overhead.png", "room-overshade.png", geo["over_record_box"], "OverheadSpec", "OverheadSpec@3x.png")
 sprites = sorted(glob.glob(os.path.join(R, "room-needle", "needle-*.png")))
