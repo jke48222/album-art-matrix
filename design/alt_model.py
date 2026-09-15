@@ -400,6 +400,17 @@ class Build:
         m.operation, m.object, m.solver = "DIFFERENCE", c, "EXACT"
         return c
 
+    def cut_outline(self, target, name, outline, t, z):
+        """Subtract a prism of any outline. A square cutter gives a square
+        opening, which is what put a hard corner in the middle of a shell
+        whose own corner is a 50 mm arc."""
+        CUT = bpy.data.collections.get("Cutters body") or collection("Cutters body")
+        CUT.hide_render = True
+        c = self.part(slab(name, outline, t, z, CUT, None), 5)
+        m = target.modifiers.new(name, "BOOLEAN")
+        m.operation, m.object, m.solver = "DIFFERENCE", c, "EXACT"
+        return c
+
     def well(self, opening, z_from, z_to, mat, t=6.0, cy=0.0):
         """Four walls lining a recess, from the steel to the glass."""
         h = z_to - z_from
@@ -741,12 +752,20 @@ def hearth(b):
 
 
 def strap(b):
-    """The original. A black lacquered shell with 50 mm corners, hung from a
-    brass hook on a saddle-leather strap that comes over the top and is
-    fixed to the face with a brass plate, after Adnet's mirror for Hermes:
-    the mounting is the design. The picture flush behind smoked acrylic in a
-    4 mm brass reveal. Mains on the bottom edge in a brass escutcheon."""
-    S, R, LIP = 540.0, 50.0, 12.0
+    """The original, second pass. The brass hook and the leather strap are
+    gone: it hangs flush like the rest of the family, and what is left is the
+    shell itself. Every border is now a parallel curve of the outside, so the
+    50 mm corner runs all the way in: 34 mm at the brass ring's outer edge,
+    32 mm at the aperture, 30 mm at the ring's inner edge, all four arcs
+    struck from one centre. The picture is flush behind smoked acrylic inside
+    that ring. Mains on the bottom edge in a brass escutcheon."""
+    S, R = 540.0, 50.0
+    OPEN = 504.0                       # the aperture in the shell's front lip
+    BR_O, BR_I = 508.0, 500.0          # the brass ring, 4 mm of face
+    def concentric(w):
+        """The same corner, offset inward: r shrinks by whatever the border
+        is wide, which is what makes two curves read as one."""
+        return R - (S - w) / 2
     z_front = AIR + ACR_T + 2.0
     z_frame_back = Z_PLY_BACK - CAVITY
     z_back = z_frame_back - BACK_T
@@ -757,42 +776,18 @@ def strap(b):
                         b.cols["Body"], b.m["lacquer"]), 5)
     b.cut(shell, "Shell cavity", (502.0, 502.0, (Z_STEEL_FRONT + 1) - z_frame_back + 4),
           (0, 0, ((Z_STEEL_FRONT + 1) + z_frame_back) / 2 - 2))
-    b.cut(shell, "Shell aperture", (504.0, 504.0, z_front - Z_STEEL_FRONT + 8),
-          (0, 0, (z_front + Z_STEEL_FRONT) / 2 + 2))
+    b.cut_outline(shell, "Shell aperture", rounded_rect(OPEN, OPEN, concentric(OPEN)),
+                  z_front - Z_STEEL_FRONT + 8, (z_front + Z_STEEL_FRONT) / 2 + 2)
     b.part(slab("Back panel", rounded_rect(S, S, R), BACK_T, z_frame_back - BACK_T / 2,
                 b.cols["Body"], b.m["black"]), 5)
     b.halo(S - 40, S - 40, z_back - 3.0, strength=30.0)
     b.part(box("Smoked acrylic", (503.0, 503.0, ACR_T), (0, 0, AIR + ACR_T / 2),
                b.cols["Face"], b.m["smoke"], bevel=0.4), 1)
-    for i, (dx, dy, sx, sy) in enumerate((
-            (0, 250.0, 508.0, 4.0), (0, -250.0, 508.0, 4.0), (-250.0, 0, 4.0, 500.0), (250.0, 0, 4.0, 500.0))):
-        b.part(box(f"Brass reveal {i}", (sx, sy, 2.4), (dx, dy, z_front - 0.8), b.cols["Face"],
-                   b.m["brass"], bevel=0.3), 1)
-    # the strap, over the top and down the face, 40 wide, 4 thick
-    W.ribbon_profile(20.0, 2.0)
+    reveal = b.part(slab("Brass reveal", rounded_rect(BR_O, BR_O, concentric(BR_O)),
+                         2.4, z_front - 0.8, b.cols["Face"], b.m["brass"]), 1)
+    b.cut_outline(reveal, "Brass reveal opening",
+                  rounded_rect(BR_I, BR_I, concentric(BR_I)), 8.0, z_front - 0.8)
     PADS = 25.0
-    z_wall = z_back - PADS
-    hook_y = S / 2 + 230.0
-    # Straight runs with square corners, and the run over the top given a
-    # 2 mm rise so it is never exactly parallel to the depth axis: with the
-    # profile's up-vector along that axis, a parallel tangent is degenerate
-    # and the strap spun edge-on down the wall in the first render.
-    zw = z_wall + 3.0
-    b.part(cable("Strap", [(0, hook_y - 8, zw), (0, S / 2 + 120, zw, "V"),
-                           (0, S / 2 + 4.0, zw, "V"), (0, S / 2 + 2.0, z_back - 0.5, "V"),
-                           (0, S / 2 + 4.0, z_front - 6.0, "V"), (0, S / 2 + 1.0, z_front + 2.5, "V"),
-                           (0, S / 2 - 27, z_front + 2.5)],
-                20.0, b.cols["Face"], b.m["leather"], flat=True), 1)
-    b.part(box("Strap plate", (46.0, 14.0, 2.0), (0, S / 2 - 24.0, z_front + 5.5),
-               b.cols["Face"], b.m["brass"], bevel=0.5), 1)
-    for dx in (-15.0, 15.0):
-        b.part(cylinder(f"Strap stud {dx:+.0f}", 3.0, 1.5, (dx, S / 2 - 24.0, z_front + 7.2),
-                        b.cols["Face"], b.m["brass"], verts=16), 1)
-    # the hook: a brass block on the wall with a pin the strap rides
-    b.part(box("Hook base", (28.0, 40.0, 10.0), (0, hook_y + 6, z_wall + 5.0),
-               b.cols["Face"], b.m["brass"], bevel=1.0), 8)
-    b.part(cylinder("Hook pin", 6.0, 22.0, (0, hook_y - 3, z_wall + 11.0),
-                    b.cols["Face"], b.m["brass"], axis="Y", verts=24), 8)
     for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
         b.part(box(f"Wall pad {i}", (30, 30, PADS), (sx * (S / 2 - 60), sy * (S / 2 - 60), z_back - PADS / 2),
                    b.cols["Body"], b.m["black"]), 7)
@@ -802,8 +797,8 @@ def strap(b):
     b.mains((165.0, -S / 2 + 2.0, Z_PLY_BACK - CAVITY / 2), rot=(math.pi / 2, 0, 0))
     b.electronics(psu=(-20.0, -165.0), bars=(-165.0, 130.0), fuse=(-35.0, 25.0),
                   pi=(175.0, 130.0), seat=Z_PLY_BACK)
-    return dict(w=S, h=S + 230.0 + 30.0, front=z_front, back=z_back, height=1500.0,
-                label="Strap", centre_y=115.0, pads=PADS, switch_down=True)
+    return dict(w=S, h=S, front=z_front, back=z_back, height=1500.0,
+                label="Strap", centre_y=0.0, pads=PADS, switch_down=True)
 
 
 DESIGNS = {"sleeve": sleeve, "lean": lean, "system": system, "splay": splay,

@@ -19,8 +19,12 @@ import math
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import bpy
 from mathutils import Vector
+
+import halo as HALO
 
 # ================================================================== numbers
 # --- the panels -------------------------------------------------------------
@@ -563,6 +567,10 @@ def build(face_png):
     for i, (sx, sy) in enumerate(((-1, -1), (1, -1), (-1, 1), (1, 1), (0, -1), (0, 1), (-1, 0), (1, 0))):
         part(cylinder(f"Back screw {i}", 2.6, 1.0, (sx * (OUTER / 2 - FRAME_W - 12), sy * (OUTER / 2 - FRAME_W - 12), Z_BACK - 0.5),
                       cols["Carcass"], anod, verts=20), 7)
+    # the halo, facing the wall from inside the standoff gap
+    HALO.add(box, material, part, cols["Carcass"], OUTER - 70, OUTER - 70,
+             Z_REAR + 5.0, face_png, lit=True, strength=30.0)
+
     # the cleat pair, wall half and frame half, near the top of the back
     cleat_y = OUTER / 2 - FRAME_W - 40
     c1 = part(box("Cleat (frame)", (CLEAT_L, CLEAT_W, CLEAT_T), (0, cleat_y, Z_BACK - CLEAT_T / 2 - 1),
@@ -604,7 +612,10 @@ def build(face_png):
     part(box("Inlet rocker", (13, 1.2, 19), (inlet_at[0] + 15, -OUTER / 2 - 0.9, inlet_at[2]), E, black), 0)
     part(cylinder("SL22 thermistor", SL22_D / 2, SL22_T, (half - 150, -half + 20, Z_BACK_FRONT + 12), E, black, axis="Y", verts=24), 6)
     part(box("USB microphone", MIC, (-OUTER / 2 + 46, -half + 12, Z_REAR + 30), E, black, bevel=1.0), 6)
-    part(box("VEML7700 lux sensor", LUX, (OUTER / 2 - 34, half - 8, Z_FRONT - 12), E, pcb_dark), 0)
+    # in the top rail, directly behind the eye. At half - 8 the board sat over
+    # the top right corner of the picture and took a 26 x 18 mm bite out of it.
+    part(box("VEML7700 lux sensor", LUX,
+             (OUTER / 2 - 34, OUTER / 2 - FRAME_W / 2 - 2, Z_FRONT - 12), E, pcb_dark), 0)
 
     # ---- wiring, suggested but where it would really run -------------------
     W = cols["Wiring"]

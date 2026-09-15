@@ -26,8 +26,12 @@ import math
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import bpy
 from mathutils import Vector
+
+import halo as HALO
 
 # ================================================================== numbers
 # --- the panels -------------------------------------------------------------
@@ -77,8 +81,11 @@ STANDOFF_BARREL = 31.75        # LISTING   1-1/4 in sign standoffs, four of them
                                #           NOT 1 in: 25.4 - 10.6 - 14.5 leaves
                                #           0.9 mm and the glass sits on the LEDs.
                                #           1-1/4 leaves 6.7, 1-1/2 leaves 13.0
-STANDOFF_D = 25.4              # LISTING   1 in diameter
-STANDOFF_INSET = 30.0          # DESIGN    from the board's edge to the barrel centre
+STANDOFF_D = 19.05             # LISTING   3/4 in diameter, and cheaper than the 1 in
+STANDOFF_INSET = 0.0           # DESIGN    0 means centre the barrel in the mat, which is
+                               #           the only place it fits: at a 550 board the mat
+                               #           is 35 mm and a 1 in barrel 30 mm in from the
+                               #           edge sat on the picture's corner
 
 # --- hanging -----------------------------------------------------------------
 FURRING = 19.05                # LISTING   1 x 3 furring strip, 3/4 in actual
@@ -416,6 +423,88 @@ def borrow(name, root, parts, layer, centre=None, keep=None, seat=None):
 
 # ==================================================================== build
 
+def tuck(parts, cols, lim):
+    """Move whatever hangs over the board's edge back inside.
+
+    The electronics, the wiring and the mark are all laid out on the 24 inch
+    square the design started from. On a smaller board the supply's foot, the
+    microphone and two of the drops end up past the edge, where on the real
+    thing they would simply have been placed further in. This walks the pack and
+    tucks each part back, one at a time, so a narrower board stays honest
+    without relaying the whole back by hand.
+    """
+    inside = {cols[n] for n in ("Electronics", "Wiring", "Board") if n in cols}
+    inside |= {c for c in bpy.data.collections
+               if c.name.split(".")[0] in ("E Power", "D Controller", "E Bus bars",
+                                           "U Unresolved fit")}
+    moved = 0
+    for o, _ in parts.values():
+        if o.type not in ("MESH", "CURVE") or not set(o.users_collection) & inside:
+            continue
+        if o.name.startswith(("Plywood board", "Steel skin", "Back panel", "Rail",
+                              "Wall pad", "Cleat", "Halo")):
+            continue
+        try:
+            corners = [o.matrix_basis @ Vector(c) for c in o.bound_box]
+        except (AttributeError, RuntimeError):
+            continue
+        if not corners:
+            continue
+        dx = dy = 0.0
+        hi_x = max(c.x for c in corners) * 1000.0
+        lo_x = min(c.x for c in corners) * 1000.0
+        hi_y = max(c.y for c in corners) * 1000.0
+        lo_y = min(c.y for c in corners) * 1000.0
+        if hi_x > lim:
+            dx = lim - hi_x
+        elif lo_x < -lim:
+            dx = -lim - lo_x
+        if hi_y > lim:
+            dy = lim - hi_y
+        elif lo_y < -lim:
+            dy = -lim - lo_y
+        if dx or dy:
+            o.location.x += mm(dx)
+            o.location.y += mm(dy)
+            moved += 1
+    # the borrowed CAD hangs off a pivot empty, so its meshes never see the walk
+    # above: move the pivot instead, using the whole group's own extent
+    root = None
+    for o in bpy.data.objects:
+        if o.type == "EMPTY" and o.parent is None:
+            root = o
+            break
+    if root is not None:
+        inv = root.matrix_world.inverted()
+        for piv in [o for o in bpy.data.objects if o.name.startswith("Atelier ")]:
+            kids = [k for k in bpy.data.objects
+                    if k.type == "MESH" and k.data.vertices and piv in
+                    (k.parent, getattr(k.parent, "parent", None))]
+            if not kids:
+                continue
+            xs, ys = [], []
+            for k in kids:
+                for c in k.bound_box:
+                    v = inv @ (k.matrix_world @ Vector(c))
+                    xs.append(v.x * 1000.0)
+                    ys.append(v.y * 1000.0)
+            dx = dy = 0.0
+            if max(xs) > lim:
+                dx = lim - max(xs)
+            elif min(xs) < -lim:
+                dx = -lim - min(xs)
+            if max(ys) > lim:
+                dy = lim - max(ys)
+            elif min(ys) < -lim:
+                dy = -lim - min(ys)
+            if dx or dy:
+                piv.location.x += mm(dx)
+                piv.location.y += mm(dy)
+                moved += 1
+    if moved:
+        print(f"tucked {moved} parts inside a {lim * 2 + 16:.0f} mm board", flush=True)
+
+
 def build(face_png):
     sc = clean()
     root = bpy.data.objects.new("Wall", None)
@@ -506,9 +595,10 @@ def build(face_png):
     # ---- the glass, floating on four standoffs ---------------------------
     part(box("Smoked acrylic", (ACRYLIC, ACRYLIC, ACR_T), (0, 0, (Z_ACR_BACK + Z_ACR_FRONT) / 2),
              cols["Glass"], smoke, bevel=0.4), 1)
+    inset = STANDOFF_INSET or (BOARD / 2 - FACE / 2) / 2
     for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
-        x = sx * (BOARD / 2 - STANDOFF_INSET)
-        y = sy * (BOARD / 2 - STANDOFF_INSET)
+        x = sx * (BOARD / 2 - inset)
+        y = sy * (BOARD / 2 - inset)
         part(cylinder(f"Standoff barrel {i}", STANDOFF_D / 2, STANDOFF_BARREL,
                       (x, y, Z_STEEL_FRONT + STANDOFF_BARREL / 2), cols["Glass"], anod), 2)
         part(cylinder(f"Standoff cap {i}", STANDOFF_D / 2, 4.0,
@@ -598,6 +688,12 @@ def build(face_png):
             for i, (sx, sy) in enumerate(((-1, 1), (1, 1), (-1, -1), (1, -1))):
                 part(box(f"Wall pad {i}", (30, 30, WALL_PAD),
                          (sx * (half_b - 45), sy * (half_b - 45), z_cl - WALL_PAD / 2), cols["Board"], paint), 7)
+
+    # the halo: twelve zones of the record's own edge colour, facing the wall
+    # from inside the standoff gap. Every other design in this family has one.
+    halo_z = (z_cl - WALL_PAD + 4.0) if ENCLOSURE == "box" else (z_cl - 4.0)
+    HALO.add(box, material, part, cols["Board"], BOARD - 80, BOARD - 80, halo_z,
+             face_png, lit=True, strength=30.0)
 
     # the cleat: OOK's is two thin aluminium hooks in the 1/8 in behind it
     part(box("Cleat (frame)", (CLEAT_L, CLEAT_W - 12, CLEAT_T), (0, y_cl + 6, z_cl - CLEAT_T / 2),
@@ -831,6 +927,7 @@ def build(face_png):
     cam = bpy.data.objects.new("Camera", cam_data)
     sc.collection.objects.link(cam)
     sc.camera = cam
+    tuck(parts, cols, BOARD / 2 - 8.0)
     return sc, cam, parts, lights, sweep, wallp
 
 
@@ -938,6 +1035,7 @@ def render(sc, path, samples, res=(2000, 1400)):
 
 
 def main():
+    global BOARD, ACRYLIC, BORDER          # before argparse reads them as defaults
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="design/renders")
@@ -948,7 +1046,17 @@ def main():
                     help="open: nothing behind. back: a panel over two rails, sides left open. "
                          "box: rails all round and a vented panel, closed")
     ap.add_argument("--prefix", default="wall")
+    ap.add_argument("--board", type=float, default=BOARD,
+                    help="the square board in mm: 609.6 is a 24 in sheet, 550 is round six")
+    ap.add_argument("--glass", type=float, default=0.0,
+                    help="the acrylic in mm; 0 means the same square as the board")
     args = ap.parse_args(argv)
+    BOARD = args.board
+    # the sheet and the board were both a 24 in square, so one constant hid
+    # inside the other: at --board 550 the glass stayed at 609.6 and hung
+    # 30 mm past the body on every side
+    ACRYLIC = args.glass or args.board
+    BORDER = (BOARD - FACE) / 2
     os.makedirs(args.out, exist_ok=True)
 
     global ENCLOSURE, Z_WALL

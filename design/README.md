@@ -200,3 +200,18 @@ the part in hand. How the steel is bonded to the plywood
 smoked sheet is a shader, not an optical model: how much of the LED grid it
 actually veils depends on the tint you buy, and #2064 grey at about 35
 percent transmission is the one the render assumes.
+
+## The other bodies
+
+Three rounds of alternate faces exist, all on this same board, the same fifteen
+openings and the same electrical layout. Any of them is a new front on the wall
+being built here, not a different wall.
+
+- `ALTERNATES.md` and `alt_model.py`: sleeve, lean, system, splay. Four objects
+  with four different answers to where the switch is.
+- `SYNTHESIS.md` and `synth_model.py`: alcove, fascia, shutter. Two deliberate
+  combinations of the bodies that survived review, and one that argues with
+  them. Shutter is the only one whose off state is a different object.
+
+The earlier round, `--direction console|vitrine|instrument|nonet`, is in this
+repository's history at `f12ca41`.

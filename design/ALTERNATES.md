@@ -24,7 +24,7 @@ C14 with its switch is placed where a hand goes, differently in each.
 |---|---|---|---|---|
 | Case | 540 sq | 143 mm | satin aluminium, charcoal wool, black anodised | underside, right |
 | Hearth | 640 sq, 70 mm chamfers | 158 mm | walnut, oatmeal wool, brass | black shoe, bottom, 140 mm left |
-| Strap | 540 sq, 50 mm corners | 120 mm | black lacquer, saddle leather, brass | bottom edge, right, brass escutcheon |
+| Strap | 540 sq, 50 mm corners | 120 mm | black lacquer, brass | bottom edge, right, brass escutcheon |
 
 ## 1. Case — the cool one
 
@@ -58,27 +58,32 @@ three at 158 mm and the most furniture-like; it is also the one that most
 wants real veneer rather than paint, because the chamfers show grain
 direction changing and paint has no grain to change.
 
-## 3. Strap — the new one
+## 3. Strap: the second pass
 
-A black lacquered shell with 50 mm corners, hung from a brass hook on a
-40 mm saddle-leather strap that comes down the wall, over the top edge and
-25 mm down the face, where a brass plate and two studs hold it. The picture
-flush behind smoked acrylic inside a 4 mm brass reveal. The mains module is
-in the bottom edge at the right, in a brass escutcheon, found by feel.
+A black lacquered shell with 50 mm corners, hung flush like the rest of the
+family. The picture is flush behind smoked acrylic inside a 4 mm brass ring,
+and the mains module is in the bottom edge at the right, in a brass
+escutcheon, found by feel.
 
-The reference is [Jacques Adnet's mirror for Hermès, 1950](https://www.danishdesignstore.com/products/adnet-circulaire-mirror-gubi):
-a pane of glass hung from a leather strap on a brass fitting, the strap in
-proportion to the pane, one of the first objects to put leather against glass.
-Its lesson is that **the mounting can be the design**. Everything else on
-this wall hides how it hangs; this one makes hanging the whole idea, and it
-is the only design here whose silhouette includes the wall above it.
+**Every border is a parallel curve of the outside.** The shell's corner is a
+50 mm arc; the brass ring reads 34 mm at its outer edge and 30 mm at its
+inner; the aperture in the shell's front lip is 32 mm. All four arcs are
+struck from the same centre, 220 mm out on each axis, so the radius shrinks
+by exactly what each border is wide. That is what makes them read as one line
+rather than four separate frames, and it is the difference between a rounded
+object and an object with rounded corners.
 
-The palette is Adnet's: black, tan, brass. It is also the room's. Black
-cubby unit, brushed-metal lamp, warm floor.
+**What it used to be.** The first version hung from a brass hook on a 40 mm
+saddle-leather strap that came down the wall, over the top edge and 25 mm
+down the face, after [Jacques Adnet's mirror for Hermès, 1950](https://www.danishdesignstore.com/products/adnet-circulaire-mirror-gubi):
+a pane of glass hung from a leather strap on a brass fitting, one of the
+first objects to put leather against glass. Its argument was that the
+mounting can be the design. That argument was not kept: the strap and the
+hook are deleted, the object hangs on a cleat like everything else, and what
+is left to look at is the shell. It also loses the cost of finding a stud,
+and 230 mm of wall above the frame.
 
-It costs a stud. The hook carries about 6 kg and has to be in one, and four
-25 mm pads keep the shell off the plaster so the halo has room. A belt and a
-hook are the whole mounting bill.
+Four 25 mm pads keep the shell off the plaster so the halo has room.
 
 ## Parts these add, over the buildable design
 
@@ -88,24 +93,21 @@ hook are the whole mounting bill.
 | Charcoal wool, 1/2 yd | Case | $8 |
 | Walnut veneer ply or veneer sheet | Hearth | $45 |
 | Oatmeal wool, 1/2 yd | Hearth | $8 |
-| Brass bar and angle, bezel and keys | Hearth, Strap | $18 |
+| Brass bar and angle, bezel and ring | Hearth, Strap | $18 |
 | Black lacquer or gloss enamel | Strap | $12 |
-| Leather belt, 40 mm, natural | Strap | $15 |
-| Brass hook, rated | Strap | $10 |
 | Addressable strip, 2 m | all | $12 |
 | 1/4 in back panel and one furring strip | all | $16 |
 
 Case about **$75** over the core build; Hearth about **$100**; Strap about
-**$65**. Roughly $190, $215 and $180 all in.
+**$40**. Roughly $190, $215 and $155 all in.
 
 ## What a render cannot settle
 
 Whether 26 or 22 gauge aluminium sheet on a wooden rail stays flat enough
 for Case's sides, which is the finish that makes or breaks it. Whether veneer
 around a 70 mm chamfer can be edge-banded cleanly or wants a mitred solid
-corner. And, for Strap, whether the shell will hang plumb from a single
-centre point with the supply off to one side inside it, which is a question
-of where the mass is and is answered by hanging it before finishing it.
+corner. Strap's question went away with its strap: on a cleat the
+mass off to one side no longer decides whether it hangs plumb.
 
 ---
 
