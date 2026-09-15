@@ -44,7 +44,9 @@
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Read once so the wall knows when your sunset is. It goes to the wall and nowhere else.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Tessera listens for a few seconds to find the song's tempo, so the wall can spin on the beat.</string>
+	<string>Tessera listens for a few seconds to find the song's tempo, so the wall can spin on the beat, and hears your moves in the games.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Your spoken guesses in the games are turned into words on this phone and sent to the wall.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>

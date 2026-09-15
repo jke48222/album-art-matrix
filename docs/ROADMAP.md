@@ -41,10 +41,10 @@ games, Claude for Connections sets and crossword clues.
 | # | Game | Notes | State |
 | --- | --- | --- | --- |
 | 19 | Wordle | Five-by-six grid, spoken whole-word guesses. | **wall side done** 2026-09-15 with the games shell (brain/games/); the phone's Games screen next |
-| 20 | Connections | Four groups of four; Claude writes the sets. | planned |
-| 21 | Sudoku | On the phone by touch, on the wall as the grid; voice optional. | planned |
-| 22 | Spelling Bee | Seven letters, one in the middle, say words. | planned |
-| 23 | Letter Boxed | Twelve letters round a square, the wall draws the lines. | planned |
+| 20 | Connections | Four groups of four; Claude writes the sets. | **wall side done** 2026-09-15: brain/games/connections.py, Claude sets or eight bundled |
+| 21 | Sudoku | On the phone by touch, on the wall as the grid; voice optional. | **wall side done** 2026-09-15: brain/games/sudoku.py, own generator with a unique-solution check and a rating |
+| 22 | Spelling Bee | Seven letters, one in the middle, say words. | **wall side done** 2026-09-15: brain/games/spellingbee.py |
+| 23 | Letter Boxed | Twelve letters round a square, the wall draws the lines. | **wall side done** 2026-09-15: brain/games/letterboxed.py, a two-word par found for every puzzle |
 | 24 | Strands | Letter grid with a theme; say a word, the wall lights its path. | planned |
 | 25 | Mini crossword | Five-by-five, clues on the phone, answers by voice. | planned |
 | 26 | Contexto | Guess the secret word by meaning; ranks from a local word file. | planned |

@@ -236,6 +236,40 @@ class Asker:
             print(f"[ask] earworm: {self.problem}", flush=True)
             return None
 
+    def connections_set(self, salt: float = 0.0) -> list[tuple[str, list[str]]] | None:
+        """Four groups of four for Connections (brain/games/connections.py),
+        easiest first, or None."""
+        if not self.ready:
+            return None
+        from pydantic import BaseModel
+        class Group(BaseModel):
+            theme: str
+            words: list[str]
+        class Puzzle(BaseModel):
+            groups: list[Group]
+        try:
+            resp = self._client_().messages.parse(
+                model=self.model, max_tokens=600,
+                system="Write a Connections puzzle: sixteen words in four groups of four, each group with a "
+                       "short theme. Order the groups easiest to hardest. Every word must belong to exactly "
+                       "one group, with at least two words that could plausibly fit another group as red "
+                       "herrings. No word may repeat. Single words or short two-word terms, lower case. Themes "
+                       "should be varied: categories, fill-in-the-blanks, hidden words, wordplay. Pop music, "
+                       "records and everyday life are welcome.",
+                messages=[{"role": "user", "content": f"A fresh puzzle, please (variation {salt:.3f})."}],
+                output_format=Puzzle, output_config={"effort": "low"},
+            )
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
+                    + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
+            got = resp.parsed_output
+            return [(g.theme, [w.strip().lower() for w in g.words]) for g in got.groups]
+        except Exception as exc:
+            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            print(f"[ask] connections: {self.problem}", flush=True)
+            return None
+
     def image_prompt(self, prompt: str, size: int = 64) -> str | None:
         """The words rewritten as a prompt for a picture on a panel of this
         size (brain/imagine.py), or None when Claude cannot be asked."""

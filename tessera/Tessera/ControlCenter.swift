@@ -122,6 +122,8 @@ struct ControlCenterPanel: View {
     /// The Video face is chosen here, not on the wall: a video needs a link
     /// before there is anything for the wall to be in the middle of.
     @State private var videoFace = false
+    /// The games live in their own sheet: a board wants the whole screen.
+    @State private var showGames = false
     @State private var videoLink = ""
     @AppStorage("video.sound") private var videoSound = true
     @State private var videoPick: PhotosPickerItem? = nil
@@ -381,7 +383,11 @@ struct ControlCenterPanel: View {
             tile(.video, "Video", mode: "video") { videoFace = true }
             tile(.lamp, "Lamp", mode: "ambient")
             tile(.clock, "Clock", mode: "clock")
+            tile(.games, "Games", mode: "game") { showGames = true }
             tile(.dark, "Off", mode: "off")
+        }
+        .sheet(isPresented: $showGames) {
+            GamesSheet(accent: accent).environment(wall)
         }
     }
 
