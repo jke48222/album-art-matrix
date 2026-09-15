@@ -34,6 +34,7 @@ from . import homekit as homekit_mod
 from .features import Features
 from .scrobble import Scrobbler
 from .shelf import Shelf
+from .posters import Posters, PosterSource
 from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
@@ -163,6 +164,16 @@ def build_sources(cfg: dict, ctrl):
             print(f"[main] adapter {name!r} unknown — skipping")
     if not sources:
         sys.exit("[main] no now-playing sources configured")
+    # posters: right after the Mac, so a show it is watching gets its poster
+    # before the ears or a scrobbler get a say. Off with [features] posters.
+    ctrl.posters = None
+    features = getattr(ctrl, "features", None)
+    if ctrl.apple is not None and (features is None or features.on("posters")):
+        ctrl.posters = Posters(store.get("tmdb", "api_key"))
+        sources.insert(sources.index(ctrl.apple) + 1, PosterSource(ctrl.apple, ctrl.posters))
+        print("[main] posters: " + ("TMDB key set; a show on the Mac gets its poster"
+                                    if ctrl.posters.ready
+                                    else "no TMDB key yet; set one from the phone"))
     return sources
 
 
@@ -306,6 +317,9 @@ def main():
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
     }, frame_len=size * size * 3, wall=wall)
+    # [features] in config.toml: a switch per feature, asked at the moment a
+    # feature would act, so one thing can be tested at a time
+    ctrl.features = Features(cfg)
     source = SourceChain(build_sources(cfg, ctrl))
     ctrl.source = source
     poller = _Poller(source, poll_s, wake=ctrl.repoll, news=ctrl.news)
@@ -321,9 +335,6 @@ def main():
     tune.ears = ctrl.ears          # the Hearing knobs land on the ear
     tune.apply()
     serve_control(ctrl, int(cfg.get("control", {}).get("port", 8788)))
-    # [features] in config.toml: a switch per feature, asked at the moment a
-    # feature would act, so one thing can be tested at a time
-    ctrl.features = Features(cfg)
     # the Home app's view of the wall, on its own thread; None when [homekit]
     # is off, and the brain runs the same either way
     ctrl.homekit = (homekit_mod.from_config(cfg, ctrl)
@@ -634,6 +645,7 @@ def main():
                         "ts": int(time.time()),
                         "title": now.title, "artist": now.artist,
                         "album": now.album, "art_url": now.art_url,
+                        **({"kind": "show"} if now.track_id.startswith("show:") else {}),
                     })
                     print(f"[main] {now.artist} — {now.title}  ({now.album})")
                 except Exception as exc:

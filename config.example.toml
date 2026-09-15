@@ -110,6 +110,12 @@ wake_word = "hey_jarvis"
 # a line here. The model is Claude Opus 5 unless told otherwise.
 model = "claude-opus-5"
 
+[tmdb]
+# Posters (brain/posters.py): when the Mac watches an episode or a film in
+# a browser, the reporter passes the name along and the wall finds its
+# poster on The Movie Database. The key comes from the phone (Services >
+# Posters), never here. Nothing to set; [features] posters turns it off.
+
 [discogs]
 # The shelf (brain/shelf.py): your Discogs collection, read with a personal
 # access token and your username, both set from the phone (Services >

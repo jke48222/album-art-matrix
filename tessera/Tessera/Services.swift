@@ -115,6 +115,15 @@ struct WallServices: Decodable {
         var problem: String?
     }
 
+    /// Posters: whether a TMDB key is on the wall and what it last found.
+    struct Tmdb: Decodable {
+        struct Last: Decodable { var title: String; var kind: String?; var year: Int?; var at: Int? }
+        var key_set: Bool
+        var posters: Int?
+        var known: Int?
+        var last: Last?
+        var problem: String?
+    }
     /// The shelf: whose Discogs collection the wall knows, and how the sync went.
     struct Discogs: Decodable {
         var user: String
@@ -129,6 +138,7 @@ struct WallServices: Decodable {
     var lastfm: Lastfm
     var listenbrainz: Listenbrainz?      // older walls do not send these
     var discogs: Discogs?
+    var tmdb: Tmdb?
     var hearing: Hearing?
     var mac: Mac?
     var claude: Claude?
@@ -365,6 +375,17 @@ struct ServicesPage: View {
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
+                Rule()
+                NavigationLink {
+                    PostersPage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "Posters", subtitle: postersLine,
+                             leading: { GlyphMark(symbol: "tv") }) {
+                        StateValue(services?.tmdb?.key_set == true ? "Connected" : "Set up",
+                                   done: services?.tmdb?.key_set == true)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
             }
 
             SetupGroup("Other players", note: otherNote) {
@@ -431,6 +452,15 @@ struct ServicesPage: View {
         return !lf.user.isEmpty && lf.key_set == true
     }
     private var listenbrainzOn: Bool { !(services?.listenbrainz?.user ?? "").isEmpty }
+    private var postersLine: String {
+        guard let t = services?.tmdb else { return "What the Mac watches, as its poster on the wall." }
+        if let p = t.problem, t.key_set { return p }
+        if t.key_set {
+            if let l = t.last { return "Last: \(l.title)" + (l.year.map { ", \($0)" } ?? "") + "." }
+            return "Ready. Play an episode in a browser on the Mac."
+        }
+        return "What the Mac watches, as its poster on the wall."
+    }
     private var discogsOn: Bool {
         guard let d = services?.discogs else { return false }
         return !d.user.isEmpty && d.token_set == true
@@ -1204,5 +1234,84 @@ struct ShelfList: Decodable {
         req.httpBody = Data("{}".utf8)
         guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
         return (resp as? HTTPURLResponse)?.statusCode == 200
+    }
+}
+
+
+// MARK: - Posters: the TMDB key, so what the Mac watches gets its poster
+
+struct PostersPage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+
+    @State private var key = ""
+    @State private var busy = false
+    @State private var problem: String?
+
+    private var tmdb: WallServices.Tmdb? { services?.tmdb }
+    private var ready: Bool { tmdb?.key_set == true }
+    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool {
+        guard services != nil else { return false }
+        let hex = typedKey.count == 32 && typedKey.allSatisfy { $0.isHexDigit }
+        return hex || (typedKey.hasPrefix("eyJ") && typedKey.count > 40)
+    }
+    private var foundLine: String {
+        guard let t = tmdb, t.key_set else { return "Paste your key above." }
+        let n = t.posters ?? 0
+        if n == 0 { return "Nothing looked up yet. Play an episode or a film in a browser on the Mac." }
+        return n == 1 ? "One poster found so far." : "\(n) posters found so far."
+    }
+
+    var body: some View {
+        SetupPage("Posters",
+                  blurb: "When the Mac watches an episode or a film in a browser, macOS names it but offers the browser's icon as the picture, so the wall used to look away. With a key for The Movie Database the wall finds the show's poster and wears that instead, and the night's viewing goes in the journal as a show.") {
+            SetupGroup("Your key", note: "Free. An API key (32 characters) or a read access token from your TMDB account settings, under API. Kept on the wall and used only to look up names.") {
+                KeyField(placeholder: ready ? "TMDB key (one is on the wall)" : "TMDB API key or read access token", text: $key)
+                Rule()
+                SetupRow(title: "Need a key?", subtitle: "Opens TMDB's API settings in Safari. An account takes a minute; the key is under Create.") {
+                    ActionPill(title: "Get a key", filled: false) {
+                        openURL(URL(string: "https://www.themoviedb.org/settings/api")!)
+                    }
+                }
+                Rule()
+                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
+                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
+                         accent: accent) { save() }
+            }
+            .padding(.top, -12)
+            Problem(text: problem ?? tmdb?.problem)
+
+            SetupGroup("On the wall", note: "The Mac's reporter passes the name of a show along; the wall asks TMDB for television first, then films, and keeps what it finds for a month. A name TMDB does not know leaves the wall as it was.") {
+                SetupRow(title: "Found", subtitle: foundLine) { EmptyView() }
+                if let l = tmdb?.last {
+                    Rule()
+                    SetupRow(title: "Last poster", subtitle: l.title + (l.year.map { ", \($0)" } ?? "") + (l.kind == "movie" ? ", a film" : ", a series")) {
+                        EmptyView()
+                    }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+            }
+        }
+    }
+
+    private func save() {
+        guard canSave, !busy else { return }
+        busy = true
+        Task {
+            let (fresh, why) = await ServiceSave.send(["tmdb": ["api_key": typedKey]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+            if why == nil { Taps.commit(); key = "" }
+            busy = false
+        }
     }
 }

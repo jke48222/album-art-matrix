@@ -186,6 +186,15 @@ class Handler(BaseHTTPRequestHandler):
         age = self._phone_age()
         age_hdr = [("X-Phone-Age", f"{age:.0f}")] if age is not None else []
         if now is None:
+            # a show or stream in a browser is not music, but its name is
+            # worth passing along: the brain can find its poster
+            show = getattr(MAC, "show", None)
+            if show:
+                packed = base64.b64encode(json.dumps(show, separators=(",", ":")).encode()).decode()
+                age_hdr = age_hdr + [("X-Mac-Show", packed)]
+                if show.get("title") != _logged.get("show"):
+                    _logged["show"] = show.get("title")
+                    print(f"[reporter] Mac: {show.get('app')} is watching {show.get('title')}")
             self._send(204, extra=age_hdr)
             return
         host = self.headers.get("Host") or f"127.0.0.1:{self.server.server_address[1]}"

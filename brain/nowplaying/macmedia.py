@@ -105,6 +105,9 @@ class MacMediaSource(NowPlayingSource):
         self._first_seen = None    # (track key, monotonic) while still artless
         self._art_key = None
         self._art_url = None
+        # the show or stream a browser tab is playing, which is not music and
+        # never becomes an answer here, kept for the posters (brain/posters.py)
+        self.show = None
 
     @staticmethod
     def available() -> bool:
@@ -135,6 +138,7 @@ class MacMediaSource(NowPlayingSource):
         return url
 
     def get_current(self):
+        self.show = None
         d = self._read()
         if not d:
             return None
@@ -177,6 +181,9 @@ class MacMediaSource(NowPlayingSource):
         # like on the wall. Longer than a song is a show whatever it says.
         if bundle in BROWSERS and ((not artist and not album)
                                    or (duration_ms and duration_ms > BROWSER_SHOW_MS)):
+            self.show = {"title": title, "artist": artist, "album": album, "bundle": bundle,
+                         "app": app_name(bundle), "duration_ms": duration_ms,
+                         "progress_ms": progress, "seen": time.time()}
             return None
         if progress is not None and duration_ms:
             progress = min(progress, duration_ms)
