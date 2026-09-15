@@ -17,7 +17,7 @@ app. Nothing here is a promise about a date.
 | 4 | HomeKit: pair by scanning the panel | The wall draws its own pairing code on the 64x64. | **done** 2026-09-15 |
 | 5 | The listening face, Horizon | Only when the wake word is said: the picture collapses to a line, the line follows your voice, a bead runs while it thinks, the answer opens from the line. | planned |
 | 6 | Vinyl scrobbling | Records the ear names go to ListenBrainz as playing-now and as listens. | **done** 2026-09-15, needs the token |
-| 7 | Knock twice | Two knocks on the frame toggle the wall; whistle as the fallback. | planned |
+| 7 | Knock twice | Two knocks on the frame toggle the wall; whistle as the fallback. | **done** 2026-09-15, numbers to tune with real knocks |
 | 8 | Teach the wall a song | A local fingerprint library (Olaf) seeded from iTunes previews and room recordings, asked before Shazam. | planned |
 | 9 | Ask the wall | A spoken question, answered by Claude with the wall's own state attached, shown as short lines on the panel. Via a Siri Shortcut or the wall's ears. | planned |
 | 10 | The wall's own ears | Wake word (openWakeWord) plus whisper.cpp on the Pi; short commands stay local. | planned |
