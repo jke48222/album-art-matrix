@@ -41,6 +41,7 @@ from .nowplaying import SourceChain
 from .sun import sun_factor
 from .nowplaying.ears import EarsSource
 from .nowplaying.knock import KnockEar
+from .nowplaying.teach import Library, Teacher
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -290,6 +291,15 @@ def main():
         print("[main] scrobble: " + ("token set, following the ear"
                                      if ctrl.scrobbler.configured
                                      else "no ListenBrainz token yet; set one from the phone"))
+    # the wall's own song library, asked before Shazam, and its teacher
+    if ctrl.ears is not None and ctrl.features.on("teach"):
+        lib = Library(min_score=tune.get("teach_match_score"))
+        ctrl.ears._library_kept = lib
+        ctrl.ears.library = lib if tune.get("teach") else None
+        ctrl.ears.teacher = Teacher(lib, ctrl.ears, by_ear=tune.get("teach_by_ear"))
+        st = lib.status()
+        print(f"[main] teach: {st['songs']} songs, {st['landmarks']} landmarks known"
+              f"{'' if tune.get('teach') else ' (lookup off by the knob)'}")
     # the switch: two knocks on the frame, or a whistle, heard by the ear
     if ctrl.ears is not None and ctrl.features.on("knock"):
         ctrl.ears.knocks = KnockEar(ctrl, knock=tune.get("knock"),
@@ -446,6 +456,13 @@ def main():
         elif quiet_since is None:
             quiet_since = time.monotonic()
         ctrl.quiet_since = quiet_since         # /health: how long the room has been quiet
+        # the teacher watches what the other sources name while the ear listens
+        teacher = getattr(ctrl.ears, "teacher", None) if ctrl.ears is not None else None
+        if teacher is not None:
+            try:
+                teacher.observe(now)
+            except Exception as exc:
+                print(f"[main] teach: {exc}", flush=True)
 
         # ---- nobody home ------------------------------------------------
         # Presence is the phone talking to the reporter, or the app talking

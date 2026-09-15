@@ -21,6 +21,9 @@ struct HearingPage: View {
     /// The knob under a thumb: its note is the only one on screen.
     @State private var touching: String?
     @State private var lastSent: [String: Date] = [:]
+    /// The wall's own song library, read from /teach while the page is up.
+    @State private var taught: TaughtList?
+    @State private var forgetting: String?
 
     private var ears: WallServices.Hearing? { services?.hearing }
 
@@ -60,6 +63,36 @@ struct HearingPage: View {
                 }
             }
 
+            SetupGroup("The switch", note: "Two knocks on the frame, alone, turn the wall off and bring it back. A whistle bending up is on, bending down is off. The microphone hears both through the board; every candidate is written to the wall's log with its numbers.") {
+                toggle("knock")
+                Rule()
+                knob("knock_sensitivity")
+                Rule()
+                toggle("whistle")
+                if let k = ears?.knock {
+                    Rule()
+                    fact("Heard", switchLine(k))
+                }
+            }
+
+            SetupGroup("Taught songs", note: taughtNote) {
+                toggle("teach")
+                Rule()
+                toggle("teach_by_ear")
+                Rule()
+                knob("teach_match_score")
+                if let learning = ears?.teacher?.learning {
+                    Rule()
+                    fact("Learning now", learning)
+                }
+                if let songs = taught?.songs, !songs.isEmpty {
+                    ForEach(songs, id: \.id) { song in
+                        Rule()
+                        taughtRow(song)
+                    }
+                }
+            }
+
             SetupGroup("Microphone", note: "Gain is the microphone's own. Auto gain off keeps the meter and the gate honest; with it on, a quiet room is slowly turned up.") {
                 toggle("hearing")
                 Rule()
@@ -91,6 +124,65 @@ struct HearingPage: View {
                 if let fresh = await WallServices.read(host: wall.host) { services = fresh }
                 try? await Task.sleep(for: .milliseconds(600))
             }
+        }
+        .task {
+            // the library changes when a song is learnt or forgotten: rarely
+            while !Task.isCancelled {
+                if let list = await TaughtList.read(host: wall.host) { taught = list }
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+    }
+
+    // MARK: The switch and the taught songs
+
+    private func switchLine(_ k: WallServices.Hearing.Knock) -> String {
+        var parts: [String] = []
+        if let d = k.knocks?.doubles, d > 0 { parts.append(d == 1 ? "one double knock" : "\(d) double knocks") }
+        if let c = k.knocks?.candidates, c > 0 { parts.append("\(c) knock\(c == 1 ? "" : "s")") }
+        if let w = k.whistles?.count, w > 0 { parts.append("\(w) whistle\(w == 1 ? "" : "s")") }
+        return parts.isEmpty ? "Nothing yet" : parts.joined(separator: ", ")
+    }
+
+    private var taughtNote: String {
+        guard let t = taught else { return "Songs the wall knows on its own, asked before Shazam." }
+        if t.songs.isEmpty {
+            return "None yet. The wall learns a song's preview when another source names it and the ear keeps missing it, and learns the room's own hearing of a song after fifteen loud seconds."
+        }
+        let n = t.songs.count
+        return "\(n) song\(n == 1 ? "" : "s"), \(t.landmarks ?? 0) landmarks, asked before Shazam."
+    }
+
+    private func taughtRow(_ song: TaughtList.Song) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(song.title).font(.ui(15)).foregroundStyle(Ink.ink).lineLimit(1)
+                Text(song.artist + "  ·  " + howLine(song)).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            ActionPill(title: forgetting == song.id ? "Forgetting" : "Forget", filled: false) {
+                forget(song.id)
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 9)
+    }
+
+    private func howLine(_ song: TaughtList.Song) -> String {
+        let how = song.how.map { $0 == "preview" ? "preview" : $0 == "ear" ? "the room" : "by name" }
+        var line = "from " + how.joined(separator: " and ")
+        if song.matched > 0 { line += ", named \(song.matched)x" }
+        return line
+    }
+
+    private func forget(_ id: String) {
+        guard forgetting == nil else { return }
+        forgetting = id
+        let h = wall.host
+        Task {
+            _ = await TaughtList.forget(host: h, id: id)
+            if let list = await TaughtList.read(host: h) { taught = list }
+            forgetting = nil
+            Taps.commit()
         }
     }
 
@@ -391,5 +483,44 @@ private struct RoomMeter: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 13)
+    }
+}
+
+
+// MARK: - The wall's own song library, as /teach describes it
+
+struct TaughtList: Decodable {
+    struct Song: Decodable {
+        var id: String
+        var title: String
+        var artist: String
+        var album: String?
+        var how: [String]
+        var matched: Int
+        var last_matched: Int?
+        var landmarks: Int?
+    }
+    var enabled: Bool?
+    var landmarks: Int?
+    var songs: [Song]
+
+    static func read(host: String) async -> TaughtList? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/teach") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 6
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(TaughtList.self, from: data)
+    }
+
+    static func forget(host: String, id: String) async -> Bool {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/teach/forget") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 6
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
+        guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
+        return (resp as? HTTPURLResponse)?.statusCode == 200
     }
 }

@@ -817,6 +817,17 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, shots)
                 return
 
+            if u.path.startswith("/teach"):
+                # the wall's own song library: what it knows and how it learnt it
+                ear = ctrl.ears
+                lib = getattr(ear, "_library_kept", None) if ear is not None else None
+                if lib is None:
+                    self._json(200, {"enabled": False, "songs": []})
+                    return
+                self._json(200, {"enabled": ear.library is not None, **lib.status(),
+                                 "teacher": (ear.teacher.status() if ear.teacher else None),
+                                 "songs": lib.listing()})
+                return
             if u.path.startswith("/journal"):
                 try:
                     limit = int(parse_qs(u.query).get("limit", ["50"])[0])
@@ -889,6 +900,37 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if self.path.startswith("/homekit/refresh"):
                     ok = hk.refresh()
                     self._json(200 if ok else 503, hk.status())
+                    return
+                self._json(404, {"error": "not found"})
+                return
+            if self.path.startswith("/teach/"):
+                ear = ctrl.ears
+                lib = getattr(ear, "_library_kept", None) if ear is not None else None
+                if lib is None:
+                    self._json(404, {"error": "this wall has no song library"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                if self.path.startswith("/teach/forget"):
+                    ok = lib.forget(str(patch.get("id", "")))
+                    self._json(200 if ok else 404, {"forgot": ok, **lib.status()})
+                    return
+                if self.path.startswith("/teach/clear"):
+                    lib.clear()
+                    self._json(200, lib.status())
+                    return
+                if self.path.startswith("/teach/learn"):
+                    # by name: the preview is fetched now, on this request
+                    title, artist = str(patch.get("title", "")).strip(), str(patch.get("artist", "")).strip()
+                    if not title or not artist or ear.teacher is None:
+                        self._json(400, {"error": "title and artist, please"})
+                        return
+                    song = ear.teacher.learn_named(title, artist)
+                    if song is None:
+                        self._json(404, {"error": f"iTunes has no preview for {artist} - {title}"})
+                        return
+                    self._json(200, {"learnt": song, **lib.status()})
                     return
                 self._json(404, {"error": "not found"})
                 return

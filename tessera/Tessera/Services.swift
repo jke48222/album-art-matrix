@@ -87,6 +87,21 @@ struct WallServices: Decodable {
         var attempts: Int?
         var matches: Int?
         var problem: String?
+        /// The switch: knocks and whistles the ear has heard.
+        struct Knock: Decodable {
+            struct Knocks: Decodable { var candidates: Int?; var doubles: Int? }
+            struct Whistles: Decodable { var count: Int? }
+            var knock: Bool?
+            var whistle: Bool?
+            var toggles: Int?
+            var knocks: Knocks?
+            var whistles: Whistles?
+        }
+        struct Taught: Decodable { var songs: Int?; var landmarks: Int?; var min_score: Int? }
+        struct Teacher: Decodable { var by_ear: Bool?; var learning: String? }
+        var knock: Knock?
+        var taught: Taught?
+        var teacher: Teacher?
     }
     struct Mac: Decodable { var endpoint: String; var answering: Bool? }
 
