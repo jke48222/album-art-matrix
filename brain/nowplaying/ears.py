@@ -137,6 +137,8 @@ class EarsSource(NowPlayingSource):
         self.device = (device or "").strip() or "auto"
         self._on_change = on_change     # the brain's nudge: poll now, not next tick
         self.knocks = None              # knock.KnockEar, when the wall's switch is on
+        self.library = None             # teach.Library: the wall's own songs, asked first
+        self.teacher = None             # teach.Teacher: fills the library from the sources
         self.settings = dict(DEFAULTS)
         self._lock = threading.Lock()
 
@@ -276,6 +278,9 @@ class EarsSource(NowPlayingSource):
             "matches": self.matches,
             # the switch, when the wall has one: counts and the last thing heard
             "knock": self.knocks.status() if self.knocks is not None else None,
+            # the wall's own songs, and whether one is being learnt right now
+            "taught": self.library.status() if self.library is not None else None,
+            "teacher": self.teacher.status() if self.teacher is not None else None,
             "settings": {k: s[k] for k in ("clip_s", "silence_s", "relisten_s",
                                            "retry_s", "keep_s", "gain", "agc")},
             "problem": self.problem or (None if self._tools_ok else self._tools_why),
@@ -502,7 +507,8 @@ class EarsSource(NowPlayingSource):
             return
         else:
             self._pending = None
-            track = self._dress(track, isrc)
+            if not key.startswith("taught:"):        # the library dressed its own
+                track = self._dress(track, isrc)
             with self._lock:
                 self._hit, self._hit_key = track, key
                 self._offset, self._clip_start = offset, clip_start
@@ -555,7 +561,30 @@ class EarsSource(NowPlayingSource):
     def _ask(self, pcm: bytes):
         """(NowPlaying, shazam key, offset seconds, isrc, aligned matches)
         or None. Runs on the thinking thread; one event loop and one client
-        live there for as long as they keep working."""
+        live there for as long as they keep working.
+
+        The wall's own library goes first: a few milliseconds, nothing sent
+        anywhere, and the songs Shazam does not know. Its answer carries no
+        offset (a preview is a slice from somewhere in the song) and an isrc
+        stand-in, so the faint rule, meant for catalogue-less Shazam
+        guesses, leaves a taught song alone."""
+        lib = self.library
+        if lib is not None:
+            try:
+                m = lib.query(np.frombuffer(pcm, dtype=np.int16))
+            except Exception as exc:
+                m = None
+                print(f"[ears] library: {exc}", flush=True)
+            if m is not None:
+                s = m.song
+                print(f"[ears] the library knows it: {s['artist']} - {s['title']} "
+                      f"({m.score} aligned)", flush=True)
+                self.problem = None
+                return (NowPlaying(track_id=f"ears:taught:{m.id}", title=s["title"],
+                                   artist=s["artist"], album=s.get("album") or "?",
+                                   art_url=s.get("art_url"), progress_ms=None,
+                                   duration_ms=s.get("duration_ms"), is_playing=True),
+                        f"taught:{m.id}", None, s.get("isrc") or "taught", m.score)
         from shazamio import Shazam
         try:
             if self._loop is None:

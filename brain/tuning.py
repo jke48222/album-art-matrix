@@ -107,6 +107,16 @@ SPECS = [
     ("whistle", "Hearing", "bool", 0, 1, 1, False,
      "A whistle bending up turns the wall on, bending down turns it off. "
      "For a frame that does not carry a knock."),
+    ("teach", "Hearing", "bool", 0, 1, 1, False,
+     "Ask the wall's own song library before Shazam. It learns the songs "
+     "Shazam misses from their iTunes previews, and from the room."),
+    ("teach_by_ear", "Hearing", "bool", 0, 1, 1, False,
+     "Also learn a song the way this room hears it, from the microphone, "
+     "while another source names it. Fingerprints only, never audio."),
+    ("teach_match_score", "Hearing", "int", 5, 60, 1, False,
+     "How many aligned landmarks make a match against the wall's own "
+     "library. Lower names sooner and risks a wrong song; a real match "
+     "scores in the dozens."),
     ("listen_for", "Hearing", "float", 3.0, 12.0, 0.5, False,
      "Seconds of the room sent to be named. Shorter answers sooner, longer "
      "is surer; the answer itself takes about two more."),
@@ -158,6 +168,9 @@ def _shipped(cfg: dict) -> dict:
         "knock": bool(ears.get("knock", True)),
         "knock_sensitivity": int(ears.get("knock_sensitivity", 20)),
         "whistle": bool(ears.get("whistle", True)),
+        "teach": bool(ears.get("teach", True)),
+        "teach_by_ear": bool(ears.get("teach_by_ear", True)),
+        "teach_match_score": int(ears.get("teach_match_score", 15)),
         "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
         "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0,
         "panel_type": 0, "temporal_dither": True, "dither_min": 0.2,
@@ -299,6 +312,17 @@ class Tuning:
                 self.ears.knocks.configure(knock=v["knock"],
                                            sensitivity_db=v["knock_sensitivity"],
                                            whistle=v["whistle"])
+            lib = getattr(self.ears, "library", None)
+            if lib is not None:
+                lib.configure(min_score=v["teach_match_score"])
+                # the knob turns the lookup off by hiding the library from the ear
+                self.ears.library = lib if v["teach"] else None
+                self.ears._library_kept = lib
+            elif getattr(self.ears, "_library_kept", None) is not None and v["teach"]:
+                self.ears.library = self.ears._library_kept
+                self.ears.library.configure(min_score=v["teach_match_score"])
+            if getattr(self.ears, "teacher", None) is not None:
+                self.ears.teacher.configure(by_ear=v["teach_by_ear"])
         for name, fname in FILES.items():
             val = v[name]
             if isinstance(val, bool):      # run_renderer.sh reads 1 or 0
