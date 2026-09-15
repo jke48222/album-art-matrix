@@ -117,6 +117,18 @@ SPECS = [
      "How many aligned landmarks make a match against the wall's own "
      "library. Lower names sooner and risks a wrong song; a real match "
      "scores in the dozens."),
+
+    # The voice: the wake word and what the wall does with the words after it.
+    ("wake", "Voice", "bool", 0, 1, 1, False,
+     "Listen for the wake word. Say it, and the wall's face folds to a line "
+     "while it listens to you; a command is done on the wall, a question "
+     "goes to Claude and comes back as words on the panel."),
+    ("wake_threshold", "Voice", "float", 0.3, 0.95, 0.05, False,
+     "How sure the wake word model has to be. Lower wakes more readily "
+     "and more often by mistake; the Voice page shows the live score."),
+    ("speech_base", "Voice", "bool", 0, 1, 1, False,
+     "Use the larger speech model. Surer of names and about twice as slow: "
+     "two and a half seconds a sentence instead of one and a half."),
     ("listen_for", "Hearing", "float", 3.0, 12.0, 0.5, False,
      "Seconds of the room sent to be named. Shorter answers sooner, longer "
      "is surer; the answer itself takes about two more."),
@@ -171,6 +183,9 @@ def _shipped(cfg: dict) -> dict:
         "teach": bool(ears.get("teach", True)),
         "teach_by_ear": bool(ears.get("teach_by_ear", True)),
         "teach_match_score": int(ears.get("teach_match_score", 15)),
+        "wake": bool(cfg.get("voice", {}).get("wake", True)),
+        "wake_threshold": float(cfg.get("voice", {}).get("wake_threshold", 0.5)),
+        "speech_base": bool(cfg.get("voice", {}).get("speech_base", False)),
         "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
         "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0,
         "panel_type": 0, "temporal_dither": True, "dither_min": 0.2,
@@ -323,6 +338,13 @@ class Tuning:
                 self.ears.library.configure(min_score=v["teach_match_score"])
             if getattr(self.ears, "teacher", None) is not None:
                 self.ears.teacher.configure(by_ear=v["teach_by_ear"])
+            voice = getattr(self.ears, "voice", None)
+            if voice is not None:
+                voice.configure(on=v["wake"])
+                if voice.wake is not None:
+                    voice.wake.configure(threshold=v["wake_threshold"])
+                if voice.transcriber is not None:
+                    voice.transcriber.configure(size="base" if v["speech_base"] else "tiny")
         for name, fname in FILES.items():
             val = v[name]
             if isinstance(val, bool):      # run_renderer.sh reads 1 or 0

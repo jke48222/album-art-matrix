@@ -40,6 +40,17 @@ is on — no Mac required.
   POST /video/upload?title=&clock=phone -> the body is a small mp4 the phone
                    made from a video of its own; the wall plays the picture
                    and the phone plays the sound it already has
+  GET  /homekit  POST /homekit/show?s=  POST /homekit/hide  POST /homekit/refresh
+  GET  /features -> the [features] switches and their state
+  GET  /teach    -> the wall's own song library: songs, how learnt, matches
+  POST /teach/learn {title, artist}   POST /teach/forget {id}   POST /teach/clear
+  POST /ask      -> {text, reply?: "wall"|"text"}: a question for Claude; the
+                   answer comes back and goes on the panel unless reply is text
+  POST /note     -> {text, minutes?}: words on the panel for a while
+  POST /earworm  -> {words}: name a song from the words remembered; sleeve up
+  POST /show     -> {query}: a cover by name    POST /play {query}: a video by name
+  GET  /voice    -> the wake word, the listener and the last thing heard
+  POST /voice/wake  start listening as if the wake word came   POST /voice/say {text}
 
 State persists to ~/.config/album-art-matrix/control.json so the wall comes
 back the way you left it. Every accepted POST sets `dirty` (a threading.Event)
@@ -207,6 +218,29 @@ class ControlState:
         """A source changed its mind: poll again now, not next tick."""
         self.repoll.set()
         self.dirty.set()
+
+    def note(self, text: str, minutes: float):
+        """A note on the panel in the ticker style, for `minutes`, then back
+        to what was up. A second note replaces the first; the return face is
+        the one before the first note."""
+        here = self.get()["mode"]
+        if getattr(self, "_note_ret", None) is None or here != "ticker":
+            self._note_ret = here if here not in ("frame", "clip", "timer", "video", "ticker") else "art"
+        self.apply({"ticker_text": text, "ticker_loop": True, "ticker_style": "across",
+                    "mode": "ticker"})
+        self._note_until = time.monotonic() + minutes * 60.0
+        t = threading.Timer(minutes * 60.0, self._note_over)
+        t.daemon = True
+        t.start()
+
+    def _note_over(self):
+        until = getattr(self, "_note_until", None)
+        if until is None or time.monotonic() < until - 1.0:
+            return                                 # a later note took over
+        self._note_until = None
+        if self.get()["mode"] == "ticker":
+            self.apply({"mode": getattr(self, "_note_ret", None) or "art"})
+        self._note_ret = None
 
     def knock_toggle(self, why: str, want: str | None = None) -> str:
         """Two knocks on the frame, or a whistle: off, or back to the face
@@ -448,6 +482,9 @@ class ControlState:
                                       "queued": 0, "submitted": 0,
                                       "problem": "scrobbling is off on this wall"})},
             "hearing": hearing,
+            # Ask the wall: whether a key is set, and how the asking has gone
+            "claude": (self.asker.status() if getattr(self, "asker", None)
+                       else {"ready": False, "problem": "asking is off on this wall"}),
             # the ear's earlier shape, for a phone not rebuilt yet. There is
             # no key any more, so a key is always "set".
             "acoustid": {"key_set": True, "device": hearing["device"],
@@ -478,6 +515,8 @@ class ControlState:
         if "listenbrainz" in changed and getattr(self, "scrobbler", None):
             self.scrobbler.configure(user=store.get("listenbrainz", "user"),
                                      token=store.get("listenbrainz", "token"))
+        if "claude" in changed and getattr(self, "asker", None):
+            self.asker.configure(api_key=store.get("claude", "api_key"))
         if ("ears" in changed or "acoustid" in changed) and self.ears:
             self.ears.configure(device=store.get("ears", "device")
                                 or store.get("acoustid", "device"))
@@ -817,6 +856,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, shots)
                 return
 
+            if u.path.startswith("/voice"):
+                v = getattr(ctrl, "voice", None)
+                self._json(200, v.status() if v is not None else {"on": False, "state": "off"})
+                return
             if u.path.startswith("/teach"):
                 # the wall's own song library: what it knows and how it learnt it
                 ear = ctrl.ears
@@ -900,6 +943,80 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if self.path.startswith("/homekit/refresh"):
                     ok = hk.refresh()
                     self._json(200 if ok else 503, hk.status())
+                    return
+                self._json(404, {"error": "not found"})
+                return
+            if self.path.startswith("/ask"):
+                # a question for Claude; the answer as text, and on the panel unless
+                # {"reply": "text"} says the caller (a Shortcut) will speak it
+                patch = self._body()
+                if patch is None:
+                    return
+                text = str(patch.get("text", "")).strip()
+                if not text:
+                    self._json(400, {"error": "text, please"})
+                    return
+                asker = getattr(ctrl, "asker", None)
+                if asker is None or not asker.ready:
+                    self._json(503, {"error": "no Claude key on this wall yet; set one under Services"})
+                    return
+                answer = asker.ask(text, size=ctrl.wall.width)
+                shown = False
+                v = getattr(ctrl, "voice", None)
+                if patch.get("reply", "wall") != "text" and v is not None:
+                    shown = v.show_answer(answer)
+                self._json(200, {"answer": answer, "shown": shown})
+                return
+            if self.path.startswith("/note"):
+                # words on the panel for a while, then back to what was up
+                patch = self._body()
+                if patch is None:
+                    return
+                text = str(patch.get("text", "")).strip()[:120]
+                if not text:
+                    self._json(400, {"error": "text, please"})
+                    return
+                try:
+                    minutes = float(patch.get("minutes", 30))
+                except (TypeError, ValueError):
+                    minutes = 30.0
+                ctrl.note(text, max(0.5, min(720.0, minutes)))
+                self._json(200, {"shown": True, "minutes": minutes})
+                return
+            if self.path.startswith("/earworm") or self.path.startswith("/show") \
+                    or self.path.startswith("/play") or self.path.startswith("/imagine"):
+                sh = getattr(ctrl, "shower", None)
+                if sh is None:
+                    self._json(404, {"error": "this wall cannot do that yet"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                what = self.path.strip("/").split("/")[0].split("?")[0]
+                text = str(patch.get("text") or patch.get("query") or patch.get("words")
+                           or patch.get("prompt") or "").strip()
+                if not text:
+                    self._json(400, {"error": "some words, please"})
+                    return
+                result = getattr(sh, what)(text)
+                code = 200 if not (isinstance(result, dict) and result.get("error")) else 404
+                self._json(code, result if isinstance(result, dict) else {"said": result})
+                return
+            if self.path.startswith("/voice/"):
+                v = getattr(ctrl, "voice", None)
+                if v is None:
+                    self._json(404, {"error": "the voice is off on this wall"})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                if self.path.startswith("/voice/wake"):
+                    v.wake_now()
+                    self._json(200, v.status())
+                    return
+                if self.path.startswith("/voice/say"):
+                    ok = v.say(str(patch.get("text", "")))
+                    self._json(200 if ok else 409, v.status())
                     return
                 self._json(404, {"error": "not found"})
                 return

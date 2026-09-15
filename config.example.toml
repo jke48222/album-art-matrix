@@ -96,6 +96,20 @@ user = ""
 # page; it is kept in services.json, not here.
 user = ""
 
+[voice]
+# The wall's own ears for speech (brain/voice/). The wake word is an
+# openWakeWord head: a bundled name ("hey_jarvis", "alexa", "hey_mycroft")
+# or a path to a trained "hey wall" .onnx. Speech to text is faster-whisper
+# on the Pi; the model size, the wake threshold and the switch itself are
+# Voice knobs on the phone. Questions the wall cannot handle itself go to
+# Claude ([ask]); the answer is drawn on the panel.
+wake_word = "hey_jarvis"
+
+[ask]
+# Ask the wall (brain/ask.py). The key is a service the phone sets, never
+# a line here. The model is Claude Opus 5 unless told otherwise.
+model = "claude-opus-5"
+
 [scrobble]
 # What the wall reports to ListenBrainz. Only the ear is offered: the
 # streaming services report themselves, and the Mac and the phone are not
