@@ -42,6 +42,12 @@ from .sun import sun_factor
 from .nowplaying.ears import EarsSource
 from .nowplaying.knock import KnockEar
 from .nowplaying.teach import Library, Teacher
+from .ask import Asker
+from .show import Shower
+from .voice import Voice
+from .voice.wake import WakeWord
+from .voice.listen import Transcriber
+from .art.horizon import OPEN_S as VOICE_OPEN_S
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -206,7 +212,41 @@ class _FrameTee:
         self._sink, self._ctrl, self._size = sink, ctrl, size
         self._halo = halo
 
+    def _open(self, raw: bytes, k: float, ink) -> bytes:
+        """The frame with only a band around the middle showing, k of the
+        way open, and a line of ink at the band's edges."""
+        side = int(round((len(raw) / 3) ** 0.5))
+        f = np.frombuffer(raw, dtype=np.uint8).reshape(side, side, 3).copy()
+        half = max(1, int(round(k * side / 2)))
+        mid = side // 2
+        f[:max(0, mid - half)] = 0
+        f[min(side, mid + half):] = 0
+        col = np.array(ink, dtype=np.float32) * (1.0 - k)
+        for y in (mid - half - 1, mid + half):
+            if 0 <= y < side:
+                f[y] = np.maximum(f[y], col.astype(np.uint8))
+        return f.tobytes()
+
     def show(self, rgb888: bytes, pre_wb_img=None):
+        # a face opening from the voice's line: the frames after a command
+        # are unmasked from the middle outwards for a moment (art/horizon.py)
+        tr = getattr(self._ctrl, "transition", None)
+        if tr is not None:
+            kind, t0, ink = tr
+            k = (time.monotonic() - t0) / VOICE_OPEN_S
+            if k >= 1.0:
+                self._ctrl.transition = None
+            else:
+                rgb888 = self._open(rgb888, k, ink)
+                if pre_wb_img is not None:
+                    # a PIL image from the sleeve faces, a numpy array from the
+                    # animated ones: masked the same, handed back as it came
+                    arr = np.asarray(pre_wb_img)
+                    masked = np.frombuffer(self._open(arr.tobytes(), k, ink),
+                                           dtype=np.uint8).reshape(arr.shape)
+                    pre_wb_img = (masked if isinstance(pre_wb_img, np.ndarray)
+                                  else Image.fromarray(masked))
+                self._ctrl.dirty.set()               # keep the frames coming
         self._ctrl.last_frame = (pre_wb_img.tobytes()
                                  if pre_wb_img is not None else rgb888)
         # every mode reaches the wall through here, so the halo hangs off this
@@ -308,6 +348,28 @@ def main():
         print("[main] knock: two knocks or a whistle switch the wall "
               f"(knock {'on' if tune.get('knock') else 'off'}, "
               f"whistle {'on' if tune.get('whistle') else 'off'})")
+    # asking: a question in words, Claude's answer on the panel
+    ctrl.asker = None
+    if ctrl.features.on("ask"):
+        ctrl.asker = Asker(ctrl, api_key=ctrl.services_store.get("claude", "api_key"),
+                           model=str(cfg.get("ask", {}).get("model", "claude-opus-5")))
+        print("[main] ask: " + ("key set" if ctrl.asker.ready
+                                else "no Claude key yet; set one from the phone"))
+    # show me, play me, and the earworm finder: by voice or from the phone
+    ctrl.shower = Shower(ctrl, asker=ctrl.asker) if ctrl.features.on("show") else None
+    # the voice: the wake word, then the words, on the ear's stream
+    ctrl.voice = None
+    if ctrl.ears is not None and ctrl.features.on("voice"):
+        vcfg = cfg.get("voice", {})
+        wake = WakeWord(str(vcfg.get("wake_word", "hey_jarvis")),
+                        threshold=float(tune.get("wake_threshold")))
+        listener = Transcriber(size="base" if tune.get("speech_base") else "tiny")
+        ctrl.voice = Voice(ctrl, wake, listener, asker=ctrl.asker, size=size,
+                           teacher=getattr(ctrl.ears, "teacher", None), shower=ctrl.shower)
+        ctrl.voice.configure(on=tune.get("wake"))
+        ctrl.ears.voice = ctrl.voice
+        print("[main] voice: " + (f"listening for {wake.name!r}" if wake.model is not None
+                                  else f"no wake word ({wake.problem})"))
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
     if halo is not None:
@@ -600,6 +662,20 @@ def main():
                     colour = tuple(c / over for c in colour)
                 eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
                 mode = s["mode"]
+
+                # ---- the voice's face -----------------------------------------
+                # While someone is talking to the wall, and while the answer is
+                # up, the Horizon face and the answer face take the panel; the
+                # wall's own faces resume the moment the voice hands back.
+                voice = ctrl.voice
+                if voice is not None and voice.state != "idle":
+                    tick = time.monotonic()
+                    vf = voice.frame(tick, size)
+                    if vf is not None:
+                        sink.show(white_balance(vf, eff).tobytes(), pre_wb_img=vf)
+                        pace(tick)
+                        continue
+                    need_show = True
 
                 # ---- waking up ---------------------------------------------
                 # The mirror of the sleep fade: at the set time the wall comes

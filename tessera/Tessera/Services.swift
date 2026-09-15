@@ -104,12 +104,23 @@ struct WallServices: Decodable {
         var teacher: Teacher?
     }
     struct Mac: Decodable { var endpoint: String; var answering: Bool? }
+    /// Ask the wall: whether a Claude key is on the wall and how asking has gone.
+    struct Claude: Decodable {
+        struct Last: Decodable { var q: String; var a: String; var s: Double?; var usd: Double? }
+        var ready: Bool
+        var model: String?
+        var answers: Int?
+        var cost_usd: Double?
+        var last: Last?
+        var problem: String?
+    }
 
     var spotify: Spotify
     var lastfm: Lastfm
     var listenbrainz: Listenbrainz?      // older walls do not send these
     var hearing: Hearing?
     var mac: Mac?
+    var claude: Claude?
     var ears: Bool
     var rejected: [String]?              // field names the wall would not take
 
@@ -322,6 +333,17 @@ struct ServicesPage: View {
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
+                Rule()
+                NavigationLink {
+                    ClaudePage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "Claude", subtitle: claudeLine,
+                             leading: { GlyphMark(symbol: "text.bubble") }) {
+                        StateValue(services?.claude?.ready == true ? "Connected" : "Set up",
+                                   done: services?.claude?.ready == true)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
             }
 
             SetupGroup("Other players", note: otherNote) {
@@ -407,6 +429,13 @@ struct ServicesPage: View {
     private var spotifyState: String {
         guard let sp = services?.spotify else { return spotifyReady ? "Sign in" : "Set up" }
         return sp.linked ? "Connected" : (spotifyReady ? "Sign in" : "Set up")
+    }
+
+    private var claudeLine: String {
+        guard let c = services?.claude else { return "Ask the wall anything; the answer is drawn on the panel." }
+        if let p = c.problem, c.ready { return p }
+        if c.ready { return "Ask the wall, by voice or Siri. \(c.answers ?? 0) answered." }
+        return "Ask the wall anything; the answer is drawn on the panel."
     }
 
     private var lastfmLine: String {
@@ -860,6 +889,82 @@ struct ListenBrainzPage: View {
             if let fresh { services = fresh }
             problem = why
             if why == nil { Taps.commit(); token = "" }
+            busy = false
+        }
+    }
+}
+
+
+// MARK: - Claude: the key that lets the wall answer questions
+
+struct ClaudePage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+
+    @State private var key = ""
+    @State private var busy = false
+    @State private var problem: String?
+
+    private var claude: WallServices.Claude? { services?.claude }
+    private var ready: Bool { claude?.ready == true }
+    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool { services != nil && typedKey.hasPrefix("sk-ant-") && typedKey.count > 20 }
+
+    var body: some View {
+        SetupPage("Claude",
+                  blurb: "Say the wake word and ask the wall anything: what played at dinner, how long until sunset, what this record is about. The words go to Claude with the wall's own state, and the answer is drawn on the panel. A Siri Shortcut can ask too and speak the answer back.") {
+            SetupGroup("Your key", note: "An Anthropic API key. It is kept on the wall and used for nothing but these questions; each answer costs about a cent.") {
+                KeyField(placeholder: ready ? "API key (one is on the wall)" : "API key, sk-ant-...", text: $key)
+                Rule()
+                SetupRow(title: "Need a key?", subtitle: "Opens the Anthropic console in Safari.") {
+                    ActionPill(title: "Get a key", filled: false) {
+                        openURL(URL(string: "https://console.anthropic.com/settings/keys")!)
+                    }
+                }
+                Rule()
+                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
+                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
+                         accent: accent) { save() }
+            }
+            .padding(.top, -12)
+            Problem(text: problem ?? claude?.problem)
+
+            SetupGroup("Asking", note: "Say the wake word, wait for the line, then talk. Commands (off, clock, lyrics, brighter, a timer, show me a cover) are done on the wall itself; anything else is a question. Shortcut recipes for Siri are in docs/ASK.md.") {
+                SetupRow(title: "Model", subtitle: claude?.model ?? "claude-opus-5") { EmptyView() }
+                Rule()
+                SetupRow(title: "Answered", subtitle: answeredLine) { EmptyView() }
+                if let last = claude?.last {
+                    Rule()
+                    SetupRow(title: "Last question", subtitle: "\(last.q)  ·  \(last.a)") { EmptyView() }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(4))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+            }
+        }
+    }
+
+    private var answeredLine: String {
+        let n = claude?.answers ?? 0
+        let usd = claude?.cost_usd ?? 0
+        if n == 0 { return "Nothing asked yet." }
+        return String(format: "%d question%@, about $%.2f so far.", n, n == 1 ? "" : "s", usd)
+    }
+
+    private func save() {
+        guard canSave, !busy else { return }
+        busy = true
+        Task {
+            let (fresh, why) = await ServiceSave.send(["claude": ["api_key": typedKey]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+            if why == nil { Taps.commit(); key = "" }
             busy = false
         }
     }

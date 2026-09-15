@@ -139,6 +139,7 @@ class EarsSource(NowPlayingSource):
         self.knocks = None              # knock.KnockEar, when the wall's switch is on
         self.library = None             # teach.Library: the wall's own songs, asked first
         self.teacher = None             # teach.Teacher: fills the library from the sources
+        self.voice = None               # voice.Voice: the wake word and what follows it
         self.settings = dict(DEFAULTS)
         self._lock = threading.Lock()
 
@@ -403,6 +404,12 @@ class EarsSource(NowPlayingSource):
                 self.knocks.feed(chunk, self.gate_open, now)
             except Exception as exc:
                 print(f"[ears] knock: {exc}", flush=True)
+        # the voice: the wake word, then the words after it
+        if self.voice is not None:
+            try:
+                self.voice.feed(chunk, self.level_db, self.floor_db, now)
+            except Exception as exc:
+                print(f"[ears] voice: {exc}", flush=True)
 
     # ---- thinking -------------------------------------------------------------
     def _think_loop(self):
