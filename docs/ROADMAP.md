@@ -27,7 +27,7 @@ app. Nothing here is a promise about a date.
 | 14 | Earworm finder | Say the words you remember; Claude names the song; the sleeve goes up. | **done** 2026-09-15, needs the Claude key |
 | 15 | Show me, play me | "Show the Blond cover" (iTunes search, frame mode); "play the Gameboy video" (YouTube search, video mode). | **done** 2026-09-15 |
 | 16 | Image creator by description | "Create a purple elephant" draws one on the panel. Image model to be chosen. | planned |
-| 17 | Weather faces | A weather display with dedicated faces that change with the weather. | planned |
+| 17 | Weather faces | A weather display with dedicated faces that change with the weather. | **done** 2026-09-15 |
 | 18 | Posters for what you watch | When the Mac plays an episode, the show's poster (The Movie Database) instead of nothing. | planned |
 
 ## Games

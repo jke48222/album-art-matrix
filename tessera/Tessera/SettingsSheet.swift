@@ -40,6 +40,7 @@ struct SettingsSheet: View {
                         row("sun.max", "Light", "\(Int(wall.state.brightness * 100))%") { LightPage(accent: accent) }
                         row("sunset", "Follow the sun", wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : "Off") { SunPage(accent: accent) }
                         row("moon.zzz", "Sleep", sleepValue) { SleepPage(accent: accent) }
+                        row("cloud.sun", "Weather", wall.state.place.isEmpty ? "No place yet" : wall.state.place) { WeatherPage(accent: accent) }
                         row("sunrise", "Wake up", wall.state.wakeEnabled ? wakeValue : "Off") { WakePage(accent: accent) }
                         row("pause.circle", "Nothing playing", idleName) { idlePage }
                         row("lock.iphone", "Lock screen", wall.live.enabled ? "Showing the wall" : "Off") { LockScreenPage(accent: accent) }
@@ -197,6 +198,7 @@ struct SettingsSheet: View {
                     ("photo", "Hold the last sleeve", "Keeps the cover up at full light.", "hold"),
                     ("sun.min", "Dim it", "Keeps the cover up, turned down.", "dim"),
                     ("wind", "Drift", "Slow colour and no picture.", "ambient"),
+                    ("cloud.sun", "The weather", "The forecast, drawn, with the temperature.", "weather"),
                    ],
                    selected: wall.state.idle) { wall.send(["idle": $0]) }
     }
@@ -230,6 +232,7 @@ struct SettingsSheet: View {
         case "hold": "Hold the last sleeve"
         case "dim": "Dim it"
         case "ambient": "Drift"
+        case "weather": "The weather"
         default: "Go dark"
         }
     }
@@ -835,6 +838,141 @@ struct SunPage: View {
                 }
             }
         }
+    }
+}
+
+/// The weather face: where, in what units, and what it says right now.
+struct WeatherPage: View {
+    @Environment(WallSession.self) private var wall
+    let accent: Color
+    @State private var query = ""
+    @State private var busy = false
+    @State private var problem: String?
+    @State private var report: WallWeather?
+
+    private var typed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    var body: some View {
+        SetupPage("Weather",
+                  blurb: "A face that is the weather: the sun crossing where the real sun is, the moon with tonight's phase, clouds that drift, rain that falls with the forecast. From Open-Meteo, free, for a place you name once.") {
+            SetupGroup("Where", note: wall.state.place.isEmpty ? "Name a town or a city." : "The wall follows this place.") {
+                KeyField(placeholder: wall.state.place.isEmpty ? "A town or a city" : wall.state.place, text: $query)
+                Rule()
+                SaveLine(title: "Use this place", enabled: !typed.isEmpty && !busy, busy: busy,
+                         done: (typed.isEmpty && !wall.state.place.isEmpty) ? wall.state.place : nil,
+                         accent: accent) { setPlace() }
+            }
+            .padding(.top, -12)
+            Problem(text: problem ?? report?.problem)
+
+            SetupGroup("Degrees", note: nil) {
+                ChoiceRow(title: "Fahrenheit", subtitle: nil, value: "f", selected: wall.state.weatherUnits,
+                          accent: accent) { wall.send(["weather_units": $0]); Taps.detent(intensity: 0.4) }
+                Rule()
+                ChoiceRow(title: "Celsius", subtitle: nil, value: "c", selected: wall.state.weatherUnits,
+                          accent: accent) { wall.send(["weather_units": $0]); Taps.detent(intensity: 0.4) }
+            }
+
+            SetupGroup("Right now", note: report?.now == nil ? nil : "As the wall has it, \(report?.age_s ?? 0) s old.") {
+                if let now = report?.now {
+                    SetupRow(title: tempLine(now), subtitle: sceneLine(now)) { EmptyView() }
+                    Rule()
+                    SetupRow(title: "High and low", subtitle: hiLo(now)) { EmptyView() }
+                } else {
+                    SetupRow(title: wall.state.place.isEmpty ? "No place yet" : "No weather yet",
+                             subtitle: wall.state.place.isEmpty ? "Name one above." : "Give it a moment.") { EmptyView() }
+                }
+                Rule()
+                SetupRow(title: "Put it on the wall", subtitle: "The weather face, now. It is also a choice under Nothing playing.") {
+                    ActionPill(title: wall.state.mode == "weather" ? "Showing" : "Show", filled: wall.state.mode != "weather") {
+                        wall.send(["mode": "weather"]); Taps.commit()
+                    }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                if let r = await WallWeather.read(host: wall.host) { report = r }
+                try? await Task.sleep(for: .seconds(5))
+            }
+        }
+    }
+
+    private func degrees(_ c: Double) -> String {
+        let v = wall.state.weatherUnits == "f" ? c * 9 / 5 + 32 : c
+        return "\(Int(v.rounded()))°"
+    }
+
+    private func tempLine(_ now: WallWeather.Now) -> String {
+        var line = degrees(now.temp ?? 0)
+        if let f = now.feels { line += ", feels " + degrees(f) }
+        return line
+    }
+
+    private func sceneLine(_ now: WallWeather.Now) -> String {
+        let scene = (report?.scene ?? "").replacingOccurrences(of: "_", with: " ")
+        var parts = [scene.isEmpty ? "" : scene, now.is_day == true ? "day" : "night"]
+        if let w = now.wind_kmh { parts.append("wind \(Int(w.rounded())) km/h") }
+        return parts.filter { !$0.isEmpty }.joined(separator: ", ")
+    }
+
+    private func hiLo(_ now: WallWeather.Now) -> String {
+        guard let h = now.high, let l = now.low else { return "Not yet" }
+        return degrees(h) + " and " + degrees(l)
+    }
+
+    private func setPlace() {
+        guard !typed.isEmpty, !busy else { return }
+        busy = true
+        let h = wall.host, q = typed
+        Task {
+            let (ok, why) = await WallWeather.setPlace(host: h, query: q)
+            problem = why
+            if ok { query = ""; Taps.commit() }
+            busy = false
+        }
+    }
+}
+
+/// What GET /weather says.
+struct WallWeather: Decodable {
+    struct Now: Decodable {
+        var temp: Double?
+        var feels: Double?
+        var code: Int?
+        var is_day: Bool?
+        var wind_kmh: Double?
+        var high: Double?
+        var low: Double?
+    }
+    var place: String?
+    var units: String?
+    var age_s: Int?
+    var stale: Bool?
+    var scene: String?
+    var problem: String?
+    var now: Now?
+
+    static func read(host: String) async -> WallWeather? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/weather") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 6
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(WallWeather.self, from: data)
+    }
+
+    static func setPlace(host: String, query: String) async -> (Bool, String?) {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/weather/place") else { return (false, "The wall is not answering.") }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 25
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["query": query])
+        guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (false, "The wall is not answering.") }
+        if (resp as? HTTPURLResponse)?.statusCode == 200 { return (true, nil) }
+        if let d = try? JSONSerialization.jsonObject(with: data) as? [String: Any], let e = d["error"] as? String { return (false, e) }
+        return (false, "The wall could not find that place.")
     }
 }
 

@@ -50,6 +50,9 @@ struct WallState: Equatable {
     var sunNight: Double = 0.25
     var lat: Double = 999
     var lon: Double = 999
+    /// The weather's place, as named on the phone, and its units.
+    var place: String = ""
+    var weatherUnits: String = "f"
     var timerRemaining: Int? = nil
     var timerTotal: Int? = nil
     var title: String? = nil
@@ -119,6 +122,8 @@ struct WallState: Equatable {
         sunNight = json["sun_night"] as? Double ?? 0.25
         lat = json["lat"] as? Double ?? 999
         lon = json["lon"] as? Double ?? 999
+        place = json["place"] as? String ?? ""
+        weatherUnits = json["weather_units"] as? String ?? "f"
         timerRemaining = json["timer_remaining_s"] as? Int
         timerTotal = json["timer_total_s"] as? Int
         if let now = json["now_showing"] as? [String: Any] {
@@ -393,6 +398,8 @@ final class WallSession {
             keepNear("sun_night", &fresh.sunNight, mine.sunNight, 0.005)
             keepNear("lat", &fresh.lat, mine.lat, 0.001)
             keepNear("lon", &fresh.lon, mine.lon, 0.001)
+            keep("place", &fresh.place, mine.place)
+            keep("weather_units", &fresh.weatherUnits, mine.weatherUnits)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
