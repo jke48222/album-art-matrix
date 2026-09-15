@@ -521,7 +521,8 @@ struct GameScreen: View {
                 VStack(spacing: 16) {
                     if let g = game {
                         if !["sliding", "whistlebird", "pictionary", "pong", "snake", "tetris"].contains(g.name) {
-                            WallStrip(colour: GameMotif.colour(g.name), message: g.message)
+                            WallStrip(colour: GameMotif.colour(g.name),
+                                      message: g.players.count > 1 ? g.players.joined(separator: ", ") : "The same board, live.")
                                 .padding(.horizontal, 16)
                         }
                         board(g)
@@ -772,8 +773,7 @@ struct WordleBoard: View {
                         Text(letter)
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(Ink.ink)
-                            .frame(maxWidth: .infinity)
-                            .aspectRatio(1, contentMode: .fit)
+                            .frame(width: 56, height: 56)
                             .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
                                 .fill(mark.map(colour) ?? Ink.plaster))
                             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)

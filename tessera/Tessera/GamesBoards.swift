@@ -45,8 +45,7 @@ struct SudokuBoard: View {
                             Text(v)
                                 .font(.system(size: 20, weight: given ? .bold : .medium, design: .rounded))
                                 .foregroundStyle(wrong.contains(i) ? tileRed : given ? Ink.ink : accent)
-                                .frame(maxWidth: .infinity)
-                                .aspectRatio(1, contentMode: .fit)
+                                .frame(width: 38, height: 38)
                                 .background(chosen == i ? accent.opacity(0.25) : Ink.plaster)
                                 .overlay(alignment: .trailing) { Rectangle().fill(Ink.hairline).frame(width: c % 3 == 2 ? 2 : 0.5) }
                                 .overlay(alignment: .bottom) { Rectangle().fill(Ink.hairline).frame(height: r % 3 == 2 ? 2 : 0.5) }
@@ -146,12 +145,13 @@ struct SpellingBeeBoard: View {
                 .frame(minHeight: 34)
             ZStack {
                 ForEach(Array(letters.enumerated()), id: \.offset) { i, ch in
+                    // a honeycomb: six cells round the centre, flat sides touching
                     let a = Double(i) * .pi / 3 + .pi / 6
-                    hex(ch, fill: Ink.plaster, ink: Ink.ink).offset(x: cos(a) * 78, y: sin(a) * 78)
+                    hex(ch, fill: Ink.plaster, ink: Ink.ink).offset(x: cos(a) * 82, y: sin(a) * 82)
                 }
                 hex(centre, fill: tileYellow, ink: Ink.ground)
             }
-            .frame(height: 230)
+            .frame(height: 250)
             HStack(spacing: 10) {
                 ActionPill(title: "Delete", filled: false) { if !word.isEmpty { word.removeLast() } }
                 ActionPill(title: "Enter", filled: true) {
@@ -172,11 +172,28 @@ struct SpellingBeeBoard: View {
 
     private func hex(_ ch: String, fill: Color, ink: Color) -> some View {
         Button { word += ch } label: {
-            Text(ch.uppercased()).font(.system(size: 26, weight: .bold, design: .rounded)).foregroundStyle(ink)
-                .frame(width: 70, height: 70)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(fill))
+            Text(ch.uppercased()).font(.system(size: 28, weight: .bold, design: .rounded)).foregroundStyle(ink)
+                .frame(width: 88, height: 88)
+                .background(HexagonShape().fill(fill))
+                .contentShape(HexagonShape())
         }
         .buttonStyle(PressStyle(scale: 0.9))
+    }
+}
+
+/// A pointy-top hexagon that fills its frame.
+struct HexagonShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let cx = rect.midX, cy = rect.midY
+        let r = min(rect.width, rect.height) / 2
+        var p = Path()
+        for k in 0..<6 {
+            let a = Double(k) * .pi / 3 - .pi / 2
+            let pt = CGPoint(x: cx + CGFloat(cos(a)) * r, y: cy + CGFloat(sin(a)) * r)
+            if k == 0 { p.move(to: pt) } else { p.addLine(to: pt) }
+        }
+        p.closeSubpath()
+        return p
     }
 }
 
@@ -297,7 +314,7 @@ struct StrandsBoard: View {
                         trace = []
                     })
             }
-            .frame(height: 320)
+            .aspectRatio(CGFloat(cols) / CGFloat(max(1, rows.count)), contentMode: .fit)
             HStack(spacing: 10) {
                 ActionPill(title: "Hint", filled: false) { send(["hint": true]) }
                 Text("\(game.state["left"].int ?? 0) to find  ·  \(game.state["extra"].array.count) extra")
@@ -349,7 +366,7 @@ struct CrosswordBoard: View {
                                     if let n { Text(String(n)).font(.system(size: 9, weight: .semibold)).foregroundStyle(Ink.dim).padding(3) }
                                 }
                             }
-                            .aspectRatio(1, contentMode: .fit)
+                            .frame(width: 62, height: 62)
                             .contentShape(Rectangle())
                             .onTapGesture {
                                 if v != "#", let s = slots.first(where: { $0["cells"].array.contains { $0[0].int == r && $0[1].int == c } }),
