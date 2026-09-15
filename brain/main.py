@@ -12,6 +12,7 @@ Brightness scales the white-balance gains in linear light, so dimming
 doesn't shift color. A control change wakes the loop instantly (dirty event).
 """
 import argparse
+import os
 import sys
 import threading
 import time
@@ -36,6 +37,7 @@ from .scrobble import Scrobbler
 from .shelf import Shelf
 from .posters import Posters, PosterSource
 from .imagine import Imaginer
+from .nowplaying.airplay import AirPlaySource
 from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
@@ -84,7 +86,7 @@ def make_sink(cfg: dict, override: str | None = None, wall=None):
     raise ValueError(f"unknown sink type: {kind}")
 
 
-DEFAULT_ORDER = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
+DEFAULT_ORDER = ["phone", "airplay", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
 
 
 def build_sources(cfg: dict, ctrl):
@@ -114,6 +116,20 @@ def build_sources(cfg: dict, ctrl):
         if name == "phone":
             ctrl.pushed = PushedSource()
             sources.append(ctrl.pushed)
+        elif name == "airplay":
+            # the wall as an AirPlay receiver: shairport-sync's metadata pipe
+            # (docs/AIRPLAY.md). Built whether or not the pipe exists yet.
+            features = getattr(ctrl, "features", None)
+            if features is not None and not features.on("airplay"):
+                continue
+            acfg = cfg.get("airplay", {})
+            ctrl.airplay = AirPlaySource(
+                pipe=str(acfg.get("pipe", "/tmp/shairport-sync-metadata")),
+                port=int(cfg.get("control", {}).get("port", 8788)),
+                host=str(acfg.get("host", "")) or None).start()
+            sources.append(ctrl.airplay)
+            print("[main] airplay: " + ("reading shairport-sync's pipe" if os.path.exists(ctrl.airplay.pipe)
+                                        else "no metadata pipe yet; install shairport-sync (docs/AIRPLAY.md)"))
         elif name == "applemusic":
             endpoint = cfg.get("applemusic", {}).get("endpoint", "")
             if endpoint:

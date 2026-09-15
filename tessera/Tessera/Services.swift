@@ -115,6 +115,17 @@ struct WallServices: Decodable {
         var problem: String?
     }
 
+    /// AirPlay: whether shairport-sync is there and who is sending.
+    struct Airplay: Decodable {
+        var running: Bool?
+        var pipe_exists: Bool?
+        var reading: Bool?
+        var state: String?
+        var connected_from: String?
+        var user_agent: String?
+        var last: String?
+        var error: String?
+    }
     /// Imagine: which image model draws, whether its key is on the wall, the bill.
     struct Images: Decodable {
         struct Last: Decodable { var id: String; var prompt: String; var usd: Double?; var ts: Int? }
@@ -153,6 +164,7 @@ struct WallServices: Decodable {
     var discogs: Discogs?
     var tmdb: Tmdb?
     var images: Images?
+    var airplay: Airplay?
     var hearing: Hearing?
     var mac: Mac?
     var claude: Claude?
@@ -411,6 +423,16 @@ struct ServicesPage: View {
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
+                Rule()
+                NavigationLink {
+                    AirPlayPage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "AirPlay", subtitle: airplayLine,
+                             leading: { GlyphMark(symbol: "airplayaudio") }) {
+                        StateValue(airplayState.text, done: airplayState.done)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
             }
 
             SetupGroup("Other players", note: otherNote) {
@@ -477,6 +499,22 @@ struct ServicesPage: View {
         return !lf.user.isEmpty && lf.key_set == true
     }
     private var listenbrainzOn: Bool { !(services?.listenbrainz?.user ?? "").isEmpty }
+    private var airplayState: (text: String, done: Bool) {
+        guard let a = services?.airplay else { return ("Set up", false) }
+        switch a.state {
+        case "playing": return ("Playing", true)
+        case "paused": return ("Paused", true)
+        default: return (a.running == true ? "Ready" : "Set up", a.running == true)
+        }
+    }
+    private var airplayLine: String {
+        guard let a = services?.airplay else { return "The wall as an AirPlay receiver called Wall." }
+        if let from = a.connected_from, !from.isEmpty, a.state != "idle" {
+            return "From \(from)" + (a.last.map { ": \($0)" } ?? "") + "."
+        }
+        if a.running == true { return "Ready. Pick Wall in the AirPlay menu." }
+        return "The wall as an AirPlay receiver called Wall. Needs shairport-sync on the Pi."
+    }
     private var imagesLine: String {
         guard let i = services?.images else { return "Say \"create a purple elephant\" and one appears." }
         if let p = i.problem, i.ready { return p }
@@ -1440,6 +1478,73 @@ struct ImagesPage: View {
             problem = why
             if why == nil { Taps.commit(); key = "" }
             busy = false
+        }
+    }
+}
+
+
+// MARK: - AirPlay: the wall as a receiver, and what is coming in
+
+struct AirPlayPage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+
+    private var ap: WallServices.Airplay? { services?.airplay }
+
+    private var stateLine: (String, Bool) {
+        guard let ap else { return ("The wall is not answering.", false) }
+        if ap.running != true { return ("shairport-sync is not running on the Pi.", false) }
+        switch ap.state {
+        case "playing": return ("Playing" + (ap.last.map { ": \($0)" } ?? ""), true)
+        case "paused": return ("Paused" + (ap.last.map { ": \($0)" } ?? ""), true)
+        default: return ("Ready. Nothing coming in.", true)
+        }
+    }
+
+    var body: some View {
+        SetupPage("AirPlay",
+                  blurb: "The wall is an AirPlay receiver called Wall. Pick it in the AirPlay menu on this phone, a Mac or an Apple TV, alone or in a group with a speaker, and the wall is handed the exact title, artwork and position of whatever plays. No account and no key. The wall does not have to make a sound.") {
+            SetupGroup("Coming in", note: nil) {
+                SetupRow(title: "State", subtitle: stateLine.0) {
+                    StateValue(stateLine.1 ? "On" : "Off", done: stateLine.1)
+                }
+                if let from = ap?.connected_from, !from.isEmpty {
+                    Rule()
+                    SetupRow(title: "From", subtitle: from + (ap?.user_agent.map { " (\($0))" } ?? "")) { EmptyView() }
+                }
+                if let e = ap?.error, ap?.running != true {
+                    Rule()
+                    SetupRow(title: "The wall says", subtitle: e) { EmptyView() }
+                }
+            }
+            .padding(.top, -12)
+
+            SetupGroup("On the Pi", note: "shairport-sync does the receiving; the wall reads what it writes. Installing it takes sudo, so it is done at the Pi, following docs/AIRPLAY.md in the project.") {
+                SetupRow(title: "shairport-sync", subtitle: ap?.running == true ? "Running." : "Not running.") {
+                    StateValue(ap?.running == true ? "Installed" : "Not yet", done: ap?.running == true)
+                }
+                Rule()
+                SetupRow(title: "The metadata pipe", subtitle: ap?.pipe_exists == true
+                         ? (ap?.reading == true ? "Open, the wall is reading it." : "There. The wall opens it when a stream begins.")
+                         : "Not there yet.") {
+                    StateValue(ap?.pipe_exists == true ? "There" : "Not yet", done: ap?.pipe_exists == true)
+                }
+                Rule()
+                SetupRow(title: "The guide", subtitle: "docs/AIRPLAY.md on GitHub. Opens in Safari.") {
+                    ActionPill(title: "Open", filled: false) {
+                        openURL(URL(string: "https://github.com/jke48222/album-art-matrix/blob/main/docs/AIRPLAY.md")!)
+                    }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+            }
         }
     }
 }
