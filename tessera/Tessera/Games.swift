@@ -14,6 +14,41 @@ import AVFoundation
 
 // MARK: - What the wall says about a game
 
+/// Any JSON, for the parts of a game's state that differ game by game.
+enum JSONValue: Decodable {
+    case string(String), number(Double), bool(Bool), null
+    case array([JSONValue]), object([String: JSONValue])
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.singleValueContainer()
+        if c.decodeNil() { self = .null }
+        else if let b = try? c.decode(Bool.self) { self = .bool(b) }
+        else if let n = try? c.decode(Double.self) { self = .number(n) }
+        else if let s = try? c.decode(String.self) { self = .string(s) }
+        else if let a = try? c.decode([JSONValue].self) { self = .array(a) }
+        else if let o = try? c.decode([String: JSONValue].self) { self = .object(o) }
+        else { self = .null }
+    }
+
+    subscript(key: String) -> JSONValue {
+        if case .object(let o) = self, let v = o[key] { return v }
+        return .null
+    }
+    subscript(index: Int) -> JSONValue {
+        if case .array(let a) = self, index >= 0, index < a.count { return a[index] }
+        return .null
+    }
+    var string: String? { if case .string(let s) = self { return s }; return nil }
+    var double: Double? { if case .number(let n) = self { return n }; return nil }
+    var int: Int? { double.map { Int($0) } }
+    var bool: Bool? { if case .bool(let b) = self { return b }; return nil }
+    var array: [JSONValue] { if case .array(let a) = self { return a }; return [] }
+    var object: [String: JSONValue] { if case .object(let o) = self { return o }; return [:] }
+    var strings: [String] { array.compactMap { $0.string } }
+    var ints: [Int] { array.compactMap { $0.int } }
+    var isNull: Bool { if case .null = self { return true }; return false }
+}
+
 struct GameStatus: Decodable {
     struct Game: Decodable {
         var name: String
@@ -25,14 +60,25 @@ struct GameStatus: Decodable {
         var message: String
         var seq: Int
         var voice: Bool?
-        // Wordle
-        var rows: [WordleRow]?
-        var keys: [String: String]?
-        var guesses_left: Int?
-        var turn: String?
-        var answer: String?
+        /// The whole state, for the boards: `state["rows"]`, `state["grid"]`.
+        var state: JSONValue
+
+        private enum Keys: String, CodingKey { case name, title, players, over, won, winner, message, seq, voice }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: Keys.self)
+            name = try c.decode(String.self, forKey: .name)
+            title = try c.decode(String.self, forKey: .title)
+            players = (try? c.decode([String].self, forKey: .players)) ?? []
+            over = (try? c.decode(Bool.self, forKey: .over)) ?? false
+            won = (try? c.decode(Bool.self, forKey: .won)) ?? false
+            winner = try? c.decode(String.self, forKey: .winner)
+            message = (try? c.decode(String.self, forKey: .message)) ?? ""
+            seq = (try? c.decode(Int.self, forKey: .seq)) ?? 0
+            voice = try? c.decode(Bool.self, forKey: .voice)
+            state = (try? JSONValue(from: decoder)) ?? .null
+        }
     }
-    struct WordleRow: Decodable { var word: String; var marks: String }
     struct Score: Decodable { var played: Int; var won: Int; var streak: Int; var best: Int }
     var running: Bool
     var seq: Int
@@ -340,13 +386,53 @@ struct GameScreen: View {
     @ViewBuilder private func board(_ g: GameStatus.Game) -> some View {
         switch g.name {
         case "wordle": WordleBoard(game: g, typed: typed, accent: accent)
+        case "sudoku": SudokuBoard(game: g, accent: accent, send: post)
+        case "connections": ConnectionsBoard(game: g, accent: accent, send: post)
+        case "spellingbee": SpellingBeeBoard(game: g, accent: accent, send: post)
+        case "letterboxed": LetterBoxedBoard(game: g, accent: accent, send: post)
+        case "strands": StrandsBoard(game: g, accent: accent, send: post)
+        case "crossword": CrosswordBoard(game: g, accent: accent, send: post)
+        case "contexto": ContextoBoard(game: g, accent: accent)
+        case "heardle": HeardleBoard(game: g, accent: accent, send: post)
+        case "sliding": SlidingBoard(game: g, accent: accent, send: post)
+        case "reaction": ReactionBoard(game: g, accent: accent, send: post)
+        case "whistlebird": WhistleBirdBoard(game: g, accent: accent, send: post)
+        case "twentyq": TwentyQBoard(game: g, accent: accent, send: post)
+        case "quiz": QuizBoard(game: g, accent: accent)
+        case "pictionary": PictionaryBoard(game: g, accent: accent)
+        case "pong": PongBoard(game: g, accent: accent, send: post)
+        case "snake": SnakeBoard(game: g, accent: accent, send: post)
+        case "tetris": TetrisBoard(game: g, accent: accent, send: post)
         default: WallBoard()
         }
     }
 
+    /// Games whose whole hand is on their board: no word field under them.
+    private var wordless: Set<String> { ["sudoku", "sliding", "reaction", "whistlebird", "twentyq", "pong", "snake", "tetris"] }
+
+    /// A move from a board, straight to the wall; the status comes back.
+    private func post(_ move: [String: Any]) {
+        let h = wall.host, who = me
+        Task {
+            if let s = await GameLink.post(host: h, "move", ["player": who, "move": move]) {
+                status = s
+                problem = s.error
+                if s.error == nil { Taps.detent(intensity: 0.3) }
+            }
+        }
+    }
+
     @ViewBuilder private func hand(_ g: GameStatus.Game) -> some View {
+        if wordless.contains(g.name) {
+            EmptyView()
+        } else {
+            wordHand(g)
+        }
+    }
+
+    @ViewBuilder private func wordHand(_ g: GameStatus.Game) -> some View {
         HStack(spacing: 10) {
-            TextField(g.name == "wordle" ? "five letters" : "your move", text: $typed)
+            TextField(placeholder(g), text: $typed)
                 .font(.machine(17))
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
@@ -375,6 +461,21 @@ struct GameScreen: View {
         }
     }
 
+    private func placeholder(_ g: GameStatus.Game) -> String {
+        switch g.name {
+        case "wordle": return "five letters"
+        case "spellingbee", "letterboxed", "strands": return "a word"
+        case "contexto": return "a word, any word"
+        case "heardle": return "the song"
+        case "reveal": return "the album or the artist"
+        case "pictionary": return "what is it?"
+        case "quiz": return "your answer"
+        case "connections": return "four words"
+        case "crossword": return "clue and answer, like 1A lamp"
+        default: return "your move"
+        }
+    }
+
     private func listen() {
         problem = nil
         speech.start(words: status?.voice_words ?? []) { text in
@@ -394,8 +495,20 @@ struct GameScreen: View {
         guard !word.isEmpty, !sending else { return }
         sending = true
         let h = wall.host, who = me
+        var move: [String: Any] = ["guess": word]
+        switch game?.name {
+        case "connections":
+            let words = word.split(whereSeparator: { $0 == "," || $0 == "\n" }).map { $0.trimmingCharacters(in: .whitespaces) }
+            move = words.count == 4 ? ["words": words] : ["pick": word]
+        case "crossword":
+            let bits = word.split(separator: " ", maxSplits: 1).map(String.init)
+            move = bits.count == 2 ? ["slot": bits[0].uppercased(), "word": bits[1]] : ["word": word]
+        case "quiz": move = ["answer": word]
+        case "heardle": move = word == "skip" ? ["skip": true] : ["guess": word]
+        default: break
+        }
         Task {
-            let s = await GameLink.post(host: h, "move", ["player": who, "move": ["guess": word]])
+            let s = await GameLink.post(host: h, "move", ["player": who, "move": move])
             if let s {
                 status = s
                 problem = s.error
@@ -443,8 +556,16 @@ struct WordleBoard: View {
         }
     }
 
+    private struct Row { var word: String; var marks: String }
+    private var rows: [Row] {
+        game.state["rows"].array.compactMap { r in
+            guard let w = r["word"].string, let m = r["marks"].string else { return nil }
+            return Row(word: w, marks: m)
+        }
+    }
+
     var body: some View {
-        let rows = game.rows ?? []
+        let rows = self.rows
         let current = Array(typed.uppercased().prefix(5))
         VStack(spacing: 6) {
             ForEach(0..<6, id: \.self) { r in
@@ -472,7 +593,7 @@ struct WordleBoard: View {
     }
 
     private var keyboard: some View {
-        let keys = game.keys ?? [:]
+        let keys = game.state["keys"].object.compactMapValues { $0.string }
         return VStack(spacing: 5) {
             ForEach(["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"], id: \.self) { row in
                 HStack(spacing: 4) {
