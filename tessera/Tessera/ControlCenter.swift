@@ -105,6 +105,7 @@ enum PanelLayout { case full, tuning }
 
 struct ControlCenterPanel: View {
     @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
     let light: Lighting
     var ink: GlassInk = .dark
     @Binding var dragLight: Double?
@@ -255,6 +256,11 @@ struct ControlCenterPanel: View {
                     .font(.ui(15, .semibold)).foregroundStyle(ink.ink).lineLimit(1)
                 Text(title == nil ? "Play something and it lands here." : [wall.state.artist, wall.state.album].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                     .font(.ui(12)).foregroundStyle(ink.dim).lineLimit(1)
+                if title != nil, let owned = wall.state.owned {
+                    Text(owned.line)
+                        .font(.ui(11)).foregroundStyle(accent).lineLimit(1)
+                        .onTapGesture { if let u = URL(string: owned.url) { openURL(u) } }
+                }
                 if title != nil {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {

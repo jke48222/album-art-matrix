@@ -115,9 +115,20 @@ struct WallServices: Decodable {
         var problem: String?
     }
 
+    /// The shelf: whose Discogs collection the wall knows, and how the sync went.
+    struct Discogs: Decodable {
+        var user: String
+        var token_set: Bool?
+        var releases: Int?
+        var synced_at: Double?
+        var syncing: Bool?
+        var problem: String?
+    }
+
     var spotify: Spotify
     var lastfm: Lastfm
     var listenbrainz: Listenbrainz?      // older walls do not send these
+    var discogs: Discogs?
     var hearing: Hearing?
     var mac: Mac?
     var claude: Claude?
@@ -344,6 +355,16 @@ struct ServicesPage: View {
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
+                Rule()
+                NavigationLink {
+                    DiscogsPage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "Discogs", subtitle: discogsLine,
+                             leading: { GlyphMark(symbol: "opticaldisc") }) {
+                        StateValue(discogsOn ? "Connected" : "Set up", done: discogsOn)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
             }
 
             SetupGroup("Other players", note: otherNote) {
@@ -410,6 +431,19 @@ struct ServicesPage: View {
         return !lf.user.isEmpty && lf.key_set == true
     }
     private var listenbrainzOn: Bool { !(services?.listenbrainz?.user ?? "").isEmpty }
+    private var discogsOn: Bool {
+        guard let d = services?.discogs else { return false }
+        return !d.user.isEmpty && d.token_set == true
+    }
+    private var discogsLine: String {
+        guard let d = services?.discogs else { return "Your record shelf, so the wall knows what you own on vinyl." }
+        if let p = d.problem, discogsOn { return p }
+        if discogsOn {
+            let n = d.releases ?? 0
+            return n == 0 ? "Reading \(d.user)'s shelf." : "\(n) record\(n == 1 ? "" : "s") on \(d.user)'s shelf."
+        }
+        return "Your record shelf, so the wall knows what you own on vinyl."
+    }
 
     private var wallNote: String {
         services == nil
@@ -967,5 +1001,208 @@ struct ClaudePage: View {
             if why == nil { Taps.commit(); key = "" }
             busy = false
         }
+    }
+}
+
+
+// MARK: - Discogs: the shelf, so the wall knows what is owned on vinyl
+
+struct DiscogsPage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+
+    @State private var user = ""
+    @State private var token = ""
+    @State private var busy = false
+    @State private var syncing = false
+    @State private var problem: String?
+    @State private var shelf: ShelfList?
+
+    private var dg: WallServices.Discogs? { services?.discogs }
+    private var savedUser: String { dg?.user ?? "" }
+    private var tokenSet: Bool { dg?.token_set == true }
+    private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var typedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool {
+        guard services != nil else { return false }
+        if !typedToken.isEmpty { return true }
+        return !typedUser.isEmpty && typedUser != savedUser
+    }
+    private var doneLine: String? {
+        guard !savedUser.isEmpty, typedUser == savedUser, typedToken.isEmpty else { return nil }
+        return tokenSet ? "Reading \(savedUser)'s shelf" : "Username on the wall"
+    }
+    private var shelfState: (text: String, done: Bool) {
+        guard let dg else { return ("Set up", false) }
+        if dg.token_set != true || dg.user.isEmpty { return ("Needs your token", false) }
+        if let p = dg.problem { return (p, false) }
+        if dg.syncing == true || syncing { return ("Reading", false) }
+        let n = dg.releases ?? 0
+        return (n == 0 ? "Empty" : "\(n) record\(n == 1 ? "" : "s")", n > 0)
+    }
+    private var shelfNote: String {
+        guard let at = dg?.synced_at else { return "Nothing read yet." }
+        return "Read \(ago(Int(at))). Read again every six hours, and whenever you change the details above."
+    }
+    private var releases: [ShelfList.Release] {
+        (shelf?.releases ?? []).sorted { a, b in
+            if a.plays != b.plays { return a.plays > b.plays }
+            return (a.added ?? "") > (b.added ?? "")
+        }
+    }
+
+    var body: some View {
+        SetupPage("Discogs",
+                  blurb: "Discogs is where a record collection is written down, pressing by pressing. With your username and a personal access token the wall reads your shelf. A streamed song from an album you own gets a small record in the sleeve's corner, and when one of your records plays, the pressing and what copies are going for show under the song.") {
+            SetupGroup("Your account", note: "Free. The token is kept on the wall and used only to read your collection and look up your pressings.") {
+                KeyField(placeholder: "Username", text: $user)
+                Rule()
+                KeyField(placeholder: tokenSet ? "Personal access token (one is on the wall)" : "Personal access token", text: $token)
+                Rule()
+                SetupRow(title: "Your token", subtitle: "Discogs settings, Developers, Generate new token. Opens in Safari.") {
+                    ActionPill(title: "Open settings", filled: false) {
+                        openURL(URL(string: "https://www.discogs.com/settings/developers")!)
+                    }
+                }
+                Rule()
+                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
+                         done: doneLine, accent: accent) { save() }
+            }
+            .padding(.top, -12)
+            Problem(text: problem)
+
+            SetupGroup("The shelf", note: shelfNote) {
+                SetupRow(title: "Records the wall knows", subtitle: "Every release in your main collection folder.") {
+                    HStack(spacing: 10) {
+                        StateValue(shelfState.text, done: shelfState.done)
+                        if tokenSet && !savedUser.isEmpty {
+                            ActionPill(title: syncing ? "Reading" : "Read again", filled: false) { sync() }
+                        }
+                    }
+                }
+                ForEach(releases, id: \.release_id) { r in
+                    Rule()
+                    releaseRow(r)
+                }
+            }
+
+            SetupGroup("On the wall", note: "The Shelf knob under Tuning turns the corner mark off. The pressing shows in the app under the song whenever a shelf album is on, from any source.") {
+                EmptyView()
+            }
+        }
+        .onAppear { user = savedUser }
+        .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
+        .task {
+            if let list = await ShelfList.read(host: wall.host) { shelf = list }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+                if syncing || shelf == nil || (shelf?.releases.count ?? 0) != (services?.discogs?.releases ?? 0) {
+                    if let list = await ShelfList.read(host: wall.host) { shelf = list }
+                }
+                if syncing, services?.discogs?.syncing != true { syncing = false }
+            }
+        }
+    }
+
+    private func releaseRow(_ r: ShelfList.Release) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(r.title).font(.ui(15)).foregroundStyle(Ink.ink).lineLimit(1)
+                Text(pressingLine(r)).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(1)
+            }
+            Spacer(minLength: 8)
+            Text(r.plays == 0 ? "" : r.plays == 1 ? "played once" : "played \(r.plays)x")
+                .font(.machine(10)).foregroundStyle(Ink.faint)
+        }
+        .padding(.horizontal, 16).padding(.vertical, 9)
+        .contentShape(Rectangle())
+        .onTapGesture { if let u = URL(string: r.url) { openURL(u) } }
+    }
+
+    private func pressingLine(_ r: ShelfList.Release) -> String {
+        var bits: [String] = [r.artists.joined(separator: ", ")]
+        if let y = r.year, y > 0 { bits.append(String(y)) }
+        let lab = [r.label, r.catno].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ")
+        if !lab.isEmpty { bits.append(lab) }
+        if let f = r.formats?.first, f != "Vinyl" { bits.append(f) }
+        return bits.joined(separator: "  ·  ")
+    }
+
+    private func ago(_ unix: Int) -> String {
+        let s = Int(Date().timeIntervalSince1970) - unix
+        if s < 90 { return "just now" }
+        if s < 3600 { return "\(s / 60) min ago" }
+        if s < 86400 { return "\(s / 3600) h ago" }
+        return "\(s / 86400) d ago"
+    }
+
+    private func save() {
+        guard canSave, !busy else { return }
+        busy = true
+        var patch: [String: String] = [:]
+        if !typedUser.isEmpty { patch["user"] = typedUser }
+        if !typedToken.isEmpty { patch["token"] = typedToken }
+        Task {
+            let (fresh, why) = await ServiceSave.send(["discogs": patch], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+            if why == nil { Taps.commit(); token = ""; syncing = true }
+            busy = false
+        }
+    }
+
+    private func sync() {
+        guard !syncing else { return }
+        syncing = true
+        let h = wall.host
+        Task {
+            _ = await ShelfList.sync(host: h)
+            Taps.commit()
+        }
+    }
+}
+
+
+/// The shelf as GET /shelf describes it: every release, with how often it
+/// has played on the wall.
+struct ShelfList: Decodable {
+    struct Release: Decodable {
+        var release_id: Int
+        var title: String
+        var artists: [String]
+        var year: Int?
+        var label: String?
+        var catno: String?
+        var formats: [String]?
+        var cover: String?
+        var country: String?
+        var url: String
+        var plays: Int
+        var added: String?
+    }
+    var releases: [Release]
+
+    static func read(host: String) async -> ShelfList? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/shelf") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 8
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(ShelfList.self, from: data)
+    }
+
+    static func sync(host: String) async -> Bool {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/shelf/sync") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 6
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = Data("{}".utf8)
+        guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
+        return (resp as? HTTPURLResponse)?.statusCode == 200
     }
 }

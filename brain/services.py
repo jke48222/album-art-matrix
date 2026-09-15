@@ -24,6 +24,10 @@ FIELDS = {
     "ears": {"device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
     # Ask the wall (brain/ask.py): an Anthropic API key, set from the phone
     "claude": {"api_key": r"^sk-ant-[A-Za-z0-9_\-]{20,200}$"},
+    # the shelf (brain/shelf.py): a Discogs personal access token, from
+    # discogs.com/settings/developers, and the username whose collection it is
+    "discogs": {"token": r"^[A-Za-z0-9]{20,100}$",
+                "user": r"^[^\s/]{1,64}$"},
     # the ear's old name. Still accepted, so a phone that has not been
     # rebuilt can keep sending its AcoustID key without being refused;
     # nothing reads the key now.

@@ -33,6 +33,8 @@ from . import halo as halo_mod
 from . import homekit as homekit_mod
 from .features import Features
 from .scrobble import Scrobbler
+from .shelf import Shelf
+from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
@@ -333,6 +335,15 @@ def main():
         print("[main] scrobble: " + ("token set, following the ear"
                                      if ctrl.scrobbler.configured
                                      else "no ListenBrainz token yet; set one from the phone"))
+    # the shelf: the Discogs collection, for the corner mark and the pressing
+    ctrl.shelf = None
+    if ctrl.features.on("shelf"):
+        ctrl.shelf = Shelf(ctrl, token=ctrl.services_store.get("discogs", "token"),
+                           user=ctrl.services_store.get("discogs", "user")).start()
+        st = ctrl.shelf.status()
+        print("[main] shelf: " + (f"{st['releases']} releases for {st['user']}"
+                                  if ctrl.shelf.configured
+                                  else "no Discogs token yet; set one from the phone"))
     # the wall's own song library, asked before Shazam, and its teacher
     if ctrl.ears is not None and ctrl.features.on("teach"):
         lib = Library(min_score=tune.get("teach_match_score"))
@@ -414,15 +425,19 @@ def main():
     idle_prev = None                 # which idle override is currently applied
     disc_key = None                  # (pressing, sleeve) the disc was built from
 
-    def show_sleeve(art_url):
+    def show_sleeve(art_url, owned=False):
         """The one path that puts a sleeve on the wall: fetch, prepare, arm
-        the disc animator, extract colours. Callers add their bookkeeping."""
+        the disc animator, extract colours. Callers add their bookkeeping.
+        `owned` stamps the shelf's mark into the corner: you have this on
+        vinyl, and every face that shows the sleeve shows it."""
         nonlocal last_pre, animator, t0, need_show
         pre = prepare(
             fetch_art(art_url), size,
             unsharp_radius=tune.get("unsharp_radius"),
             unsharp_percent=tune.get("unsharp_percent"),
         )
+        if owned and tune.get("shelf_mark"):
+            pre = owned_mark(pre, size)
         last_pre = pre
         animator = build_disc(pre)
         # what each finish would do to this sleeve, for the phone to show
@@ -484,7 +499,9 @@ def main():
         if ctrl.replay is not None:
             entry, ctrl.replay = ctrl.replay, None
             try:
-                show_sleeve(entry["art_url"])
+                owned = (ctrl.shelf.note_playing(entry.get("album", ""), entry.get("artist", ""))
+                         if ctrl.shelf is not None else None)
+                show_sleeve(entry["art_url"], owned=owned is not None)
                 ctrl.now_showing = {"title": entry.get("title", "?"),
                                     "artist": entry.get("artist", "?"),
                                     "album": entry.get("album", "")}
@@ -598,9 +615,16 @@ def main():
             if now.progress_ms is None:
                 prog = None
                 ctrl.progress = {}
+            # the shelf: is this album on it? The pressing goes to the phone
+            # and the sleeve gets the corner mark
+            owned = (ctrl.shelf.note_playing(now.album, now.artist)
+                     if ctrl.shelf is not None else None)
+            if owned is not None:
+                print(f"[main] on the shelf: {owned.get('year') or ''} {owned.get('label')} "
+                      f"{owned.get('catno')}".strip())
             if now.art_url:
                 try:
-                    show_sleeve(now.art_url)
+                    show_sleeve(now.art_url, owned=owned is not None)
                     last_track = now.track_id
                     ctrl.now_showing = {"title": now.title,
                                         "artist": now.artist,

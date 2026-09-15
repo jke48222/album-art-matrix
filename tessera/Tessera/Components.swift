@@ -361,6 +361,13 @@ struct Placard: View {
                     .font(.ui(15, .medium))
                     .foregroundStyle(litDim)
                     .lineLimit(2)
+                if let owned = state.owned {
+                    Text(owned.line)
+                        .font(.machine(10))
+                        .foregroundStyle(litDim)
+                        .lineLimit(1)
+                        .padding(.top, 1)
+                }
             } else {
                 Text(silence)
                     .font(.displayMid(19))

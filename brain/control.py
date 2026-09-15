@@ -51,6 +51,7 @@ is on — no Mac required.
   POST /show     -> {query}: a cover by name    POST /play {query}: a video by name
   GET  /weather  -> the forecast the face draws, the place, its age
   POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
+  GET  /shelf    -> the Discogs collection with plays per release; POST /shelf/sync
   GET  /voice    -> the wake word, the listener and the last thing heard
   POST /voice/wake  start listening as if the wake word came   POST /voice/say {text}
 
@@ -194,6 +195,7 @@ class ControlState:
         self.spotify = None          # SpotifySource
         self.lastfm = None           # LastfmSource
         self.listenbrainz = None     # ListenBrainzSource
+        self.shelf = None            # brain/shelf.py, the Discogs collection
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -450,6 +452,10 @@ class ControlState:
         # looking) can tell whether the spin face has one to turn
         if self.pressing is not None:
             out["pressing_for"] = self.pressing[0]
+        # the pressing on the shelf for the song that is on, if it is there
+        sh = getattr(self, "shelf", None)
+        if sh is not None and sh.playing:
+            out["owned"] = sh.playing
         if self.art_colors:
             out["art_colors"] = list(self.art_colors)
         sl = self.sleep              # snapshot: the render thread can null it
@@ -494,6 +500,11 @@ class ControlState:
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
                        else {"ready": False, "problem": "asking is off on this wall"}),
+            # the shelf: whose Discogs collection, how many releases, when synced
+            "discogs": (self.shelf.status() if getattr(self, "shelf", None)
+                        else {"user": "", "token_set": False, "releases": 0,
+                              "synced_at": None, "syncing": False,
+                              "problem": "the shelf is off on this wall"}),
             # the ear's earlier shape, for a phone not rebuilt yet. There is
             # no key any more, so a key is always "set".
             "acoustid": {"key_set": True, "device": hearing["device"],
@@ -526,6 +537,9 @@ class ControlState:
                                      token=store.get("listenbrainz", "token"))
         if "claude" in changed and getattr(self, "asker", None):
             self.asker.configure(api_key=store.get("claude", "api_key"))
+        if "discogs" in changed and getattr(self, "shelf", None):
+            self.shelf.configure(token=store.get("discogs", "token"),
+                                 user=store.get("discogs", "user"))
         if ("ears" in changed or "acoustid" in changed) and self.ears:
             self.ears.configure(device=store.get("ears", "device")
                                 or store.get("acoustid", "device"))
@@ -873,6 +887,13 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
                 return
+            if u.path.startswith("/shelf"):
+                sh = getattr(ctrl, "shelf", None)
+                if sh is None:
+                    self._json(200, {"releases": [], "problem": "the shelf is off on this wall"})
+                    return
+                self._json(200, {**sh.status(), "releases": sh.listing(ctrl.journal_read(500))})
+                return
             if u.path.startswith("/teach"):
                 # the wall's own song library: what it knows and how it learnt it
                 ear = ctrl.ears
@@ -1014,6 +1035,17 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 result = getattr(sh, what)(text)
                 code = 200 if not (isinstance(result, dict) and result.get("error")) else 404
                 self._json(code, result if isinstance(result, dict) else {"said": result})
+                return
+            if self.path.startswith("/shelf/sync"):
+                sh = getattr(ctrl, "shelf", None)
+                if sh is None:
+                    self._json(404, {"error": "the shelf is off on this wall"})
+                    return
+                if not sh.configured:
+                    self._json(400, {"error": "set the Discogs token and username first", **sh.status()})
+                    return
+                sh.sync_soon()
+                self._json(200, {**sh.status(), "syncing": True})
                 return
             if self.path.startswith("/weather/"):
                 w = getattr(ctrl, "weather", None)

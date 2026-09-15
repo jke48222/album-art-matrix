@@ -58,6 +58,8 @@ struct WallState: Equatable {
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
+    /// The pressing on the owner's Discogs shelf for the song that is on.
+    var owned: WallOwned? = nil
     var artColors: [String] = []
     var sleepRemaining: Int? = nil
     /// Bumped by the brain whenever new CONTENT lands (track change, replay,
@@ -131,6 +133,7 @@ struct WallState: Equatable {
             artist = now["artist"] as? String
             album = now["album"] as? String
         }
+        owned = (json["owned"] as? [String: Any]).map(WallOwned.init(json:))
         if let p = json["progress"] as? [String: Any], let at = p["at"] as? Double {
             songAt = at / 1000
             songOf = (p["of"] as? Double).map { $0 / 1000 }
@@ -149,6 +152,55 @@ struct WallState: Equatable {
         if let w = json["wall"] as? [String: Any], let px = w["width"] as? Int {
             Panel.learn(px)
         }
+    }
+}
+
+/// A pressing from the shelf, as /state carries it under `owned`.
+struct WallOwned: Equatable {
+    var releaseId: Int = 0
+    var title = ""
+    var year: Int?
+    var label = ""
+    var catno = ""
+    var country = ""
+    var formats: [String] = []
+    var descriptions: [String] = []
+    var lowest: Double?
+    var currency = "USD"
+    var forSale = 0
+    var url = ""
+
+    init(json: [String: Any]) {
+        releaseId = json["release_id"] as? Int ?? 0
+        title = json["title"] as? String ?? ""
+        year = json["year"] as? Int
+        label = json["label"] as? String ?? ""
+        catno = json["catno"] as? String ?? ""
+        country = json["country"] as? String ?? ""
+        formats = json["formats"] as? [String] ?? []
+        descriptions = json["descriptions"] as? [String] ?? []
+        url = json["url"] as? String ?? ""
+        if let p = json["price"] as? [String: Any] {
+            lowest = p["lowest"] as? Double
+            currency = p["currency"] as? String ?? "USD"
+            forSale = p["for_sale"] as? Int ?? 0
+        }
+    }
+
+    /// One line for under the song: the pressing, then what copies go for.
+    var line: String {
+        var bits: [String] = ["On your shelf"]
+        var press: [String] = []
+        if let y = year, y > 0 { press.append(String(y)) }
+        if !label.isEmpty { press.append(label) }
+        if !catno.isEmpty { press.append(catno) }
+        if !country.isEmpty { press.append(country) }
+        if !press.isEmpty { bits.append(press.joined(separator: " ")) }
+        if let low = lowest, low > 0 {
+            let sym = currency == "USD" ? "$" : currency == "GBP" ? "£" : currency == "EUR" ? "€" : currency + " "
+            bits.append(String(format: "copies from %@%.0f", sym, low))
+        }
+        return bits.joined(separator: "  ·  ")
     }
 }
 
