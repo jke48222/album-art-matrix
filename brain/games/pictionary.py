@@ -62,8 +62,18 @@ class Pictionary(Game):
         try:
             prompt = (f"A simple, clear drawing of a {self.word}, the whole thing in view, centred, bold "
                       f"outlines and flat colours on a plain background, no words or letters anywhere.")
-            self.picture = self.imaginer.draw(f"a {self.word}", expanded=prompt)
-            self.t0 = self._clock()
+            def partial(img):
+                # the sketch as it forms: guessing starts on the first glimpse
+                self.picture = img
+                self.faces = {}
+                if self.t0 is None:
+                    self.t0 = self._clock()
+                self.message = "Guess."
+                self.changed()
+            self.picture = self.imaginer.draw(f"a {self.word}", expanded=prompt, on_partial=partial)
+            self.faces = {}
+            if self.t0 is None:
+                self.t0 = self._clock()
             self.message = "Guess."
         except Exception as exc:
             self.problem = str(exc)

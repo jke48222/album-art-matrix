@@ -57,7 +57,7 @@ def sleeve_path():
 
 class FakeImaginer:
     ready = True
-    def draw(self, prompt, expanded=None):
+    def draw(self, prompt, expanded=None, on_partial=None):
         img = Image.new("RGB", (512, 512), (248, 240, 224))
         d = ImageDraw.Draw(img)
         d.ellipse((90, 140, 420, 430), fill=(110, 120, 140))

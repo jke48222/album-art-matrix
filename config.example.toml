@@ -122,13 +122,14 @@ pipe = "/tmp/shairport-sync-metadata"
 # A picture from words (brain/imagine.py): "create a purple elephant". The
 # key, the drawer and the quality come from the phone (Services > Images);
 # these are the starting points. The newest OpenAI image model the key can
-# reach is used (gpt-image-2, then 1.5, then 1) at high quality: about
-# seventeen cents a picture on gpt-image-1, less on the newer ones; medium
-# is about four cents, low about one. Google's Imagen Ultra is six cents.
+# reach is used (gpt-image-2, then 1.5, then 1), streamed so the wall shows
+# the picture forming. medium is a good picture in well under a minute
+# (about four cents on gpt-image-1); high is the most detailed and takes
+# minutes (about seventeen cents); low is a cent. Imagen Ultra is six cents.
 provider = "openai"                            # or "google"
 openai_model = "gpt-image-2"                   # falls back to gpt-image-1.5, then gpt-image-1
 google_model = "imagen-4.0-ultra-generate-001" # imagen-4.0-generate-001 is cheaper
-quality = "high"                               # low, medium, high (OpenAI only)
+quality = "medium"                             # low, medium, high (OpenAI only)
 
 [tmdb]
 # Posters (brain/posters.py): when the Mac watches an episode or a film in

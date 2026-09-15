@@ -417,7 +417,7 @@ def main():
             api_key=store.get("images", "api_key"),
             openai_model=str(icfg.get("openai_model", "gpt-image-2")),
             google_model=str(icfg.get("google_model", "imagen-4.0-ultra-generate-001")),
-            quality=store.get("images", "quality") or str(icfg.get("quality", "high")))
+            quality=store.get("images", "quality") or str(icfg.get("quality", "medium")))
         if store.get("images", "model"):
             ctrl.imaginer.configure(model=store.get("images", "model"))
         st = ctrl.imaginer.status()
@@ -1025,6 +1025,20 @@ def main():
                         ctrl.dirty.clear()
                     continue
 
+                if mode == "imagine" and ctrl.imaginer is not None:
+                    # a picture being drawn, partial by partial, then held
+                    tick = time.monotonic()
+                    live = ctrl.imaginer.live
+                    if live.expired(tick) or live.stage == "idle":
+                        ctrl.imaginer.release()
+                        continue
+                    f = live.frame_at(size, tick)
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    # frames flow while it draws; the held picture only needs a nudge
+                    wait = max(0.02, 1.0 / min(anim_fps, 30.0)) if live.busy() or tick - live.updated_at < 1.5 else 0.5
+                    if ctrl.dirty.wait(wait):
+                        ctrl.dirty.clear()
+                    continue
                 if mode == "game" and ctrl.games is not None:
                     tick = time.monotonic()
                     f = ctrl.games.frame_at(size, tick)

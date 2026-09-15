@@ -1,4 +1,4 @@
-"""Imagine: a picture from a description.
+"""Imagine: a picture from words, drawn on the wall as it is drawn.
 
     "create a purple elephant"  ->  a purple elephant on the panel
 
@@ -6,18 +6,22 @@ The words go to Claude first, when a key is set, to be written out as a
 prompt for a picture that will be seen on a 64 or 192 pixel LED panel:
 one clear subject, large and centred, real light and depth, deep colour,
 no text (without Claude a fixed template does the same job, less well).
-The prompt goes to an image model at high quality, OpenAI's newest image
-model that the key can reach (gpt-image-2, then 1.5, then 1) or Google's
-Imagen Ultra through their REST APIs, whichever the phone chose (Services
-> Images), and the picture comes back as bytes. It is brought to the
-wall's size in linear light with a light autocontrast, so the fine bright
-details keep their brightness, then through the sleeve pipeline, and
-shown in the frame face for ten minutes, or until something else is
-chosen; it is kept at full size with its prompt in
-~/.config/album-art-matrix/imagined/, listed by GET /imagine and shown
-again by POST /imagine/show {id}.
+The prompt goes to an image model, the newest OpenAI image model the key
+can reach (gpt-image-2, then 1.5, then 1) or Google's Imagen Ultra,
+whichever the phone chose (Services > Images), at the quality the phone
+chose (medium to start: a good picture in well under a minute; high is
+the most detailed and takes minutes).
 
-One picture every ten seconds at most. Every picture's cost is counted.
+OpenAI streams the picture as it forms: three partial images, then the
+final one. The wall goes into its "imagine" face the moment the words
+arrive and shows each partial as it lands, crossfading from the last,
+with a soft band of light sweeping across while the model is still at
+work, so the picture is seen being drawn. Every image is brought to the
+wall's size in linear light with a gentle stretch, so fine bright detail
+keeps its brightness. The finished picture stays for ten minutes, or
+until something else is chosen, and is kept at full size with its prompt
+in ~/.config/album-art-matrix/imagined/, listed by GET /imagine and shown
+again by POST /imagine/show {id}. One picture every ten seconds at most.
 """
 from __future__ import annotations
 
@@ -29,17 +33,26 @@ import re
 import threading
 import time
 
+import numpy as np
 import requests
 from PIL import Image
+
+from .art.pixelfont import draw_text, text_width
 
 DIR = os.path.expanduser("~/.config/album-art-matrix/imagined")
 MIN_GAP_S = 10.0
 SHOW_S = 600.0
 KEEP = 200                       # pictures kept; the oldest go
+PARTIALS = 3                     # partial images asked of OpenAI while it draws
+FADE_S = 0.9                     # a new partial crossfades from the last over this
 
 OPENAI_URL = "https://api.openai.com/v1/images/generations"
 GOOGLE_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:predict"
 PROVIDERS = ("openai", "google")
+QUALITIES = ("low", "medium", "high")
+# the OpenAI models to try, best first, when the one asked for is not
+# there for this key (a 404, or "model not found")
+OPENAI_FALLBACK = ["gpt-image-2", "gpt-image-1.5", "gpt-image-1"]
 
 # dollars a picture, as published when this was written (2026-09); a model
 # not listed costs "?" in the log and nothing in the total
@@ -68,10 +81,10 @@ IMAGE_SYSTEM = ("You write prompts for an image model. The picture will be shown
                 "the request asked for (colours, objects, mood, style). One paragraph, at most 70 words. Answer with "
                 "the prompt only.")
 
-# the OpenAI models to try, best first, when the one asked for is not
-# there for this key (a 404, or "model not found")
-OPENAI_FALLBACK = ["gpt-image-2", "gpt-image-1.5", "gpt-image-1"]
-QUALITIES = ("low", "medium", "high")
+
+def _slug(text: str) -> str:
+    s = re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
+    return s[:40] or "picture"
 
 
 def enhance_for_panel(img: Image.Image, size: int) -> Image.Image:
@@ -80,13 +93,11 @@ def enhance_for_panel(img: Image.Image, size: int) -> Image.Image:
     their neighbours, then a gentle stretch so the panel gets the whole
     range. What a 64 pixel panel can show of a picture is decided here,
     so this is where fidelity is won or lost."""
-    import numpy as np
     a = np.asarray(img.convert("RGB"), dtype=np.float32) / 255.0
     lin = np.where(a <= 0.04045, a / 12.92, ((a + 0.055) / 1.055) ** 2.4)
-    # Pillow's Lanczos on a float image, channel by channel
     chans = []
     for k in range(3):
-        ch = Image.fromarray((lin[..., k] * 65535.0).astype(np.uint16) if False else lin[..., k], mode="F")
+        ch = Image.fromarray(lin[..., k], mode="F")
         chans.append(np.asarray(ch.resize((size, size), Image.LANCZOS), dtype=np.float32))
     lin_small = np.clip(np.stack(chans, axis=-1), 0.0, 1.0)
     srgb = np.where(lin_small <= 0.0031308, lin_small * 12.92, 1.055 * np.power(lin_small, 1 / 2.4) - 0.055)
@@ -102,15 +113,159 @@ def enhance_for_panel(img: Image.Image, size: int) -> Image.Image:
     return Image.fromarray((out + 0.5).astype(np.uint8))
 
 
-def _slug(text: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")
-    return s[:40] or "picture"
+def _ease(t: float) -> float:
+    t = 0.0 if t < 0 else 1.0 if t > 1 else t
+    return t * t * (3 - 2 * t)
+
+
+class LiveDrawing:
+    """What the wall shows while a picture is being drawn, and after: the
+    partial images as they land, crossfading, a band of light sweeping
+    across while the model is still at work, the finished picture held
+    for a while. One of these lives on the Imaginer; the render loop asks
+    it for frames in mode "imagine"."""
+
+    def __init__(self, clock=None):
+        self._clock = clock or time.monotonic
+        self.stage = "idle"             # idle | waiting | partial | done | failed
+        self.prompt = ""
+        self.images: list[Image.Image] = []       # the partials, then the final
+        self.final: Image.Image | None = None
+        self.problem: str | None = None
+        self.t0 = 0.0
+        self.updated_at = 0.0
+        self.done_at: float | None = None
+        self.hold_s = SHOW_S
+        self.quick = False
+        self._frames: dict[tuple[int, int], np.ndarray] = {}
+        self._lock = threading.Lock()
+
+    # ---- what happens ----------------------------------------------------------------------
+    def start(self, prompt: str, quick: bool = False):
+        with self._lock:
+            now = self._clock()
+            self.stage, self.prompt, self.quick = "waiting", prompt, quick
+            self.images, self.final, self.problem = [], None, None
+            self.t0 = self.updated_at = now
+            self.done_at = None
+            self._frames = {}
+
+    def partial(self, img: Image.Image):
+        with self._lock:
+            self.images.append(img)
+            self.stage = "partial"
+            self.updated_at = self._clock()
+
+    def finish(self, img: Image.Image):
+        with self._lock:
+            self.images.append(img)
+            self.final = img
+            self.stage = "done"
+            self.updated_at = self.done_at = self._clock()
+
+    def fail(self, why: str):
+        with self._lock:
+            self.problem = why
+            self.stage = "failed"
+            self.updated_at = self.done_at = self._clock()
+
+    def clear(self):
+        with self._lock:
+            self.stage = "idle"
+            self._frames = {}
+
+    def busy(self) -> bool:
+        return self.stage in ("waiting", "partial")
+
+    def expired(self, now: float | None = None) -> bool:
+        now = self._clock() if now is None else now
+        if self.stage == "done":
+            return now - (self.done_at or now) > self.hold_s
+        if self.stage == "failed":
+            return now - (self.done_at or now) > 4.0
+        return False
+
+    def elapsed(self) -> float:
+        return self._clock() - self.t0 if self.stage != "idle" else 0.0
+
+    def public(self) -> dict:
+        return {"stage": self.stage, "prompt": self.prompt, "partials": max(0, len(self.images) - (1 if self.final else 0)),
+                "of": PARTIALS, "elapsed": round(self.elapsed(), 1), "problem": self.problem,
+                "done_ago": round(self._clock() - self.done_at, 1) if self.done_at else None}
+
+    # ---- the frames ------------------------------------------------------------------------------
+    def _frame(self, k: int, size: int) -> np.ndarray:
+        key = (k, size)
+        f = self._frames.get(key)
+        if f is None:
+            f = np.asarray(enhance_for_panel(self.images[k], size), dtype=np.uint8)
+            self._frames[key] = f
+        return f
+
+    def frame_at(self, size: int, now: float | None = None) -> np.ndarray:
+        now = self._clock() if now is None else now
+        with self._lock:
+            stage, n = self.stage, len(self.images)
+            since = now - self.updated_at
+            t = now - self.t0
+            if stage in ("idle", "waiting") or n == 0:
+                f = np.zeros((size, size, 3), dtype=np.uint8)
+                f[...] = (5, 5, 9)
+                if stage == "failed":
+                    self._words(f, size, "could not draw", (200, 90, 80))
+                elif stage == "waiting":
+                    self._sweep(f, size, t, 0.16)
+                    if size > 96:
+                        self._words(f, size, self.prompt, (120, 118, 112))
+                return f
+            cur = self._frame(n - 1, size).astype(np.float32)
+            fade = FADE_S * (0.6 if self.quick else 1.0)
+            if since < fade:
+                k = _ease(since / fade)
+                prev = (self._frame(n - 2, size).astype(np.float32) if n >= 2
+                        else np.full((size, size, 3), 5.0, dtype=np.float32))
+                cur = prev * (1 - k) + cur * k
+            out = np.clip(cur, 0, 255).astype(np.uint8)
+            if stage == "partial":
+                self._sweep(out, size, t, 0.10)
+                # a thin line at the foot: how many of the partials are in
+                w = int(size * n / (PARTIALS + 1))
+                out[size - 1, :w] = (230, 226, 216)
+            elif stage == "failed":
+                self._words(out, size, "could not draw", (200, 90, 80))
+            return out
+
+    @staticmethod
+    def _sweep(f: np.ndarray, size: int, t: float, strength: float):
+        """A soft band of warm light crossing the picture, once every 1.6 s."""
+        phase = (t / 1.6) % 1.0
+        x = (phase * 1.4 - 0.2) * size
+        xs = np.arange(size, dtype=np.float32)
+        band = np.exp(-((xs - x) / (size * 0.09)) ** 2) * strength
+        f[...] = np.clip(f.astype(np.float32) + band[None, :, None] * np.array([255, 235, 200], np.float32), 0, 255).astype(np.uint8)
+
+    @staticmethod
+    def _words(f: np.ndarray, size: int, words: str, colour):
+        line, lines = "", []
+        for w in (words or "").split():
+            cand = (line + " " + w).strip()
+            if text_width(cand, 1) <= size - 8 or not line:
+                line = cand
+            else:
+                lines.append(line)
+                line = w
+        if line:
+            lines.append(line)
+        y = size - 6 - 9 * min(3, len(lines))
+        for ln in lines[:3]:
+            draw_text(f, ln, (size - text_width(ln, 1)) // 2, y, colour, 1)
+            y += 9
 
 
 class Imaginer:
     def __init__(self, ctrl, shower=None, asker=None, provider: str = "openai", api_key: str = "",
                  openai_model: str = "gpt-image-2", google_model: str = "imagen-4.0-ultra-generate-001",
-                 quality: str = "high", path: str = DIR, post=None, clock=None):
+                 quality: str = "medium", path: str = DIR, post=None, stream=None, clock=None):
         self.ctrl = ctrl
         self.shower = shower
         self.asker = asker
@@ -118,10 +273,12 @@ class Imaginer:
         self.api_key = (api_key or "").strip()
         self.openai_model = openai_model
         self.google_model = google_model
-        self.quality = quality if quality in QUALITIES else "high"
-        self.model_used: str | None = None      # the OpenAI model that last answered
+        self.quality = quality if quality in QUALITIES else "medium"
         self.path = path
         self._post = post or self._http_post
+        # streaming is the real thing's; a test that hands in `post` gets the
+        # plain call unless it hands in `stream` too
+        self._stream = stream if stream is not None else (self._http_stream if post is None else None)
         self._clock = clock or time.time
         self._lock = threading.Lock()
         self.index: list[dict] = []
@@ -129,8 +286,11 @@ class Imaginer:
         self.cost_usd = 0.0
         self.last: dict | None = None
         self.problem: str | None = None
+        self.model_used: str | None = None
         self._last_at = 0.0
         self.busy = False
+        self.live = LiveDrawing()
+        self._ret: str | None = None
         self._load()
 
     # ---- settings -----------------------------------------------------------------------
@@ -159,7 +319,7 @@ class Imaginer:
         return {"ready": self.ready, "provider": self.provider, "model": self.model,
                 "model_used": self.model_used, "quality": self.quality, "images": self.count,
                 "cost_usd": round(self.cost_usd, 4), "last": self.last, "busy": self.busy,
-                "problem": self.problem}
+                "problem": self.problem, "live": self.live.public()}
 
     # ---- disk -----------------------------------------------------------------------------
     def _index_path(self) -> str:
@@ -208,7 +368,7 @@ class Imaginer:
 
     # ---- the providers -----------------------------------------------------------------------
     def _http_post(self, url: str, headers: dict, body: dict) -> dict:
-        r = requests.post(url, headers=headers, json=body, timeout=180)
+        r = requests.post(url, headers=headers, json=body, timeout=300)
         if r.status_code >= 400:
             try:
                 msg = r.json().get("error", {}).get("message") or r.text[:200]
@@ -217,33 +377,85 @@ class Imaginer:
             raise RuntimeError(f"{r.status_code}: {msg}")
         return r.json()
 
-    def _openai(self, prompt: str) -> bytes:
+    def _http_stream(self, url: str, headers: dict, body: dict):
+        """OpenAI's server-sent events for a streamed image: each `data:`
+        line is one event, yielded as a dict."""
+        r = requests.post(url, headers=headers, json=body, timeout=(20, 300), stream=True)
+        if r.status_code >= 400:
+            try:
+                msg = r.json().get("error", {}).get("message") or r.text[:200]
+            except ValueError:
+                msg = r.text[:200]
+            raise RuntimeError(f"{r.status_code}: {msg}")
+        for line in r.iter_lines(decode_unicode=True):
+            if not line or not line.startswith("data:"):
+                continue
+            payload = line[5:].strip()
+            if payload == "[DONE]":
+                break
+            try:
+                yield json.loads(payload)
+            except ValueError:
+                continue
+
+    @staticmethod
+    def _missing_model(exc: Exception) -> bool:
+        msg = str(exc).lower()
+        return msg.startswith("404") or ("model" in msg and any(w in msg for w in (
+            "not found", "does not exist", "not exist", "invalid", "no access", "not supported")))
+
+    def _openai(self, prompt: str, on_partial=None) -> bytes:
         models = [self.openai_model] + [m for m in OPENAI_FALLBACK if m != self.openai_model]
-        data = None
         for i, model in enumerate(models):
             body = {"model": model, "prompt": prompt, "n": 1, "size": "1024x1024",
                     "quality": self.quality, "output_format": "png"}
             try:
+                if self._stream is not None:
+                    try:
+                        raw = self._openai_streamed(dict(body, stream=True, partial_images=PARTIALS), on_partial)
+                        self.model_used = model
+                        return raw
+                    except RuntimeError as exc:
+                        low = str(exc).lower()
+                        if "stream" in low or "partial_images" in low:
+                            print(f"[imagine] {model} would not stream; drawing it in one go", flush=True)
+                        else:
+                            raise
                 data = self._post(OPENAI_URL, {"Authorization": f"Bearer {self.api_key}"}, body)
                 self.model_used = model
-                break
+                item = (data.get("data") or [{}])[0]
+                if item.get("b64_json"):
+                    return base64.b64decode(item["b64_json"])
+                if item.get("url"):
+                    r = requests.get(item["url"], timeout=60)
+                    r.raise_for_status()
+                    return r.content
+                raise RuntimeError("no image in the answer")
             except RuntimeError as exc:
-                msg = str(exc).lower()
-                missing = msg.startswith("404") or "model" in msg and ("not found" in msg or "does not exist" in msg
-                                                                          or "not exist" in msg or "invalid" in msg
-                                                                          or "no access" in msg or "not supported" in msg)
-                if missing and i < len(models) - 1:
+                if self._missing_model(exc) and i < len(models) - 1:
                     print(f"[imagine] {model} is not available for this key, trying {models[i + 1]}", flush=True)
                     continue
                 raise
-        item = (data.get("data") or [{}])[0]
-        if item.get("b64_json"):
-            return base64.b64decode(item["b64_json"])
-        if item.get("url"):
-            r = requests.get(item["url"], timeout=60)
-            r.raise_for_status()
-            return r.content
-        raise RuntimeError("no image in the answer")
+        raise RuntimeError("no model answered")
+
+    def _openai_streamed(self, body: dict, on_partial=None) -> bytes:
+        final = None
+        for ev in self._stream(OPENAI_URL, {"Authorization": f"Bearer {self.api_key}"}, body):
+            kind = ev.get("type", "")
+            if kind == "image_generation.partial_image" and ev.get("b64_json"):
+                if on_partial is not None:
+                    try:
+                        on_partial(base64.b64decode(ev["b64_json"]), int(ev.get("partial_image_index", 0)))
+                    except Exception as exc:
+                        print(f"[imagine] partial: {exc}", flush=True)
+            elif kind == "image_generation.completed" and ev.get("b64_json"):
+                final = base64.b64decode(ev["b64_json"])
+            elif kind == "error" or "error" in ev:
+                err = ev.get("error") if isinstance(ev.get("error"), dict) else {"message": str(ev.get("error") or ev)}
+                raise RuntimeError(f"stream: {err.get('message', 'error')}")
+        if final is None:
+            raise RuntimeError("the stream ended without a picture")
+        return final
 
     def _google(self, prompt: str) -> bytes:
         body = {"instances": [{"prompt": prompt}],
@@ -258,36 +470,51 @@ class Imaginer:
         model = self.model_used if (self.provider == "openai" and self.model_used) else self.model
         return COST.get((self.provider, model, self.quality)) or COST.get((self.provider, model, "*"))
 
+    @staticmethod
+    def _decode(raw: bytes) -> Image.Image:
+        img = Image.open(io.BytesIO(raw)).convert("RGB")
+        img.load()
+        return img
+
     # ---- the deed ------------------------------------------------------------------------------
-    def draw(self, prompt: str, expanded: str | None = None) -> Image.Image:
-        """The picture for a prompt, in hand, not shown and not kept: the
-        games' way in (AI pictionary). Raises with the reason when it
-        cannot."""
+    def _take(self, prompt: str) -> str | None:
+        """The pace and the one-at-a-time rule; the reason when refused."""
         prompt = " ".join((prompt or "").split())
         if not prompt:
-            raise ValueError("describe the picture")
+            return "describe the picture"
         if not self.ready:
-            raise RuntimeError("no image key on the wall yet")
+            return "no image key on the wall yet"
         with self._lock:
             now = self._clock()
             if self.busy:
-                raise RuntimeError("still drawing the last one")
+                return "still drawing the last one"
             if now - self._last_at < MIN_GAP_S:
-                raise RuntimeError(f"one picture every {int(MIN_GAP_S)} seconds")
+                return f"one picture every {int(MIN_GAP_S)} seconds"
             self._last_at = now
             self.busy = True
+        return None
+
+    def draw(self, prompt: str, expanded: str | None = None, on_partial=None) -> Image.Image:
+        """The picture for a prompt, in hand, not shown and not kept: the
+        games' way in (AI pictionary). `on_partial(img)` gets each partial
+        as the model streams it. Raises with the reason when it cannot."""
+        why = self._take(prompt)
+        if why:
+            raise RuntimeError(why)
         try:
             size = int(getattr(getattr(self.ctrl, "wall", None), "width", 64) or 64)
             expanded = expanded or self.expand(prompt, size)
+            def partial(raw, idx):
+                if on_partial is not None:
+                    on_partial(self._decode(raw))
             try:
-                raw = self._openai(expanded) if self.provider == "openai" else self._google(expanded)
+                raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
                 self.problem = f"{type(exc).__name__}: {str(exc)[:160]}"
                 print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
                 raise RuntimeError(f"the image model said no: {str(exc)[:120]}") from exc
             try:
-                img = Image.open(io.BytesIO(raw)).convert("RGB")
-                img.load()
+                img = self._decode(raw)
             except Exception as exc:
                 self.problem = f"bad image: {exc}"
                 raise RuntimeError("the image came back unreadable") from exc
@@ -302,33 +529,34 @@ class Imaginer:
 
     def imagine(self, prompt: str) -> dict:
         prompt = " ".join((prompt or "").split())
-        if not prompt:
-            return {"error": "Describe the picture."}
-        if not self.ready:
-            return {"error": "No image key on the wall yet. Set one under Services, Images."}
-        with self._lock:
-            now = self._clock()
-            if self.busy:
-                return {"error": "Still drawing the last one."}
-            if now - self._last_at < MIN_GAP_S:
-                return {"error": f"One picture every {int(MIN_GAP_S)} seconds. A moment."}
-            self._last_at = now
-            self.busy = True
+        why = self._take(prompt)
+        if why:
+            words = {"describe the picture": "Describe the picture.",
+                     "no image key on the wall yet": "No image key on the wall yet. Set one under Services, Images.",
+                     "still drawing the last one": "Still drawing the last one."}
+            return {"error": words.get(why, why[0].upper() + why[1:] + ".")}
         try:
             size = int(getattr(getattr(self.ctrl, "wall", None), "width", 64) or 64)
+            self._go_live(prompt)
             expanded = self.expand(prompt, size)
             t0 = time.monotonic()
+            def partial(raw, idx):
+                self.live.partial(self._decode(raw))
+                self._nudge()
             try:
-                raw = self._openai(expanded) if self.provider == "openai" else self._google(expanded)
+                raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
                 self.problem = f"{type(exc).__name__}: {str(exc)[:160]}"
                 print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
+                self.live.fail(self.problem)
+                self._nudge()
                 return {"error": f"The image model said no: {str(exc)[:120]}"}
             try:
-                img = Image.open(io.BytesIO(raw)).convert("RGB")
-                img.load()
+                img = self._decode(raw)
             except Exception as exc:
                 self.problem = f"bad image: {exc}"
+                self.live.fail(self.problem)
+                self._nudge()
                 return {"error": "The image came back unreadable."}
             usd = self._cost()
             image_id = f"{int(self._clock())}-{_slug(prompt)}"
@@ -355,36 +583,60 @@ class Imaginer:
                 self._save()
             print(f"[imagine] {self.provider} {entry['model']} {self.quality}: {prompt!r} in {entry['took_s']} s, "
                   f"${usd if usd is not None else '?'}", flush=True)
-            shown = self._show(img)
-            return {"imagined": True, "shown": shown, "id": image_id, "prompt": prompt,
-                    "expanded": expanded, "usd": usd, "seconds": SHOW_S,
-                    "said": "Drawn." if shown else "Drawn, but the wall could not show it."}
+            self.live.finish(img)
+            self._nudge()
+            return {"imagined": True, "shown": True, "id": image_id, "prompt": prompt,
+                    "expanded": expanded, "usd": usd, "seconds": SHOW_S, "took_s": entry["took_s"],
+                    "said": "Drawn."}
         finally:
             self.busy = False
 
-    def _show(self, img) -> bool:
-        if self.shower is None:
-            return False
+    # ---- the wall ----------------------------------------------------------------------------------
+    def _go_live(self, prompt: str, quick: bool = False):
+        """The wall into its imagine face, remembering what it was doing."""
+        self.live.start(prompt, quick=quick)
+        ctrl = self.ctrl
         try:
-            size = int(getattr(getattr(self.ctrl, "wall", None), "width", 64) or 64)
-            return bool(self.shower.show_image(enhance_for_panel(img, size), SHOW_S))
+            here = ctrl.get()["mode"]
+            if here != "imagine":
+                self._ret = here if here not in ("frame", "clip", "timer", "video", "game") else "art"
+            ctrl.apply({"mode": "imagine"})
+            ctrl.shown_seq += 1
         except Exception as exc:
-            print(f"[imagine] could not show: {exc}", flush=True)
-            return False
+            print(f"[imagine] could not take the wall: {exc}", flush=True)
+        self._nudge()
+
+    def _nudge(self):
+        d = getattr(self.ctrl, "dirty", None)
+        if d is not None:
+            try:
+                d.set()
+            except Exception:
+                pass
+
+    def release(self):
+        """The finished picture has had its time: hand the wall back."""
+        try:
+            if self.ctrl.get()["mode"] == "imagine":
+                self.ctrl.apply({"mode": self._ret or "art"})
+        except Exception:
+            pass
+        self._ret = None
+        self.live.clear()
 
     def show_again(self, image_id: str) -> dict:
         p = self.image_path(image_id)
         if p is None:
             return {"error": "No such picture."}
         try:
-            img = Image.open(p).convert("RGB")
-            img.load()
+            img = self._decode(open(p, "rb").read())
         except Exception as exc:
             return {"error": f"That picture would not open: {exc}"}
         entry = next((e for e in self.index if e["id"] == image_id), {"id": image_id, "prompt": ""})
-        shown = self._show(img)
-        return {"shown": shown, **entry, "seconds": SHOW_S,
-                "said": "Up." if shown else "The wall could not show it."}
+        self._go_live(entry.get("prompt", ""), quick=True)
+        self.live.finish(img)
+        self._nudge()
+        return {"shown": True, **entry, "seconds": SHOW_S, "said": "Up."}
 
     def forget(self, image_id: str) -> dict:
         p = self.image_path(image_id)

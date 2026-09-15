@@ -1433,7 +1433,7 @@ struct ImagesPage: View {
     private var im: WallServices.Images? { services?.images }
     private var ready: Bool { im?.ready == true }
     private var provider: String { im?.provider ?? "openai" }
-    private var quality: String { im?.quality ?? "high" }
+    private var quality: String { im?.quality ?? "medium" }
     private var modelLine: String {
         guard let im else { return "" }
         if let used = im.model_used, !used.isEmpty, used != im.model {
@@ -1480,10 +1480,10 @@ struct ImagesPage: View {
 
             SetupGroup("Quality", note: provider == "google"
                        ? "Imagen Ultra draws every picture; the quality choice is OpenAI's."
-                       : "High is the most detailed picture the model makes and what a wall deserves: about seventeen cents on gpt-image-1, less on the newer models. Medium is about four cents, low about one.") {
-                ChoiceRow(title: "High", subtitle: "Every detail the panel can carry", value: "high", selected: quality, accent: accent) { pick(quality: $0) }
+                       : "Medium is a good picture in well under a minute, about four cents on gpt-image-1. High is the most detailed the model makes and takes minutes, about seventeen cents. Low is a cent and rough. The wall shows every picture being drawn either way.") {
+                ChoiceRow(title: "Medium", subtitle: "Good and quick", value: "medium", selected: quality, accent: accent) { pick(quality: $0) }
                 Rule()
-                ChoiceRow(title: "Medium", subtitle: "Good, a quarter of the price", value: "medium", selected: quality, accent: accent) { pick(quality: $0) }
+                ChoiceRow(title: "High", subtitle: "Every detail, minutes to draw", value: "high", selected: quality, accent: accent) { pick(quality: $0) }
                 Rule()
                 ChoiceRow(title: "Low", subtitle: "Quick and rough", value: "low", selected: quality, accent: accent) { pick(quality: $0) }
             }
