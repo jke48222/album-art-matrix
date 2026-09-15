@@ -410,13 +410,16 @@ def main():
     ctrl.imaginer = None
     if ctrl.features.on("imagine"):
         icfg = cfg.get("imagine", {})
+        store = ctrl.services_store
         ctrl.imaginer = Imaginer(
             ctrl, shower=ctrl.shower or Shower(ctrl, asker=ctrl.asker), asker=ctrl.asker,
-            provider=ctrl.services_store.get("images", "provider") or str(icfg.get("provider", "openai")),
-            api_key=ctrl.services_store.get("images", "api_key"),
-            openai_model=str(icfg.get("openai_model", "gpt-image-1")),
-            google_model=str(icfg.get("google_model", "imagen-4.0-generate-001")),
-            quality=str(icfg.get("quality", "low")))
+            provider=store.get("images", "provider") or str(icfg.get("provider", "openai")),
+            api_key=store.get("images", "api_key"),
+            openai_model=str(icfg.get("openai_model", "gpt-image-2")),
+            google_model=str(icfg.get("google_model", "imagen-4.0-ultra-generate-001")),
+            quality=store.get("images", "quality") or str(icfg.get("quality", "high")))
+        if store.get("images", "model"):
+            ctrl.imaginer.configure(model=store.get("images", "model"))
         st = ctrl.imaginer.status()
         print(f"[main] imagine: {st['provider']} {st['model']} " + ("(key set)" if st["ready"]
                                                                    else "(no key yet; set one from the phone)"))

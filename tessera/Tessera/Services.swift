@@ -135,6 +135,7 @@ struct WallServices: Decodable {
         var ready: Bool
         var provider: String?
         var model: String?
+        var model_used: String?
         var quality: String?
         var images: Int?
         var cost_usd: Double?
@@ -1432,6 +1433,14 @@ struct ImagesPage: View {
     private var im: WallServices.Images? { services?.images }
     private var ready: Bool { im?.ready == true }
     private var provider: String { im?.provider ?? "openai" }
+    private var quality: String { im?.quality ?? "high" }
+    private var modelLine: String {
+        guard let im else { return "" }
+        if let used = im.model_used, !used.isEmpty, used != im.model {
+            return "\(used) (asked for \(im.model ?? ""), which this key cannot reach)"
+        }
+        return im.model ?? ""
+    }
     private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSave: Bool { services != nil && typedKey.count >= 20 }
     private var costLine: String {
@@ -1469,7 +1478,19 @@ struct ImagesPage: View {
             }
             Problem(text: problem ?? im?.problem)
 
+            SetupGroup("Quality", note: provider == "google"
+                       ? "Imagen Ultra draws every picture; the quality choice is OpenAI's."
+                       : "High is the most detailed picture the model makes and what a wall deserves: about seventeen cents on gpt-image-1, less on the newer models. Medium is about four cents, low about one.") {
+                ChoiceRow(title: "High", subtitle: "Every detail the panel can carry", value: "high", selected: quality, accent: accent) { pick(quality: $0) }
+                Rule()
+                ChoiceRow(title: "Medium", subtitle: "Good, a quarter of the price", value: "medium", selected: quality, accent: accent) { pick(quality: $0) }
+                Rule()
+                ChoiceRow(title: "Low", subtitle: "Quick and rough", value: "low", selected: quality, accent: accent) { pick(quality: $0) }
+            }
+
             SetupGroup("So far", note: "One picture every ten seconds at most.") {
+                SetupRow(title: "Drawing with", subtitle: modelLine) { EmptyView() }
+                Rule()
                 SetupRow(title: "Drawn", subtitle: costLine) { EmptyView() }
                 if let l = im?.last {
                     Rule()
@@ -1491,6 +1512,16 @@ struct ImagesPage: View {
         Taps.detent(intensity: 0.4)
         Task {
             let (fresh, why) = await ServiceSave.send(["images": ["provider": who]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+        }
+    }
+
+    private func pick(quality q: String) {
+        guard q != quality else { return }
+        Taps.detent(intensity: 0.4)
+        Task {
+            let (fresh, why) = await ServiceSave.send(["images": ["quality": q]], to: wall.host)
             if let fresh { services = fresh }
             problem = why
         }
