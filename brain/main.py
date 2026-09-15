@@ -39,7 +39,8 @@ from .posters import Posters, PosterSource
 from .imagine import Imaginer
 from .nowplaying.airplay import AirPlaySource
 from .games.host import GameHost
-from .games import wordle, sudoku, spellingbee, letterboxed, connections  # noqa: F401  (each registers itself)
+from .games import (wordle, sudoku, spellingbee, letterboxed, connections, strands, crossword,   # noqa: F401
+                    contexto, reaction, whistlebird, pictures, heardle, quiz)                      # each registers itself
 from .art.mark import owned_mark
 from .art import pipeline as art_pipeline
 from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance

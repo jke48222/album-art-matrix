@@ -45,17 +45,17 @@ games, Claude for Connections sets and crossword clues.
 | 21 | Sudoku | On the phone by touch, on the wall as the grid; voice optional. | **wall side done** 2026-09-15: brain/games/sudoku.py, own generator with a unique-solution check and a rating |
 | 22 | Spelling Bee | Seven letters, one in the middle, say words. | **wall side done** 2026-09-15: brain/games/spellingbee.py |
 | 23 | Letter Boxed | Twelve letters round a square, the wall draws the lines. | **wall side done** 2026-09-15: brain/games/letterboxed.py, a two-word par found for every puzzle |
-| 24 | Strands | Letter grid with a theme; say a word, the wall lights its path. | planned |
-| 25 | Mini crossword | Five-by-five, clues on the phone, answers by voice. | planned |
-| 26 | Contexto | Guess the secret word by meaning; ranks from a local word file. | planned |
-| 27 | Heardle | The phone plays the first seconds of a song; say it; the sleeve is the reveal. | planned |
-| 28 | Sliding picture puzzle | A sleeve scrambled into sliding blocks; slide them back. | planned |
-| 29 | Cover reveal | A sleeve sharpens over thirty seconds; first to name it wins. | planned |
+| 24 | Strands | Letter grid with a theme; say a word, the wall lights its path. | **wall side done** 2026-09-15: brain/games/strands.py, Claude sets or six bundled, grids threaded on random whole-grid paths |
+| 25 | Mini crossword | Five-by-five, clues on the phone, answers by voice. | **wall side done** 2026-09-15: brain/games/crossword.py, own fills from the common words, Claude clues or a hand-clued puzzle |
+| 26 | Contexto | Guess the secret word by meaning; ranks from a local word file. | **wall side done** 2026-09-15: brain/games/contexto.py on twenty thousand GloVe vectors cut to 1.9 MB |
+| 27 | Heardle | The phone plays the first seconds of a song; say it; the sleeve is the reveal. | **wall side done** 2026-09-15: brain/games/heardle.py, journal songs with iTunes previews |
+| 28 | Sliding picture puzzle | A sleeve scrambled into sliding blocks; slide them back. | **wall side done** 2026-09-15: brain/games/pictures.py, a journal sleeve, always solvable |
+| 29 | Cover reveal | A sleeve sharpens over thirty seconds; first to name it wins. | **wall side done** 2026-09-15: brain/games/pictures.py |
 | 30 | Twenty questions with knocks | Knock once for yes, whistle for no; Claude guesses. | planned |
 | 31 | AI pictionary | The image creator draws a secret word; guess by voice. | planned |
-| 32 | Pub quiz | Claude writes a round on a theme; voice answers; scoreboard. | planned |
-| 33 | Whistle bird | Pitch of your whistle sets the bird's height. | planned |
-| 34 | Reaction knock | Red, then green, knock; milliseconds on the panel. | planned |
+| 32 | Pub quiz | Claude writes a round on a theme; voice answers; scoreboard. | **wall side done** 2026-09-15: brain/games/quiz.py, Claude rounds or two bundled |
+| 33 | Whistle bird | Pitch of your whistle sets the bird's height. | **wall side done** 2026-09-15: brain/games/whistlebird.py on the ear's pitch, the range learnt from the whistler |
+| 34 | Reaction knock | Red, then green, knock; milliseconds on the panel. | **wall side done** 2026-09-15: brain/games/reaction.py, timed on the knock's own clock |
 | 35 | The arcade | Pong with phones as tilt paddles; snake and tetris on the remote. | planned |
 
 ## The picture, later

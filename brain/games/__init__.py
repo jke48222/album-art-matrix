@@ -75,6 +75,13 @@ class Game:
         """Words the phone's speech recogniser should expect."""
         return []
 
+    def event(self, kind: str, info: dict) -> bool:
+        """Something the ear noticed: "knock" (one, at once), "double",
+        "whistle" ({kind: up|down}), "pitch" ({hz, t}, many a second while
+        someone whistles). True when the game used it, which keeps a
+        double knock or a whistle from switching the wall off mid-game."""
+        return False
+
     # ---- shared ------------------------------------------------------------------------
     def public(self) -> dict:
         return {"name": self.name, "title": self.title, "players": self.players, "over": self.over,
