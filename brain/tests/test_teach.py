@@ -180,3 +180,18 @@ def test_the_ear_itself_is_never_taught(tmp_path):
     t.observe(now("X", "Y", tid="ears:abc"), mono=100.0)
     t.observe(now("X", "Y", tid="ears:abc"), mono=130.0)
     assert lib.status()["songs"] == 0
+
+
+def test_a_preview_must_match_the_title_not_just_the_artist():
+    from brain.nowplaying.teach import pick_preview
+    results = [
+        {"wrapperType": "track", "trackName": "White Ferrari", "artistName": "Frank Ocean", "previewUrl": "u1"},
+        {"wrapperType": "track", "trackName": "Nights", "artistName": "Frank Ocean", "previewUrl": "u2"},
+        {"wrapperType": "track", "trackName": "Nights (Live)", "artistName": "Frank Ocean", "previewUrl": "u3"},
+        {"wrapperType": "collection", "collectionName": "Blonde", "artistName": "Frank Ocean"},
+    ]
+    assert pick_preview(results, "Nights", "Frank Ocean")["previewUrl"] == "u2"
+    assert pick_preview(results[:1], "Nights", "Frank Ocean") is None            # White Ferrari is not Nights
+    assert pick_preview(results, "Pink + White", "Frank Ocean") is None
+    assert pick_preview(results, "Nights", "Kelela & PinkPantheress") is None
+    assert pick_preview(results, "Nights", "Frank Ocean, Someone")["previewUrl"] == "u2"

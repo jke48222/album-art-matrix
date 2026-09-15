@@ -382,6 +382,25 @@ class Library:
 
 
 # ---- the teacher ---------------------------------------------------------------------
+def pick_preview(results: list, title: str, artist: str) -> dict | None:
+    """The result that is this song: the title AND the artist must each
+    match, exactly or one inside the other. An artist's other song is not
+    a preview of this one (the wall once learnt White Ferrari for Nights)."""
+    want_t, want_a = _plain(title), _plain(artist).split(",")[0].split(" & ")[0].strip()
+    best, best_score = None, 0
+    for x in results:
+        if x.get("wrapperType") != "track" or not x.get("previewUrl"):
+            continue
+        t, a = _plain(x.get("trackName")), _plain(x.get("artistName"))
+        ts = 2 if t == want_t else 1 if (want_t and (want_t in t or t in want_t)) else 0
+        sc = 2 if a == want_a else 1 if (want_a and (want_a in a or a in want_a)) else 0
+        if ts == 0 or sc == 0:
+            continue
+        if ts + sc > best_score:
+            best, best_score = x, ts + sc
+    return best
+
+
 def itunes_preview(title: str, artist: str) -> dict | None:
     """The best iTunes match for a song by name: preview url, art, length."""
     try:
@@ -392,17 +411,8 @@ def itunes_preview(title: str, artist: str) -> dict | None:
     except (requests.RequestException, ValueError) as exc:
         print(f"[teach] itunes: {exc}", flush=True)
         return None
-    want_t, want_a = _plain(title), _plain(artist).split(",")[0]
-    best, best_score = None, -1
-    for x in results:
-        if x.get("wrapperType") != "track" or not x.get("previewUrl"):
-            continue
-        t, a = _plain(x.get("trackName")), _plain(x.get("artistName"))
-        score = (2 if t == want_t else 1 if want_t in t or t in want_t else 0) \
-            + (2 if a == want_a else 1 if want_a in a or a in want_a else 0)
-        if score > best_score:
-            best, best_score = x, score
-    if best is None or best_score < 2:
+    best = pick_preview(results, title, artist)
+    if best is None:
         return None
     return {"preview": best["previewUrl"], "title": best.get("trackName") or title,
             "artist": best.get("artistName") or artist, "album": best.get("collectionName") or "",
