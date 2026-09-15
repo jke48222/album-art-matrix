@@ -14,7 +14,33 @@ import UIKit
 struct WallServices: Decodable {
     struct Spotify: Decodable { var client_id: String; var linked: Bool }
     struct Lastfm: Decodable { var user: String; var key_set: Bool? }
-    struct Listenbrainz: Decodable { var user: String }
+    /// Reading needs the username. Writing, the records the ear names, needs
+    /// the user token; the rest is the wall's scrobbler saying how that goes.
+    struct Listenbrainz: Decodable {
+        struct Listen: Decodable {
+            var title: String
+            var artist: String
+            var album: String?
+            var at: Int             // unix seconds the play started
+            var kind: String?
+        }
+        struct Playing: Decodable {
+            var title: String
+            var artist: String
+            var heard_s: Int
+            var needs_s: Int
+            var listened: Bool
+        }
+        var user: String
+        var token_set: Bool?
+        var valid: Bool?
+        var user_name: String?
+        var playing: Playing?
+        var last_listen: Listen?
+        var queued: Int?
+        var submitted: Int?
+        var problem: String?
+    }
     /// The wall's ears: a microphone read all the time, Shazam naming the
     /// last few seconds when the room is loud enough. Levels are dB below
     /// the microphone's ceiling, so they are negative and louder is higher.
@@ -373,8 +399,11 @@ struct ServicesPage: View {
                  : "Spotify, Tidal and Deezer report through it."
     }
     private var listenbrainzLine: String {
-        listenbrainzOn ? "Following \(services!.listenbrainz!.user)."
-                       : "The open ledger. Username only, no key."
+        guard listenbrainzOn, let lb = services?.listenbrainz else {
+            return "The open ledger. Username only, no key."
+        }
+        return lb.valid == true ? "Following \(lb.user). The ear's records are written there."
+                                : "Following \(lb.user)."
     }
 
     private var earsLine: String {
@@ -696,17 +725,54 @@ struct ListenBrainzPage: View {
     @Binding var services: WallServices?
 
     @State private var user = ""
+    @State private var token = ""
     @State private var busy = false
     @State private var problem: String?
 
-    private var savedUser: String { services?.listenbrainz?.user ?? "" }
+    private var lb: WallServices.Listenbrainz? { services?.listenbrainz }
+    private var savedUser: String { lb?.user ?? "" }
+    private var tokenSet: Bool { lb?.token_set == true }
     private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var typedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool {
+        guard services != nil else { return false }
+        if !typedToken.isEmpty { return true }
+        return !typedUser.isEmpty && typedUser != savedUser
+    }
+    private var doneLine: String? {
+        guard !savedUser.isEmpty, typedUser == savedUser, typedToken.isEmpty else { return nil }
+        return tokenSet ? "Following \(savedUser), writing records" : "Following \(savedUser)"
+    }
+    /// The records row's state: what the wall's scrobbler says of the token.
+    private var recordsState: (text: String, done: Bool) {
+        guard let lb else { return ("Set up", false) }
+        if lb.token_set != true { return ("Needs your token", false) }
+        switch lb.valid {
+        case .some(true): return ("On" + (lb.user_name.map { " as \($0)" } ?? ""), true)
+        case .some(false): return ("Token refused", false)
+        default: return (lb.problem ?? "Checking", false)
+        }
+    }
+    private var recordsSubtitle: String {
+        guard let lb else { return "The wall is not answering." }
+        if let n = lb.submitted, n > 0 { return n == 1 ? "One listen written so far." : "\(n) listens written so far." }
+        if lb.token_set == true { return "Nothing written yet. Play a record." }
+        return "Paste your user token above."
+    }
 
     var body: some View {
         SetupPage("ListenBrainz",
-                  blurb: "The open version of Last.fm, run by the MusicBrainz people. Free, and the wall needs only your username: reading what you play needs no key at all.") {
+                  blurb: "The open version of Last.fm, run by the MusicBrainz people. Free. Your username lets the wall read what you play; your user token lets it write down the records it hears.") {
             SetupGroup("Your account", note: "An account takes a minute. Then every scrobbler that can post there (Web Scrobbler in a computer's browser, Pano Scrobbler on Android) reaches the wall.") {
                 KeyField(placeholder: "Username", text: $user)
+                Rule()
+                KeyField(placeholder: tokenSet ? "User token (one is on the wall)" : "User token", text: $token)
+                Rule()
+                SetupRow(title: "Your token", subtitle: "On your ListenBrainz settings page, under User token. Opens in Safari.") {
+                    ActionPill(title: "Open settings", filled: false) {
+                        openURL(URL(string: "https://listenbrainz.org/settings/")!)
+                    }
+                }
                 Rule()
                 SetupRow(title: "No account yet?", subtitle: "Opens listenbrainz.org in Safari.") {
                     ActionPill(title: "Make one", filled: false) {
@@ -714,27 +780,71 @@ struct ListenBrainzPage: View {
                     }
                 }
                 Rule()
-                SaveLine(title: "Save to the wall",
-                         enabled: services != nil && !typedUser.isEmpty && typedUser != savedUser,
-                         busy: busy,
-                         done: (!savedUser.isEmpty && typedUser == savedUser) ? "Following \(savedUser)" : nil,
-                         accent: accent) { save() }
+                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
+                         done: doneLine, accent: accent) { save() }
             }
             .padding(.top, -12)
             Problem(text: problem)
+
+            SetupGroup("The wall's records",
+                       note: "Every record the ear names goes into your listening history like a streamed song: half the song or four minutes, whichever comes first. Listens the wall could not send wait and go later.") {
+                SetupRow(title: "Writing records", subtitle: recordsSubtitle) {
+                    StateValue(recordsState.text, done: recordsState.done)
+                }
+                if let p = lb?.playing {
+                    Rule()
+                    SetupRow(title: p.title,
+                             subtitle: p.artist + (p.listened ? ", counted" : ", \(p.heard_s) of \(p.needs_s) s heard")) {
+                        EmptyView()
+                    }
+                }
+                if let l = lb?.last_listen {
+                    Rule()
+                    SetupRow(title: "Last written", subtitle: "\(l.title), \(l.artist), \(ago(l.at))") {
+                        EmptyView()
+                    }
+                }
+                if let q = lb?.queued, q > 0 {
+                    Rule()
+                    SetupRow(title: "Waiting to send",
+                             subtitle: q == 1 ? "One listen, until the network is back." : "\(q) listens, until the network is back.") {
+                        EmptyView()
+                    }
+                }
+            }
         }
         .onAppear { user = savedUser }
         .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
+        .task {
+            // the records group is live while the page is up: the scrobbler's
+            // state changes as a record plays, and a token check takes a moment
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(4))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+            }
+        }
+    }
+
+    private func ago(_ unix: Int) -> String {
+        let s = Int(Date().timeIntervalSince1970) - unix
+        if s < 90 { return "just now" }
+        if s < 3600 { return "\(s / 60) min ago" }
+        if s < 86400 { return "\(s / 3600) h ago" }
+        return "\(s / 86400) d ago"
     }
 
     private func save() {
-        guard !typedUser.isEmpty, !busy else { return }
+        guard canSave, !busy else { return }
         busy = true
+        var patch: [String: String] = [:]
+        if !typedUser.isEmpty { patch["user"] = typedUser }
+        if !typedToken.isEmpty { patch["token"] = typedToken }
         Task {
-            let (fresh, why) = await ServiceSave.send(["listenbrainz": ["user": typedUser]], to: wall.host)
+            let (fresh, why) = await ServiceSave.send(["listenbrainz": patch], to: wall.host)
             if let fresh { services = fresh }
             problem = why
-            if why == nil { Taps.commit() }
+            if why == nil { Taps.commit(); token = "" }
             busy = false
         }
     }
