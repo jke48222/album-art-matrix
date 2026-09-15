@@ -80,9 +80,10 @@ def band_shares(samples: np.ndarray, rate: int = RATE) -> tuple[float, float]:
 class KnockDetector:
     """Feed it the ear's chunks; it calls `on_double(info)` for a lone pair."""
 
-    def __init__(self, on_double=None, sensitivity_db: float = 20.0, log=print,
+    def __init__(self, on_double=None, sensitivity_db: float = 20.0, log=print, on_knock=None,
                  rate: int = RATE):
         self.on_double = on_double
+        self.on_knock = on_knock            # every lone candidate, at once (the games)
         self.sensitivity_db = float(sensitivity_db)
         self.log = log
         self.rate = rate
@@ -175,6 +176,11 @@ class KnockDetector:
         cand = {"t": self._burst_start, "over_db": round(over, 1), "ms": int(length * 1000),
                 "low": round(low, 2), "high": round(high, 2)}
         self.last = dict(cand, kind="knock")
+        if self.on_knock is not None:
+            try:
+                self.on_knock(dict(cand))
+            except Exception as exc:
+                self.log(f"[knock] on_knock: {exc}")
         self._pair(cand)
 
     def _pair(self, cand: dict):
@@ -226,8 +232,9 @@ class KnockDetector:
 class WhistleDetector:
     """Feed it the ear's chunks; it calls `on_whistle("up" | "down", info)`."""
 
-    def __init__(self, on_whistle=None, log=print, rate: int = RATE):
+    def __init__(self, on_whistle=None, log=print, rate: int = RATE, on_pitch=None):
         self.on_whistle = on_whistle
+        self.on_pitch = on_pitch            # (hz, t) for every tonal window (the games)
         self.log = log
         self.rate = rate
         self._carry = np.zeros(0, dtype=np.int16)
@@ -276,6 +283,11 @@ class WhistleDetector:
         if self._track and abs(hz - self._track[-1][1]) > WHISTLE_GLIDE_BINS * self.rate / WHISTLE_N:
             self._decide(t, ended=True)      # a jump: a new whistle, or not one
         self._track.append((t, hz))
+        if self.on_pitch is not None:
+            try:
+                self.on_pitch(hz, t)
+            except Exception as exc:
+                self.log(f"[whistle] on_pitch: {exc}")
         if self._track[-1][0] - self._track[0][0] >= WHISTLE_MAX_S:
             self._decide(t, ended=True)
 
@@ -326,7 +338,8 @@ class KnockEar:
         self.whistle_on = bool(whistle)
         self.knocks = KnockDetector(on_double=self._double, sensitivity_db=sensitivity_db,
                                     log=self.log)
-        self.whistles = WhistleDetector(on_whistle=self._whistle, log=self.log)
+        self.whistles = WhistleDetector(on_whistle=self._whistle, log=self.log, on_pitch=self._pitch)
+        self.knocks.on_knock = self._knock
         self.toggles = 0
 
     def configure(self, knock=None, sensitivity_db=None, whistle=None):
@@ -343,12 +356,33 @@ class KnockEar:
         if self.whistle_on:
             self.whistles.feed(chunk, now=now)
 
+    def _game(self, kind: str, info: dict) -> bool:
+        """A game on the wall that wants knocks or whistles gets them first."""
+        games = getattr(self.ctrl, "games", None)
+        if games is None:
+            return False
+        try:
+            return bool(games.event(kind, info))
+        except Exception as exc:
+            self.log(f"[knock] game event: {exc}")
+            return False
+
+    def _knock(self, cand):
+        self._game("knock", cand)
+
+    def _pitch(self, hz, t):
+        self._game("pitch", {"hz": hz, "t": t})
+
     def _double(self, info):
+        if self._game("double", info):
+            return
         self.toggles += 1
         what = self.ctrl.knock_toggle("two knocks")
         self.log(f"[knock] the wall goes {what}")
 
     def _whistle(self, kind, info):
+        if self._game("whistle", {"kind": kind, **(info or {})}):
+            return
         self.toggles += 1
         what = self.ctrl.knock_toggle("a whistle " + kind, want="on" if kind == "up" else "off")
         self.log(f"[whistle] the wall goes {what}")

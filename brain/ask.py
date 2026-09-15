@@ -270,6 +270,111 @@ class Asker:
             print(f"[ask] connections: {self.problem}", flush=True)
             return None
 
+    def strands_set(self, salt: float = 0.0) -> tuple[str, str, list[str]] | None:
+        """(theme, spangram, words) for Strands (brain/games/strands.py):
+        the spangram and the words together have exactly 48 letters. Two
+        tries, then None."""
+        if not self.ready:
+            return None
+        from pydantic import BaseModel
+        class StrandsSet(BaseModel):
+            theme: str
+            spangram: str
+            words: list[str]
+        for attempt in range(2):
+            try:
+                resp = self._client_().messages.parse(
+                    model=self.model, max_tokens=400,
+                    system="Write a Strands puzzle set: a short theme (a hint, like 'On the turntable'), a spangram "
+                           "of 8 to 13 letters that names the theme (one word or two words run together, letters "
+                           "only), and six or seven theme words of 4 to 10 letters. The spangram and the words "
+                           "together must have EXACTLY 48 letters: count them. Lower case, letters only, no "
+                           "repeats, everyday words.",
+                    messages=[{"role": "user", "content": f"A fresh set, please (variation {salt:.3f}, try {attempt + 1})."}],
+                    output_format=StrandsSet, output_config={"effort": "low"},
+                )
+                usage = getattr(resp, "usage", None)
+                if usage is not None:
+                    self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
+                        + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
+                got = resp.parsed_output
+                span = "".join(ch for ch in got.spangram.lower() if ch.isalpha())
+                words = ["".join(ch for ch in w.lower() if ch.isalpha()) for w in got.words]
+                words = [w for w in words if 4 <= len(w) <= 10]
+                if 8 <= len(span) <= 13 and len(span) + sum(len(w) for w in words) == 48 \
+                        and len(set(words + [span])) == len(words) + 1:
+                    return got.theme.strip(), span, words
+            except Exception as exc:
+                self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+                print(f"[ask] strands: {self.problem}", flush=True)
+                return None
+        return None
+
+    def quiz_round(self, theme: str | None, n: int = 10, salt: float = 0.0):
+        """(theme, [(question, [acceptable answers])]) for the pub quiz
+        (brain/games/quiz.py), or None."""
+        if not self.ready:
+            return None
+        from pydantic import BaseModel
+        class Q(BaseModel):
+            question: str
+            answers: list[str]
+        class Round(BaseModel):
+            theme: str
+            questions: list[Q]
+        try:
+            resp = self._client_().messages.parse(
+                model=self.model, max_tokens=1500,
+                system=f"Write a pub quiz round of {n} questions" + (f" on the theme: {theme}." if theme else
+                       ", on a theme of your choosing (music, film, food, places, science, the everyday).")
+                       + " Each question has a short factual answer that can be said in a few words; give every "
+                       "acceptable way of saying it (numbers as digits and as words, with and without 'the'). "
+                       "Mix easy and hard. No trick questions.",
+                messages=[{"role": "user", "content": f"A round, please (variation {salt:.3f})."}],
+                output_format=Round, output_config={"effort": "low"},
+            )
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
+                    + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
+            got = resp.parsed_output
+            qs = [(q.question.strip(), [a.strip() for a in q.answers if a.strip()]) for q in got.questions]
+            qs = [q for q in qs if q[0] and q[1]][:n]
+            return (got.theme.strip(), qs) if len(qs) >= 5 else None
+        except Exception as exc:
+            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            print(f"[ask] quiz: {self.problem}", flush=True)
+            return None
+
+    def crossword_clues(self, words: list[str]) -> dict[str, str] | None:
+        """A crossword clue for every word (brain/games/crossword.py)."""
+        if not self.ready or not words:
+            return None
+        from pydantic import BaseModel
+        class Clue(BaseModel):
+            word: str
+            clue: str
+        class Clues(BaseModel):
+            clues: list[Clue]
+        try:
+            resp = self._client_().messages.parse(
+                model=self.model, max_tokens=600,
+                system="Write mini crossword clues: short, fair, in the style of a newspaper's mini, one per word. "
+                       "Never include the word itself or its plain form in its clue. Keep each under nine words.",
+                messages=[{"role": "user", "content": ", ".join(words)}],
+                output_format=Clues, output_config={"effort": "low"},
+            )
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
+                    + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
+            out = {c.word.strip().lower(): c.clue.strip() for c in resp.parsed_output.clues}
+            return out if all(w in out for w in words) else None
+        except Exception as exc:
+            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            print(f"[ask] clues: {self.problem}", flush=True)
+            return None
+
     def image_prompt(self, prompt: str, size: int = 64) -> str | None:
         """The words rewritten as a prompt for a picture on a panel of this
         size (brain/imagine.py), or None when Claude cannot be asked."""

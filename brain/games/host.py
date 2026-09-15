@@ -134,6 +134,24 @@ class GameHost:
                 self._record(g)
             return {**result, **self.status()}
 
+    def event(self, kind: str, info: dict) -> bool:
+        """The ear's knocks, whistles and pitch, to the running game."""
+        g = self.game
+        if g is None or g.over:
+            return False
+        try:
+            used = bool(g.event(kind, info))
+        except Exception as exc:
+            print(f"[games] {g.name} {kind}: {exc}", flush=True)
+            return False
+        if used:
+            if kind != "pitch":
+                self.seq += 1
+            self.ctrl.dirty.set()
+            if g.over:
+                self._record(g)
+        return used
+
     def end(self) -> dict:
         with self._lock:
             g = self.game
