@@ -1,79 +1,58 @@
 #!/usr/bin/env python3
-"""Tessera's mark: one lit tile in a dark lattice.
+"""Tessera's app icon: the Record mark, white on black.
 
-The icon is drawn with the same rules the app draws the wall with, so the
-mark on the home screen and the object inside the app are the same thing:
-round emitters on near-black, a dark lattice that exists whether lit or not,
-and an additive halo around anything emitting. One tessera is lit, warm,
-off-centre, the way a single LED looks when a panel first takes power.
+The mark is drawn from the same geometry as the logo files and the in-app
+mark (record_cells in tessera/Tools/logos.py), at the icon scale the Record
+direction sets there, so the home screen, the logo sheet and the header
+agree. Drawn four times larger, then reduced, so the tile edges stay crisp.
 
     python3 tessera/Tools/make_icon.py
 """
-from PIL import Image, ImageDraw, ImageFilter
+import os
+import sys
+
+from PIL import Image, ImageDraw
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+import logos  # noqa: E402
 
 SIZE = 1024
-GROUND = (11, 10, 9)
-UNLIT = (34, 32, 28)
-LIT = (232, 176, 75)      # Ink.tile
-GRID = 7                  # 7x7 emitters still reads at 60px; 64 would be mud
+GROUND = (0, 0, 0)
+GHOST = (0x1D, 0x1A, 0x17)     # the unlit lattice
+LIT = (255, 255, 255)
 
 
-def render(size: int = SIZE) -> Image.Image:
-    img = Image.new("RGB", (size, size), GROUND)
-    glow = Image.new("RGB", (size, size), (0, 0, 0))
-    gd = ImageDraw.Draw(glow)
+def scale() -> float:
+    """The Record direction's icon scale, set in logos.py."""
+    return next(d["icon_scale"] for d in logos.DIRECTIONS if d["slug"] == "record")
+
+
+def render(size: int = SIZE, ss: int = 4, k: float = None) -> Image.Image:
+    k = scale() if k is None else k
+    S = size * ss
+    img = Image.new("RGB", (S, S), GROUND)
     d = ImageDraw.Draw(img)
+    lattice, lit = logos.record_cells()
+    unit = S * k / 100.0            # the mark's 0..100 box, centred
+    off = S * (1 - k) / 2
 
-    margin = size * 0.09
-    span = size - margin * 2
-    cell = span / GRID
-    r = cell * 0.36
+    def tile(cx, cy, s, radius, fill):
+        d.rounded_rectangle([off + (cx - s / 2) * unit, off + (cy - s / 2) * unit,
+                             off + (cx + s / 2) * unit, off + (cy + s / 2) * unit],
+                            radius=radius * unit, fill=fill)
 
-    # The lit tile sits one step up and left of centre, so the mark has a
-    # direction and never reads as a symmetric logo-grid.
-    lit_x, lit_y = 2, 3
-
-    for gy in range(GRID):
-        for gx in range(GRID):
-            cx = margin + gx * cell + cell / 2
-            cy = margin + gy * cell + cell / 2
-            box = (cx - r, cy - r, cx + r, cy + r)
-            if (gx, gy) == (lit_x, lit_y):
-                # the halo goes on the additive layer
-                # A fully lit emitter blooms bigger than its dark neighbours.
-                hr = r * 3.6
-                gd.ellipse((cx - hr, cy - hr, cx + hr, cy + hr), fill=LIT)
-                lr = r * 1.45
-                d.ellipse((cx - lr, cy - lr, cx + lr, cy + lr), fill=LIT)
-            else:
-                # neighbours catch a little of it, falling off with distance
-                dist = max(abs(gx - lit_x), abs(gy - lit_y))
-                k = max(0.0, 1 - dist / 3.0) ** 2
-                shade = tuple(
-                    int(UNLIT[i] + (LIT[i] - UNLIT[i]) * 0.30 * k) for i in range(3)
-                )
-                d.ellipse(box, fill=shade)
-
-    glow = glow.filter(ImageFilter.GaussianBlur(size * 0.055))
-    glow = Image.eval(glow, lambda v: int(v * 0.78))
-    return add(img, glow)
-
-
-def add(base: Image.Image, glow: Image.Image) -> Image.Image:
-    """Light adds, it does not replace."""
-    from PIL import ImageChops
-    return ImageChops.add(base, glow)
+    for cx, cy, s, _ in lattice:
+        tile(cx, cy, s, 1.1, GHOST)
+    for cx, cy, s, _, _ in lit:
+        tile(cx, cy, s, min(1.1, s * 0.12), LIT)
+    return img.resize((size, size), Image.LANCZOS)
 
 
 if __name__ == "__main__":
-    import os
-    here = os.path.dirname(os.path.abspath(__file__))
-    out_dir = os.path.join(here, "..", "Tessera", "Assets.xcassets", "AppIcon.appiconset")
-    os.makedirs(out_dir, exist_ok=True)
+    out_dir = os.path.join(HERE, "..", "Tessera", "Assets.xcassets", "AppIcon.appiconset")
     icon = render()
     icon.save(os.path.join(out_dir, "AppIcon1024.png"))
     # a small copy for eyeballing legibility at home-screen size
-    icon.resize((120, 120), Image.LANCZOS).save(
-        os.path.join(here, "icon-preview-120.png")
-    )
-    print("wrote AppIcon1024.png")
+    icon.resize((120, 120), Image.LANCZOS).save(os.path.join(HERE, "icon-preview-120.png"))
+    print(f"wrote AppIcon1024.png, the mark at {scale():.2f} of the icon")

@@ -208,6 +208,27 @@ class ControlState:
         self.repoll.set()
         self.dirty.set()
 
+    def knock_toggle(self, why: str, want: str | None = None) -> str:
+        """Two knocks on the frame, or a whistle: off, or back to the face
+        that was up (art when there was none worth keeping). `want` pins
+        the direction (a rising whistle means on, a falling one off); a
+        knock just flips. Returns "on" or "off", what the wall now is."""
+        here = self.get()["mode"]
+        going_off = (here != "off") if want is None else (want == "off")
+        if going_off:
+            if here == "off":
+                return "off"
+            self.knock_ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+            self.apply({"mode": "off"})
+            print(f"[control] {why}: off (was {here})", flush=True)
+            return "off"
+        if here != "off":
+            return "on"
+        back = getattr(self, "knock_ret", None) or "art"
+        self.apply({"mode": back})
+        print(f"[control] {why}: on ({back})", flush=True)
+        return "on"
+
     def _merge(self, patch: dict, persist: bool = True) -> dict:
         rejected = {}
         with self._lock:

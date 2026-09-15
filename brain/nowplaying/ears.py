@@ -273,6 +273,8 @@ class EarsSource(NowPlayingSource):
                         "times": e["times"]} for e in named],
             "attempts": self.attempts,
             "matches": self.matches,
+            # the switch, when the wall has one: counts and the last thing heard
+            "knock": self.knocks.status() if self.knocks is not None else None,
             "settings": {k: s[k] for k in ("clip_s", "silence_s", "relisten_s",
                                            "retry_s", "keep_s", "gain", "agc")},
             "problem": self.problem or (None if self._tools_ok else self._tools_why),
@@ -389,6 +391,12 @@ class EarsSource(NowPlayingSource):
                 self.gap_at = now
         alpha = CHUNK_S / ONSET_TAU_S
         self._slow_pw = pw if slow is None else slow + alpha * (pw - slow)
+        # the switch: knocks and whistles, on the same chunk, same thread
+        if self.knocks is not None:
+            try:
+                self.knocks.feed(chunk, self.gate_open, now)
+            except Exception as exc:
+                print(f"[ears] knock: {exc}", flush=True)
 
     # ---- thinking -------------------------------------------------------------
     def _think_loop(self):
