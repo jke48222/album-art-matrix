@@ -83,6 +83,7 @@ def test_openai_and_google_requests_and_the_picture_at_both_sizes(tmp_path):
         calls, clock = [], [1_760_000_000.0]
         shower = FakeShower(size)
         im = Imaginer(Ctrl(size), shower=shower, asker=FakeAsker(), provider=provider, api_key="sk-test-key-12345",
+                      openai_model="gpt-image-1", google_model="imagen-4.0-generate-001", quality="low",
                       path=str(tmp_path / f"im-{size}"), post=fake_post(calls, raw), clock=lambda: clock[0])
         res = im.imagine("a purple elephant")
         assert res.get("imagined") and res["shown"] and res["id"].endswith("-a-purple-elephant")
@@ -110,11 +111,58 @@ def test_openai_and_google_requests_and_the_picture_at_both_sizes(tmp_path):
                 os.path.join(OUT, f"imagine-{size}.png"))
 
 
+def test_the_best_model_first_then_the_next(tmp_path):
+    """The newest model is asked for; a key that cannot reach it falls back,
+    once, and the picture records the model that drew it."""
+    raw = png_bytes()
+    calls = []
+    def post(url, headers, body):
+        calls.append(body["model"])
+        if body["model"] in ("gpt-image-2", "gpt-image-1.5"):
+            raise RuntimeError(f"404: The model `{body['model']}` does not exist or you do not have access to it.")
+        return {"data": [{"b64_json": base64.b64encode(raw).decode()}]}
+    im = Imaginer(Ctrl(), shower=FakeShower(64), api_key="k" * 24, path=str(tmp_path / "im"), post=post)
+    assert im.quality == "high" and im.model == "gpt-image-2"
+    res = im.imagine("a lighthouse")
+    assert res.get("imagined") and calls == ["gpt-image-2", "gpt-image-1.5", "gpt-image-1"]
+    assert im.listing()[0]["model"] == "gpt-image-1" and im.status()["model_used"] == "gpt-image-1"
+    assert res["usd"] == 0.167                                          # high, on the model that drew
+    # a different refusal is not a missing model: it is passed on
+    def refusing(url, headers, body):
+        raise RuntimeError("400: Your request was rejected by the safety system")
+    im2 = Imaginer(Ctrl(), api_key="k" * 24, path=str(tmp_path / "im2"), post=refusing, clock=lambda: 9e9)
+    assert "said no" in im2.imagine("x")["error"]
+    im.configure(quality="medium", model="gpt-image-1.5")
+    assert im.quality == "medium" and im.openai_model == "gpt-image-1.5"
+    im.configure(quality="ultra")                                       # not a quality: ignored
+    assert im.quality == "medium"
+
+
+def test_the_panel_version_keeps_the_light(tmp_path):
+    """A fine bright line on a dark ground: in linear light it stays bright
+    at the panel's size; in sRGB it greys."""
+    from brain.imagine import enhance_for_panel
+    from brain.art.pipeline import prepare
+    img = Image.new("RGB", (1024, 1024), (8, 8, 12))
+    px = img.load()
+    for y in range(1024):
+        for x in range(1024):
+            if (x // 16) % 2 == 0 and (y // 16) % 2 == 0:
+                px[x, y] = (250, 250, 250)                              # a fine bright grid
+    plain = np.asarray(prepare(img, 64, unsharp_percent=0), dtype=np.float32)
+    lit = np.asarray(enhance_for_panel(img, 64), dtype=np.float32)
+    assert lit.shape == (64, 64, 3)
+    assert lit.mean() > plain.mean() + 15                               # brighter, as the eye would see it
+    big = enhance_for_panel(img, 192)
+    assert big.size == (192, 192)
+
+
 def test_pace_gallery_and_restart(tmp_path):
     raw = png_bytes((240, 200, 30))
     calls, clock = [], [1_760_000_000.0]
     shower = FakeShower(64)
     im = Imaginer(Ctrl(), shower=shower, api_key="k" * 24, path=str(tmp_path / "im"),
+                  openai_model="gpt-image-1", quality="low",
                   post=fake_post(calls, raw), clock=lambda: clock[0])
     first = im.imagine("a yellow sun")
     assert first.get("imagined")
@@ -125,6 +173,7 @@ def test_pace_gallery_and_restart(tmp_path):
     ids = [e["id"] for e in im.listing()]
     assert ids == [second["id"], first["id"]]                           # newest first
     again = Imaginer(Ctrl(), shower=shower, api_key="k" * 24, path=str(tmp_path / "im"),
+                     openai_model="gpt-image-1", quality="low",
                      post=fake_post(calls, raw), clock=lambda: clock[0])
     assert [e["id"] for e in again.listing()] == ids and again.status()["images"] == 2
     res = again.show_again(first["id"])

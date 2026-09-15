@@ -560,7 +560,9 @@ class ControlState:
             self.asker.configure(api_key=store.get("claude", "api_key"))
         if "images" in changed and getattr(self, "imaginer", None):
             self.imaginer.configure(provider=store.get("images", "provider") or None,
-                                    api_key=store.get("images", "api_key"))
+                                    api_key=store.get("images", "api_key"),
+                                    quality=store.get("images", "quality") or None,
+                                    model=store.get("images", "model") or None)
         if "tmdb" in changed and getattr(self, "posters", None):
             self.posters.configure(api_key=store.get("tmdb", "api_key"))
         if "discogs" in changed and getattr(self, "shelf", None):
