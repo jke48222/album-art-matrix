@@ -115,6 +115,19 @@ struct WallServices: Decodable {
         var problem: String?
     }
 
+    /// Imagine: which image model draws, whether its key is on the wall, the bill.
+    struct Images: Decodable {
+        struct Last: Decodable { var id: String; var prompt: String; var usd: Double?; var ts: Int? }
+        var ready: Bool
+        var provider: String?
+        var model: String?
+        var quality: String?
+        var images: Int?
+        var cost_usd: Double?
+        var last: Last?
+        var busy: Bool?
+        var problem: String?
+    }
     /// Posters: whether a TMDB key is on the wall and what it last found.
     struct Tmdb: Decodable {
         struct Last: Decodable { var title: String; var kind: String?; var year: Int?; var at: Int? }
@@ -139,6 +152,7 @@ struct WallServices: Decodable {
     var listenbrainz: Listenbrainz?      // older walls do not send these
     var discogs: Discogs?
     var tmdb: Tmdb?
+    var images: Images?
     var hearing: Hearing?
     var mac: Mac?
     var claude: Claude?
@@ -386,6 +400,17 @@ struct ServicesPage: View {
                     }
                 }
                 .buttonStyle(PressStyle(scale: 0.99))
+                Rule()
+                NavigationLink {
+                    ImagesPage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "Images", subtitle: imagesLine,
+                             leading: { GlyphMark(symbol: "paintbrush") }) {
+                        StateValue(services?.images?.ready == true ? "Connected" : "Set up",
+                                   done: services?.images?.ready == true)
+                    }
+                }
+                .buttonStyle(PressStyle(scale: 0.99))
             }
 
             SetupGroup("Other players", note: otherNote) {
@@ -452,6 +477,16 @@ struct ServicesPage: View {
         return !lf.user.isEmpty && lf.key_set == true
     }
     private var listenbrainzOn: Bool { !(services?.listenbrainz?.user ?? "").isEmpty }
+    private var imagesLine: String {
+        guard let i = services?.images else { return "Say \"create a purple elephant\" and one appears." }
+        if let p = i.problem, i.ready { return p }
+        if i.ready {
+            let n = i.images ?? 0
+            let who = i.provider == "google" ? "Imagen" : "OpenAI"
+            return n == 0 ? "\(who), ready. Say \"create a purple elephant\"." : "\(who). \(n) drawn so far."
+        }
+        return "Say \"create a purple elephant\" and one appears."
+    }
     private var postersLine: String {
         guard let t = services?.tmdb else { return "What the Mac watches, as its poster on the wall." }
         if let p = t.problem, t.key_set { return p }
@@ -1308,6 +1343,99 @@ struct PostersPage: View {
         busy = true
         Task {
             let (fresh, why) = await ServiceSave.send(["tmdb": ["api_key": typedKey]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+            if why == nil { Taps.commit(); key = "" }
+            busy = false
+        }
+    }
+}
+
+
+// MARK: - Images: the drawer and its key, for pictures from words
+
+struct ImagesPage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+
+    @State private var key = ""
+    @State private var busy = false
+    @State private var problem: String?
+
+    private var im: WallServices.Images? { services?.images }
+    private var ready: Bool { im?.ready == true }
+    private var provider: String { im?.provider ?? "openai" }
+    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var canSave: Bool { services != nil && typedKey.count >= 20 }
+    private var costLine: String {
+        guard let im else { return "" }
+        let n = im.images ?? 0
+        if n == 0 { return "Nothing drawn yet." }
+        return "\(n) drawn, about $\(String(format: "%.2f", im.cost_usd ?? 0)) in all."
+    }
+
+    var body: some View {
+        SetupPage("Images",
+                  blurb: "\"Create a purple elephant\" draws one on the panel. Claude writes the words out as a prompt made for a panel this size, an image model draws it, and the picture stays up for ten minutes. Every picture is kept on the wall, with its words, under Imagine in Settings.") {
+            SetupGroup("Who draws", note: provider == "google"
+                       ? "Google's Imagen through the Gemini API. About four cents a picture."
+                       : "OpenAI's gpt-image-1 at low quality, which is plenty for a panel. About a cent a picture.") {
+                ChoiceRow(title: "OpenAI", subtitle: "gpt-image-1", value: "openai", selected: provider, accent: accent) { pick($0) }
+                Rule()
+                ChoiceRow(title: "Google", subtitle: "Imagen 4", value: "google", selected: provider, accent: accent) { pick($0) }
+            }
+            .padding(.top, -12)
+
+            SetupGroup("Your key", note: "Kept on the wall and used only to draw. Change the drawer above and paste that drawer's key.") {
+                KeyField(placeholder: ready ? "API key (one is on the wall)" : (provider == "google" ? "Gemini API key" : "OpenAI API key, sk-..."), text: $key)
+                Rule()
+                SetupRow(title: "Need a key?", subtitle: provider == "google" ? "Opens Google AI Studio in Safari." : "Opens the OpenAI platform in Safari.") {
+                    ActionPill(title: "Get a key", filled: false) {
+                        openURL(URL(string: provider == "google" ? "https://aistudio.google.com/apikey"
+                                                                : "https://platform.openai.com/api-keys")!)
+                    }
+                }
+                Rule()
+                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
+                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
+                         accent: accent) { save() }
+            }
+            Problem(text: problem ?? im?.problem)
+
+            SetupGroup("So far", note: "One picture every ten seconds at most.") {
+                SetupRow(title: "Drawn", subtitle: costLine) { EmptyView() }
+                if let l = im?.last {
+                    Rule()
+                    SetupRow(title: "Last", subtitle: l.prompt) { EmptyView() }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                if Task.isCancelled { break }
+                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+            }
+        }
+    }
+
+    private func pick(_ who: String) {
+        guard who != provider else { return }
+        Taps.detent(intensity: 0.4)
+        Task {
+            let (fresh, why) = await ServiceSave.send(["images": ["provider": who]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+        }
+    }
+
+    private func save() {
+        guard canSave, !busy else { return }
+        busy = true
+        Task {
+            let (fresh, why) = await ServiceSave.send(["images": ["api_key": typedKey, "provider": provider]], to: wall.host)
             if let fresh { services = fresh }
             problem = why
             if why == nil { Taps.commit(); key = "" }

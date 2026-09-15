@@ -110,6 +110,16 @@ wake_word = "hey_jarvis"
 # a line here. The model is Claude Opus 5 unless told otherwise.
 model = "claude-opus-5"
 
+[imagine]
+# A picture from words (brain/imagine.py): "create a purple elephant". The
+# key and the choice of drawer come from the phone (Services > Images);
+# these are the models and the quality asked for. low is plenty for a 64
+# pixel panel and the cheapest (about a cent a picture with gpt-image-1).
+provider = "openai"                        # or "google"
+openai_model = "gpt-image-1"               # gpt-image-1-mini is cheaper
+google_model = "imagen-4.0-generate-001"   # imagen-4.0-fast-generate-001 is cheaper
+quality = "low"                            # low, medium, high (OpenAI only)
+
 [tmdb]
 # Posters (brain/posters.py): when the Mac watches an episode or a film in
 # a browser, the reporter passes the name along and the wall finds its

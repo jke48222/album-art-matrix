@@ -24,6 +24,9 @@ FIELDS = {
     "ears": {"device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
     # Ask the wall (brain/ask.py): an Anthropic API key, set from the phone
     "claude": {"api_key": r"^sk-ant-[A-Za-z0-9_\-]{20,200}$"},
+    # imagine (brain/imagine.py): which image model draws, and its key
+    "images": {"provider": r"^(openai|google)$",
+               "api_key": r"^[A-Za-z0-9_\-]{20,300}$"},
     # posters (brain/posters.py): a TMDB API key (v3, 32 hex) or read access
     # token (v4, a JWT), from themoviedb.org/settings/api
     "tmdb": {"api_key": r"^([0-9a-f]{32}|eyJ[A-Za-z0-9._\-]{40,800})$"},

@@ -236,6 +236,30 @@ class Asker:
             print(f"[ask] earworm: {self.problem}", flush=True)
             return None
 
+    def image_prompt(self, prompt: str, size: int = 64) -> str | None:
+        """The words rewritten as a prompt for a picture on a panel of this
+        size (brain/imagine.py), or None when Claude cannot be asked."""
+        if not self.ready:
+            return None
+        from .imagine import IMAGE_SYSTEM
+        try:
+            resp = self._client_().messages.create(
+                model=self.model, max_tokens=200,
+                system=IMAGE_SYSTEM.format(size=size),
+                messages=[{"role": "user", "content": prompt}],
+                output_config={"effort": "low"},
+            )
+            text = " ".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
+            usage = getattr(resp, "usage", None)
+            if usage is not None:
+                self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
+                    + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
+            return text or None
+        except Exception as exc:
+            self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+            print(f"[ask] image prompt: {self.problem}", flush=True)
+            return None
+
     def status(self) -> dict:
         return {"ready": self.ready, "model": self.model, "answers": self.answers,
                 "cost_usd": round(self.cost_usd, 4), "last": self.last, "problem": self.problem}

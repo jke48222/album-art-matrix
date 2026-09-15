@@ -41,6 +41,7 @@ struct SettingsSheet: View {
                         row("sunset", "Follow the sun", wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : "Off") { SunPage(accent: accent) }
                         row("moon.zzz", "Sleep", sleepValue) { SleepPage(accent: accent) }
                         row("cloud.sun", "Weather", wall.state.place.isEmpty ? "No place yet" : wall.state.place) { WeatherPage(accent: accent) }
+                        row("paintbrush.pointed", "Imagine", "A picture from words") { ImaginePage(accent: accent) }
                         row("sunrise", "Wake up", wall.state.wakeEnabled ? wakeValue : "Off") { WakePage(accent: accent) }
                         row("pause.circle", "Nothing playing", idleName) { idlePage }
                         row("lock.iphone", "Lock screen", wall.live.enabled ? "Showing the wall" : "Off") { LockScreenPage(accent: accent) }
@@ -1474,5 +1475,148 @@ final class OneShotSpot: NSObject, CLLocationManagerDelegate {
         if let spot { handler?(spot.0, spot.1); Taps.commit() }
         handler = nil
         manager = nil
+    }
+}
+
+
+// MARK: - Imagine: a picture from words, and the ones drawn so far
+
+struct ImaginePage: View {
+    @Environment(WallSession.self) private var wall
+    let accent: Color
+    @State private var prompt = ""
+    @State private var busy = false
+    @State private var problem: String?
+    @State private var said: String?
+    @State private var gallery: WallImagined?
+    @State private var showing: String?
+
+    private var typed: String { prompt.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var ready: Bool { gallery?.ready == true }
+    private var columns: [GridItem] { Array(repeating: GridItem(.flexible(), spacing: 8), count: 3) }
+
+    var body: some View {
+        SetupPage("Imagine",
+                  blurb: "Describe a picture and the wall draws it: a purple elephant, a lighthouse at night, a bowl of ramen. Claude writes the words out for a panel this size, an image model draws it, and it stays up for ten minutes. By voice, \"create\" or \"draw\" does the same.") {
+            SetupGroup("The words", note: ready ? "One picture every ten seconds. About a cent each." : "Set up a drawer and its key under Services, Images, first.") {
+                KeyField(placeholder: "a purple elephant", text: $prompt)
+                Rule()
+                SaveLine(title: busy ? "Drawing" : "Draw it", enabled: ready && !typed.isEmpty && !busy, busy: busy,
+                         done: said, accent: accent) { draw() }
+            }
+            .padding(.top, -12)
+            Problem(text: problem ?? gallery?.problem)
+
+            SetupGroup("Drawn so far", note: (gallery?.images.isEmpty ?? true) ? "Nothing yet." : "Tap one to put it back on the wall.") {
+                if let items = gallery?.images, !items.isEmpty {
+                    LazyVGrid(columns: columns, spacing: 8) {
+                        ForEach(items, id: \.id) { item in
+                            VStack(alignment: .leading, spacing: 4) {
+                                AsyncImage(url: URL(string: "http://\(wall.host)/imagine/\(item.id).png")) { phase in
+                                    if let image = phase.image {
+                                        image.resizable().interpolation(.medium).aspectRatio(1, contentMode: .fill)
+                                    } else {
+                                        RoundedRectangle(cornerRadius: 10).fill(Ink.plaster)
+                                            .aspectRatio(1, contentMode: .fit)
+                                    }
+                                }
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                    .stroke(showing == item.id ? accent : .clear, lineWidth: 2))
+                                Text(item.prompt).font(.ui(11)).foregroundStyle(Ink.dim).lineLimit(2)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { show(item.id) }
+                        }
+                    }
+                    .padding(.horizontal, 16).padding(.vertical, 12)
+                } else {
+                    SetupRow(title: "Nothing yet", subtitle: "The first one lands here.") { EmptyView() }
+                }
+            }
+        }
+        .task {
+            while !Task.isCancelled {
+                if let g = await WallImagined.read(host: wall.host) { gallery = g }
+                try? await Task.sleep(for: .seconds(busy ? 2 : 6))
+            }
+        }
+    }
+
+    private func draw() {
+        guard ready, !typed.isEmpty, !busy else { return }
+        busy = true
+        said = nil
+        let h = wall.host, p = typed
+        Task {
+            let (ok, why, id) = await WallImagined.draw(host: h, prompt: p)
+            problem = why
+            if ok {
+                prompt = ""
+                said = "Drawn"
+                showing = id
+                Taps.commit()
+                if let g = await WallImagined.read(host: h) { gallery = g }
+            }
+            busy = false
+        }
+    }
+
+    private func show(_ id: String) {
+        let h = wall.host
+        showing = id
+        Task {
+            _ = await WallImagined.show(host: h, id: id)
+            Taps.detent(intensity: 0.4)
+        }
+    }
+}
+
+/// What GET /imagine says: the drawer's state and every picture kept.
+struct WallImagined: Decodable {
+    struct Item: Decodable {
+        var id: String
+        var prompt: String
+        var expanded: String?
+        var provider: String?
+        var ts: Int?
+        var usd: Double?
+    }
+    var ready: Bool?
+    var provider: String?
+    var images: [Item]
+    var problem: String?
+
+    static func read(host: String) async -> WallImagined? {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/imagine") else { return nil }
+        var req = URLRequest(url: url)
+        req.timeoutInterval = 8
+        guard let (data, resp) = try? await URLSession.shared.data(for: req),
+              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        return try? JSONDecoder().decode(WallImagined.self, from: data)
+    }
+
+    static func draw(host: String, prompt: String) async -> (Bool, String?, String?) {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/imagine") else { return (false, "No wall.", nil) }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 180
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["prompt": prompt])
+        guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (false, "The wall is not answering.", nil) }
+        let json = (try? JSONSerialization.jsonObject(with: data) as? [String: Any]) ?? [:]
+        if (resp as? HTTPURLResponse)?.statusCode == 200 { return (true, nil, json["id"] as? String) }
+        return (false, json["error"] as? String ?? "The wall could not draw that.", nil)
+    }
+
+    static func show(host: String, id: String) async -> Bool {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)/imagine/show") else { return false }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.timeoutInterval = 10
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
+        guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
+        return (resp as? HTTPURLResponse)?.statusCode == 200
     }
 }

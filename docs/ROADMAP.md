@@ -26,7 +26,7 @@ app. Nothing here is a promise about a date.
 | 13 | The shelf | Discogs collection sync: a corner mark on streamed songs you own on vinyl; pressing details and price when a record plays. | **done** 2026-09-15: brain/shelf.py, the mark in brain/art/mark.py, a Discogs page in the app; waiting for the token |
 | 14 | Earworm finder | Say the words you remember; Claude names the song; the sleeve goes up. | **done** 2026-09-15, needs the Claude key |
 | 15 | Show me, play me | "Show the Blond cover" (iTunes search, frame mode); "play the Gameboy video" (YouTube search, video mode). | **done** 2026-09-15 |
-| 16 | Image creator by description | "Create a purple elephant" draws one on the panel. Image model to be chosen. | planned |
+| 16 | Image creator by description | "Create a purple elephant" draws one on the panel. Image model to be chosen. | **done** 2026-09-15: brain/imagine.py, OpenAI gpt-image-1 or Google Imagen chosen on the phone, an Imagine page with the gallery; waiting for a key |
 | 17 | Weather faces | A weather display with dedicated faces that change with the weather. | **done** 2026-09-15 |
 | 18 | Posters for what you watch | When the Mac plays an episode, the show's poster (The Movie Database) instead of nothing. | **done** 2026-09-15: brain/posters.py, the reporter's X-Mac-Show header, a Posters page in the app; waiting for the key and a reporter restart |
 
