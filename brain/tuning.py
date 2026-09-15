@@ -92,6 +92,10 @@ SPECS = [
      "Give video the same shadow lift a still sleeve gets. Off keeps its "
      "blacks black, which is what a night scene needs."),
 
+    ("shelf_mark", "Shelf", "bool", 0, 1, 1, False,
+     "A small record in the corner of the sleeve when the album is on your "
+     "Discogs shelf: you own this one on vinyl. Takes effect from the next song."),
+
     # The ear's knobs live here too: same store, same page on the phone,
     # nothing to restart. Levels are dB below the microphone's ceiling.
     ("hearing", "Hearing", "bool", 0, 1, 1, False,
@@ -187,6 +191,7 @@ def _shipped(cfg: dict) -> dict:
         "wake_threshold": float(cfg.get("voice", {}).get("wake_threshold", 0.5)),
         "speech_base": bool(cfg.get("voice", {}).get("speech_base", False)),
         "mic_auto_gain": bool(ears.get("mic_auto_gain", False)),
+        "shelf_mark": bool(cfg.get("discogs", {}).get("mark", True)),
         "bit_depth": 64, "dither": 0.0, "addr_settle_ns": 0,
         "panel_type": 0, "temporal_dither": True, "dither_min": 0.2,
         "gain_r": float(wb.get("r", 1.0)),

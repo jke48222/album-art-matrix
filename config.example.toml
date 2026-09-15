@@ -110,6 +110,16 @@ wake_word = "hey_jarvis"
 # a line here. The model is Claude Opus 5 unless told otherwise.
 model = "claude-opus-5"
 
+[discogs]
+# The shelf (brain/shelf.py): your Discogs collection, read with a personal
+# access token and your username, both set from the phone (Services >
+# Discogs), never here. Synced every six hours to
+# ~/.config/album-art-matrix/shelf.json. A song from an album on the shelf
+# gets a small record in the sleeve's corner (the phone's Shelf knob turns
+# it off), and the pressing, with the lowest price copies are going for,
+# shows on the phone under the song.
+mark = true
+
 [scrobble]
 # What the wall reports to ListenBrainz. Only the ear is offered: the
 # streaming services report themselves, and the Mac and the phone are not
