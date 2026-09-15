@@ -1495,10 +1495,36 @@ struct ImaginePage: View {
     private var ready: Bool { gallery?.ready == true }
     private var columns: [GridItem] { Array(repeating: GridItem(.flexible(), spacing: 8), count: 3) }
 
+    private var liveLine: String {
+        guard let l = gallery?.live else { return "" }
+        switch l.stage {
+        case "waiting": return "Thinking about it, \(Int(l.elapsed ?? 0)) s."
+        case "partial": return "Drawing: \(l.partials ?? 0) of \(l.of ?? 3) passes, \(Int(l.elapsed ?? 0)) s."
+        case "done": return "Done" + ((l.done_ago ?? 0) < 600 ? ", on the wall." : ".")
+        case "failed": return l.problem ?? "Could not draw."
+        default: return ""
+        }
+    }
+
     var body: some View {
         SetupPage("Imagine",
-                  blurb: "Describe a picture and the wall draws it: a purple elephant, a lighthouse at night, a bowl of ramen. Claude writes the words out for a panel this size, an image model draws it, and it stays up for ten minutes. By voice, \"create\" or \"draw\" does the same.") {
-            SetupGroup("The words", note: ready ? "One picture every ten seconds. About a cent each." : "Set up a drawer and its key under Services, Images, first.") {
+                  blurb: "Describe a picture and the wall draws it: a purple elephant, a lighthouse at night, a bowl of ramen. Claude writes the words out for a panel this size, an image model draws it while the wall shows it forming, and it stays up for ten minutes. By voice, \"create\" or \"draw\" does the same.") {
+            if let l = gallery?.live, l.stage != "idle", !liveLine.isEmpty {
+                HStack(spacing: 12) {
+                    PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
+                        .frame(width: 96, height: 96)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(l.stage == "done" ? "On the wall" : "Drawing").font(.ui(11, .semibold)).foregroundStyle(accent)
+                        Text(l.prompt ?? "").font(.ui(14, .semibold)).foregroundStyle(Ink.ink).lineLimit(2)
+                        Text(liveLine).font(.ui(12)).foregroundStyle(Ink.dim)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(12)
+                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+            }
+            SetupGroup("The words", note: ready ? "One picture every ten seconds. The wall shows it being drawn." : "Set up a drawer and its key under Services, Images, first.") {
                 KeyField(placeholder: "a purple elephant", text: $prompt)
                 Rule()
                 SaveLine(title: busy ? "Drawing" : "Draw it", enabled: ready && !typed.isEmpty && !busy, busy: busy,
@@ -1538,7 +1564,8 @@ struct ImaginePage: View {
         .task {
             while !Task.isCancelled {
                 if let g = await WallImagined.read(host: wall.host) { gallery = g }
-                try? await Task.sleep(for: .seconds(busy ? 2 : 6))
+                let drawing = gallery?.live?.stage == "waiting" || gallery?.live?.stage == "partial"
+                try? await Task.sleep(for: .seconds(busy || drawing ? 1 : 6))
             }
         }
     }
@@ -1582,10 +1609,20 @@ struct WallImagined: Decodable {
         var ts: Int?
         var usd: Double?
     }
+    struct Live: Decodable {
+        var stage: String
+        var prompt: String?
+        var partials: Int?
+        var of: Int?
+        var elapsed: Double?
+        var problem: String?
+        var done_ago: Double?
+    }
     var ready: Bool?
     var provider: String?
     var images: [Item]
     var problem: String?
+    var live: Live?
 
     static func read(host: String) async -> WallImagined? {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/imagine") else { return nil }

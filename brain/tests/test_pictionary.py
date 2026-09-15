@@ -24,7 +24,7 @@ class FakeImaginer:
     def __init__(self):
         self.prompts = []
 
-    def draw(self, prompt, expanded=None):
+    def draw(self, prompt, expanded=None, on_partial=None):
         self.prompts.append((prompt, expanded))
         img = Image.new("RGB", (512, 512), (250, 245, 230))
         d = ImageDraw.Draw(img)

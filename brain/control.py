@@ -89,7 +89,7 @@ JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 PHONE_SIDE = 64
 
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video",
-         "weather", "game")
+         "weather", "game", "imagine")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
