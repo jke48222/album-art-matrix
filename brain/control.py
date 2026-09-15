@@ -52,6 +52,7 @@ is on — no Mac required.
   GET  /weather  -> the forecast the face draws, the place, its age
   POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
   GET  /shelf    -> the Discogs collection with plays per release; POST /shelf/sync
+  GET  /art/airplay/<key>.jpg -> artwork that arrived over AirPlay, for the phone
   POST /imagine {prompt} -> a picture from words, on the panel; GET /imagine lists them,
        GET /imagine/<id>.png is one, POST /imagine/show {id} shows it again, POST /imagine/forget {id}
   GET  /voice    -> the wake word, the listener and the last thing heard
@@ -200,6 +201,7 @@ class ControlState:
         self.shelf = None            # brain/shelf.py, the Discogs collection
         self.posters = None          # brain/posters.py, TMDB posters for shows
         self.imaginer = None         # brain/imagine.py, pictures from words
+        self.airplay = None          # brain/nowplaying/airplay.py, the receiver
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -504,6 +506,10 @@ class ControlState:
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
                        else {"ready": False, "problem": "asking is off on this wall"}),
+            # AirPlay: is shairport-sync there, is a stream on, who is sending
+            "airplay": (self.airplay.status() if getattr(self, "airplay", None)
+                        else {"running": False, "pipe_exists": False, "reading": False, "state": "off",
+                              "error": "AirPlay is off on this wall"}),
             # imagine: which image model, whether its key is set, what it cost
             "images": (self.imaginer.status() if getattr(self, "imaginer", None)
                        else {"ready": False, "provider": "openai", "images": 0,
@@ -903,6 +909,22 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             if u.path.startswith("/weather"):
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
+                return
+            if u.path.startswith("/art/airplay/"):
+                ap = getattr(ctrl, "airplay", None)
+                key = u.path.rsplit("/", 1)[1].split(".")[0]
+                hit = ap.art(key) if ap is not None else None
+                if hit is None:
+                    self._json(404, {"error": "no such artwork"})
+                    return
+                data, mime = hit
+                self.send_response(200)
+                self.send_header("Content-Type", mime)
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "max-age=86400")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(data)
                 return
             if u.path.startswith("/imagine"):
                 im = getattr(ctrl, "imaginer", None)

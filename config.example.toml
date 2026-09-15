@@ -110,6 +110,14 @@ wake_word = "hey_jarvis"
 # a line here. The model is Claude Opus 5 unless told otherwise.
 model = "claude-opus-5"
 
+[airplay]
+# The wall as an AirPlay receiver (brain/nowplaying/airplay.py): shairport-
+# sync, installed as docs/AIRPLAY.md says, writes what is playing to this
+# pipe and the brain reads it. It answers right after the phone in the
+# chain. Nothing else to set; [features] airplay = false turns it off.
+pipe = "/tmp/shairport-sync-metadata"
+# host = "album-matrix.local"   # the name the phone fetches AirPlay artwork by
+
 [imagine]
 # A picture from words (brain/imagine.py): "create a purple elephant". The
 # key and the choice of drawer come from the phone (Services > Images);

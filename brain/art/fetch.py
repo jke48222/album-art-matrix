@@ -18,7 +18,15 @@ def _decode(data: bytes) -> Image.Image:
     return img
 
 
+# Pictures the brain already holds, by the URL it serves them at: AirPlay
+# artwork (brain/nowplaying/airplay.py) is read straight from here, while the
+# phone fetches the same URL from the control port.
+LOCAL: dict[str, bytes] = {}
+
+
 def fetch_art(url: str, timeout: float = 15.0) -> Image.Image:
+    if url in LOCAL:
+        return _decode(LOCAL[url])
     if url.startswith("data:"):
         # The Mac's Now Playing hands over artwork as bytes, not a link. No
         # disk cache: the bytes are already in hand.
