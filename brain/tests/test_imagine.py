@@ -5,7 +5,6 @@ on the wall at both sizes, the gallery, the pace and the money.
 """
 import base64
 import io
-import json
 import os
 import sys
 
@@ -14,8 +13,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.imagine import (Imaginer, LiveDrawing, PANEL_BRIEF, MIN_GAP_S, OPENAI_URL, KEEP,   # noqa: E402
-                           PARTIALS, FADE_S)
+from brain.imagine import (Imaginer, LiveDrawing, PANEL_BRIEF, MIN_GAP_S, OPENAI_URL, PARTIALS, FADE_S)
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")
 

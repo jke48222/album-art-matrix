@@ -418,7 +418,6 @@ class WeatherFace:
                 f[sy, sx] = np.maximum(f[sy, sx], (v * 0.85, v * 0.88, v))
 
         # the sun or the moon
-        thing = None
         if scene in ("clear", "mostly_clear", "partly_cloudy", "fog", "overcast"):
             r = size * (0.075 if not self.big else 0.06)
             through = {"fog": 0.35, "overcast": 0.0}.get(scene, 1.0)
@@ -426,12 +425,10 @@ class WeatherFace:
                 pos = self._sun_pos(now, lat, lon) if k is not None else (size * 0.5, size * 0.22)
                 if pos is not None and through > 0:
                     self._draw_sun(f, pos[0], pos[1], t, r, through)
-                    thing = pos
             elif scene in ("clear", "mostly_clear", "partly_cloudy"):
                 mx, my = size * 0.72, size * 0.22
                 _glow(f, mx, my, r * 3.5, MOON, 0.22)
                 _moon(f, mx, my, r, moon_phase(now), MOON)
-                thing = (mx, my)
 
         # clouds: two layers, the far ones smaller, slower and dimmer
         if self._clouds is not None:

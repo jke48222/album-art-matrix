@@ -11,7 +11,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.games.spellingbee import SpellingBee, make_hive, score_of, rank_of   # noqa: E402
+from brain.games.spellingbee import make_hive, score_of, rank_of   # noqa: E402
 from brain.games.words import common                                             # noqa: E402
 from brain.games.host import GameHost                                            # noqa: E402
 from brain.tests.test_games import FakeCtrl                                      # noqa: E402
@@ -33,7 +33,7 @@ def test_hive_and_scores():
 
 def test_play(tmp_path):
     host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
-    st = host.start("spellingbee", {"seed": 1}, ["Jalen"])
+    host.start("spellingbee", {"seed": 1}, ["Jalen"])
     g = host.game
     word = g.answers[0]
     r = host.hear(word, "Jalen")

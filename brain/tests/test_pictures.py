@@ -43,7 +43,7 @@ def test_sliding(tmp_path):
     path = sleeve(tmp_path)
     for size, scale in ((64, 4), (192, 2)):
         host = GameHost(Ctrl(size), path=str(tmp_path / "g.json"))
-        st = host.start("sliding", {"image": path, "seed": 1, "grid": 3})
+        host.start("sliding", {"image": path, "seed": 1, "grid": 3})
         g = host.game
         assert sorted(g.tiles) == list(range(9)) and g.tiles != list(range(9))
         f = host.frame_at(size)

@@ -50,7 +50,6 @@ import re
 import subprocess
 import threading
 import time
-import urllib.parse
 
 import numpy as np
 import requests

@@ -428,7 +428,6 @@ class VideoPlayer:
         if not shutil.which("ffmpeg"):
             self._fail(gen, "ffmpeg is missing on the wall")
             return
-        s = self.size
         cmd = ["ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error",
                "-threads", "1", "-filter_threads", "1"]
         if _is_url(source):

@@ -7,12 +7,11 @@ import os
 import random
 import sys
 
-import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.games.sudoku import (Sudoku, full_grid, make_puzzle, count_solutions, solve, rate)   # noqa: E402
+from brain.games.sudoku import (full_grid, make_puzzle, count_solutions, solve, rate)   # noqa: E402
 from brain.games.host import GameHost                                                        # noqa: E402
 from brain.tests.test_games import FakeCtrl                                                  # noqa: E402
 

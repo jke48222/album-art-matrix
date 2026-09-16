@@ -12,7 +12,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.games.crossword import PATTERNS, BUNDLED, slots, fill_grid, N   # noqa: E402
+from brain.games.crossword import PATTERNS, BUNDLED, slots, fill_grid   # noqa: E402
 from brain.games.words import common, common_set                          # noqa: E402
 from brain.games.host import GameHost                                     # noqa: E402
 from brain.tests.test_games import FakeCtrl                               # noqa: E402

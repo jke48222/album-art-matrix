@@ -185,7 +185,7 @@ class Shower:
             # the sleeve with the name on a band along its foot, the artist
             # under the title at 192, for a while
             try:
-                from .games.board import banner, INK, mix, BLACK, fit_text, text_centred
+                from .games.board import banner, INK, fit_text, text_centred
                 ctrl = self.ctrl
                 tune = getattr(ctrl, "tuning", None)
                 pre = prepare(fetch_art(art), ctrl.wall.width,

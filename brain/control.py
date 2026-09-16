@@ -97,6 +97,15 @@ PHONE_SIDE = 64
 MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video",
          "weather", "game", "imagine")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
+BODY_MAX = 32_000_000                 # the largest JSON body any POST will read
+# One Shower serves four routes, but they are three switches: /show and /play
+# are both the "show" feature. Route -> (switch, what to call it when it is off).
+SHOWER_SWITCH = {
+    "show": ("show", "showing a cover by name"),
+    "play": ("show", "showing a cover by name"),
+    "imagine": ("imagine", "drawing from words"),
+    "earworm": ("earworm", "naming a song from the words you remember"),
+}
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
 IDLES = ("black", "hold", "dim", "ambient", "weather")   # what the wall does in silence
@@ -799,8 +808,18 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self.end_headers()
 
         def _body(self) -> dict | None:
+            # Capped the way /video/upload is. The Pi has under a gigabyte and
+            # a one-minute watchdog: a client claiming half of it in a
+            # Content-Length should be refused, not read into memory.
             try:
                 n = int(self.headers.get("Content-Length", 0))
+            except ValueError:
+                self._json(400, {"error": "body must be a JSON object"})
+                return None
+            if n > BODY_MAX:
+                self._json(413, {"error": f"the body must be under {BODY_MAX // 1_000_000} MB"})
+                return None
+            try:
                 patch = json.loads(self.rfile.read(n) or b"{}")
                 if not isinstance(patch, dict):
                     raise ValueError
@@ -808,6 +827,18 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             except (ValueError, json.JSONDecodeError):
                 self._json(400, {"error": "body must be a JSON object"})
                 return None
+
+        def _switched_off(self, name: str, what: str) -> bool:
+            """Ask a feature's switch at the moment it would act, the way
+            features.py says every feature should. Features that own an
+            object (the shower, the games) are already gated by main.py
+            never building it; this is for the ones that act on ctrl
+            directly, or that share another feature's object."""
+            fe = getattr(ctrl, "features", None)
+            if fe is not None and not fe.on(name):
+                self._json(404, {"error": f"{what} is off on this wall"})
+                return True
+            return False
 
         def _send_file(self, path, ctype: str, head: bool = False):
             """A file with byte ranges, which is how AVPlayer reads sound:
@@ -1006,6 +1037,8 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, a.status() if a is not None else {"ready": False, "problem": "asking is off on this wall"})
                 return
             if u.path.startswith("/note"):
+                if self._switched_off("note", "notes"):
+                    return
                 self._json(200, ctrl.note_status())
                 return
             if u.path.startswith("/show"):
@@ -1128,6 +1161,8 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if self.path.startswith("/note"):
                 # words on the panel for a while, then back to what was up
+                if self._switched_off("note", "notes"):
+                    return
                 patch = self._body()
                 if patch is None:
                     return
@@ -1201,10 +1236,22 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if sh is None:
                     self._json(404, {"error": "this wall cannot do that yet"})
                     return
+                what = self.path.strip("/").split("/")[0].split("?")[0]
+                # The shower answers for four routes but they are three
+                # features: show and play are both "show". Without this,
+                # "show = false" took earworm down with it and
+                # "earworm = false" did nothing at all.
+                # .get, not [what]: startswith means "/showtime" reaches here
+                # too, and an unknown tail should be a 404 rather than a 500.
+                known = SHOWER_SWITCH.get(what)
+                if known is None or not hasattr(sh, what):
+                    self._json(404, {"error": "this wall cannot do that yet"})
+                    return
+                if self._switched_off(*known):
+                    return
                 patch = self._body()
                 if patch is None:
                     return
-                what = self.path.strip("/").split("/")[0].split("?")[0]
                 text = str(patch.get("text") or patch.get("query") or patch.get("words")
                            or patch.get("prompt") or "").strip()
                 if not text:

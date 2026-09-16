@@ -13,7 +13,6 @@ holds, which is the confidence the whole aesthetic runs on. LRC gives line
 times, not word times, so word timing is an even spread, which is a guess,
 and an honest one: it is how people read.
 """
-import colorsys
 import re
 import threading
 
