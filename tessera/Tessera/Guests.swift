@@ -174,6 +174,6 @@ struct GuestsSection: View {
             .autocorrectionDisabled()
             .padding(.vertical, 12).padding(.horizontal, 14)
             .background(Ink.sunk)
-            .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+            .overlay { RoundedRectangle(cornerRadius: Round.control).strokeBorder(Ink.hairline, lineWidth: 1) }
     }
 }

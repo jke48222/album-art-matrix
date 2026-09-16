@@ -1,6 +1,21 @@
 import type { NowPlaying, NowPlayingSource, SourceConfig } from "../types";
 import { fetchJson, status, TransportError } from "./base";
 
+// What the playerctl helper sends: MPRIS metadata, flattened. All optional,
+// because it is a helper someone runs themselves and the code below already
+// falls back on every field.
+type MprisBody = {
+  trackId?: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  artUrl?: string | null;
+  progressMs?: number | null;
+  durationMs?: number | null;
+  isPlaying?: boolean;
+  player?: string;
+};
+
 export const MPRIS_CAVEAT =
   "Known caveat: the macOS equivalent path (nowplaying-cli) broke when Apple restricted the private MediaRemote framework around macOS 15.4, and is unverified. Not a bug to fix here.";
 
@@ -27,8 +42,9 @@ export const mprisSource: NowPlayingSource = {
     const { status: code, body } = await fetchJson(bridge);
     if (code === 204) return null;
     if (code >= 400) throw new TransportError(`MPRIS helper returned HTTP ${code}.`, "http", code);
-    const b = body as any;
-    if (!b?.title) throw new TransportError("MPRIS helper response is malformed: no title.", "parse");
+    const b = body as MprisBody | undefined;
+    if (!b?.title)
+      throw new TransportError("MPRIS helper response is malformed: no title.", "parse");
     return {
       trackId: `mpris:${b.trackId ?? `${b.artist}-${b.title}`}`,
       title: b.title,

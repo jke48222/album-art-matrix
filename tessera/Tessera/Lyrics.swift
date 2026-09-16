@@ -50,7 +50,7 @@ final class SongClock {
                 let raw = music.currentPlaybackTime
                 let playing = music.playbackState == .playing
                 let host = CACurrentMediaTime()
-                await MainActor.run { self?.ingest(raw, host, playing) }
+                await MainActor.run { [weak self] in self?.ingest(raw, host, playing) }
                 try? await Task.sleep(for: .milliseconds(200))
             }
         }

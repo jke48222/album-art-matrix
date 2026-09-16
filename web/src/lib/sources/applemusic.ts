@@ -36,7 +36,11 @@ export const appleMusicSource: NowPlayingSource = {
     }
     const url = String(cfg.config.bridgeUrl ?? "").trim();
     if (!url) {
-      return status("applemusic", "needs-setup", "Set the bridge URL of the reporter running on your Mac.");
+      return status(
+        "applemusic",
+        "needs-setup",
+        "Set the bridge URL of the reporter running on your Mac.",
+      );
     }
     return status("applemusic", "disconnected", `Polling ${url}. Not yet contacted.`);
   },
@@ -61,7 +65,10 @@ export const appleMusicSource: NowPlayingSource = {
     const pick = (a: string, c: string) => b[a] ?? b[c];
     const id = pick("trackId", "track_id");
     if (!b.title && !id) {
-      throw new TransportError("Bridge response is malformed: it has no title or trackId.", "parse");
+      throw new TransportError(
+        "Bridge response is malformed: it has no title or trackId.",
+        "parse",
+      );
     }
     const rawId = String(id ?? `${b.artist ?? ""}-${b.title ?? ""}`);
     const art = pick("artUrl", "art_url");

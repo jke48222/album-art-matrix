@@ -240,10 +240,14 @@ enum BeatListener {
                 Task.detached { [weak self] in
                     try? await Task.sleep(nanoseconds: UInt64(timeout * 1e9))
                     guard let self else { return }
-                    self.lock.lock()
-                    let w = self.waiter
-                    self.waiter = nil
-                    self.lock.unlock()
+                    // withLock, not lock()/unlock(): the bare pair is
+                    // unavailable from an async context and is an error in
+                    // Swift 6. Scoped, it is the same two calls.
+                    let w = self.lock.withLock { () -> CheckedContinuation<Bool, Never>? in
+                        let pending = self.waiter
+                        self.waiter = nil
+                        return pending
+                    }
                     w?.resume(returning: false)
                 }
             }

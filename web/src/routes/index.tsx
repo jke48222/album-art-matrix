@@ -36,10 +36,22 @@ export const Route = createFileRoute("/")({
 });
 
 const MODES: { id: ViewMode; label: string; note: string }[] = [
-  { id: "wall", label: "Wall", note: "Round emitters on a dark substrate, with bloom. The object in the room." },
-  { id: "grid", label: "Grid", note: "One pixel block per LED with the panel grid drawn in. The legibility judge." },
+  {
+    id: "wall",
+    label: "Wall",
+    note: "Round emitters on a dark substrate, with bloom. The object in the room.",
+  },
+  {
+    id: "grid",
+    label: "Grid",
+    note: "One pixel block per LED with the panel grid drawn in. The legibility judge.",
+  },
   { id: "raw", label: "Raw", note: "Nearest-neighbour buffer, no styling. What the Pi receives." },
-  { id: "split", label: "Split", note: "Drag the seam. Uncorrected on the left, white balanced on the right." },
+  {
+    id: "split",
+    label: "Split",
+    note: "Drag the seam. Uncorrected on the left, white balanced on the right.",
+  },
 ];
 
 const IDLE_OPTIONS: { id: IdleBehaviour; label: string }[] = [
@@ -78,7 +90,13 @@ function WallPage() {
     sessionStorage.removeItem("aam.rerender");
     try {
       const t = JSON.parse(raw);
-      setOverride({ ...t, progressMs: null, durationMs: null, isPlaying: false, tier: "history re-render" });
+      setOverride({
+        ...t,
+        progressMs: null,
+        durationMs: null,
+        isPlaying: false,
+        tier: "history re-render",
+      });
       toast.success("Re-rendering that track with the current settings.");
     } catch {
       /* ignore malformed */
@@ -86,7 +104,13 @@ function WallPage() {
   }, []);
 
   const track = override ?? state.track;
-  const gainsUsed: [number, number, number] = settings.applyWhiteBalance ? gains : [1, 1, 1];
+  // Memoised so it is one value, not a fresh array every render: the
+  // effect and the callback below both depend on it, and a new array
+  // each time re-ran them on every render for nothing.
+  const gainsUsed = useMemo<[number, number, number]>(
+    () => (settings.applyWhiteBalance ? gains : [1, 1, 1]),
+    [settings.applyWhiteBalance, gains],
+  );
 
   const process = useCallback(
     async (img: RgbaImage) => {
@@ -100,8 +124,7 @@ function WallPage() {
       lastGood.current = r;
       return r;
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [run, settings.wallSize, settings.unsharpRadius, settings.unsharpPercent, gainsUsed[0], gainsUsed[1], gainsUsed[2]],
+    [run, settings.wallSize, settings.unsharpRadius, settings.unsharpPercent, gainsUsed],
   );
 
   // Test pattern takes over the wall until dismissed.
@@ -189,7 +212,12 @@ function WallPage() {
       durationMs: track.durationMs,
       source: state.answeredBy ?? "manual",
       sourceTier: track.tier ?? null,
-      settingsSnapshot: { ...settings, gainR: gainsUsed[0], gainG: gainsUsed[1], gainB: gainsUsed[2] },
+      settingsSnapshot: {
+        ...settings,
+        gainR: gainsUsed[0],
+        gainG: gainsUsed[1],
+        gainB: gainsUsed[2],
+      },
     });
   }, [track, result, pattern, addHistory, state.answeredBy, settings, gainsUsed]);
 
@@ -249,7 +277,8 @@ function WallPage() {
         // UNbalanced buffer - sending `balanced` applied the gains twice and
         // landed over-warm and dim on the wall.
         let bin = "";
-        for (let i = 0; i < result.unbalanced.length; i++) bin += String.fromCharCode(result.unbalanced[i]);
+        for (let i = 0; i < result.unbalanced.length; i++)
+          bin += String.fromCharCode(result.unbalanced[i]);
         res = await fetch(settings.pushEndpoint, {
           method: "POST",
           headers: { "content-type": "application/json" },
@@ -258,7 +287,10 @@ function WallPage() {
       } else {
         res = await fetch(settings.pushEndpoint, {
           method: "POST",
-          headers: { "content-type": "application/octet-stream", "x-matrix-size": String(result.size) },
+          headers: {
+            "content-type": "application/octet-stream",
+            "x-matrix-size": String(result.size),
+          },
           body: new Uint8Array(result.balanced).buffer as ArrayBuffer,
         });
       }
@@ -273,7 +305,9 @@ function WallPage() {
     if (!result) return;
     const blob = new Blob([new Uint8Array(result.balanced)], { type: "application/octet-stream" });
     download(blob, `frame-${result.size}x${result.size}.rgb888.bin`);
-    toast.success(`${result.balanced.length.toLocaleString()} bytes, exactly what the renderer eats.`);
+    toast.success(
+      `${result.balanced.length.toLocaleString()} bytes, exactly what the renderer eats.`,
+    );
   };
 
   const idleLabel = {
@@ -290,7 +324,10 @@ function WallPage() {
       {/* ── The wall ─────────────────────────────────────────── */}
       <section className="enter">
         <div className="relative mx-auto max-w-[540px]">
-          <div key={`${shown?.size ?? 0}-${track?.trackId ?? pattern ?? "dark"}-${mode}`} className="enter relative">
+          <div
+            key={`${shown?.size ?? 0}-${track?.trackId ?? pattern ?? "dark"}-${mode}`}
+            className="enter relative"
+          >
             {mode === "split" && shown ? (
               <SplitWall
                 unbalanced={shown.unbalanced}
@@ -316,21 +353,31 @@ function WallPage() {
             )}
           </div>
           {/* the floor catching the glow */}
-          <div aria-hidden className="floorlight pointer-events-none absolute -bottom-16 left-1/2 h-16 w-[130%] -translate-x-1/2" />
+          <div
+            aria-hidden
+            className="floorlight pointer-events-none absolute -bottom-16 left-1/2 h-16 w-[130%] -translate-x-1/2"
+          />
         </div>
 
         <div className="mx-auto mt-7 max-w-[540px] space-y-2">
-          <Strip options={MODES.map(({ id, label }) => ({ id, label }))} value={mode} onChange={(v) => setSettings({ viewMode: v })} />
+          <Strip
+            options={MODES.map(({ id, label }) => ({ id, label }))}
+            value={mode}
+            onChange={(v) => setSettings({ viewMode: v })}
+          />
           <p className="num px-0.5 text-[10px] leading-relaxed text-muted-foreground">
             {MODES.find((m) => m.id === mode)?.note}
-            {mode === "split" && " The balanced side reads warm on this monitor. That is the point."}
+            {mode === "split" &&
+              " The balanced side reads warm on this monitor. That is the point."}
           </p>
           {mode === "split" && shown && (
             <div className="enter grid grid-cols-2 gap-2 pt-1.5">
-              {([
-                ["uncorrected", shown.unbalanced],
-                ["balanced", shown.balanced],
-              ] as const).map(([label, buf]) => (
+              {(
+                [
+                  ["uncorrected", shown.unbalanced],
+                  ["balanced", shown.balanced],
+                ] as const
+              ).map(([label, buf]) => (
                 <figure key={label} className="space-y-1">
                   <PlainCanvas buffer={buf} size={shown.size} brightness={brightness} />
                   <figcaption className="num text-center text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
@@ -396,13 +443,17 @@ function WallPage() {
           )}
           {review !== "off" && (
             <div className="mt-4">
-              <HonestNote tone="warn">Design-review mode is on. This is a forced state, not a live reading.</HonestNote>
+              <HonestNote tone="warn">
+                Design-review mode is on. This is a forced state, not a live reading.
+              </HonestNote>
             </div>
           )}
           {(artError || state.lastError) && (
             <div className="mt-4 space-y-2">
               {artError && <HonestNote tone="warn">{artError}</HonestNote>}
-              {state.lastError && <HonestNote tone="warn">Last source error - {state.lastError}</HonestNote>}
+              {state.lastError && (
+                <HonestNote tone="warn">Last source error - {state.lastError}</HonestNote>
+              )}
             </div>
           )}
         </div>
@@ -453,11 +504,17 @@ function WallPage() {
             />
             {power && (
               <>
-                <Readout label="frame draw" value={`${power.amps.toFixed(1)} A / ${power.watts.toFixed(0)} W model`} />
+                <Readout
+                  label="frame draw"
+                  value={`${power.amps.toFixed(1)} A / ${power.watts.toFixed(0)} W model`}
+                />
                 <Readout label="duty" value={`${(power.averageLevel * 100).toFixed(1)}%`} />
               </>
             )}
-            <Readout label="panel" value={`${settings.wallSize}x${settings.wallSize} / ${(settings.wallSize / 64) ** 2}x p2.5`} />
+            <Readout
+              label="panel"
+              value={`${settings.wallSize}x${settings.wallSize} / ${(settings.wallSize / 64) ** 2}x p2.5`}
+            />
           </div>
 
           <div className="hairline-t pt-3">
@@ -490,7 +547,9 @@ function WallPage() {
                 }}
                 className={cn(
                   "press w-24 shrink-0 space-y-1.5 border p-1.5 text-left transition-colors",
-                  step === i ? "border-foreground/60 bg-surface" : "border-border hover:border-foreground/30",
+                  step === i
+                    ? "border-foreground/60 bg-surface"
+                    : "border-border hover:border-foreground/30",
                 )}
               >
                 <StepThumb buffer={s.buffer} size={result.size} />
@@ -505,7 +564,9 @@ function WallPage() {
               <p className="num text-[10px] uppercase tracking-[0.12em] text-foreground">
                 {result.steps[step].name}
               </p>
-              <p className="text-xs leading-relaxed text-muted-foreground">{result.steps[step].note}</p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                {result.steps[step].note}
+              </p>
               <StepLarge buffer={result.steps[step].buffer} size={result.size} />
             </div>
           )}
@@ -549,7 +610,10 @@ function WallPage() {
             disabled={!result}
             onClick={async () => {
               if (!result) return;
-              download(await canvasToBlob(makeScaledPng(result.balanced, result.size, 1)), `wall-${result.size}.png`);
+              download(
+                await canvasToBlob(makeScaledPng(result.balanced, result.size, 1)),
+                `wall-${result.size}.png`,
+              );
             }}
           >
             png 1:1
@@ -558,7 +622,10 @@ function WallPage() {
             disabled={!result}
             onClick={async () => {
               if (!result) return;
-              download(await canvasToBlob(makeScaledPng(result.balanced, result.size, 4)), `wall-${result.size}-4x.png`);
+              download(
+                await canvasToBlob(makeScaledPng(result.balanced, result.size, 4)),
+                `wall-${result.size}-4x.png`,
+              );
             }}
           >
             png 4x
@@ -568,7 +635,9 @@ function WallPage() {
             onClick={async () => {
               if (!result) return;
               download(
-                await canvasToBlob(makeComparePng(result.unbalanced, result.balanced, result.size, 3)),
+                await canvasToBlob(
+                  makeComparePng(result.unbalanced, result.balanced, result.size, 3),
+                ),
                 "white-balance-compare.png",
               );
             }}
@@ -578,7 +647,11 @@ function WallPage() {
           <ExportBtn disabled={!result} onClick={downloadBin}>
             rgb888 .bin
           </ExportBtn>
-          <ExportBtn disabled={!result || !settings.pushEnabled} onClick={() => void pushFrame()} accent>
+          <ExportBtn
+            disabled={!result || !settings.pushEnabled}
+            onClick={() => void pushFrame()}
+            accent
+          >
             push to wall
           </ExportBtn>
         </div>
@@ -638,7 +711,9 @@ function NowPlayingPlacard({
           {polling ? "polling" : "poll"}
         </button>
       </div>
-      <h1 className="display-mid mt-2 line-clamp-2 text-2xl leading-tight text-foreground">{track.title}</h1>
+      <h1 className="display-mid mt-2 line-clamp-2 text-2xl leading-tight text-foreground">
+        {track.title}
+      </h1>
       <p className="num mt-1 truncate text-xs text-muted-foreground">
         {track.artist}
         {track.album ? ` - ${track.album}` : ""}
@@ -648,7 +723,10 @@ function NowPlayingPlacard({
         {frac != null ? (
           <div>
             <div className="relative h-px w-full bg-border">
-              <span className="absolute inset-y-0 left-0 -my-px h-[3px] bg-[var(--art)]" style={{ width: `${frac * 100}%` }} />
+              <span
+                className="absolute inset-y-0 left-0 -my-px h-[3px] bg-[var(--art)]"
+                style={{ width: `${frac * 100}%` }}
+              />
             </div>
             <div className="num mt-1.5 flex justify-between text-[9px] tracking-[0.08em] text-muted-foreground">
               <span>{elapsed != null ? fmtMs(elapsed) : "-"}</span>
@@ -714,14 +792,24 @@ function SplitWall({
       aria-valuenow={Math.round(wipe * 100)}
     >
       <canvas ref={aRef} className="block w-full" style={{ imageRendering: "pixelated" }} />
-      <div className="absolute inset-y-0 right-0 overflow-hidden" style={{ left: `${wipe * 100}%` }}>
+      <div
+        className="absolute inset-y-0 right-0 overflow-hidden"
+        style={{ left: `${wipe * 100}%` }}
+      >
         <canvas
           ref={bRef}
           className="absolute right-0 top-0 h-full"
-          style={{ imageRendering: "pixelated", width: `${100 / (1 - wipe || 1e-6)}%`, maxWidth: "none" }}
+          style={{
+            imageRendering: "pixelated",
+            width: `${100 / (1 - wipe || 1e-6)}%`,
+            maxWidth: "none",
+          }}
         />
       </div>
-      <div className="pointer-events-none absolute inset-y-0 w-px bg-[var(--art)]" style={{ left: `${wipe * 100}%` }}>
+      <div
+        className="pointer-events-none absolute inset-y-0 w-px bg-[var(--art)]"
+        style={{ left: `${wipe * 100}%` }}
+      >
         <span className="absolute left-1/2 top-1/2 h-6 w-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[var(--art)]" />
       </div>
       <span className="num pointer-events-none absolute left-2 top-2 text-[9px] uppercase tracking-[0.12em] text-white/60">
@@ -764,12 +852,22 @@ function ExportBtn({
   );
 }
 
-function PlainCanvas({ buffer, size, brightness }: { buffer: Uint8Array; size: number; brightness: number }) {
+function PlainCanvas({
+  buffer,
+  size,
+  brightness,
+}: {
+  buffer: Uint8Array;
+  size: number;
+  brightness: number;
+}) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (ref.current) drawNearest(ref.current, buffer, size, 4, brightness);
   }, [buffer, size, brightness]);
-  return <canvas ref={ref} className="block w-full bg-black" style={{ imageRendering: "pixelated" }} />;
+  return (
+    <canvas ref={ref} className="block w-full bg-black" style={{ imageRendering: "pixelated" }} />
+  );
 }
 
 function StepThumb({ buffer, size }: { buffer: Uint8Array; size: number }) {
@@ -777,7 +875,13 @@ function StepThumb({ buffer, size }: { buffer: Uint8Array; size: number }) {
   useEffect(() => {
     if (ref.current) drawNearest(ref.current, buffer, size, 1, 1);
   }, [buffer, size]);
-  return <canvas ref={ref} className="block aspect-square w-full bg-black" style={{ imageRendering: "pixelated" }} />;
+  return (
+    <canvas
+      ref={ref}
+      className="block aspect-square w-full bg-black"
+      style={{ imageRendering: "pixelated" }}
+    />
+  );
 }
 
 function StepLarge({ buffer, size }: { buffer: Uint8Array; size: number }) {
@@ -785,5 +889,11 @@ function StepLarge({ buffer, size }: { buffer: Uint8Array; size: number }) {
   useEffect(() => {
     if (ref.current) drawNearest(ref.current, buffer, size, size > 128 ? 2 : 4, 1);
   }, [buffer, size]);
-  return <canvas ref={ref} className="block w-full max-w-[420px] bg-black" style={{ imageRendering: "pixelated" }} />;
+  return (
+    <canvas
+      ref={ref}
+      className="block w-full max-w-[420px] bg-black"
+      style={{ imageRendering: "pixelated" }}
+    />
+  );
 }

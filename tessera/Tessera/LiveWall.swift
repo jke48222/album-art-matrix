@@ -49,7 +49,9 @@ final class LiveWall {
 
     /// How long the wall may stay on the lock screen after the app can no
     /// longer say what it is doing.
-    private static let linger: TimeInterval = 15 * 60
+    // nonisolated because content(_:) below is, and a let this size is safe
+    // to read from anywhere; without it Swift 6 makes the read an error.
+    nonisolated private static let linger: TimeInterval = 15 * 60
 
     init() {
         adoptLeftovers()

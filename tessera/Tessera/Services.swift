@@ -521,8 +521,8 @@ struct ServicesPage: View {
                 Done(text: "Connected")
             } else {
                 ActionPill(title: "Connect") {
-                    StandIn.requestMusicAccess { [weak wall] in
-                        wall?.push.restart()
+                    StandIn.requestMusicAccess {
+                        wall.push.restart()
                         musicConnected = Service.appleMusicAuthorized
                         musicRefused = Service.appleMusicRefused
                     }

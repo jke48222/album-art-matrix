@@ -6,6 +6,24 @@
 import AVFoundation
 import Foundation
 
+/// The reader, the writer and their two ends, carried into the pull closure
+/// as one value. AVFoundation's transcode types are not Sendable and the
+/// closure `requestMediaDataWhenReady(on:)` takes is, so without this the
+/// four captures are four warnings, and four errors in Swift 6. They are
+/// touched only from the single serial queue passed to that call, which is
+/// the guarantee @unchecked is standing in for.
+private final class Transcode: @unchecked Sendable {
+    let reader: AVAssetReader
+    let writer: AVAssetWriter
+    let input: AVAssetWriterInput
+    let output: AVAssetReaderVideoCompositionOutput
+    init(reader: AVAssetReader, writer: AVAssetWriter,
+         input: AVAssetWriterInput, output: AVAssetReaderVideoCompositionOutput) {
+        self.reader = reader; self.writer = writer
+        self.input = input; self.output = output
+    }
+}
+
 /// A square, small, quiet copy of a video's picture: what the wall wants.
 enum VideoPicture {
     enum Failure: LocalizedError {
@@ -78,26 +96,27 @@ enum VideoPicture {
         writer.startSession(atSourceTime: .zero)
         let total = CMTimeGetSeconds(duration)
 
+        let job = Transcode(reader: reader, writer: writer, input: input, output: output)
         try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
             let queue = DispatchQueue(label: "wall.picture")
-            input.requestMediaDataWhenReady(on: queue) {
-                while input.isReadyForMoreMediaData {
-                    if let sample = output.copyNextSampleBuffer() {
-                        input.append(sample)
+            job.input.requestMediaDataWhenReady(on: queue) {
+                while job.input.isReadyForMoreMediaData {
+                    if let sample = job.output.copyNextSampleBuffer() {
+                        job.input.append(sample)
                         if total > 0 {
                             let at = CMTimeGetSeconds(CMSampleBufferGetPresentationTimeStamp(sample))
                             progress(min(1, max(0, at / total)))
                         }
                     } else {
-                        input.markAsFinished()
-                        if reader.status == .failed {
-                            writer.cancelWriting()
-                            cont.resume(throwing: reader.error ?? Failure.reader)
+                        job.input.markAsFinished()
+                        if job.reader.status == .failed {
+                            job.writer.cancelWriting()
+                            cont.resume(throwing: job.reader.error ?? Failure.reader)
                             return
                         }
-                        writer.finishWriting {
-                            if writer.status == .completed { cont.resume() }
-                            else { cont.resume(throwing: writer.error ?? Failure.writer) }
+                        job.writer.finishWriting {
+                            if job.writer.status == .completed { cont.resume() }
+                            else { cont.resume(throwing: job.writer.error ?? Failure.writer) }
                         }
                         return
                     }

@@ -194,7 +194,11 @@ final class SpeechMove {
             guard let self else { return }
             if let result {
                 let text = result.bestTranscription.formattedString
-                DispatchQueue.main.async {
+                // weak the whole way down: the outer closure captured self
+                // strongly, so the inner Task's [weak self] was not the
+                // thing it looked like (and is a Swift 6 error).
+                DispatchQueue.main.async { [weak self] in
+                    guard let self else { return }
                     self.heard = text
                     // a pause after the words is the end of the move
                     self.settle?.cancel()
@@ -204,7 +208,9 @@ final class SpeechMove {
                         self.finish(text)
                     }
                 }
-                if result.isFinal { DispatchQueue.main.async { self.finish(text) } }
+                if result.isFinal {
+                    DispatchQueue.main.async { [weak self] in self?.finish(text) }
+                }
             }
             if error != nil { DispatchQueue.main.async { self.stop() } }
         }
@@ -326,7 +332,7 @@ struct GamesSheetBody: View {
                                 }
                             }
                             .padding(16)
-                            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster.opacity(0.6)))
+                            .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster.opacity(0.6)))
                         }
                     }
                     .padding(.horizontal, 16).padding(.vertical, 18)
@@ -350,7 +356,7 @@ struct GamesSheetBody: View {
         HStack(spacing: 14) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .frame(width: 112, height: 112)
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
             VStack(alignment: .leading, spacing: 6) {
                 Text(g.over ? "Over" : "On the wall").font(.ui(11, .semibold)).foregroundStyle(GameMotif.colour(g.name))
                 Text(g.title).font(.display(22)).foregroundStyle(Ink.ink)
@@ -361,8 +367,8 @@ struct GamesSheetBody: View {
             Image(systemName: "chevron.right").foregroundStyle(Ink.faint)
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(GameMotif.colour(g.name).opacity(0.5), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(Ink.plaster))
+        .overlay(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).stroke(GameMotif.colour(g.name).opacity(0.5), lineWidth: 1))
     }
 
     private func tile(_ card: GameCard) -> some View {
@@ -385,7 +391,7 @@ struct GamesSheetBody: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+        .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
     }
 
     private func start(_ card: GameCard) {
@@ -623,7 +629,7 @@ struct GameScreen: View {
                 .focused($typing)
                 .onSubmit { send() }
                 .padding(.horizontal, 14).frame(minHeight: 48)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
             ActionPill(title: sending ? "Sending" : "Send", filled: true) { send() }
             if g.voice ?? true {
                 Button {
@@ -725,7 +731,7 @@ struct WallStrip: View {
         HStack(spacing: 12) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .frame(width: 64, height: 64)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
             VStack(alignment: .leading, spacing: 4) {
                 Text("On the wall").font(.ui(11, .semibold)).foregroundStyle(colour)
                 Text(message).font(.ui(13)).foregroundStyle(Ink.dim).lineLimit(2)
@@ -733,7 +739,7 @@ struct WallStrip: View {
             Spacer(minLength: 0)
         }
         .padding(10)
-        .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Ink.plaster.opacity(0.7)))
+        .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster.opacity(0.7)))
     }
 }
 
@@ -743,7 +749,7 @@ struct WallBoard: View {
     var body: some View {
         PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
             .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
     }
 }
 
@@ -785,9 +791,9 @@ struct WordleBoard: View {
                             .font(.system(size: 26, weight: .bold, design: .rounded))
                             .foregroundStyle(Ink.ink)
                             .frame(width: 56, height: 56)
-                            .background(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                                 .fill(mark.map(colour) ?? Ink.plaster))
-                            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .overlay(RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                                 .stroke(mark == nil ? Ink.hairline : .clear, lineWidth: 1))
                     }
                 }
@@ -808,7 +814,7 @@ struct WordleBoard: View {
                             .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .foregroundStyle(m == nil ? Ink.dim : Ink.ink)
                             .frame(maxWidth: .infinity, minHeight: 30)
-                            .background(RoundedRectangle(cornerRadius: 6, style: .continuous)
+                            .background(RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
                                 .fill(m.flatMap { $0.first }.map(colour) ?? Ink.sunk))
                     }
                 }

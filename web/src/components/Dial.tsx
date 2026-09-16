@@ -135,7 +135,13 @@ export function Dial({
         style={{ width: size, height: size }}
       >
         <svg width={size} height={size} aria-hidden>
-          <circle cx={cx} cy={cy} r={needleR + 3} fill="var(--surface-sunk)" stroke="var(--border)" />
+          <circle
+            cx={cx}
+            cy={cy}
+            r={needleR + 3}
+            fill="var(--surface-sunk)"
+            stroke="var(--border)"
+          />
           {ticks}
           {/* needle */}
           <line

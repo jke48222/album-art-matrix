@@ -18,7 +18,12 @@ function NavStrip({ pathname, className }: { pathname: string; className?: strin
     NAV.findIndex((n) => (n.to === "/" ? pathname === "/" : pathname.startsWith(n.to))),
   );
   return (
-    <nav className={cn("placard-sunk relative isolate grid grid-cols-6 overflow-hidden p-0.5", className)}>
+    <nav
+      className={cn(
+        "placard-sunk relative isolate grid grid-cols-6 overflow-hidden p-0.5",
+        className,
+      )}
+    >
       <span
         aria-hidden
         className="absolute inset-y-0.5 left-0.5 -z-10 rounded-[5px] bg-foreground transition-transform duration-300 [transition-timing-function:var(--ease-snap)]"
@@ -58,9 +63,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
             <span className="display-wide block truncate text-[17px] uppercase leading-none text-foreground">
               Album&nbsp;Art&nbsp;Matrix
             </span>
-            <span className="eyebrow mt-1.5 block">
-              3x3 / hub75 / p2.5 / simulation
-            </span>
+            <span className="eyebrow mt-1.5 block">3x3 / hub75 / p2.5 / simulation</span>
           </Link>
 
           <div className="relative ml-auto shrink-0">
@@ -98,18 +101,22 @@ export function Shell({ children }: { children: React.ReactNode }) {
         {review !== "off" && (
           <div className="mx-auto w-full max-w-3xl px-5 pt-2">
             <p className="num border border-warning/50 px-3 py-1.5 text-[10px] uppercase tracking-[0.1em] text-warning">
-              review mode / forced into &ldquo;{REVIEW_STATES.find((s) => s.id === review)?.label}&rdquo; / not a live reading
+              review mode / forced into &ldquo;{REVIEW_STATES.find((s) => s.id === review)?.label}
+              &rdquo; / not a live reading
             </p>
           </div>
         )}
       </header>
 
-      <main className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-5 pb-8 pt-3">{children}</main>
+      <main className="relative z-10 mx-auto w-full max-w-3xl flex-1 px-5 pb-8 pt-3">
+        {children}
+      </main>
 
       <footer className="relative z-10 mx-auto w-full max-w-3xl px-5 pb-28 pt-3 md:pb-8">
         <p className="eyebrow leading-relaxed normal-case tracking-[0.06em]">
-          Simulation and circuit models only. Nine 64x64 HUB75 P2.5 panels, 3x3, 480 mm on a side. Ten
-          panels are on the bench; the wall is not yet assembled, and nothing here is a measurement of it.
+          Simulation and circuit models only. Nine 64x64 HUB75 P2.5 panels, 3x3, 480 mm on a side.
+          Ten panels are on the bench; the wall is not yet assembled, and nothing here is a
+          measurement of it.
         </p>
       </footer>
 

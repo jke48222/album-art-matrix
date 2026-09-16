@@ -87,7 +87,14 @@ export function drawWall(
       const lum = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 
       if (cell >= 4 && lum > 0.02) {
-        const bloom = ctx.createRadialGradient(cxp, cyp, radius * 0.4, cxp, cyp, radius + cell * lum * 1.5);
+        const bloom = ctx.createRadialGradient(
+          cxp,
+          cyp,
+          radius * 0.4,
+          cxp,
+          cyp,
+          radius + cell * lum * 1.5,
+        );
         bloom.addColorStop(0, `rgba(${r | 0}, ${g | 0}, ${b | 0}, ${0.42 * lum})`);
         bloom.addColorStop(1, "rgba(0,0,0,0)");
         ctx.fillStyle = bloom;

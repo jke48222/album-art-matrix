@@ -1,11 +1,19 @@
 // The developer's own keys, baked in once, so a person only ever signs in.
 //
-// Every app with a "Sign in with Spotify" button was registered with Spotify
-// once by its developer; the app id that came back is public by design (the
-// sign-in uses PKCE, so there is no secret to keep). Last.fm hands out
-// per-app keys the same way. They are pasted here once, and the app hands
-// them to any wall it meets that is missing them (WallServices.seeded). The
-// wall's ears need no key at all: they go through Shazam.
+// Only what is safe to publish belongs in this file. This repository is
+// public, so anything here is readable by anyone, forever.
+//
+// The Spotify app id is safe: every app with a "Sign in with Spotify" button
+// was registered once by its developer, and the id that came back is public
+// by design, because the sign-in uses PKCE and there is no secret to keep.
+//
+// A Last.fm API key is NOT the same thing, whatever this comment used to
+// say. It is a credential bound to the developer's Last.fm account, sent in
+// the clear by clients but not meant to be published: a copied key burns the
+// owner's rate limit and can get it revoked for someone else's abuse. So it
+// is empty here. Make one at https://www.last.fm/api/accounts and type it
+// into Tessera's Services page, which keeps it in services.json on the wall
+// and never in the repository.
 //
 // Empty means "not made yet": the Services pages then walk through making
 // them by hand, so nothing breaks while the keys do not exist.
@@ -19,12 +27,12 @@ enum DeveloperKeys {
     static let spotifyClientID = "9d6085a739ed432d9f5da56c598cf39b"
     static let lastfmAPIKey = ""
 
-    // The owner's own accounts, handed to a wall that has none, so setting
-    // up a fresh wall takes no typing at all. Not developer keys: clear them
-    // for a build meant for someone else. Either can still be changed on
-    // the wall from the Services pages.
-    static let lastfmUser = "youfoundjalen"
-    static let listenbrainzUser = "youfoundjalen"
+    // A wall with no account of its own can be handed one here, so setting it
+    // up takes no typing. Empty in the repository, which is public: an account
+    // name is not a secret but it is nobody else's business either. Fill them
+    // in for a local build, or type them into the Services pages once.
+    static let lastfmUser = ""
+    static let listenbrainzUser = ""
 
     static var any: Bool {
         !(spotifyClientID.isEmpty && lastfmAPIKey.isEmpty

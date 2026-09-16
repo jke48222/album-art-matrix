@@ -1,21 +1,10 @@
 // Shared typed contracts for Album Art Matrix.
 
 export type SourceId =
-  | "applemusic"
-  | "spotify"
-  | "acoustid"
-  | "lastfm"
-  | "mpris"
-  | "manual"
-  | "demo";
+  "applemusic" | "spotify" | "acoustid" | "lastfm" | "mpris" | "manual" | "demo";
 
 export type SourceState =
-  | "connected"
-  | "disconnected"
-  | "needs-setup"
-  | "needs-bridge"
-  | "error"
-  | "no-answer";
+  "connected" | "disconnected" | "needs-setup" | "needs-bridge" | "error" | "no-answer";
 
 export interface NowPlaying {
   trackId: string;

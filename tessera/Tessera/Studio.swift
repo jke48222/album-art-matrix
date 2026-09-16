@@ -13,10 +13,11 @@
 // currently on the wall lends its own palette, so what you make belongs to
 // the room it will hang in.
 
+import AVFoundation
+import Combine
+import PhotosUI
 import SwiftUI
 import UIKit
-import PhotosUI
-import AVFoundation
 
 // MARK: - The canvas
 
@@ -670,11 +671,11 @@ struct StudioScreen: View {
         // onto the room behind it.
         .padding(7)
         .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
+            RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
                 .fill(LinearGradient(colors: [Color(hex: 0x8C877E), Color(hex: 0x5E5A54)],
                                      startPoint: .top, endPoint: .bottom))
         )
-        .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous)
+        .overlay(RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
             .strokeBorder(.white.opacity(0.12), lineWidth: 1))
         .shadow(color: inkColor.opacity(0.34), radius: 26)
         .shadow(color: .black.opacity(0.45), radius: 12, y: 6)
@@ -824,7 +825,7 @@ struct StudioScreen: View {
                 .padding(.vertical, 12)
                 .padding(.horizontal, 14)
                 .background(Ink.sunk)
-                .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+                .overlay { RoundedRectangle(cornerRadius: Round.control).strokeBorder(Ink.hairline, lineWidth: 1) }
 
             Button {
                 words = ""

@@ -511,7 +511,7 @@ struct TickerRow: View {
                     .submitLabel(.send)
                     .padding(.vertical, 12).padding(.horizontal, 14)
                     .background(Ink.sunk)
-                    .overlay { RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.hairline, lineWidth: 1) }
+                    .overlay { RoundedRectangle(cornerRadius: Round.control).strokeBorder(Ink.hairline, lineWidth: 1) }
                     .onSubmit { Taps.commit(); send() }
 
                 Button("Send") { send() }
@@ -608,7 +608,7 @@ struct WallTimerRow: View {
                                 .padding(.vertical, 10)
                                 .background(Ink.sunk)
                                 .overlay {
-                                    RoundedRectangle(cornerRadius: 8)
+                                    RoundedRectangle(cornerRadius: Round.control)
                                         .strokeBorder(Ink.hairline, lineWidth: 1)
                                 }
                         }
@@ -746,12 +746,12 @@ struct LetterInker: View {
             .frame(width: 30, height: 38)
             .background(Ink.sunk)
             .overlay {
-                RoundedRectangle(cornerRadius: 7)
+                RoundedRectangle(cornerRadius: Round.chip)
                     .strokeBorder(i < colors.count
                         ? (Color(wallHex: hex) ?? Ink.hairline).opacity(0.45)
                         : Ink.hairline, lineWidth: 1)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 7))
+            .clipShape(RoundedRectangle(cornerRadius: Round.chip))
     }
 
     private func act(_ label: String, _ run: @escaping () -> Void) -> some View {

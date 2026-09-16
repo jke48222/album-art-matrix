@@ -351,15 +351,22 @@ struct NextStepCard: View {
             HStack(alignment: .top) {
                 WallThumb(frame: frame, live: wall.link.isLive)
                 Spacer()
+                // Words, not a second X. This card sat under the sheet's own
+                // close button: two dark circles with the same glyph, fifty
+                // points apart, one closing Settings and one waving off a
+                // suggestion. It was also a 30pt target, under the 44 a
+                // finger needs. "Not now" says which one it is and cannot be
+                // mistaken for the other.
                 Button(action: dismiss) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .semibold))
+                    Text("Not now")
+                        .font(.ui(14, .medium))
                         .foregroundStyle(Ink.dim)
-                        .frame(width: 30, height: 30)
-                        .background(Circle().fill(Ink.sunk))
+                        .padding(.horizontal, Space.step)
+                        .frame(height: 44)
+                        .contentShape(Rectangle())
                 }
-                .buttonStyle(PressStyle(scale: 0.94))
-                .accessibilityLabel("Dismiss")
+                .buttonStyle(PressStyle(scale: 0.96))
+                .accessibilityLabel("Not now, hide this suggestion")
             }
             Text(step.title)
                 .font(.displayMid(21))
@@ -465,18 +472,18 @@ struct WallThumb: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                 .fill(Ink.sunk)
             if let frame, let img = EmitterTile.render([UInt8](frame), cell: 3) {
                 Image(uiImage: img)
                     .resizable()
                     .interpolation(.none)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
             }
         }
         .frame(width: 88, height: 88)
         .overlay {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                 .strokeBorder(Ink.hairline, lineWidth: 1)
         }
         .overlay(alignment: .bottomTrailing) {
@@ -513,7 +520,7 @@ struct SetupGroup<Content: View>: View {
                 .padding(.leading, 2)
             VStack(spacing: 0) { content }
                 .background(Glass(radius: 22))
-                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.hero, style: .continuous))
             if let note {
                 Text(note)
                     .font(.ui(12))
@@ -597,12 +604,21 @@ struct ToggleRow: View {
 }
 
 /// The line between rows, inset so it reads as a rule and not a box edge.
+/// A hairline between rows.
+///
+/// The inset is a list convention: the rule starts where the row's words
+/// start, so the eye reads a column rather than a ladder. It is only right
+/// when the rows above and below are themselves inset by that much. On a
+/// screen whose content runs to the group's edge it is just a rule that
+/// starts in the wrong place and ends flush, which is how it looked on the
+/// brightness step: content at 24pt, rule at 40. Those pass `inset: 0`.
 struct Rule: View {
+    var inset: CGFloat = Space.gap
     var body: some View {
         Rectangle()
             .fill(Ink.hairline)
             .frame(height: 1)
-            .padding(.leading, 16)
+            .padding(.leading, inset)
     }
 }
 
@@ -794,10 +810,10 @@ struct ChoicePage<T: Hashable>: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Glass(radius: 18))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            RoundedRectangle(cornerRadius: Round.sheet, style: .continuous)
                                 .strokeBorder(on ? accent : .clear, lineWidth: 2)
                         }
-                        .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                     }
                     .buttonStyle(PressStyle(scale: 0.99))
                     .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
@@ -937,7 +953,7 @@ struct WeatherPage: View {
             HStack(alignment: .top, spacing: 14) {
                 PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                     .frame(width: 112, height: 112)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(wall.state.place.isEmpty ? "Here" : wall.state.place).font(.ui(12, .semibold)).foregroundStyle(accent)
                     HStack(alignment: .firstTextBaseline, spacing: 2) {
@@ -959,8 +975,8 @@ struct WeatherPage: View {
             }
         }
         .padding(14)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
-        .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(accent.opacity(0.35), lineWidth: 1))
+        .background(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(Ink.plaster))
+        .overlay(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).stroke(accent.opacity(0.35), lineWidth: 1))
     }
 
     private func fact(_ symbol: String, _ label: String, _ value: String) -> some View {
@@ -1224,15 +1240,15 @@ struct PanelPage: View {
                             Taps.commit()
                         } label: {
                             VStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                RoundedRectangle(cornerRadius: Round.card, style: .continuous)
                                     .fill(Color(red: Double(rgb.0) / 255, green: Double(rgb.1) / 255, blue: Double(rgb.2) / 255))
                                     .frame(height: 76)
-                                    .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Ink.hairline, lineWidth: 1) }
+                                    .overlay { RoundedRectangle(cornerRadius: Round.card, style: .continuous).strokeBorder(Ink.hairline, lineWidth: 1) }
                                 Text(name).font(.ui(14, .medium)).foregroundStyle(Ink.ink)
                             }
                             .padding(12)
                             .background(Ink.plaster)
-                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                         }
                         .buttonStyle(PressStyle(scale: 0.97))
                         .accessibilityLabel("Show full \(name) on the wall")
@@ -1622,7 +1638,7 @@ struct ImaginePage: View {
                 HStack(spacing: 12) {
                     PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                         .frame(width: 96, height: 96)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
                         Text(l.stage == "done" ? "On the wall" : "Drawing").font(.ui(11, .semibold)).foregroundStyle(accent)
                         Text(l.prompt ?? "").font(.ui(14, .semibold)).foregroundStyle(Ink.ink).lineLimit(2)
@@ -1631,7 +1647,7 @@ struct ImaginePage: View {
                     Spacer(minLength: 0)
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
             }
             SetupGroup("The words", note: ready ? "One picture every ten seconds. The wall shows it being drawn." : "Set up a drawer and its key under Services, Images, first.") {
                 KeyField(placeholder: "a purple elephant", text: $prompt)
@@ -1651,12 +1667,12 @@ struct ImaginePage: View {
                                     if let image = phase.image {
                                         image.resizable().interpolation(.medium).aspectRatio(1, contentMode: .fill)
                                     } else {
-                                        RoundedRectangle(cornerRadius: 10).fill(Ink.plaster)
+                                        RoundedRectangle(cornerRadius: Round.control).fill(Ink.plaster)
                                             .aspectRatio(1, contentMode: .fit)
                                     }
                                 }
-                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                                .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
+                                .overlay(RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                                     .stroke(showing == item.id ? accent : .clear, lineWidth: 2))
                                 Text(item.prompt).font(.ui(11)).foregroundStyle(Ink.dim).lineLimit(2)
                             }

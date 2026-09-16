@@ -8,13 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { DEFAULT_ORDER, DEFAULT_SOURCE_CONFIG } from "./sources/index";
-import type {
-  HistoryEntry,
-  Settings,
-  SourceConfigMap,
-  SourceId,
-  WbProfile,
-} from "./types";
+import type { HistoryEntry, Settings, SourceConfigMap, SourceId, WbProfile } from "./types";
 
 export const DEFAULT_GAINS: [number, number, number] = [1.0, 0.75, 0.55];
 
@@ -165,13 +159,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const gains = useMemo(
-    () => [activeProfile.gainR, activeProfile.gainG, activeProfile.gainB] as [number, number, number],
+    () =>
+      [activeProfile.gainR, activeProfile.gainG, activeProfile.gainB] as [number, number, number],
     [activeProfile],
   );
 
   const persistProfiles = (next: WbProfile[]) => {
     setProfiles(next);
-    save("aam.profiles", next.filter((p) => !p.builtIn));
+    save(
+      "aam.profiles",
+      next.filter((p) => !p.builtIn),
+    );
   };
 
   const addProfile = useCallback(
@@ -189,7 +187,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [profiles, settings.activeWbProfileId, setSettings],
   );
 
-  const setActiveProfile = useCallback((id: string) => setSettings({ activeWbProfileId: id }), [setSettings]);
+  const setActiveProfile = useCallback(
+    (id: string) => setSettings({ activeWbProfileId: id }),
+    [setSettings],
+  );
 
   /** Editing gains live writes to the active profile, creating a working copy for the built-in. */
   const setActiveGains = useCallback(
@@ -209,7 +210,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSettings({ activeWbProfileId: "working" });
       } else {
         persistProfiles(
-          profiles.map((p) => (p.id === activeProfile.id ? { ...p, gainR: g[0], gainG: g[1], gainB: g[2] } : p)),
+          profiles.map((p) =>
+            p.id === activeProfile.id ? { ...p, gainR: g[0], gainG: g[1], gainB: g[2] } : p,
+          ),
         );
       }
     },
@@ -296,7 +299,11 @@ export function useStore(): Store {
 }
 
 /** config.toml emitter, exact hardware-project format. */
-export function toConfigToml(settings: Settings, gains: [number, number, number], adapters: SourceId[]) {
+export function toConfigToml(
+  settings: Settings,
+  gains: [number, number, number],
+  adapters: SourceId[],
+) {
   return `[panel]
 width = ${settings.wallSize}
 height = ${settings.wallSize}

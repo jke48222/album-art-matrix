@@ -17,7 +17,12 @@ enum Ink {
     static let sunk     = Color(hex: 0x0E0D0B)
     static let ink      = Color(hex: 0xEAE4D8)
     static let dim      = Color(hex: 0x96907F)
-    static let faint    = Color(hex: 0x5E594E)
+    // Was 0x5E594E, which measured 2.84:1 on ground: under the 3:1 floor for
+    // large text, let alone the 4.5:1 body text needs, and it carries words at
+    // forty-odd places, most of them 9 to 12pt. Lifted along its own hue until
+    // it clears 4.5:1 on all three grounds (4.77 / 4.51 / 4.68). Still the
+    // quietest voice: well below dim, which is 6.2:1.
+    static let faint    = Color(hex: 0x837C6C)
     static let hairline = Color(hex: 0xEAE4D8).opacity(0.13)
     static let tile     = Color(hex: 0xE8B04B)   // a lit tessera; pending states
     static let signal   = Color(hex: 0xE0491F)   // warnings and destructive only
@@ -45,8 +50,12 @@ extension Color {
 
 // MARK: - Type
 
-// Faces ship in Fonts/ and are registered at launch. Every size goes through
-// the caller's @ScaledMetric so custom faces track Dynamic Type.
+// Faces ship in Fonts/ and are registered at launch.
+//
+// Dynamic Type: the sizes below are written as literals and still scale,
+// because Font.custom(_:size:) scales relative to .body on its own. Nothing
+// here uses @ScaledMetric, whatever this comment used to claim. Checked on
+// the simulator at every step up to accessibility-extra-large.
 enum Face {
     static let display       = "Technor-Bold"
     static let displayMid    = "Technor-Semibold"
@@ -112,6 +121,21 @@ struct Microlabel: ViewModifier {
 
 extension View {
     func microlabel(_ color: Color = Ink.dim) -> some View { modifier(Microlabel(color: color)) }
+
+    /// A quiet text button that still looks like one.
+    ///
+    /// These carry real escape routes: "I don't have a wall yet" is the only
+    /// way forward on a network with no wall. Styled as dim semibold text with
+    /// nothing else, they read as captions, and a caption is not something
+    /// anyone thinks to press. The underline is the affordance, and it is not
+    /// a colour, so it survives the room being dark and eyes that do not sort
+    /// these greys apart.
+    func quietLink() -> some View {
+        self.font(.ui(15, .semibold))
+            .foregroundStyle(Ink.ink)
+            .underline(true, pattern: .solid)
+            .accessibilityAddTraits(.isButton)
+    }
 }
 
 extension Color {

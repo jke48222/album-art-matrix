@@ -24,7 +24,8 @@ export const Route = createFileRoute("/settings")({
       { property: "og:title", content: "Settings - Album Art Matrix" },
       {
         property: "og:description",
-        content: "Every pipeline and wall control in one place, exportable as a Pi-ready config file.",
+        content:
+          "Every pipeline and wall control in one place, exportable as a Pi-ready config file.",
       },
     ],
   }),
@@ -35,16 +36,35 @@ const IDLE: { id: IdleBehaviour; label: string; note: string }[] = [
   { id: "black", label: "Go black", note: "Panels off. Lowest power, zero light." },
   { id: "hold", label: "Hold last cover", note: "Keeps the last frame lit indefinitely." },
   { id: "dim", label: "Dim last cover", note: "Last frame at 20% brightness." },
-  { id: "ambient", label: "Ambient drift", note: "A slow generated gradient so the wall is never dead." },
+  {
+    id: "ambient",
+    label: "Ambient drift",
+    note: "A slow generated gradient so the wall is never dead.",
+  },
 ];
 
 function SettingsPage() {
-  const { settings, setSettings, resetSettings, gains, order, sourceConfigs, history, profiles } = useStore();
+  const { settings, setSettings, resetSettings, gains, order, sourceConfigs, history, profiles } =
+    useStore();
   const [confirmReset, setConfirmReset] = useState(false);
 
   const exportAll = () => {
     const blob = new Blob(
-      [JSON.stringify({ settings, gains, order, sourceConfigs, profiles, history, exportedAt: new Date().toISOString() }, null, 2)],
+      [
+        JSON.stringify(
+          {
+            settings,
+            gains,
+            order,
+            sourceConfigs,
+            profiles,
+            history,
+            exportedAt: new Date().toISOString(),
+          },
+          null,
+          2,
+        ),
+      ],
       { type: "application/json" },
     );
     download(blob, "album-art-matrix-backup.json");
@@ -65,7 +85,10 @@ function SettingsPage() {
           <CardTitle className="text-base">Wall and pipeline</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          <Field label="Wall size" hint="9 panels of 64x64. 192 is the real wall; smaller sizes preview a single panel or a 2x2 slice.">
+          <Field
+            label="Wall size"
+            hint="9 panels of 64x64. 192 is the real wall; smaller sizes preview a single panel or a 2x2 slice."
+          >
             <div className="flex gap-2">
               {([64, 128, 192] as WallSize[]).map((s) => (
                 <Button
@@ -130,10 +153,14 @@ function SettingsPage() {
             <div>
               <p className="text-sm font-medium">Apply white balance</p>
               <p className="text-xs text-muted-foreground">
-                Per-channel gain in linear light using the active profile ({gains.map((g) => g.toFixed(2)).join(" / ")}).
+                Per-channel gain in linear light using the active profile (
+                {gains.map((g) => g.toFixed(2)).join(" / ")}).
               </p>
             </div>
-            <Switch checked={settings.applyWhiteBalance} onCheckedChange={(v) => setSettings({ applyWhiteBalance: v })} />
+            <Switch
+              checked={settings.applyWhiteBalance}
+              onCheckedChange={(v) => setSettings({ applyWhiteBalance: v })}
+            />
           </div>
         </CardContent>
       </Card>
@@ -148,7 +175,9 @@ function SettingsPage() {
               key={o.id}
               onClick={() => setSettings({ idleBehaviour: o.id })}
               className={`rounded-lg border p-3 text-left transition-colors ${
-                settings.idleBehaviour === o.id ? "border-[var(--art)]" : "border-border hover:border-foreground/30"
+                settings.idleBehaviour === o.id
+                  ? "border-[var(--art)]"
+                  : "border-border hover:border-foreground/30"
               }`}
             >
               <p className="display-mid text-sm text-foreground">{o.label}</p>
@@ -170,7 +199,10 @@ function SettingsPage() {
                 POSTs the exact RGB888 buffer this app renders, at the configured size.
               </p>
             </div>
-            <Switch checked={settings.pushEnabled} onCheckedChange={(v) => setSettings({ pushEnabled: v })} />
+            <Switch
+              checked={settings.pushEnabled}
+              onCheckedChange={(v) => setSettings({ pushEnabled: v })}
+            />
           </div>
           <Field label="Format">
             <Strip
@@ -196,12 +228,16 @@ function SettingsPage() {
               className="num"
               value={settings.pushEndpoint}
               onChange={(e) => setSettings({ pushEndpoint: e.target.value })}
-              placeholder={settings.pushFormat === "brain" ? "http://album-matrix.local:8788/frame" : "http://host:port/frame"}
+              placeholder={
+                settings.pushFormat === "brain"
+                  ? "http://album-matrix.local:8788/frame"
+                  : "http://host:port/frame"
+              }
             />
           </Field>
           <HonestNote tone="warn">
-            With push on and no endpoint reachable, the app reports the failure instead of pretending the frame
-            landed. The Pi brain format only accepts 64x64 frames today.
+            With push on and no endpoint reachable, the app reports the failure instead of
+            pretending the frame landed. The Pi brain format only accepts 64x64 frames today.
           </HonestNote>
         </CardContent>
       </Card>
@@ -214,7 +250,19 @@ function SettingsPage() {
           <Button
             variant="secondary"
             onClick={() =>
-              download(new Blob([toConfigToml(settings, gains, order.filter((id) => sourceConfigs[id].enabled))], { type: "text/plain" }), "config.toml")
+              download(
+                new Blob(
+                  [
+                    toConfigToml(
+                      settings,
+                      gains,
+                      order.filter((id) => sourceConfigs[id].enabled),
+                    ),
+                  ],
+                  { type: "text/plain" },
+                ),
+                "config.toml",
+              )
             }
           >
             <Download className="mr-2 h-4 w-4" /> config.toml
@@ -222,7 +270,13 @@ function SettingsPage() {
           <Button
             variant="secondary"
             onClick={async () => {
-              await navigator.clipboard.writeText(toConfigToml(settings, gains, order.filter((id) => sourceConfigs[id].enabled)));
+              await navigator.clipboard.writeText(
+                toConfigToml(
+                  settings,
+                  gains,
+                  order.filter((id) => sourceConfigs[id].enabled),
+                ),
+              );
               toast.success("config.toml copied. Paste it straight into the hardware repo.");
             }}
           >
@@ -241,7 +295,8 @@ function SettingsPage() {
               toast.success("Settings restored to defaults.");
             }}
           >
-            <RotateCcw className="mr-2 h-4 w-4" /> {confirmReset ? "Tap again to confirm" : "Reset settings"}
+            <RotateCcw className="mr-2 h-4 w-4" />{" "}
+            {confirmReset ? "Tap again to confirm" : "Reset settings"}
           </Button>
         </CardContent>
       </Card>

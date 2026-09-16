@@ -24,7 +24,7 @@ export function NumberControl({
   unit?: string;
   hint?: string;
 }) {
-  const decimals = step < 1 ? String(step).split(".")[1]?.length ?? 2 : 0;
+  const decimals = step < 1 ? (String(step).split(".")[1]?.length ?? 2) : 0;
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">

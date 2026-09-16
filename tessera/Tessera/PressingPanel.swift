@@ -139,7 +139,7 @@ struct PressingPanel: View {
                         else { Rectangle().fill(ink.fill) }
                     }
                     .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
                     PhotosPicker(selection: $photoItem, matching: .images) {
                         Text("Choose a photo").font(.ui(13, .medium)).foregroundStyle(Ink.ground)
                             .padding(.horizontal, 14).frame(height: 36)
@@ -185,10 +185,10 @@ struct PressingPanel: View {
                                     }
                                     .padding(.horizontal, 12).padding(.vertical, 10)
                                     .background {
-                                        if choice == saved.choice { RoundedRectangle(cornerRadius: 18, style: .continuous).fill(accent) }
+                                        if choice == saved.choice { RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(accent) }
                                         else {
-                                            RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.ultraThinMaterial)
-                                            RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+                                            RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(.ultraThinMaterial)
+                                            RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
                                         }
                                     }
                                 }
@@ -205,7 +205,7 @@ struct PressingPanel: View {
                         TextField("Name this pressing", text: $saveName)
                             .font(.ui(14)).foregroundStyle(ink.ink)
                             .padding(.horizontal, 14).frame(height: 40)
-                            .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(ink.fill))
+                            .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
                             .submitLabel(.done)
                             .onSubmit(keepOnShelf)
                         Button(action: keepOnShelf) {
@@ -263,10 +263,10 @@ struct PressingPanel: View {
                 .frame(maxWidth: .infinity).frame(height: 50)
                 .background {
                     if quiet {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.ultraThinMaterial)
-                        RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
                     } else {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous).fill(accent)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(accent)
                     }
                 }
             }
@@ -276,8 +276,8 @@ struct PressingPanel: View {
                     Text("Song's own").font(.ui(15, .semibold)).foregroundStyle(ink.ink)
                         .padding(.horizontal, 18).frame(height: 50)
                         .background {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous).fill(.ultraThinMaterial)
-                            RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+                            RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(.ultraThinMaterial)
+                            RoundedRectangle(cornerRadius: Round.card, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
                         }
                 }
             }
@@ -303,10 +303,10 @@ struct PressingPanel: View {
                 .lineLimit(1).minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity).frame(height: 36)
                 .background {
-                    if on { RoundedRectangle(cornerRadius: 12, style: .continuous).fill(accent) }
+                    if on { RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(accent) }
                     else {
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.ultraThinMaterial)
-                        RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
                     }
                 }
         }

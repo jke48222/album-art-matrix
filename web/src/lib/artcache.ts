@@ -134,7 +134,8 @@ function toRgba(img: HTMLImageElement | ImageBitmap): RgbaImage {
   } catch {
     throw new ArtError({
       kind: "cors",
-      message: "Canvas was tainted by the remote image, so getImageData threw. The host must allow cross-origin reads.",
+      message:
+        "Canvas was tainted by the remote image, so getImageData threw. The host must allow cross-origin reads.",
     });
   }
 }
@@ -170,12 +171,17 @@ export async function loadArt(url: string): Promise<RgbaImage> {
     // Fall back to an <img crossOrigin="anonymous"> load; some CDNs allow the image but not fetch.
     return toRgba(await loadImageElement(url, true));
   }
-  if (res.status === 404) throw new ArtError({ kind: "notfound", message: "Artwork URL returned 404." });
-  if (!res.ok) throw new ArtError({ kind: "unknown", message: `Artwork URL returned HTTP ${res.status}.` });
+  if (res.status === 404)
+    throw new ArtError({ kind: "notfound", message: "Artwork URL returned 404." });
+  if (!res.ok)
+    throw new ArtError({ kind: "unknown", message: `Artwork URL returned HTTP ${res.status}.` });
   const type = res.headers.get("content-type") ?? "";
   const blob = await res.blob();
   if (!type.startsWith("image/") && !blob.type.startsWith("image/")) {
-    throw new ArtError({ kind: "type", message: `Response was ${type || "an unknown type"}, not an image.` });
+    throw new ArtError({
+      kind: "type",
+      message: `Response was ${type || "an unknown type"}, not an image.`,
+    });
   }
   if (blob.size > MAX_BYTES) {
     throw new ArtError({

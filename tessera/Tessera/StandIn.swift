@@ -215,7 +215,6 @@ final class StandIn {
             } else {
                 px = art ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
             }
-        case "ticker": px = ticker(t)
         case "clock":  px = clock()
         default:       px = finished(art) ?? [UInt8](repeating: 0, count: 64 * 64 * 3)
         }
@@ -266,17 +265,6 @@ final class StandIn {
             }
             cx += adv * scale
         }
-    }
-
-    private func ticker(_ t: Double) -> [UInt8] {
-        var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
-        let text = PixelFont.normalize(state.tickerText.isEmpty ? "?" : state.tickerText)
-        let w = PixelFont.textWidth(text, scale: 2)
-        let travel = w + 64 + 4
-        var off = Int(t * 18)                       // the wall's px/s at speed 1
-        off = state.tickerLoop ? off % travel : min(off, travel)
-        stamp(text, into: &px, x: 64 - off, y: (64 - 14) / 2, rgb: inkBytes(), scale: 2)
-        return px
     }
 
     private func clock() -> [UInt8] {

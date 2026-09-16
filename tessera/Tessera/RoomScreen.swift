@@ -13,6 +13,7 @@
 // tuning it. The opening is live too (RoomIntro.swift).
 
 import AVFoundation
+import Combine
 import MediaPlayer
 import SwiftUI
 import UIKit
@@ -118,6 +119,22 @@ struct RoomWallScreen: View {
     /// The words sit in the dark under the table: light ink, always.
     private let inkLight = Color(hex: 0xF1EEE8)
     private let inkLightDim = Color(hex: 0xDCD7CD)
+
+    /// The shelf falling into shadow under the now-playing words, so they have
+    /// something to be read against. Soft at both edges: it should look like
+    /// the light dropping off, never like a box behind the type.
+    private var wordsShadow: some View {
+        LinearGradient(stops: [
+            .init(color: .black.opacity(0),    location: 0.00),
+            .init(color: .black.opacity(0.34), location: 0.22),
+            .init(color: .black.opacity(0.45), location: 0.55),
+            .init(color: .black.opacity(0.30), location: 0.88),
+            .init(color: .black.opacity(0),    location: 1.00),
+        ], startPoint: .top, endPoint: .bottom)
+        .padding(.vertical, -22)
+        .blur(radius: 12)
+        .allowsHitTesting(false)
+    }
     /// The glass takes the room's own tone.
     private var panelInk: GlassInk { light.roomBright ? .light : .dark }
 
@@ -574,6 +591,13 @@ struct RoomWallScreen: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 28)
+            // The words sit on the render's grey shelf, which measures around
+            // #767168. That surface cannot carry body text at any colour: even
+            // pure white reaches only 4.85:1 on it, and the artist line was at
+            // 3.38:1. So the shelf falls into shadow under the words, the way
+            // it would if the light above it is the wall. The pair then reads
+            // at 7.4:1 and 9.2:1 and keeps its tonal difference.
+            .background(alignment: .top) { wordsShadow }
             RoomKeys(accent: light.steadyAccent)
                 .padding(.top, 18)
         }

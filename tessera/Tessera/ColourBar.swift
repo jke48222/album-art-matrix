@@ -84,10 +84,10 @@ private struct ColourSheet: View {
                 Spacer()
                 Button("Done") { dismiss() }.font(.ui(15, .semibold)).foregroundStyle(Ink.ink)
             }
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
+            RoundedRectangle(cornerRadius: Round.sheet, style: .continuous)
                 .fill(colour)
                 .frame(height: 96)
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .overlay(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous)
                     .strokeBorder(.white.opacity(0.14), lineWidth: 1))
             ColorPicker("Pick", selection: $colour, supportsOpacity: false)
                 .font(.ui(15)).foregroundStyle(Ink.ink)

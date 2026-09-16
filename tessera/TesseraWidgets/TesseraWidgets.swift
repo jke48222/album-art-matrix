@@ -119,7 +119,7 @@ private struct MediumWall: View {
         HStack(spacing: 14) {
             PanelView(entry: entry)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .clipShape(RoundedRectangle(cornerRadius: Round.chip))
 
             VStack(alignment: .leading, spacing: 4) {
                 if let title = entry.title, !title.isEmpty, !entry.isDark {
@@ -175,7 +175,7 @@ private struct WidgetKey: View {
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 5)
                 .background(on ? Color.white : Color.white.opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: 6))
+                            in: RoundedRectangle(cornerRadius: Round.chip))
         }
         .buttonStyle(.plain)
     }
