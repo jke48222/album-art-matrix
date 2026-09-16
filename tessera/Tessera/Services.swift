@@ -12,9 +12,19 @@ import UIKit
 // MARK: - What the wall says about its services
 
 struct WallServices: Decodable {
+    struct Claude: Decodable { var key_set: Bool; var model: String; var busy: Bool; var problem: String?; var last_cost_usd: Double? }
+    var claude: Claude?
     struct Spotify: Decodable { var client_id: String; var linked: Bool }
     struct Lastfm: Decodable { var user: String; var key_set: Bool? }
-    struct Listenbrainz: Decodable { var user: String }
+    struct Listenbrainz: Decodable {
+        struct Listen: Decodable { var title: String; var artist: String; var at: Double }
+        var user: String
+        var token_set: Bool?
+        var enabled: Bool?
+        var last_listen: Listen?
+        var queued: Int?
+        var problem: String?
+    }
     /// The wall's ears: a microphone read all the time, Shazam naming the
     /// last few seconds when the room is loud enough. Levels are dB below
     /// the microphone's ceiling, so they are negative and louder is higher.
@@ -67,6 +77,25 @@ struct WallServices: Decodable {
     var spotify: Spotify
     var lastfm: Lastfm
     var listenbrainz: Listenbrainz?      // older walls do not send these
+    struct Voice: Decodable {
+        var enabled: Bool
+        var state: String
+        var wake_word: String
+        var custom_available: Bool
+        var problem: String?
+        var last_transcribe_ms: Int?
+    }
+    struct AirPlay: Decodable {
+        var name: String
+        var running: Bool
+        var enabled: Bool
+        var connected_from: String?
+        var last: Int?
+        var problem: String?
+        var output: String
+    }
+    var airplay: AirPlay?
+    var voice: Voice?
     var hearing: Hearing?
     var mac: Mac?
     var ears: Bool
@@ -240,6 +269,31 @@ struct ServicesPage: View {
                 appleRow
             }
             .padding(.top, -12)
+
+            SetupGroup("Your records", note: "Keep the wall in touch with the physical collection.") {
+                NavigationLink { ShelfPage(accent: accent) } label: {
+                    SetupRow(title: "Discogs shelf", subtitle: "Collection, pressings and plays") {
+                        Image(systemName: "chevron.right").font(.system(size: 12)).foregroundStyle(Ink.faint)
+                    }
+                }
+            }
+
+            SetupGroup("AirPlay", note: "Choose Wall in the AirPlay picker. The wall receives the sleeve silently. You can add speakers to the same group later.") {
+                SetupRow(title: "Wall", subtitle: services?.airplay?.connected_from ?? "Waiting for a device") {
+                    StateValue(services?.airplay?.running == true ? "Ready" : "Off", done: services?.airplay?.running == true)
+                }
+                Problem(text: services?.airplay?.problem)
+            }
+
+            SetupGroup("Ask the wall", note: "Short answers, shown on the panel or spoken by a Siri Shortcut.") {
+                NavigationLink {
+                    ClaudePage(accent: accent, services: $services)
+                } label: {
+                    SetupRow(title: "Claude", subtitle: "A key for questions and the wall's tools.") {
+                        StateValue(services?.claude?.key_set == true ? "Connected" : "Set up", done: services?.claude?.key_set == true)
+                    }
+                }
+            }
 
             SetupGroup("Read by the wall", note: wallNote) {
                 NavigationLink {
@@ -694,48 +748,166 @@ struct ListenBrainzPage: View {
     @Environment(\.openURL) private var openURL
     let accent: Color
     @Binding var services: WallServices?
-
     @State private var user = ""
+    @State private var token = ""
     @State private var busy = false
     @State private var problem: String?
-
+    @State private var offline = false
     private var savedUser: String { services?.listenbrainz?.user ?? "" }
     private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var tokenSet: Bool { services?.listenbrainz?.token_set == true }
 
     var body: some View {
         SetupPage("ListenBrainz",
-                  blurb: "The open version of Last.fm, run by the MusicBrainz people. Free, and the wall needs only your username: reading what you play needs no key at all.") {
-            SetupGroup("Your account", note: "An account takes a minute. Then every scrobbler that can post there (Web Scrobbler in a computer's browser, Pano Scrobbler on Android) reaches the wall.") {
+                  blurb: "Read what you stream with your username. Add a user token to keep the records the wall hears in your listening history.") {
+            SetupGroup("Your account", note: "Your token stays on the wall. Any phone can see whether it is set, but cannot read it back.") {
                 KeyField(placeholder: "Username", text: $user)
                 Rule()
-                SetupRow(title: "No account yet?", subtitle: "Opens listenbrainz.org in Safari.") {
-                    ActionPill(title: "Make one", filled: false) {
-                        openURL(URL(string: "https://listenbrainz.org/")!)
+                SecureField(tokenSet ? "User token is set" : "User token", text: $token)
+                    .font(.system(size: 13, design: .monospaced))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .padding(.vertical, 14)
+                Rule()
+                SetupRow(title: "Your user token", subtitle: "Copy it from your ListenBrainz settings.") {
+                    ActionPill(title: "Open", filled: false) {
+                        openURL(URL(string: "https://listenbrainz.org/settings/")!)
                     }
                 }
                 Rule()
                 SaveLine(title: "Save to the wall",
-                         enabled: services != nil && !typedUser.isEmpty && typedUser != savedUser,
-                         busy: busy,
-                         done: (!savedUser.isEmpty && typedUser == savedUser) ? "Following \(savedUser)" : nil,
-                         accent: accent) { save() }
+                         enabled: services != nil && (typedUser != savedUser || !token.isEmpty),
+                         busy: busy, done: tokenSet ? "Token saved" : nil,
+                         accent: accent) { save(clearToken: false) }
+                if tokenSet {
+                    Rule()
+                    SetupRow(title: "Stop reporting records", subtitle: "Remove the token. Queued listens stay on the wall.") {
+                        ActionPill(title: "Remove", filled: false) { save(clearToken: true) }
+                            .disabled(busy)
+                    }
+                }
             }
             .padding(.top, -12)
-            Problem(text: problem)
+            SetupGroup("Records heard", note: "Half a song or four minutes earns a listen. Offline listens wait up to seven days.") {
+                if let lb = services?.listenbrainz {
+                    SetupRow(title: "Vinyl scrobbling",
+                             subtitle: lb.enabled == true ? (tokenSet ? "Listening for records." : "Add your user token to begin.") : "Off for this build. Enable scrobble on the wall.") { EmptyView() }
+                    Rule()
+                    if let last = lb.last_listen {
+                        SetupRow(title: last.title, subtitle: last.artist) {
+                            Text(Date(timeIntervalSince1970: last.at), style: .relative)
+                                .font(.caption)
+                        }
+                    } else {
+                        SetupRow(title: "No listens yet", subtitle: "The next record heard long enough will appear here.") { EmptyView() }
+                    }
+                    Rule()
+                    SetupRow(title: "Waiting to send", subtitle: "\(lb.queued ?? 0) listens") { EmptyView() }
+                    Problem(text: lb.problem)
+                } else {
+                    SetupRow(title: "Connecting to the wall", subtitle: "Listening history will appear when the wall answers.") { EmptyView() }
+                }
+            }
+            Problem(text: offline ? "The wall is offline. Showing its last known state." : problem)
         }
         .onAppear { user = savedUser }
-        .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
+        .task {
+            while !Task.isCancelled {
+                if let fresh = await WallServices.read(host: wall.host) {
+                    services = fresh
+                    offline = false
+                } else { offline = true }
+                do { try await Task.sleep(for: .seconds(2)) } catch { return }
+            }
+        }
     }
 
-    private func save() {
-        guard !typedUser.isEmpty, !busy else { return }
+    private func save(clearToken: Bool) {
+        guard !busy else { return }
         busy = true
+        var values = ["user": typedUser]
+        if clearToken { values["token"] = "" }
+        else if !token.isEmpty { values["token"] = token.trimmingCharacters(in: .whitespacesAndNewlines) }
         Task {
-            let (fresh, why) = await ServiceSave.send(["listenbrainz": ["user": typedUser]], to: wall.host)
+            let (fresh, why) = await ServiceSave.send(["listenbrainz": values], to: wall.host)
             if let fresh { services = fresh }
             problem = why
-            if why == nil { Taps.commit() }
+            if why == nil { token = ""; Taps.commit() }
             busy = false
+        }
+    }
+}
+
+struct ClaudePage: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(\.openURL) private var openURL
+    let accent: Color
+    @Binding var services: WallServices?
+    @State private var key = ""
+    @State private var question = ""
+    @State private var answer = ""
+    @State private var busy = false
+    @State private var problem: String?
+
+    var body: some View {
+        SetupPage("Claude", blurb: "Ask a short question. Claude can read what is playing and your recent records, and change the wall when you ask.") {
+            SetupGroup("API key", note: "Kept only on the wall. Questions go to Anthropic when you ask; no conversation history is kept here.") {
+                SecureField(services?.claude?.key_set == true ? "API key is set" : "Claude API key", text: $key)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled().padding(16)
+                Rule()
+                SetupRow(title: "Get a key", subtitle: "Opens the Anthropic console.") {
+                    ActionPill(title: "Open", filled: false) { openURL(URL(string: "https://console.anthropic.com/settings/keys")!) }
+                }
+                SaveLine(title: "Save to the wall", enabled: !key.isEmpty && services != nil,
+                         busy: busy, done: services?.claude?.key_set == true ? "Key saved" : nil,
+                         accent: accent) { saveKey(clear: false) }
+                if services?.claude?.key_set == true {
+                    SetupRow(title: "Disconnect Claude", subtitle: "Remove the key from this wall.") {
+                        ActionPill(title: "Remove", filled: false) { saveKey(clear: true) }.disabled(busy)
+                    }
+                }
+            }
+            .padding(.top, -12)
+            SetupGroup("Try a question", note: "Enable Ask in this build's wall config. The previous face returns after the answer finishes.") {
+                KeyField(placeholder: "What is playing?", text: $question)
+                SaveLine(title: "Ask the wall", enabled: !question.trimmingCharacters(in: .whitespaces).isEmpty,
+                         busy: busy, done: nil, accent: accent) { ask() }
+                if !answer.isEmpty { Text(answer).font(.ui(15)).padding(16) }
+                Problem(text: problem ?? services?.claude?.problem)
+            }
+        }
+    }
+
+    private func saveKey(clear: Bool) {
+        guard !busy else { return }
+        busy = true
+        Task {
+            let (fresh, why) = await ServiceSave.send(["claude": ["api_key": clear ? "" : key]], to: wall.host)
+            if let fresh { services = fresh }
+            problem = why
+            if why == nil { key = ""; Taps.commit() }
+            busy = false
+        }
+    }
+
+    private func ask() {
+        guard !busy, let url = URL(string: "http://\(wall.host)/ask") else { return }
+        busy = true
+        Task {
+            defer { busy = false }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 7
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: ["text": question, "reply": "wall"])
+            do {
+                let (data, response) = try await URLSession.shared.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 200,
+                      let value = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let text = value["answer"] as? String else { throw URLError(.badServerResponse) }
+                answer = text
+                problem = nil
+            } catch { problem = "The wall could not answer. Check the connection and try again." }
         }
     }
 }

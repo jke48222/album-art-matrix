@@ -1,0 +1,125 @@
+{
+  "answer-64": {
+    "size": 64,
+    "scale": 2,
+    "margin": 1,
+    "rows": 4,
+    "pages": [
+      [
+        "The",
+        "rain",
+        "ends",
+        "at"
+      ],
+      [
+        "six."
+      ]
+    ],
+    "seconds": 10.0
+  },
+  "no-key-64": {
+    "size": 64,
+    "scale": 2,
+    "margin": 1,
+    "rows": 4,
+    "pages": [
+      [
+        "no",
+        "key",
+        "yet"
+      ]
+    ],
+    "seconds": 7.0
+  },
+  "network-64": {
+    "size": 64,
+    "scale": 2,
+    "margin": 1,
+    "rows": 4,
+    "pages": [
+      [
+        "no",
+        "answe",
+        "r",
+        "right"
+      ],
+      [
+        "now"
+      ]
+    ],
+    "seconds": 10.0
+  },
+  "empty-64": {
+    "size": 64,
+    "scale": 2,
+    "margin": 1,
+    "rows": 4,
+    "pages": [
+      [
+        "Sorry",
+        ", I",
+        "could",
+        "not"
+      ],
+      [
+        "answe",
+        "r."
+      ]
+    ],
+    "seconds": 10.0
+  },
+  "answer-192": {
+    "size": 192,
+    "scale": 3,
+    "margin": 12,
+    "rows": 7,
+    "pages": [
+      [
+        "The rain",
+        "ends at",
+        "six."
+      ]
+    ],
+    "seconds": 7.0
+  },
+  "no-key-192": {
+    "size": 192,
+    "scale": 3,
+    "margin": 12,
+    "rows": 7,
+    "pages": [
+      [
+        "no key",
+        "yet"
+      ]
+    ],
+    "seconds": 7.0
+  },
+  "network-192": {
+    "size": 192,
+    "scale": 3,
+    "margin": 12,
+    "rows": 7,
+    "pages": [
+      [
+        "no answer",
+        "right now"
+      ]
+    ],
+    "seconds": 7.0
+  },
+  "empty-192": {
+    "size": 192,
+    "scale": 3,
+    "margin": 12,
+    "rows": 7,
+    "pages": [
+      [
+        "Sorry, I",
+        "could not",
+        "answer."
+      ]
+    ],
+    "seconds": 7.0
+  }
+}

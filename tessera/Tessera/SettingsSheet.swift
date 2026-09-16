@@ -37,6 +37,8 @@ struct SettingsSheet: View {
                     }
                     SettingsList {
                         row("music.note", "Services", servicesLine) { ServicesPage(accent: accent, services: $services, musicConnected: $musicConnected, musicRefused: $musicRefused) }
+                        row("magnifyingglass", "Find something", "Sleeve, video or remembered words") { DiscoverPage(accent: accent) }
+                        row("square.stack", "The shelf", "Your physical collection") { ShelfPage(accent: accent) }
                         row("sun.max", "Light", "\(Int(wall.state.brightness * 100))%") { LightPage(accent: accent) }
                         row("sunset", "Follow the sun", wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : "Off") { SunPage(accent: accent) }
                         row("moon.zzz", "Sleep", sleepValue) { SleepPage(accent: accent) }

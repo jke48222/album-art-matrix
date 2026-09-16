@@ -44,3 +44,8 @@ design/renders/vitrine.blend
 design/renders/instrument.blend
 design/renders/nonet.blend
 design/renders/nonet-*.blend
+
+# Optional local fingerprint engine, rebuilt by pi/install-olaf.sh
+/vendor/
+/bin/
+/models/

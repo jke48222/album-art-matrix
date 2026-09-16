@@ -16,6 +16,9 @@ struct HearingPage: View {
     @Binding var services: WallServices?
 
     @State private var store = TuningStore()
+    @State private var taught: TaughtLibrary?
+    @State private var teachProblem: String?
+    @State private var clearingLibrary = false
     /// While a finger is down, the number shown is the finger's.
     @State private var dragging: [String: Double] = [:]
     /// The knob under a thumb: its note is the only one on screen.
@@ -70,6 +73,37 @@ struct HearingPage: View {
                 toggle("mic_auto_gain")
             }
 
+            SetupGroup("Voice", note: "Say hey jarvis, then a command or question. Speech stays on the wall. Questions need the Claude key. Enable this build's wake and Horizon features first.") {
+                toggle("wake")
+                Rule()
+                knob("wake_threshold")
+                Rule()
+                choice("wake_word", title: "Wake phrase", labels: ["Hey Jarvis", "Hey wall"])
+                Rule()
+                choice("speech_model", title: "Speech model", labels: ["Tiny", "Base"])
+                Rule()
+                knob("speech_gate")
+                if let voice = services?.voice {
+                    Rule()
+                    fact("Voice", voice.state.capitalized)
+                    if !voice.custom_available {
+                        SetupRow(title: "Hey wall is not trained yet", subtitle: "Hey Jarvis is ready. Selecting Hey wall requires its model on the wall.") { EmptyView() }
+                    }
+                    if let ms = voice.last_transcribe_ms { fact("Last transcription", "\(ms) ms") }
+                    Problem(text: voice.problem)
+                }
+            }
+
+            taughtGroup
+
+            SetupGroup("Knocks and whistles", note: "Two knocks toggle the wall. Whistle up for on, down for off. Enable this build's knock feature on the wall first.") {
+                toggle("knock")
+                Rule()
+                knob("knock_sensitivity")
+                Rule()
+                toggle("whistle")
+            }
+
             SetupGroup("Timing", note: "All seconds. Every miss makes the next clip longer on its own, up to twelve seconds, which is what a TV over the music needs.") {
                 knob("listen_for")
                 Rule()
@@ -89,6 +123,7 @@ struct HearingPage: View {
             // The meter is live only while this page is up.
             while !Task.isCancelled {
                 if let fresh = await WallServices.read(host: wall.host) { services = fresh }
+                await refreshTaught()
                 try? await Task.sleep(for: .milliseconds(600))
             }
         }
@@ -237,6 +272,83 @@ struct HearingPage: View {
         }
     }
 
+    private var taughtGroup: some View {
+        SetupGroup("Taught songs", note: "The wall keeps fingerprints, never recordings. Swipe a song to forget it.") {
+            toggle("teach_by_ear")
+            Rule()
+            knob("teach_match_score")
+            if let taught {
+                Rule()
+                fact("Library", taught.enabled ? "\(taught.songs.count) songs" : "Teaching is off for this build")
+                if taught.busy {
+                    HStack { ProgressView(); Text("Updating library").font(.ui(13)) }
+                        .padding(16)
+                }
+                if taught.songs.isEmpty {
+                    SetupRow(title: "No taught songs yet", subtitle: "Play a named song aloud to teach the wall.") { EmptyView() }
+                } else {
+                    List {
+                        ForEach(taught.songs) { song in
+                            VStack(alignment: .leading, spacing: 5) {
+                                Text(song.title).font(.ui(15))
+                                Text(song.artist).font(.ui(12)).foregroundStyle(.secondary)
+                                Text("Learnt from \(song.how). Matched \(song.times_matched) times.")
+                                    .font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary)
+                            }
+                            .swipeActions {
+                                Button("Forget", role: .destructive) { manageTaught("forget", id: song.id) }
+                            }
+                        }
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: min(360, CGFloat(taught.songs.count) * 86))
+                    SetupRow(title: "Erase the library", subtitle: "Remove every fingerprint from the wall.") {
+                        ActionPill(title: "Clear", filled: false) { clearingLibrary = true }
+                    }
+                }
+                Problem(text: teachProblem ?? taught.problem)
+            } else {
+                SetupRow(title: "Reading the library", subtitle: "The wall's songs will appear here.") { ProgressView() }
+                Problem(text: teachProblem)
+            }
+        }
+        .confirmationDialog("Forget every taught song?", isPresented: $clearingLibrary) {
+            Button("Erase library", role: .destructive) { manageTaught("clear") }
+        }
+    }
+
+    private func refreshTaught() async {
+        guard let url = URL(string: "http://\(wall.host)/teach") else { return }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 3
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard (response as? HTTPURLResponse)?.statusCode == 200 else { throw URLError(.badServerResponse) }
+            taught = try JSONDecoder().decode(TaughtLibrary.self, from: data)
+            teachProblem = nil
+        } catch {
+            teachProblem = "Could not read the wall's library. Showing its last known state."
+        }
+    }
+
+    private func manageTaught(_ action: String, id: String? = nil) {
+        Task {
+            guard let url = URL(string: "http://\(wall.host)/teach/\(action)") else { return }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.timeoutInterval = 5
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try? JSONSerialization.data(withJSONObject: id.map { ["id": $0] } ?? [:])
+            do {
+                let (_, response) = try await URLSession.shared.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 202 else { throw URLError(.badServerResponse) }
+                await refreshTaught()
+                Taps.commit()
+            } catch { teachProblem = "The wall could not update the library. Try again." }
+        }
+    }
+
     // MARK: The wall's own knobs, drawn as the wall describes them
 
     private func spec(_ name: String) -> Knob? {
@@ -292,6 +404,20 @@ struct HearingPage: View {
                 if touching == name, !k.note.isEmpty { noteLine(k.note) }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
+        }
+    }
+
+    private func choice(_ key: String, title: String, labels: [String]) -> some View {
+        SetupRow(title: title, subtitle: nil) {
+            Picker(title, selection: Binding(get: { Int(store.values[key] ?? 0) }, set: { value in
+                Task { await store.send(key, Double(value)) }
+            })) {
+                ForEach(Array(labels.enumerated()), id: \.offset) { index, label in
+                    Text(label).tag(index)
+                }
+            }
+            .pickerStyle(.menu)
+            .tint(accent)
         }
     }
 
@@ -392,4 +518,20 @@ private struct RoomMeter: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 13)
     }
+}
+
+private struct TaughtLibrary: Decodable {
+    struct Song: Decodable, Identifiable {
+        var id: String
+        var title: String
+        var artist: String
+        var added: Double
+        var how: String
+        var times_matched: Int
+    }
+    var songs: [Song]
+    var enabled: Bool
+    var available: Bool
+    var busy: Bool
+    var problem: String?
 }

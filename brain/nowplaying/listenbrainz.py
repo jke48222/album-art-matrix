@@ -99,6 +99,10 @@ class ListenBrainzSource(NowPlayingSource):
         artist = tm.get("artist_name") or "?"
         album = tm.get("release_name") or ""
         info = tm.get("additional_info") or {}
+        # Our own vinyl announcement is not a streaming source. Let the ear
+        # keep owning it, or the wall would feed its own scrobbles back to itself.
+        if info.get("submission_client") == "album-art-matrix" and info.get("music_service_name") == "vinyl":
+            return None
         dur = info.get("duration_ms")
         if dur is None and isinstance(info.get("duration"), (int, float)):
             dur = info["duration"] * 1000

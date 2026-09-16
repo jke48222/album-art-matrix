@@ -26,6 +26,7 @@ class NowPlaying:
     progress_ms: Optional[int]
     duration_ms: Optional[int]
     is_playing: bool
+    isrc: Optional[str] = None
 
 
 class NowPlayingSource:

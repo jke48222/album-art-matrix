@@ -1,0 +1,12 @@
+{
+  "reply": {
+    "answer": "no key yet",
+    "shown": true
+  },
+  "response_s": 0.003,
+  "during": "answer",
+  "before": "ambient",
+  "after": "ambient",
+  "frame_bytes": 12288,
+  "lit_bytes": 1188
+}

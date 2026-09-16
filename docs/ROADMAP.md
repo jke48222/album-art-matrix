@@ -15,17 +15,17 @@ app. Nothing here is a promise about a date.
 | 2 | HomeKit: the wall as a television | Modes become inputs; the Control Centre remote's arrows, play and back drive the wall. | **done** 2026-09-15 |
 | 3 | HomeKit: the ear as a house sensor | "Sound in the room" and "music playing" appear as sensors, so lamps and notifications can follow them. | **done** 2026-09-15 |
 | 4 | HomeKit: pair by scanning the panel | The wall draws its own pairing code on the 64x64. | **done** 2026-09-15 |
-| 5 | The listening face, Horizon | Only when the wake word is said: the picture collapses to a line, the line follows your voice, a bead runs while it thinks, the answer opens from the line. | planned |
-| 6 | Vinyl scrobbling | Records the ear names go to ListenBrainz as playing-now and as listens. | planned |
-| 7 | Knock twice | Two knocks on the frame toggle the wall; whistle as the fallback. | planned |
-| 8 | Teach the wall a song | A local fingerprint library (Olaf) seeded from iTunes previews and room recordings, asked before Shazam. | planned |
-| 9 | Ask the wall | A spoken question, answered by Claude with the wall's own state attached, shown as short lines on the panel. Via a Siri Shortcut or the wall's ears. | planned |
-| 10 | The wall's own ears | Wake word (openWakeWord) plus whisper.cpp on the Pi; short commands stay local. | planned |
-| 11 | Leave a note | "Hey Siri, tell the wall back at six" puts words on the panel through a Shortcut. | planned |
-| 12 | AirPlay to the wall | The Pi is an AirPlay 2 receiver; any Apple device in the group hands over exact title, art and position. | planned |
-| 13 | The shelf | Discogs collection sync: a corner mark on streamed songs you own on vinyl; pressing details and price when a record plays. | planned |
-| 14 | Earworm finder | Say the words you remember; Claude names the song; the sleeve goes up. | planned |
-| 15 | Show me, play me | "Show the Blond cover" (iTunes search, frame mode); "play the Gameboy video" (YouTube search, video mode). | planned |
+| 5 | The listening face, Horizon | Only when the wake word is said: the picture collapses to a line, the line follows your voice, a bead runs while it thinks, the answer opens from the line. | **built, Codex**: both layouts inspected; physical wake acceptance pending |
+| 6 | Vinyl scrobbling | Records the ear names go to ListenBrainz as playing-now and as listens. | **built, Codex**: 23 offline tests; awaiting live token and acceptance |
+| 7 | Knock twice | Two knocks on the frame toggle the wall; whistle as the fallback. | **built, Codex**: 11 synthetic tests; real room acceptance pending |
+| 8 | Teach the wall a song | A local fingerprint library (Olaf) seeded from iTunes previews and room recordings, asked before Shazam. | **built, Codex**: native engine and MALI preview verified on Pi; physical-room and phone install acceptance pending |
+| 9 | Ask the wall | A spoken question, answered by Claude with the wall's own state attached, shown as short lines on the panel. Via a Siri Shortcut or the wall's ears. | **built, Codex**: API, tools, signed Shortcut, 64/192 renders; key and iPhone acceptance pending |
+| 10 | The wall's own ears | Wake word (openWakeWord) plus whisper.cpp on the Pi; short commands stay local. | **built, Codex**: Jarvis and tiny verified on Pi; custom wake training and room/phone acceptance pending |
+| 11 | Leave a note | "Hey Siri, tell the wall back at six" puts words on the panel through a Shortcut. | **built, Codex**: timed API and signed one-pass Shortcut; iPhone acceptance pending |
+| 12 | AirPlay to the wall | The Pi is an AirPlay 2 receiver; any Apple device in the group hands over exact title, art and position. | **built, Codex**: native receiver and cleanup verified on Pi; live Apple sender acceptance pending |
+| 13 | The shelf | Discogs collection sync: a corner mark on streamed songs you own on vinyl; pressing details and price when a record plays. | **built, Codex**: 40-release matching fixture, sync resume, phone catalogue and 64/192 mark; live token and phone acceptance pending |
+| 14 | Earworm finder | Say the words you remember; Claude names the song; the sleeve goes up. | **built, Codex**: structured response, phone and voice routes, four result layouts; live key acceptance pending |
+| 15 | Show me, play me | "Show the Blond cover" (iTunes search, frame mode); "play the Gameboy video" (YouTube search, video mode). | **built, Codex**: album-first catalogue and yt-dlp search, Room/Find UI; live phone acceptance pending |
 | 16 | Image creator by description | "Create a purple elephant" draws one on the panel. Image model to be chosen. | planned |
 | 17 | Weather faces | A weather display with dedicated faces that change with the weather. | planned |
 | 18 | Posters for what you watch | When the Mac plays an episode, the show's poster (The Movie Database) instead of nothing. | planned |

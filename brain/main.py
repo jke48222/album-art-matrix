@@ -38,6 +38,7 @@ from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
 from .sun import sun_factor
 from .nowplaying.ears import EarsSource
+from .nowplaying.airplay import AirPlaySource
 from .nowplaying.applemusic import AppleMusicSource
 from .nowplaying.applemusic_account import AppleMusicAccountSource, configured as account_configured
 from .nowplaying.lastfm import LastfmSource
@@ -46,6 +47,15 @@ from .nowplaying.macmedia import MacMediaSource
 from .nowplaying.pushed import PushedSource
 from .nowplaying.spotify import SpotifySource
 from .services import Services
+from .features import Features
+from .gestures import Gestures
+from .voice import Voice
+from .teach import Teacher
+from .ask import Ask
+from .shelf import Shelf
+from .earworm import Earworm
+from .art.loading import Sleeves, Preparing
+from .scrobble import Scrobbler
 from .tuning import Tuning
 from .video.player import VideoPlayer
 from .wall import Wall
@@ -68,7 +78,7 @@ def make_sink(cfg: dict, override: str | None = None, wall=None):
     raise ValueError(f"unknown sink type: {kind}")
 
 
-DEFAULT_ORDER = ["phone", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
+DEFAULT_ORDER = ["phone", "airplay", "applemusic", "spotify", "lastfm", "listenbrainz", "ears"]
 
 
 def build_sources(cfg: dict, ctrl):
@@ -93,6 +103,8 @@ def build_sources(cfg: dict, ctrl):
     order = [str(n) for n in cfg.get("nowplaying", {}).get("adapters", DEFAULT_ORDER)]
     order = ["ears" if n == "acoustid" else n for n in order]   # the ear's old name
     order += [n for n in DEFAULT_ORDER if n not in order]
+    order = [n for n in order if n != "airplay"]
+    order.insert(order.index("phone") + 1 if "phone" in order else 0, "airplay")
     sources = []
     for name in order:
         if name == "phone":
@@ -119,6 +131,10 @@ def build_sources(cfg: dict, ctrl):
             else:
                 print("[main] applemusic: no MusicKit credentials on this machine "
                       "(deploy.sh copies them) — skipping")
+        elif name == "airplay":
+            options = {**cfg.get("airplay", {}), "control_port": int(cfg.get("control", {}).get("port", 8788))}
+            ctrl.airplay = AirPlaySource(ctrl, options)
+            sources.append(ctrl.airplay)
         elif name == "spotify":
             sp = SpotifySource(store.get("spotify", "client_id"),
                                int(cfg.get("spotify", {}).get("redirect_port", 8888)))
@@ -203,6 +219,13 @@ class _FrameTee:
         self._halo = halo
 
     def show(self, rgb888: bytes, pre_wb_img=None):
+        horizon = self._ctrl.horizon
+        if horizon is not None and horizon.waiting:
+            frame = (np.asarray(pre_wb_img) if pre_wb_img is not None else
+                     np.frombuffer(rgb888, dtype=np.uint8).reshape(self._size, self._size, 3))
+            horizon.target(frame)
+            self._ctrl.dirty.set()
+            return
         self._ctrl.last_frame = (pre_wb_img.tobytes()
                                  if pre_wb_img is not None else rgb888)
         # every mode reaches the wall through here, so the halo hangs off this
@@ -258,9 +281,22 @@ def main():
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
     }, frame_len=size * size * 3, wall=wall)
+    ctrl.features = Features(cfg, args.config).start()
     source = SourceChain(build_sources(cfg, ctrl))
+    if ctrl.ears is not None:
+        ctrl.ears.gestures = Gestures(ctrl)
+        ctrl.scrobbler = Scrobbler(
+            ctrl.services_store, ctrl.features, on_listen=ctrl.journal_scrobbled,
+            sources=cfg.get("scrobble", {}).get("sources", ["ears"])).start(ctrl.ears)
     ctrl.source = source
     poller = _Poller(source, poll_s, wake=ctrl.repoll, news=ctrl.news)
+    ctrl.poller = poller
+    ctrl.teach = Teacher(ctrl)
+    ctrl.asker = Ask(ctrl)
+    ctrl.earworm = Earworm(ctrl)
+    ctrl.shelf = Shelf(ctrl)
+    if ctrl.ears is not None:
+        ctrl.ears.teacher = ctrl.teach
     poller.start()
     if args.once:
         ctrl.news.wait(20)               # one pass wants an answer to show
@@ -269,6 +305,9 @@ def main():
                              unsharp_radius=tune.get("unsharp_radius"),
                              unsharp_percent=tune.get("unsharp_percent"))
     ctrl.tuning = tune
+    ctrl.voice = Voice(ctrl)
+    if ctrl.ears is not None:
+        ctrl.ears.voice = ctrl.voice
     tune.video = ctrl.video
     tune.ears = ctrl.ears          # the Hearing knobs land on the ear
     tune.apply()
@@ -312,15 +351,23 @@ def main():
     idle_prev = None                 # which idle override is currently applied
     disc_key = None                  # (pressing, sleeve) the disc was built from
 
+    def mark_sleeve(image):
+        if ctrl.get()["mode"] in ("art", "cd", "lyrics") and (ctrl.horizon is None or ctrl.horizon.waiting) and ctrl.shelf.streamed_mark():
+            ink = ctrl.art_colors[0] if ctrl.art_colors else "#e8e2d5"
+            return art_pipeline.shelf_overlay(image, ink)
+        return image
+
+    def sleeve_ready():
+        ctrl.news.set()
+        ctrl.dirty.set()
+
+    sleeves = Sleeves(sleeve_ready)
+
     def show_sleeve(art_url):
         """The one path that puts a sleeve on the wall: fetch, prepare, arm
         the disc animator, extract colours. Callers add their bookkeeping."""
         nonlocal last_pre, animator, t0, need_show
-        pre = prepare(
-            fetch_art(art_url), size,
-            unsharp_radius=tune.get("unsharp_radius"),
-            unsharp_percent=tune.get("unsharp_percent"),
-        )
+        pre = sleeves.get(art_url, size, tune.get("unsharp_radius"), tune.get("unsharp_percent"))
         last_pre = pre
         animator = build_disc(pre)
         # what each finish would do to this sleeve, for the phone to show
@@ -376,11 +423,14 @@ def main():
         if gap > 0 and ctrl.dirty.wait(gap):
             ctrl.dirty.clear()
 
+    waiting_replay = None
+    once_deadline = time.monotonic() + 20
     while True:
         ctrl.loop_beat = time.monotonic()      # /health: the loop is alive
         # ---- phone asked to re-show something from the journal ----------
-        if ctrl.replay is not None:
-            entry, ctrl.replay = ctrl.replay, None
+        if ctrl.replay is not None or waiting_replay is not None:
+            entry, ctrl.replay = ctrl.replay or waiting_replay, None
+            waiting_replay = None
             try:
                 show_sleeve(entry["art_url"])
                 ctrl.now_showing = {"title": entry.get("title", "?"),
@@ -390,6 +440,8 @@ def main():
                 hold_until = time.monotonic() + 600   # current track waits
                 print(f"[main] replay: {entry.get('artist')} — "
                       f"{entry.get('title')}")
+            except Preparing:
+                waiting_replay = entry
             except Exception as exc:
                 print(f"[main] replay failed: {exc}")
 
@@ -501,8 +553,12 @@ def main():
                         "ts": int(time.time()),
                         "title": now.title, "artist": now.artist,
                         "album": now.album, "art_url": now.art_url,
+                        "source": now.track_id.split(":", 1)[0],
+                        **({"scrobbled": False} if now.track_id.startswith("ears:") else {}),
                     })
                     print(f"[main] {now.artist} — {now.title}  ({now.album})")
+                except Preparing:
+                    pass
                 except Exception as exc:
                     print(f"[main] art pipeline failed: {exc}")
             else:
@@ -510,6 +566,9 @@ def main():
                 last_track = now.track_id
 
         if args.once:
+            if last_pre is None and now is not None and now.art_url and time.monotonic() < once_deadline:
+                ctrl.news.wait(0.1)
+                continue
             if last_pre is not None:
                 s = ctrl.get()
                 art_pipeline.PANEL_CAP = int(s["panel_brightness"])
@@ -630,6 +689,24 @@ def main():
                     idle_prev = idle_now
                     need_show = True
 
+                horizon = ctrl.horizon
+                if horizon is not None:
+                    if not ctrl.features.enabled("wake") or not ctrl.features.enabled("horizon") or horizon.done:
+                        ctrl.horizon = None
+                        need_show, blacked, frame_shown = True, False, None
+                    elif horizon.waiting:
+                        need_show, blacked, frame_shown = True, False, None
+                        if mode in ("art", "cd", "lyrics") and last_pre is None:
+                            horizon.target(horizon.source)
+                            continue
+                    else:
+                        tick = time.monotonic()
+                        f = Image.fromarray(horizon.frame_at(tick - horizon.changed))
+                        f = apply_finish(mark_sleeve(f), s["finish"])
+                        sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                        pace(tick)
+                        continue
+
                 if mode == "off":
                     if not blacked:
                         sink.show(black)
@@ -640,6 +717,26 @@ def main():
                     continue
                 blacked = False
 
+                if mode == "answer" and ctrl.answer is not None:
+                    answer = ctrl.answer
+                    f = Image.fromarray(answer["face"].frame_at(time.monotonic() - answer["t0"]))
+                    ctrl.finish_base = f
+                    f = apply_finish(mark_sleeve(f), s["finish"])
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    ctrl.dirty.wait(0.1)
+                    ctrl.dirty.clear()
+                    continue
+
+                if mode == "result" and ctrl.result is not None:
+                    result = ctrl.result
+                    tick = time.monotonic()
+                    f = Image.fromarray(result["face"].frame_at(tick - result["t0"]))
+                    ctrl.finish_base = f
+                    f = apply_finish(f, s["finish"])
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    pace(tick)
+                    continue
+
                 if mode == "frame" and ctrl.frame_override is not None:
                     if frame_shown != (id(ctrl.frame_override), s["finish"]) \
                             or sl is not None:
@@ -649,7 +746,7 @@ def main():
                         # white_balance, so a design needs nothing special)
                         ctrl.finish_base = f
                         # a pushed picture takes the finish too, as a sleeve does
-                        f = apply_finish(f, s["finish"])
+                        f = apply_finish(mark_sleeve(f), s["finish"])
                         # a design's dim greys are flat tones on purpose: the hard lift
                         sink.show(white_balance(f, eff, hard=True).tobytes(),
                                   pre_wb_img=f)
@@ -728,7 +825,7 @@ def main():
                         # after; how far ahead is yours to set
                         f = lyric_canvas.frame_at(at + s["lyric_offset"])
                         ctrl.finish_base = f
-                        f = apply_finish(f, s["finish"])
+                        f = apply_finish(mark_sleeve(f), s["finish"])
                         sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                         if ctrl.dirty.wait(0.08):
                             ctrl.dirty.clear()
@@ -777,7 +874,7 @@ def main():
                         clock_key = key
                     f = clock.frame_at(0.0)
                     ctrl.finish_base = f
-                    f = apply_finish(f, s["finish"])
+                    f = apply_finish(mark_sleeve(f), s["finish"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     if ctrl.dirty.wait(0.5):
                         ctrl.dirty.clear()
@@ -812,7 +909,7 @@ def main():
                         frame = c["frames"][clip_i % len(c["frames"])]
                         f = Image.frombytes("RGB", (size, size), frame)
                         ctrl.finish_base = f
-                        f = apply_finish(f, s["finish"])
+                        f = apply_finish(mark_sleeve(f), s["finish"])
                         sink.show(white_balance(f, eff).tobytes(),
                                   pre_wb_img=f)
                         clip_i += 1
@@ -853,7 +950,7 @@ def main():
                             frac = min(1.0, at / prog[3])
                     f = animator.frame_at(tick - t0, progress_s=at, fraction=frac)
                     ctrl.finish_base = f
-                    f = apply_finish(f, s["finish"])
+                    f = apply_finish(mark_sleeve(f), s["finish"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     pace(tick)
                     continue
@@ -866,9 +963,9 @@ def main():
                 if last_pre is not None:
                     ctrl.finish_base = last_pre
                 if need_show and last_pre is not None:
-                    if (id(last_pre), s["finish"]) != fin_key:
-                        fin_img = apply_finish(last_pre, s["finish"])
-                        fin_key = (id(last_pre), s["finish"])
+                    if (id(last_pre), s["finish"], ctrl.shelf.revision, tune.get("shelf_mark")) != fin_key:
+                        fin_img = apply_finish(mark_sleeve(last_pre), s["finish"])
+                        fin_key = (id(last_pre), s["finish"], ctrl.shelf.revision, tune.get("shelf_mark"))
                     sink.show(white_balance(fin_img, eff).tobytes(),
                               pre_wb_img=fin_img)
                     need_show = False

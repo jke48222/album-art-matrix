@@ -16,3 +16,14 @@ HAP-python[QRCode]
 # Optional: the wall runs without it, and says so when a video needs it.
 # Needs updating often; pi/install-ytdlp.sh is the one-liner for that.
 yt-dlp
+
+# Ask the wall: official Claude SDK, adaptive thinking and wall tools.
+anthropic>=0.70
+
+# Local wake inference uses ONNX only. pi/install-voice.sh installs these
+# plus the pinned openWakeWord source with --no-deps, avoiding unused TFLite.
+onnxruntime>=1.20,<2; python_version < "3.14"
+scipy>=1.14,<2
+scikit-learn>=1.5,<2
+tqdm>=4,<5
+# Native whisper.cpp and tiny/base model files: bash pi/install-voice.sh.

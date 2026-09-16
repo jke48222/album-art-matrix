@@ -1,0 +1,7 @@
+[panel]
+width = 192
+height = 192
+[wall]
+tile = 64
+cols = 3
+rows = 3

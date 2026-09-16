@@ -60,6 +60,11 @@ _BRACKETS = re.compile(r"\s*[\[(][^\])]*[\])]")
 
 # What the phone's Hearing knobs land on. Names match tuning.py's SPECS.
 DEFAULTS = {
+    "teach_by_ear": True,
+    "teach_match_score": 12,
+    "knock": False,
+    "knock_sensitivity": 20,
+    "whistle": False,
     "on": True,
     "clip_s": 6.0,        # listen_for
     "gate_db": -52.0,     # room_gate
@@ -135,6 +140,10 @@ class EarsSource(NowPlayingSource):
 
     def __init__(self, device: str = "auto", on_change=None):
         self.device = (device or "").strip() or "auto"
+        self.gestures = None
+        self.teacher = None
+        self.voice = None
+        self._forced = threading.Event()
         self._on_change = on_change     # the brain's nudge: poll now, not next tick
         self.settings = dict(DEFAULTS)
         self._lock = threading.Lock()
@@ -356,6 +365,10 @@ class EarsSource(NowPlayingSource):
             time.sleep(3)
 
     def _hear(self, chunk: bytes):
+        if self.voice is not None:
+            self.voice.feed(chunk)
+        if self.gestures is not None:
+            self.gestures.feed(chunk, self.settings, self.gate_open, self.level_db)
         db = _db(chunk)
         self._ring.append(chunk)
         self._recent.append(db)
@@ -389,6 +402,8 @@ class EarsSource(NowPlayingSource):
                 self.gap_at = now
         alpha = CHUNK_S / ONSET_TAU_S
         self._slow_pw = pw if slow is None else slow + alpha * (pw - slow)
+        if self.teacher is not None:
+            self.teacher.feed(chunk, self.settings, self.gate_open)
 
     # ---- thinking -------------------------------------------------------------
     def _think_loop(self):
@@ -401,6 +416,9 @@ class EarsSource(NowPlayingSource):
                 time.sleep(5)
             time.sleep(0.2)
 
+    def force_ask(self):
+        self._forced.set()
+
     def _think(self):
         s = self.settings
         now = time.monotonic()
@@ -412,7 +430,12 @@ class EarsSource(NowPlayingSource):
             return
         with self._lock:
             hit, heard_at = self._hit, self._heard_at
-        if not self.gate_open:
+        forced = self._forced.is_set()
+        if forced:
+            self._forced.clear()
+        if self.voice is not None and self.voice.state in ("listening", "thinking"):
+            return
+        if not self.gate_open and not forced:
             if self.quiet_since is not None \
                     and now - self.quiet_since >= float(s["silence_s"]):
                 if hit is not None:
@@ -441,7 +464,7 @@ class EarsSource(NowPlayingSource):
         win = min(MAX_CLIP_S, RING_S, float(s["clip_s"]) + ESCALATE_S * min(2, self._misses))
         self.window_s = win
         loud_for = now - (self.loud_since or now)
-        if loud_for < win:
+        if loud_for < win and not forced:
             self.state = self._idle_state()
             return                       # still gathering the clip
         if hit is None:
@@ -451,7 +474,7 @@ class EarsSource(NowPlayingSource):
             fresh = self.gap_at is not None and self.gap_at > (self._last_try or 0) \
                 and now - self.gap_at >= win
             due = fresh or now - self._last_try >= float(s["relisten_s"])
-        if not due:
+        if not due and not forced:
             self.state = self._idle_state()
             return
         self.state = "asking"
@@ -463,6 +486,8 @@ class EarsSource(NowPlayingSource):
         found = self._ask(clip)
         if found is None:
             self._misses += 1
+            if self.teacher is not None and self.gate_open:
+                self.teacher.miss(self._misses)
             self.state = self._idle_state()
             return
         track, key, offset, isrc, aligned = found
@@ -481,7 +506,7 @@ class EarsSource(NowPlayingSource):
             # the person in the room hears one song, so the wall keeps one
             with self._lock:
                 self._heard_at = time.monotonic()
-        elif held is None and not isrc and not self._heard_before(track, key):
+        elif held is None and not isrc and not key.startswith("local-") and not self._heard_before(track, key):
             # No catalogue record behind it (no ISRC): the kind of match a
             # noisy room produces out of nothing, an obscure upload matched
             # to a TV. It is shown as faint and has to be heard twice before
@@ -547,6 +572,10 @@ class EarsSource(NowPlayingSource):
         """(NowPlaying, shazam key, offset seconds, isrc, aligned matches)
         or None. Runs on the thinking thread; one event loop and one client
         live there for as long as they keep working."""
+        if self.teacher is not None and self.teacher.enabled():
+            found = self.teacher.library.query(pcm, self.settings["teach_match_score"])
+            if found is not None:
+                return found
         from shazamio import Shazam
         try:
             if self._loop is None:
@@ -579,7 +608,7 @@ class EarsSource(NowPlayingSource):
         return (NowPlaying(
             track_id=f"ears:{key}", title=track["title"],
             artist=track.get("subtitle") or "?", album=album or "?", art_url=art,
-            progress_ms=None, duration_ms=None, is_playing=True,
+            progress_ms=None, duration_ms=None, is_playing=True, isrc=track.get("isrc"),
         ), key, (float(offset) if offset is not None else None), track.get("isrc"),
             len(matches))
 
@@ -608,6 +637,14 @@ class EarsSource(NowPlayingSource):
             return track
         return NowPlaying(**{**track.__dict__, "duration_ms": dur or None,
                              "art_url": art or track.art_url})
+
+    def scrobble_snapshot(self):
+        """A cheap read of the ear, independent of which source wins the wall.
+        The last confirmation distinguishes a replay from a stale hold."""
+        with self._lock:
+            hit, confirmed = self._hit, self._heard_at
+        audible = bool(self.settings["on"] and self.capturing and self.gate_open)
+        return hit, audible, confirmed
 
     # ---- the answer ----------------------------------------------------------
     def get_current(self):

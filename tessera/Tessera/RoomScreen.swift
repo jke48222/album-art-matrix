@@ -564,6 +564,9 @@ struct RoomWallScreen: View {
                         .lineLimit(1).minimumScaleFactor(0.62)
                     Text([wall.state.artist, wall.state.album].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
                         .font(.ui(15)).foregroundStyle(inkLightDim).lineLimit(1).truncationMode(.tail)
+                    ShelfPressingBadge()
+                    RoomDiscoverBar(ink: inkLight, accent: light.steadyAccent)
+                        .padding(.top, 7)
                 } else {
                     Text(wall.state.mode == "off" ? "Asleep" : "Nothing playing")
                         .font(.display(24)).foregroundStyle(inkLight)

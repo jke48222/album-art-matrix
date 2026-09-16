@@ -352,3 +352,20 @@ def _as_light(colour) -> str:
     top = max(r, g, b, 1.0)
     k = 232.0 / top if top < 232.0 else 1.0
     return "#%02x%02x%02x" % tuple(min(255, int(c * k + 0.5)) for c in (r, g, b))
+
+
+def shelf_overlay(image: Image.Image, ink="#e8e2d5") -> Image.Image:
+    """A five- or eleven-pixel disc, inset from the sleeve's lower corner."""
+    size = image.width
+    diameter = 5 if size < 128 else 11
+    inset = 2 if size < 128 else 6
+    color = tuple(int(ink.lstrip("#")[i:i+2], 16) for i in (0, 2, 4)) if isinstance(ink, str) else tuple(ink)
+    canvas = np.asarray(image.convert("RGB")).copy()
+    y, x = np.mgrid[:diameter, :diameter]
+    radius = (diameter-1)/2
+    distance = (x-radius)**2+(y-radius)**2
+    mask = (distance <= radius**2) & (distance >= (1 if diameter == 5 else 2)**2)
+    left = size-inset-diameter
+    tile = canvas[left:left+diameter, left:left+diameter]
+    tile[mask] = color
+    return Image.fromarray(canvas)

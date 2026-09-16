@@ -1,0 +1,7 @@
+{'name': 'Wall', 'running': True, 'enabled': True, 'connected_from': None, 'last': None, 'problem': None, 'output': 'stdout'}
+1297709 /home/pi/album-art-matrix/.venv/bin/python -m brain.child_process 1297633 /home/pi/wall-codex/bin/nqptp
+1297710 /home/pi/wall-codex/bin/nqptp
+1297711 /home/pi/album-art-matrix/.venv/bin/python -m brain.child_process 1297633 /home/pi/wall-codex/bin/shairport-sync -c /tmp/matrix-airplay-mfbup_lu/shairport.conf -o stdout
+1297712 /home/pi/wall-codex/bin/shairport-sync -c /tmp/matrix-airplay-mfbup_lu/shairport.conf -o stdout
+
+{'name': 'Wall', 'running': False, 'enabled': False, 'connected_from': None, 'last': None, 'problem': None, 'output': 'stdout'}

@@ -1,0 +1,86 @@
+...........[scrobble] listened: An Artist - A Song
+.[scrobble] listened: An Artist - A Song
+.[scrobble] listened: An Artist - A Song
+.[scrobble] listened: An Artist - A Song
+......[scrobble] ListenBrainz is unreachable; listens are kept on the wall.
+[scrobble] ListenBrainz is unreachable; listens are kept on the wall.
+[scrobble] ListenBrainz is unreachable; listens are kept on the wall.
+[scrobble] ListenBrainz is unreachable; listens are kept on the wall.
+[scrobble] listened: An Artist - A Song
+.[scrobble] ListenBrainz HTTP 500; will retry.
+[scrobble] ListenBrainz HTTP 500; will retry.
+[scrobble] ListenBrainz HTTP 500; will retry.
+[scrobble] ListenBrainz HTTP 500; will retry.
+[scrobble] listened: An Artist - A Song
+.[scrobble] ListenBrainz HTTP 503; will retry.
+[scrobble] ListenBrainz HTTP 503; will retry.
+[scrobble] ListenBrainz HTTP 503; will retry.
+[scrobble] ListenBrainz HTTP 503; will retry.
+[scrobble] listened: An Artist - A Song
+.[scrobble] ListenBrainz HTTP 429; will retry.
+[scrobble] ListenBrainz HTTP 429; will retry.
+[scrobble] ListenBrainz HTTP 429; will retry.
+[scrobble] ListenBrainz HTTP 429; will retry.
+[scrobble] listened: An Artist - A Song
+.[scrobble] ListenBrainz refused a submission (HTTP 400); dropped.
+.[scrobble] ListenBrainz refused a submission (HTTP 401); dropped.
+.[scrobble] ListenBrainz refused a submission (HTTP 403); dropped.
+.[scrobble] ListenBrainz refused a submission (HTTP 404); dropped.
+.[scrobble] ListenBrainz refused a submission (HTTP 422); dropped.
+.[scrobble] ListenBrainz HTTP 503; will retry.
+[scrobble] ListenBrainz HTTP 503; will retry.
+.[scrobble] ListenBrainz HTTP 503; will retry.
+.[scrobble] listened: An Artist - Song 0
+[scrobble] listened: An Artist - Song 1
+[scrobble] listened: An Artist - Song 2
+[scrobble] listened: An Artist - Song 3
+[scrobble] listened: An Artist - Song 4
+[scrobble] listened: An Artist - Song 5
+[scrobble] listened: An Artist - Song 6
+[scrobble] listened: An Artist - Song 7
+[scrobble] listened: An Artist - Song 8
+[scrobble] listened: An Artist - Song 9
+[scrobble] listened: An Artist - Song 10
+[scrobble] listened: An Artist - Song 11
+[scrobble] listened: An Artist - Song 12
+[scrobble] listened: An Artist - Song 13
+[scrobble] listened: An Artist - Song 14
+[scrobble] listened: An Artist - Song 15
+[scrobble] listened: An Artist - Song 16
+[scrobble] listened: An Artist - Song 17
+[scrobble] listened: An Artist - Song 18
+[scrobble] listened: An Artist - Song 19
+[scrobble] listened: An Artist - Song 20
+[scrobble] listened: An Artist - Song 21
+[scrobble] listened: An Artist - Song 22
+[scrobble] listened: An Artist - Song 23
+[scrobble] listened: An Artist - Song 24
+[scrobble] listened: An Artist - Song 25
+[scrobble] listened: An Artist - Song 26
+[scrobble] listened: An Artist - Song 27
+[scrobble] listened: An Artist - Song 28
+[scrobble] listened: An Artist - Song 29
+[scrobble] listened: An Artist - Song 30
+[scrobble] listened: An Artist - Song 31
+[scrobble] listened: An Artist - Song 32
+[scrobble] listened: An Artist - Song 33
+[scrobble] listened: An Artist - Song 34
+[scrobble] listened: An Artist - Song 35
+[scrobble] listened: An Artist - Song 36
+[scrobble] listened: An Artist - Song 37
+[scrobble] listened: An Artist - Song 38
+[scrobble] listened: An Artist - Song 39
+[scrobble] listened: An Artist - Song 40
+[scrobble] listened: An Artist - Song 41
+[scrobble] listened: An Artist - Song 42
+[scrobble] listened: An Artist - Song 43
+[scrobble] listened: An Artist - Song 44
+[scrobble] listened: An Artist - Song 45
+[scrobble] listened: An Artist - Song 46
+[scrobble] listened: An Artist - Song 47
+[scrobble] listened: An Artist - Song 48
+[scrobble] listened: An Artist - Song 49
+..[features] could not read feature switches: TOMLDecodeError; keeping previous switches
+.Olaf noisy-query latency: 0.020s
+......
+40 passed in 1.86s

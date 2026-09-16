@@ -31,6 +31,12 @@ ROOT = os.path.expanduser("~/album-art-matrix")
 
 # name, group, kind, low, high, step, needs a renderer relaunch, what it does
 SPECS = [
+    ("shelf_mark", "Shelf", "bool", 0, 1, 1, False, "Mark streamed albums you own on vinyl with a small disc."),
+    ("wake", "Hearing", "bool", 0, 1, 1, False, "Listen locally for the wake phrase. Needs this build's wake feature enabled."),
+    ("wake_threshold", "Hearing", "float", .1, .95, .05, False, "Wake confidence. Raise it if the room wakes the wall by accident."),
+    ("wake_word", "Hearing", "int", 0, 1, 1, False, "0: hey jarvis. 1: hey wall, requires the custom model."),
+    ("speech_model", "Hearing", "int", 0, 1, 1, False, "0: tiny, fastest. 1: base, more accurate but may exceed the three-second deadline."),
+    ("speech_gate", "Hearing", "int", -65, -20, 1, False, "Speech above this dB level keeps capture open. Ends after 0.8 seconds below it."),
     ("bit_depth", "Panel", "int", 4, 64, 4, True,
      "Bit planes per frame. More colour in the dark end, a slower refresh."),
     ("dither", "Panel", "float", 0.0, 10.0, 0.1, False,
@@ -94,6 +100,16 @@ SPECS = [
 
     # The ear's knobs live here too: same store, same page on the phone,
     # nothing to restart. Levels are dB below the microphone's ceiling.
+    ("teach_by_ear", "Hearing", "bool", 0, 1, 1, False,
+     "Learn twenty seconds while a named player is audible. Only fingerprints remain. Requires teach feature."),
+    ("teach_match_score", "Hearing", "int", 6, 100, 1, False,
+     "Aligned Olaf fingerprints needed to name a taught song. Higher is stricter."),
+    ("knock", "Hearing", "bool", 0, 1, 1, False,
+     "Two short knocks on the frame toggle the wall. Requires this build's knock feature."),
+    ("knock_sensitivity", "Hearing", "int", 6, 40, 1, False,
+     "Required rise above the room, in dB. Higher rejects more music."),
+    ("whistle", "Hearing", "bool", 0, 1, 1, False,
+     "Whistle up to turn on, down to turn off. A steady whistle toggles."),
     ("hearing", "Hearing", "bool", 0, 1, 1, False,
      "Listen to the room through the wall's microphone and name what is "
      "playing. Off leaves the microphone open for the level meter only."),
@@ -137,6 +153,17 @@ def _shipped(cfg: dict) -> dict:
     pipe = cfg.get("pipeline", {})
     ears = cfg.get("ears", {})
     return {
+        "shelf_mark": bool(cfg.get("shelf", {}).get("mark", True)),
+        "wake": bool(ears.get("wake", False)),
+        "wake_threshold": float(ears.get("wake_threshold", .5)),
+        "wake_word": int(ears.get("wake_word", 0)),
+        "speech_model": int(ears.get("speech_model", 0)),
+        "speech_gate": int(ears.get("speech_gate", -45)),
+        "teach_by_ear": bool(ears.get("teach_by_ear", True)),
+        "teach_match_score": int(ears.get("teach_match_score", 12)),
+        "knock": bool(ears.get("knock", False)),
+        "knock_sensitivity": int(ears.get("knock_sensitivity", 20)),
+        "whistle": bool(ears.get("whistle", False)),
         "hearing": bool(ears.get("on", True)),
         "listen_for": float(ears.get("listen_for", 6.0)),
         "room_gate": int(ears.get("room_gate", -52)),
@@ -275,7 +302,9 @@ class Tuning:
             self.video.unsharp_radius = float(v["unsharp_radius"])
             self.video.unsharp_percent = int(v["unsharp_percent"])
         if self.ears is not None:
-            self.ears.configure(on=v["hearing"], clip_s=v["listen_for"],
+            self.ears.configure(teach_by_ear=v["teach_by_ear"], teach_match_score=v["teach_match_score"],
+                                knock=v["knock"], knock_sensitivity=v["knock_sensitivity"],
+                                whistle=v["whistle"], on=v["hearing"], clip_s=v["listen_for"],
                                 gate_db=v["room_gate"],
                                 silence_s=v["quiet_before_letting_go"],
                                 relisten_s=v["listen_again_every"],

@@ -13,12 +13,38 @@ is on — no Mac required.
   POST /push    -> what the phone is playing: {track, artist, album, id?,
                    playing, progress_ms, duration_ms, art?}; 40 s TTL
   GET  /nowplaying -> what the chain currently answers, or 204
-  GET  /services   -> which music services the wall can use, and their state
+  GET /services -> also voice {enabled, state, wake_word, custom_available, problem, last_transcribe_ms}.
+  POST /tuning -> wake, wake_threshold, wake_word (0 Jarvis, 1 wall), speech_model (0 tiny, 1 base), speech_gate.
+  Horizon is a transient wake overlay, not a selectable or persisted mode.
+  GET /shelf -> cached collection, current matches, played counts, sync status and marketplace details.
+  POST /services -> discogs {user, token}; GET /services.discogs never returns the token.
+  GET /art/airplay.jpg -> current AirPlay cover; 404 before one arrives or when disabled.
+  GET /services -> also airplay {name, running, enabled, connected_from, last, problem, output}.
+  POST /note -> {text: 1..120 characters, minutes: 0..1440 exclusive zero, default 30}; {shown, minutes}.
+  POST /state with _feature: note gates the one-pass Tell the wall Shortcut.
+  POST /earworm -> {text}; structured match, alternatives and an eight-second result face.
+  POST /show -> {query}; catalogue sleeve for ten minutes.
+  POST /play -> {query}; first YouTube result through the existing video player.
+  POST /ask -> {text, reply: wall|text}; {answer, shown} within six seconds.
+                   Requires features.ask and claude.api_key in services.
+                   Answer is temporary, paged, and dismissed on control change.
+  GET  /teach -> {engine, available, enabled, songs, problem, busy}
+  POST /teach/forget -> {id}; 202 when queued, 404 for a missing song
+  POST /teach/clear -> {}; 202 when queued. Poll GET /teach for completion.
+                   Songs contain name, added, how, times_matched and metadata.
+                   No audio is stored. Disabled teaching can still be wiped.
+  GET  /features   -> {features: {name: bool}, problem}; config switches, live
+  GET  /services   -> services, including listenbrainz {user, token_set,
+                   enabled, last_listen: {title, artist, at}, queued, problem}.
+                   Hearing knobs include knock, knock_sensitivity (dB), whistle.
+                   /state persists knock_ret, the face restored after off.
+                   User tokens never come back to a phone. Ear journal
+                   entries include scrobbled, true after server acceptance.
   POST /spotify/tokens -> {access_token, refresh_token, expires_in} from the
                    phone's PKCE sign-in; the wall polls Spotify from then on
   POST /spotify/unlink -> forget the Spotify account
   POST /services   -> {spotify: {client_id}, lastfm: {api_key, user},
-                   listenbrainz: {user}, ears: {device}}: any
+                   listenbrainz: {user, token}, claude: {api_key}, ears: {device}}: any
                    subset; kept in services.json, applied at once. This is
                    how every service gets connected from the phone alone.
   POST /video    -> {url, sound?, loop?}: a YouTube link, or any link ffmpeg
@@ -49,6 +75,7 @@ wall cancels it), the frame override, a pending replay.
 """
 import base64
 import json
+import queue
 import os
 import threading
 import time
@@ -67,7 +94,7 @@ JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 # copy for a thumbnail. This is that fallback size, not a limit.
 PHONE_SIDE = 64
 
-MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video")
+MODES = ("art", "cd", "ambient", "off", "frame", "ticker", "clock", "clip", "timer", "nine", "lyrics", "video", "answer", "result")
 UPLOAD_MAX = 80_000_000               # a picture the phone sends up, at most
 EFFECTS = ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")
 FINISHES = ("clean", "dither", "poster")
@@ -75,6 +102,7 @@ IDLES = ("black", "hold", "dim", "ambient")   # what the wall does in silence
 AWAYS = ("stay", "off")                       # what it does when nobody is home
 
 DEFAULTS = {
+    "knock_ret": "art",      # the face restored by the microphone gestures
     "mode": "art",           # art | cd | ambient | off | frame
     "brightness": 1.0,       # 0.05-1.0, scales white-balance gains in linear
     "rpm": 7.5,              # cd mode spin rate (S4 beat grid will own this)
@@ -128,6 +156,8 @@ class ControlState:
         wall: the panel arrangement. The app speaks 64x64 and the wall may be
         192x192, so every frame crossing this API is translated: what the
         phone sends is scaled up, what it reads back is scaled down."""
+        self._state_path = STATE_PATH
+        self._journal_path = JOURNAL_PATH
         self._lock = threading.Lock()
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
@@ -176,6 +206,19 @@ class ControlState:
         self.spotify = None          # SpotifySource
         self.lastfm = None           # LastfmSource
         self.listenbrainz = None     # ListenBrainzSource
+        self.features = None
+        self.scrobbler = None
+        self.teach = None
+        self.shelf = None
+        self.airplay = None
+        self.voice = None
+        self.horizon = None
+        self.asker = None
+        self.answer = None
+        self.result = None
+        self.earworm = None
+        self.note = None
+        self.control_seq = 0
         self.ears = None             # EarsSource: the microphone, named by Shazam
         self.apple = None            # AppleMusicSource (remote mode knows the Mac)
         self.services_store = None   # services.Services: what the phone set
@@ -188,13 +231,17 @@ class ControlState:
         # or clip) — never on a settings change. Clients key their arrival
         # animations on this instead of guessing from title strings.
         self.shown_seq = 0
+        self._journal_lock = threading.Lock()
+        self._journal_jobs = queue.SimpleQueue()
+        self._journal = self._journal_load()
+        threading.Thread(target=self._journal_worker, name="journal", daemon=True).start()
         try:
-            with open(STATE_PATH) as fh:
+            with open(self._state_path) as fh:
                 self._merge(json.load(fh), persist=False)
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             if seed:
                 self._merge(seed, persist=False)
-        if self._s["mode"] in ("frame", "clip", "video"):   # overrides die with restart
+        if self._s["mode"] in ("frame", "clip", "video", "answer", "result"):   # overrides die with restart
             self._s["mode"] = "art"
 
     def get(self) -> dict:
@@ -210,7 +257,9 @@ class ControlState:
         rejected = {}
         with self._lock:
             for k, v in patch.items():
-                if k == "mode" and v in MODES:
+                if k == "knock_ret" and v in MODES and v != "off":
+                    self._s[k] = v
+                elif k == "mode" and v in MODES:
                     self._s[k] = v
                 elif k == "effect" and v in EFFECTS:
                     self._s[k] = v
@@ -287,10 +336,16 @@ class ControlState:
                 else:
                     rejected[k] = v
             snap = dict(self._s)
+            if self.note is not None:
+                snap.update(self.note["previous"])
+            if snap["mode"] == "answer" and self.answer is not None:
+                snap["mode"] = self.answer["ret"]
+            if snap["mode"] == "result" and self.result is not None:
+                snap["mode"] = self.result["ret"]
         if persist:
             try:
-                os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
-                with open(STATE_PATH, "w") as fh:
+                os.makedirs(os.path.dirname(self._state_path), exist_ok=True)
+                with open(self._state_path, "w") as fh:
                     json.dump(snap, fh, indent=2)
             except OSError:
                 pass
@@ -309,6 +364,56 @@ class ControlState:
         self._finish_base = img
         self.finish_seq += 1
 
+    def show_answer(self, text):
+        if self.note is not None:
+            self.apply({})
+        from .art.answer import Answer
+        face = Answer(self.wall.width, text)
+        ret = self.answer["ret"] if self.answer else self.get()["mode"]
+        self.answer = {"face": face, "t0": time.monotonic(), "ret": ret if ret != "answer" else "art"}
+        self.apply({"mode": "answer"}, internal=True)
+        current = self.answer
+        def restore():
+            if self.answer is current:
+                self.answer = None
+                if self.get()["mode"] == "answer":
+                    self.apply({"mode": current["ret"]}, internal=True)
+        timer = threading.Timer(face.duration, restore)
+        timer.daemon = True
+        timer.start()
+
+    def show_result(self, items, duration=8):
+        """Prepare remote covers on the request thread, then animate arrays."""
+        from .art.fetch import fetch_art
+        from .art.result import ResultFace
+        prepared = []
+        for item in items[:2]:
+            prepared.append({**item, "image": fetch_art(item["art_url"], timeout=6)})
+        ret = self.result["ret"] if self.result else self.get()["mode"]
+        face = ResultFace(self.wall.width, prepared)
+        self.answer = None
+        self.result = {"face": face, "t0": time.monotonic(),
+                       "ret": ret if ret not in ("answer", "result") else "art"}
+        self.apply({"mode": "result"}, internal=True)
+        current = self.result
+        def restore():
+            if self.result is current:
+                self.result = None
+                if self.get()["mode"] == "result":
+                    self.apply({"mode": current["ret"]}, internal=True)
+        timer = threading.Timer(duration, restore)
+        timer.daemon = True
+        timer.start()
+
+    def gesture_power(self, action):
+        """A gesture runs on its own worker; persistence cannot block capture."""
+        state = self.get()
+        on = action == "on" or (action == "toggle" and state["mode"] == "off")
+        if on and state["mode"] == "off":
+            self.apply({"mode": state.get("knock_ret", "art")})
+        elif not on and state["mode"] != "off":
+            self.apply({"knock_ret": state["mode"], "mode": "off"})
+
     def ring(self):
         """The alarm: straight to the timer's zero, fireworks and all, and
         back to whatever the wall was doing when it is done."""
@@ -318,8 +423,24 @@ class ControlState:
         self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret}
         self.apply({"mode": "timer"})
 
-    def apply(self, patch: dict) -> dict:
+    def apply(self, patch: dict, internal=False) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
+        patch = dict(patch)
+        feature = patch.pop("_feature", None)
+        if feature is not None and (feature != "note" or not self.features or not self.features.enabled(feature)):
+            return {"_feature": "disabled or unknown"}
+        if not internal:
+            if self.note is not None:
+                previous, self.note = self.note["previous"], None
+                patch = {**previous, **patch}
+            self.horizon = None
+            self.control_seq += 1
+            if self.answer is not None:
+                previous, self.answer = self.answer, None
+                patch.setdefault("mode", previous["ret"])
+            if self.result is not None:
+                previous, self.result = self.result, None
+                patch.setdefault("mode", previous["ret"])
         # sleep fade is a command, not a persisted setting
         if "sleep_fade_min" in patch:
             minutes = _clamp(patch.pop("sleep_fade_min"), 0, 180)
@@ -412,11 +533,18 @@ class ControlState:
             "attempts": 0, "matches": 0, "settings": {},
             "problem": "this wall has no ears"}
         return {
+            "discogs": ({k:v for k,v in self.shelf.public().items() if k not in ("rows","current")} if self.shelf else None),
+            "airplay": self.airplay.public() if self.airplay else None,
+            "voice": self.voice.public() if self.voice else None,
+            "claude": self.asker.public() if self.asker else {"key_set": False, "model": "claude-opus-5", "busy": False, "problem": None},
             "spotify": {"client_id": sp.client_id if sp else "",
                         "linked": bool(sp and sp.linked)},
             "lastfm": {"user": lf.user if lf else "",
                        "key_set": bool(lf and lf.api_key)},
-            "listenbrainz": {"user": lb.user if lb else ""},
+            "listenbrainz": {"user": lb.user if lb else "",
+                            **(self.scrobbler.status() if self.scrobbler else
+                               {"token_set": bool(self.services_store and self.services_store.get("listenbrainz", "token")),
+                                "last_listen": None, "queued": 0, "problem": None, "enabled": False})},
             "hearing": hearing,
             # the ear's earlier shape, for a phone not rebuilt yet. There is
             # no key any more, so a key is always "set".
@@ -438,6 +566,8 @@ class ControlState:
         if store is None:
             return {"services": "not available"}
         changed, rejected = store.update(patch)
+        if "discogs" in changed and self.shelf:
+            self.shelf.changed()
         if "spotify" in changed and self.spotify:
             self.spotify.set_client_id(store.get("spotify", "client_id"))
         if "lastfm" in changed and self.lastfm:
@@ -541,38 +671,56 @@ class ControlState:
                 "ytdlp": ytdlp_v}
 
     # ---- journal --------------------------------------------------------
-    def journal_append(self, entry: dict):
-        """Main loop calls this once per shown sleeve."""
+    def _journal_load(self):
+        entries = []
         try:
-            os.makedirs(os.path.dirname(JOURNAL_PATH), exist_ok=True)
-            with open(JOURNAL_PATH, "a") as fh:
-                fh.write(json.dumps(entry) + "\n")
-        except OSError:
-            return
-        try:                                     # occasional trim, best effort
-            with open(JOURNAL_PATH) as fh:
-                lines = fh.readlines()
-            if len(lines) > JOURNAL_MAX:
-                with open(JOURNAL_PATH, "w") as fh:
-                    fh.writelines(lines[-JOURNAL_MAX:])
+            with open(self._journal_path) as fh:
+                for line in fh:
+                    try:
+                        value = json.loads(line)
+                        if isinstance(value, dict):
+                            entries.append(value)
+                    except ValueError:
+                        continue
         except OSError:
             pass
+        return entries[-JOURNAL_MAX:]
+
+    def journal_append(self, entry: dict):
+        """The drawing loop hands off a small dict; it never waits on disk."""
+        with self._journal_lock:
+            self._journal.append(dict(entry))
+            self._journal = self._journal[-JOURNAL_MAX:]
+        self._journal_jobs.put(True)
+
+    def journal_scrobbled(self, session, last):
+        """Mark the closest ear entry for this performance, not other plays."""
+        with self._journal_lock:
+            candidates = [entry for entry in self._journal
+                          if entry.get("source") == "ears"
+                          and entry.get("title") == last["title"]
+                          and entry.get("artist") == last["artist"]
+                          and abs(entry.get("ts", 0) - last["at"]) <= 60]
+            if candidates:
+                entry = min(candidates, key=lambda e: abs(e["ts"] - last["at"]))
+                entry["scrobbled"] = True
+        self._journal_jobs.put(True)
+
+    def _journal_worker(self):
+        from .scrobble import atomic_json
+        while True:
+            self._journal_jobs.get()
+            with self._journal_lock:
+                snapshot = [dict(e) for e in self._journal]
+            try:
+                atomic_json(self._journal_path, snapshot, lines=True)
+            except OSError as exc:
+                print(f"[journal] could not save: {type(exc).__name__}", flush=True)
 
     def journal_read(self, limit: int = 50) -> list[dict]:
-        try:
-            with open(JOURNAL_PATH) as fh:
-                lines = fh.readlines()
-        except OSError:
-            return []
-        out = []
-        for ln in reversed(lines[-limit * 2:]):
-            try:
-                out.append(json.loads(ln))
-            except json.JSONDecodeError:
-                continue
-            if len(out) >= limit:
-                break
-        return out
+        limit = max(1, min(JOURNAL_MAX, limit))
+        with self._journal_lock:
+            return [dict(e) for e in reversed(self._journal[-limit:])]
 
 
 def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
@@ -702,6 +850,24 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 self._json(200, ctrl.tuning.public())
                 return
+            if u.path == "/shelf/current":
+                self._json(200, ctrl.shelf.current if ctrl.shelf and ctrl.shelf.enabled() else [])
+                return
+            if u.path == "/shelf":
+                self._json(200, ctrl.shelf.public() if ctrl.shelf else {"rows": [], "problem": "Shelf is unavailable."})
+                return
+            if u.path == "/art/airplay.jpg":
+                art = ctrl.airplay.art if ctrl.airplay and ctrl.airplay.enabled() else None
+                if art is None:
+                    self._json(404, {"error": "No AirPlay cover yet."})
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "image/jpeg")
+                self.send_header("Content-Length", str(len(art)))
+                self.send_header("Cache-Control", "no-cache")
+                self.end_headers()
+                self.wfile.write(art)
+                return
             if u.path.startswith("/frame.raw"):
                 px = ctrl.last_frame
                 if px is None:
@@ -768,6 +934,13 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 ctrl.last_client = time.monotonic()
                 self._json(200, ctrl.public_state())
                 return
+            if u.path == "/teach":
+                self._json(200, ctrl.teach.public() if ctrl.teach else {"engine": "Olaf", "available": False,
+                           "enabled": False, "songs": [], "problem": "Teaching is unavailable.", "busy": False})
+                return
+            if u.path == "/features":
+                self._json(200, ctrl.features.public() if ctrl.features else {"features": {}, "problem": None})
+                return
             if u.path.startswith("/services"):
                 self._json(200, ctrl.services())
                 return
@@ -795,6 +968,66 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if urlparse(self.path).path == "/earworm":
+                data = self._body()
+                if data is None:
+                    return
+                try:
+                    self._json(200, ctrl.earworm.ask(data.get("text")))
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                return
+            if urlparse(self.path).path in ("/show", "/play"):
+                from .discover import play, show
+                data = self._body()
+                if data is None:
+                    return
+                try:
+                    answer = (show(ctrl, data.get("query")) if urlparse(self.path).path == "/show"
+                              else play(ctrl, data.get("query")))
+                    self._json(200, answer)
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                except RuntimeError as exc:
+                    self._json(503, {"error": str(exc)})
+                return
+            if urlparse(self.path).path == "/note":
+                from .note import show
+                data = self._body()
+                if data is None:
+                    return
+                try:
+                    self._json(200, show(ctrl, data.get("text"), data.get("minutes", 30)))
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                return
+            if urlparse(self.path).path == "/ask":
+                data = self._body()
+                if data is None:
+                    return
+                if ctrl.asker is None:
+                    self._json(503, {"error": "Ask is unavailable."})
+                    return
+                try:
+                    self._json(200, ctrl.asker.ask(data.get("text"), data.get("reply", "wall")))
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                return
+            if urlparse(self.path).path in ("/teach/forget", "/teach/clear"):
+                data = self._body()
+                if data is None:
+                    return
+                if ctrl.teach is None:
+                    self._json(503, {"error": "Teaching is unavailable."})
+                    return
+                action = urlparse(self.path).path.rsplit("/", 1)[-1]
+                ident = data.get("id")
+                if action == "forget" and (not isinstance(ident, str) or ident not in ctrl.teach.library.entries):
+                    self._json(404, {"error": "No such taught song."})
+                    return
+                accepted = ctrl.teach.manage(action, ident)
+                self._json(202 if accepted else 409, ctrl.teach.public())
+                return
             if self.path.startswith("/homekit/"):
                 # the pairing code, drawn on the panel; and taken down
                 hk = getattr(ctrl, "homekit", None)

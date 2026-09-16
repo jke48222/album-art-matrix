@@ -1,0 +1,9 @@
+[panel]
+width = 64
+height = 64
+[wall]
+tile = 64
+cols = 1
+rows = 1
+[sink]
+type = "preview"

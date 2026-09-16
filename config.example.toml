@@ -94,12 +94,23 @@ user = ""
 user = ""
 
 [ears]
+wake = false           # also requires [features] wake; local ONNX inference
+wake_threshold = 0.5
+wake_word = 0          # 0 hey jarvis; 1 custom hey_wall.onnx when installed
+speech_model = 0       # 0 tiny; 1 base, hard three-second request deadline
+speech_gate = -45      # dB; capture stops after 0.8 s below this, maximum 8 s
 # The wall's own microphone, named by Shazam (shazamio: no key, no account,
 # and not an offered API, so it can break the day Apple changes it). "auto"
 # picks the first USB microphone `arecord -l` lists; name one instead if
 # there are several (plughw:2,0 is usual). Everything else about hearing,
 # the gate, the clip length, the gain, is a Hearing knob on the phone.
 device = "auto"
+# Gestures are also editable through Hearing on the phone.
+knock = false
+teach_by_ear = true     # in-memory twenty-second clips, fingerprints only
+teach_match_score = 12  # aligned native Olaf hashes
+knock_sensitivity = 20  # rise in dB above the one-second room average
+whistle = false
 
 [sink]
 type = "preview"                 # "preview" on the Mac, "pi" on the Pi
@@ -141,3 +152,42 @@ port = 51826
 # 123-45-678 and the like).
 pincode = "371-22-984"
 log = "info"        # "debug" logs every request the phone makes, for a pairing that will not take
+
+# Each build's abilities are opt-in. The brain watches this table once a
+# second without disk reads on the rendering loop. GET /features reports it.
+[features]
+scrobble = false
+knock = false
+teach = false
+ask = false
+wake = false
+horizon = false
+note = false        # POST /note and the Tell the wall Shortcut
+airplay = false
+shelf = false
+earworm = false
+show = false
+imagine = false
+weather = false
+posters = false
+games = false
+
+[shelf]
+mark = true         # small disc on streamed sleeves also owned on vinyl
+
+[scrobble]
+# Only records named by the microphone are ours to report. Streaming apps
+# report themselves. Future adapters can be opted in when integrated here.
+sources = ["ears"]
+# Set listenbrainz.token from Tessera > Services > ListenBrainz, not here.
+# Qualified offline listens live in scrobbles.jsonl for at most seven days;
+# dedupe receipts and the last listen live in scrobble-state.json.
+
+# Claude credentials are only entered in Tessera > Services > Claude.
+# No claude.api_key belongs in this seed. /ask uses claude-opus-5.
+
+[airplay]
+# Enabled only by [features] airplay. Native builds: pi/install-airplay.sh.
+output = "stdout"       # discarded by the brain; "alsa" for a connected DAC
+sample_rate = 44100      # RTP metadata clock, separate from audio output rate
+host = "album-matrix.local" # reachable cover-art host for the phone and Pi

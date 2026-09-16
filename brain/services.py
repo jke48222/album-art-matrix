@@ -14,10 +14,15 @@ PATH = os.path.expanduser("~/.config/album-art-matrix/services.json")
 
 # section -> key -> pattern a value must match. Empty clears a value.
 FIELDS = {
+    "images": {"provider": r"^(openai|google)$",
+               "api_key": r"^[A-Za-z0-9_.-]{20,240}$"},
+    "discogs": {"token": r"^[A-Za-z0-9_-]{20,100}$", "user": r"^[^\s/]{1,64}$"},
+    "claude": {"api_key": r"^sk-ant-[A-Za-z0-9_-]{16,240}$"},
     "spotify": {"client_id": r"^[0-9A-Za-z]{8,64}$"},
     "lastfm": {"api_key": r"^[0-9A-Za-z]{16,64}$",
                "user": r"^[^\s/]{1,64}$"},
-    "listenbrainz": {"user": r"^[^\s/]{1,64}$"},
+    "listenbrainz": {"user": r"^[^\s/]{1,64}$",
+                     "token": r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"},
     "ears": {"device": r"^(auto|[A-Za-z0-9:_,.=-]{1,64})$"},
     # the ear's old name. Still accepted, so a phone that has not been
     # rebuilt can keep sending its AcoustID key without being refused;
@@ -34,7 +39,7 @@ class Services:
         for s, keys in FIELDS.items():
             for k in keys:
                 v = (cfg.get(s) or {}).get(k, "")
-                if isinstance(v, str) and not v.startswith("PASTE"):
+                if s != "claude" and k not in ("token",) and isinstance(v, str) and not v.startswith("PASTE"):
                     self.data[s][k] = v.strip()
         try:
             with open(PATH) as fh:
