@@ -222,7 +222,6 @@ class Asker:
         the words someone remembers, or None."""
         if not self.ready:
             return None
-        import anthropic
         from pydantic import BaseModel
         class Guess(BaseModel):
             title: str

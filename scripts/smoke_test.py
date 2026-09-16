@@ -2,7 +2,6 @@
 pipeline, write the panel preview plus a pre/post-white-balance comparison.
 No network, no Spotify — proves the pipeline before hardware or credentials.
 """
-import math
 import os
 import sys
 
@@ -11,7 +10,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from PIL import Image, ImageDraw  # noqa: E402
 import numpy as np  # noqa: E402
 
-from brain.art.pipeline import process, prepare, white_balance  # noqa: E402
+from brain.art.pipeline import process  # noqa: E402
 from brain.sinks.mac_preview import MacPreviewSink  # noqa: E402
 
 SIZE, PANEL = 640, 64

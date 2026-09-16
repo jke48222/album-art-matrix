@@ -405,12 +405,15 @@ and starts using them at once. The Spotify sign-in itself runs on the phone. The
 `config.toml` are only seeds; anything set from the phone wins. What still needs a computer is the
 one-time `./deploy.sh` that puts the software on the Pi.
 
-The developer's own keys live in `tessera/Tessera/DeveloperKeys.swift`: the Spotify app id and the
-Last.fm API key, made once by whoever builds the app, the way every app with a
-"Sign in with Spotify" button was registered once by its developer. With them filled in, the app
-hands them to any wall it meets that is missing them, and a person only ever signs in to Spotify or
-types a Last.fm or ListenBrainz username. With them empty, the Services pages walk through making
-them by hand.
+The developer's own keys live in `tessera/Tessera/DeveloperKeys.swift`. Only what is safe to
+publish goes in there, because this repository is public. The Spotify app id qualifies: it is public
+by design, the way every app with a "Sign in with Spotify" button was registered once by its
+developer, and the sign-in uses PKCE so there is no secret to keep. A **Last.fm API key does not**:
+it is bound to the developer's Last.fm account and a published one can be copied and revoked for
+someone else's abuse, so that field is empty and the key is typed into Tessera's Services page
+instead, which keeps it in `services.json` on the wall. With a key filled in, the app hands it to
+any wall it meets that is missing one, and a person only ever signs in to Spotify or types a
+Last.fm or ListenBrainz username. With it empty, the Services pages walk through making it by hand.
 
 To re-run the circuit simulations, you need `ngspice` on your PATH plus numpy and matplotlib:
 
@@ -478,7 +481,7 @@ ios-companion/          AlbumWall, the first app, 4,406 lines of Swift
 ├── AlbumWallWidgets/   Home screen widgets and the Live Activity surface
 └── design/             Screen designs the app was built from
 
-tessera/                The current iOS app, 6,257 lines of Swift
+tessera/                The current iOS app, 26,472 lines of Swift
 ├── Tessera/            Wall screen, Studio (draw / photo / words / video),
 │                       Archive, Settings, offline outbox, stand-in wall
 ├── TesseraWidgets/     Home screen widgets

@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from brain.voice import commands as C                                  # noqa: E402
 from brain.voice.commands import Command                               # noqa: E402
-from brain.art.answer import AnswerFace, layout, wrap, pages, PAGE_S, HOLD_S   # noqa: E402
+from brain.art.answer import AnswerFace, layout, wrap, pages, PAGE_S   # noqa: E402
 from brain.art.horizon import Horizon, ink_of, COLLAPSE_S, OPEN_S, MISSED_S   # noqa: E402
 from brain.voice.voice import Voice, END_SILENCE_S                     # noqa: E402
 

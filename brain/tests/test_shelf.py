@@ -14,7 +14,7 @@ from PIL import Image
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from brain.nowplaying import NowPlaying                                  # noqa: E402
-from brain.shelf import Shelf, fold, fold_artist, release_from_api        # noqa: E402
+from brain.shelf import Shelf, fold, fold_artist        # noqa: E402
 from brain.art.mark import owned_mark, geometry                           # noqa: E402
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")

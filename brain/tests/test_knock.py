@@ -2,7 +2,6 @@
 
     .venv/bin/python -m pytest brain/tests/test_knock.py -q
 """
-import math
 import os
 import sys
 

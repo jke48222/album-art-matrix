@@ -434,9 +434,21 @@ class Voice:
             self.log(f"[voice] {self.problem}")
             self._missed(time.monotonic(), "an error")
 
+    # Spoken commands whose feature owns no object of its own, so nothing
+    # else would refuse them: note acts straight on ctrl, and earworm shares
+    # the shower with show and play. Everything else here is already gated by
+    # main.py never building the thing it needs.
+    _SWITCHED = {"note": "Notes are off on this wall.",
+                 "earworm": "Naming a song from its words is off on this wall.",
+                 "imagine": "Drawing from words is off on this wall."}
+
     def _do(self, cmd: cmds.Command):
         ctrl = self.ctrl
         name = cmd.name
+        feats = getattr(ctrl, "features", None)
+        if name in self._SWITCHED and feats is not None and not feats.on(name):
+            self._answer(self._SWITCHED[name])
+            return
         if name == "cancel":
             self._missed(time.monotonic(), "cancelled")
             return

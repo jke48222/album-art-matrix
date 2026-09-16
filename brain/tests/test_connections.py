@@ -10,7 +10,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.games.connections import Connections, BUNDLED    # noqa: E402
+from brain.games.connections import BUNDLED    # noqa: E402
 from brain.games.host import GameHost                       # noqa: E402
 from brain.tests.test_games import FakeCtrl                 # noqa: E402
 

@@ -59,7 +59,7 @@ def test_twenty_and_out(tmp_path, monkeypatch):
     host.start("twentyq", {"asker": asker})
     g = host.game
     for i in range(20):
-        r = host.move(None, {"answer": "no"})
+        host.move(None, {"answer": "no"})
     assert g.over and not g.won and "You win" in g.message
     assert "over" in host.move(None, {"answer": "no"})["error"]
 

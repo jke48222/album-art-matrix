@@ -12,7 +12,6 @@ Brightness scales the white-balance gains in linear light, so dimming
 doesn't shift color. A control change wakes the loop instantly (dirty event).
 """
 import argparse
-import os
 import sys
 import threading
 import time
@@ -326,7 +325,6 @@ def main():
     # dark end, the sharpening, the renderer's own launch flags. config.toml
     # seeds it; the phone's tuning page moves it from there.
     tune = Tuning(cfg)
-    pipe = cfg.get("pipeline", {})
     poll_s = float(cfg.get("nowplaying", {}).get("poll_seconds", 5.0))
 
     anim = cfg.get("animation", {})

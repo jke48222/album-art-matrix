@@ -43,7 +43,7 @@ def wait_drawn(g):
 def test_play(tmp_path):
     host = GameHost(Ctrl(64), path=str(tmp_path / "g.json"))
     im = FakeImaginer()
-    st = host.start("pictionary", {"word": "elephant", "imaginer": im}, ["Jalen", "Sam"])
+    host.start("pictionary", {"word": "elephant", "imaginer": im}, ["Jalen", "Sam"])
     g = host.game
     wait_drawn(g)
     assert "elephant" in im.prompts[0][1] and "no words" in im.prompts[0][1]

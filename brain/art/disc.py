@@ -18,7 +18,7 @@ track, so how far in you are is readable from across the room with no text.
 import math
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image
 
 SUPER = 4  # supersample factor for rotation quality
 

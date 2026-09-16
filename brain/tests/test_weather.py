@@ -5,13 +5,12 @@ sizes on eight kinds of weather.
 """
 import os
 import sys
-import time
 
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.weather import (SCENES, ALL_CODES, scene_for, parse_forecast, Weather,   # noqa: E402
+from brain.weather import (ALL_CODES, scene_for, parse_forecast, Weather,   # noqa: E402
                            REFRESH_S, STALE_S)
 from brain.art.weather import WeatherFace, moon_phase                             # noqa: E402
 

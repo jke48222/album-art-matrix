@@ -12,7 +12,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from brain.games.host import GameHost                  # noqa: E402
 from brain.games import heardle                        # noqa: E402,F401
-from brain.games.heardle import STEPS                  # noqa: E402
 from brain.tests.test_pictures import Ctrl             # noqa: E402
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")
