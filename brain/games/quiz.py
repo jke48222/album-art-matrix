@@ -12,12 +12,11 @@ own below. Options: {"theme": "...", "set": n, "seconds": s}.
 from __future__ import annotations
 
 import random
-import re
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, GREEN, INK, RED, WHITE, YELLOW, arc, banner, blank, fill, header, mix,
-                    progress, scale_for, scoreboard, text, text_centred, fit_text, wrap_text, text_right)
+from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, YELLOW, arc, blank, header, mix,
+                    scale_for, scoreboard, text_centred, fit_text, wrap_text)
 from .pictures import _fold
 
 SECONDS = 20.0

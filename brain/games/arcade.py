@@ -23,9 +23,8 @@ import random
 import time
 
 from . import Game, register
-from .board import (BLACK, BLUE, CYAN, DIM, EDGE, FAINT, GREEN, INK, ORANGE, PURPLE, RED, SLATE, WHITE, YELLOW,
-                    banner, blank, disc, fill, glow, header, mix, outline, rounded, scale_for, text, text_centred,
-                    text_right, tile)
+from .board import (BLACK, BLUE, DIM, EDGE, FAINT, GREEN, INK, ORANGE, PURPLE, RED, WHITE, YELLOW,
+                    banner, blank, disc, fill, glow, mix, outline, rounded, scale_for, text, text_right, tile)
 
 DIRS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 

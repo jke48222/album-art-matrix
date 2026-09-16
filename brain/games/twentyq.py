@@ -11,8 +11,8 @@ question too: knock if it is right.
 from __future__ import annotations
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, HONEY, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, header, mix,
-                    scale_for, text, text_centred, fit_text, wrap_text)
+from .board import (BLACK, DIM, GREEN, HONEY, INK, banner, blank, breathe, header, mix,
+                    scale_for, text_centred, fit_text, wrap_text)
 
 MAX_Q = 20
 

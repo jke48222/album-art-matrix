@@ -20,11 +20,10 @@ from __future__ import annotations
 import random
 import re
 
-import numpy as np
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, SLATE, WHITE, banner, blank, fill, header, mix,
-                    text, scale_for)
+from .board import (BLACK, EDGE, INK, RED, WHITE, banner, blank, fill, header, mix,
+                    text)
 
 DIGITS_3X5 = {
     "1": ["010", "110", "010", "010", "111"],

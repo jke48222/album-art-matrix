@@ -18,8 +18,7 @@ import random
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, ORANGE, WHITE, YELLOW, banner, blank, disc, ease_out, fill, header,
-                    mix, rounded, scale_for, text, text_centred)
+from .board import (BLACK, DIM, GREEN, INK, ORANGE, WHITE, YELLOW, banner, blank, ease_out, fill, mix, rounded, scale_for, text_centred)
 
 PITCH_HOLD_S = 0.35         # how long the last whistle steers after it stops
 SINK_PER_S = 0.22           # of the height, per second, when silent

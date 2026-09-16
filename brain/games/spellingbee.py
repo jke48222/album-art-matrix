@@ -21,8 +21,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, fill, header,
-                    hexagon, mix, progress, text, text_centred, text_width, fit_text)
+from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, header,
+                    hexagon, progress, text, text_centred, text_width, fit_text)
 from .words import common
 
 RANKS = [(0.0, "Beginner"), (0.02, "Good Start"), (0.05, "Moving Up"), (0.08, "Good"), (0.15, "Solid"),
@@ -167,8 +167,16 @@ class SpellingBee(Game):
             text(c, rank, 8, size - 22, DIM, 1)
             text(c, f"{self.points} pts", size - 8 - text_width(f"{self.points} pts", 1), size - 22, INK, 1)
         else:
+            # One panel has no room for the list of words found, and that is
+            # fine: the last one is the one you want to see. The score is not
+            # optional though. It used to show only on the nine panel wall,
+            # which left the small wall playing a scoring game with the score
+            # hidden. Word on the left, points on the right, one line.
+            pts = f"{self.points}"
             if self.found:
-                text_centred(c, fit_text(self.found[0][0].upper(), size - 4, 1), cx, size - 12, INK, 1)
+                text(c, fit_text(self.found[0][0].upper(), size - 8 - text_width(pts, 1), 1),
+                     2, size - 12, INK, 1)
+            text(c, pts, size - 2 - text_width(pts, 1), size - 12, HONEY, 1)
             progress(c, 2, size - 3, size - 4, 1, share, HONEY, FAINT)
         if self.over:
             banner(c, size, self.message, BLACK, HONEY)

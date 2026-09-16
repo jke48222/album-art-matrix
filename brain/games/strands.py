@@ -23,8 +23,8 @@ import re
 import time
 
 from . import Game, register
-from .board import (BLACK, BLUE, DIM, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, breathe, disc, fill,
-                    glow, header, line, mix, text, letter_tile, text_centred, fit_text)
+from .board import (BLACK, BLUE, INK, SLATE2, YELLOW, banner, blank, breathe, disc, fill,
+                    glow, header, line, mix, text, fit_text)
 from .words import common_set
 
 ROWS, COLS = 8, 6
@@ -280,11 +280,31 @@ class Strands(Game):
                 if big:
                     disc(c, x, y, cell / 2 - 0.5, back or SLATE2, soft=0.8)
                 elif back:
-                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell, back)
+                    # At 192 a found cell is a bright disc with the letter
+                    # knocked out of it in black, and it reads beautifully. At
+                    # 64 the cell is 7px and the letter is 5x7, so there is a
+                    # single pixel of tile around it: the knocked-out letter
+                    # loses its edges and a found word turns into a column of
+                    # solid blocks. So the tile carries the colour darkened and
+                    # the letter stays the bright one, which keeps the whole
+                    # glyph and still says plainly that the cell was found.
+                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell,
+                         mix(back, BLACK, 0.72))
                 ch = self.grid[r][cc]
                 gw_, gh_ = 5 * s, 7 * s
-                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 1), int(y - gh_ / 2) + (1 if big else 0),
-                     BLACK if back else INK, s)
+                # Centred in its cell. At 64 the cell is 7px and the glyph 5,
+                # and the old +1 pushed the letter flush against the cell's
+                # right edge: two pixels of bare tile on one side, none on the
+                # other, so a highlighted letter read as a broken block rather
+                # than a letter on a tile.
+                if back is None:
+                    ink_ = INK
+                elif big:
+                    ink_ = BLACK          # knocked out of the bright disc
+                else:
+                    ink_ = back           # the bright letter on its dark tile
+                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 0), int(y - gh_ / 2) + (1 if big else 0),
+                     ink_, s)
         if self.over:
             banner(c, size, self.message, BLACK, YELLOW)
         header(c, size, "STRANDS", fit_text(self.theme, 100, 1) if not self.over else "", s, accent=BLUE)

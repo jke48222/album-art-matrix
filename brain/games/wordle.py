@@ -18,9 +18,9 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, GREEN, GREY, INK, SLATE, YELLOW, WHITE, banner, blank,
-                    breathe, ease_in_out, fill, grid_geometry, header, letter_tile, mix, outline, scale_for,
-                    text_centred, fit_text, tile)
+from .board import (BLACK, DIM, EDGE, GREEN, GREY, INK, SLATE, YELLOW, banner, blank,
+                    breathe, ease_in_out, grid_geometry, header, letter_tile, mix, outline, scale_for,
+                    tile)
 from .words import answers5, valid5
 
 ROWS, COLS = 6, 5

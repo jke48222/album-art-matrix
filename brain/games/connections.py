@@ -20,8 +20,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, INK, SLATE, SLATE2, WHITE, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
-                    ease_out, fill, header, mix, rounded, text, text_centred, fit_text, tile, text_width)
+from .board import (BLACK, INK, SLATE2, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
+                    ease_out, header, mix, text_centred, fit_text, tile, text_scrolled)
 
 COLOURS = [YELLOW, GREEN, BLUE, PURPLE]
 NAMES = ["yellow", "green", "blue", "purple"]
@@ -260,9 +260,11 @@ class Connections(Game):
                 break
             picked = w in self.picked
             tile(c, x, yy, cell_w - s, cell_h - (1 if not big else 4), INK if picked else SLATE2, s)
-            label = w.upper() if big else w[:4].upper()
-            text_centred(c, fit_text(label, cell_w - 3 * s, 1), x + (cell_w - s) // 2, yy + (0 if not big else 15),
-                         BLACK if picked else INK, 1)
+            # The whole word, always. At 64 a tile holds four characters and
+            # the words are six, so the long ones travel through their tile
+            # instead of being cut to PENC and BRID.
+            text_scrolled(c, w.upper(), x + s, yy + (0 if not big else 15), cell_w - 3 * s, t,
+                          BLACK if picked else INK, 1, height=7 if not big else 9)
         if self.over:
             banner(c, size, self.message[:40], INK, mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
         header(c, size, "CONNECTIONS", f"{4 - self.mistakes} mistakes left" if not self.over else "", s, accent=PURPLE)

@@ -18,8 +18,8 @@ import numpy as np
 from PIL import Image
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, WHITE, YELLOW, banner, blank, breathe, disc, fill, header, mix,
-                    progress, scale_for, text_centred, fit_text)
+from .board import (BLACK, DIM, GREEN, INK, WHITE, YELLOW, banner, blank, breathe, disc, header, mix,
+                    progress, scale_for, text_centred)
 from ..art.pipeline import prepare
 from .pictures import _fold
 
