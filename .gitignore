@@ -25,8 +25,6 @@ web/.tanstack/
 tessera/build/
 tessera/build-device/
 build-device/
-tessera/build/
-tessera/build-device/
 
 # Xcode DerivedData from a simulator build at the repo root
 /build/
@@ -44,3 +42,22 @@ design/renders/vitrine.blend
 design/renders/instrument.blend
 design/renders/nonet.blend
 design/renders/nonet-*.blend
+
+# Test-run output: coverage's data file, and the sheet scripts/render_games.py
+# draws (both regenerate, neither belongs in the tree)
+.coverage
+.coverage.*
+htmlcov/
+games-sheet.png
+
+# The room's render passes: 654 frames, 420 MB, Blender output that ffmpeg
+# turns into the .mov files staged in tessera/Tessera. The films ship; the
+# frames are intermediates. room.py, render_all.sh and tt900-white.blend are
+# tracked, so they regenerate (render_all.sh resumes from a named pass).
+tessera/Tools/room/room-dive/
+tessera/Tools/room/room-divelight/
+tessera/Tools/room/room-intro/
+tessera/Tools/room/room-lightfilm/
+tessera/Tools/room/room-mark/
+tessera/Tools/room/room-marklight/
+tessera/Tools/room/room-needle/
