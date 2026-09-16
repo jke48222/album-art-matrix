@@ -22,7 +22,8 @@ export const Route = createFileRoute("/profiles")({
       { property: "og:title", content: "White balance profiles - Album Art Matrix" },
       {
         property: "og:description",
-        content: "Save measured LED panel white balance profiles, or keep the published typical values badged as a guess.",
+        content:
+          "Save measured LED panel white balance profiles, or keep the published typical values badged as a guess.",
       },
     ],
   }),
@@ -69,14 +70,16 @@ function ProfilesPage() {
         <p className="eyebrow">colour, owned honestly</p>
         <h1 className="display-mid text-2xl text-foreground">Balance</h1>
         <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
-          RGB LED panels are not neutral: green and blue emitters are far more efficient than red, so an uncorrected
-          white frame comes out cyan. Gains are applied in linear light, after gamma decode.
+          RGB LED panels are not neutral: green and blue emitters are far more efficient than red,
+          so an uncorrected white frame comes out cyan. Gains are applied in linear light, after
+          gamma decode.
         </p>
       </header>
 
       <HonestNote tone="warn">
-        The default gains (R 1.00 / G 0.75 / B 0.55) are published typical values, <strong>not a measurement of any
-        panel</strong>. They stay badged as a guess until you enter a reading.
+        The default gains (R 1.00 / G 0.75 / B 0.55) are published typical values,{" "}
+        <strong>not a measurement of any panel</strong>. They stay badged as a guess until you enter
+        a reading.
       </HonestNote>
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_1fr]">
@@ -116,7 +119,11 @@ function ProfilesPage() {
                     {delta[2].toFixed(2)}, created {String(p.createdAt).slice(0, 10)}
                   </p>
                   <div className="mt-3 flex gap-2">
-                    <Button size="sm" variant={active ? "secondary" : "default"} onClick={() => setActiveProfile(p.id)}>
+                    <Button
+                      size="sm"
+                      variant={active ? "secondary" : "default"}
+                      onClick={() => setActiveProfile(p.id)}
+                    >
                       {active ? (
                         <>
                           <Check className="mr-1 h-3.5 w-3.5" /> Active
@@ -145,7 +152,12 @@ function ProfilesPage() {
             <CardContent className="space-y-4">
               <div className="flex gap-2">
                 {(["rgb", "xyz"] as const).map((v) => (
-                  <Button key={v} size="sm" variant={mode === v ? "default" : "secondary"} onClick={() => setMode(v)}>
+                  <Button
+                    key={v}
+                    size="sm"
+                    variant={mode === v ? "default" : "secondary"}
+                    onClick={() => setMode(v)}
+                  >
                     {v.toUpperCase()}
                   </Button>
                 ))}
@@ -169,15 +181,25 @@ function ProfilesPage() {
               <div className="placard-sunk p-3.5">
                 <p className="eyebrow">corrective gains / largest normalised to 1.00</p>
                 <p className="num mt-1.5 text-sm text-[var(--art)]">
-                  R {computed[0].toFixed(2)} / G {computed[1].toFixed(2)} / B {computed[2].toFixed(2)}
+                  R {computed[0].toFixed(2)} / G {computed[1].toFixed(2)} / B{" "}
+                  {computed[2].toFixed(2)}
                 </p>
                 <GainBars r={computed[0]} g={computed[1]} b={computed[2]} />
               </div>
               <Field label="Profile name">
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Panel batch A, sensor X100" />
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Panel batch A, sensor X100"
+                />
               </Field>
               <Field label="Notes">
-                <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Sensor, distance, ambient conditions" />
+                <Textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Sensor, distance, ambient conditions"
+                />
               </Field>
               <Button onClick={saveMeasured}>Save as measured profile</Button>
             </CardContent>
@@ -191,13 +213,19 @@ function ProfilesPage() {
               <ol className="list-decimal space-y-1.5 pl-5 text-xs leading-relaxed text-muted-foreground marker:font-mono marker:text-[10px] marker:text-muted-foreground/60">
                 <li>Set the wall to the full white test pattern at 100% brightness.</li>
                 <li>
-                  <strong className="text-foreground">Warm the panel up for ten minutes.</strong> LED output shifts as
-                  the panel heats; a cold reading is the wrong reading.
+                  <strong className="text-foreground">Warm the panel up for ten minutes.</strong>{" "}
+                  LED output shifts as the panel heats; a cold reading is the wrong reading.
                 </li>
                 <li>Kill ambient light, or at least keep it constant and off-axis.</li>
-                <li>Hold the colour sensor square to the panel, a fixed distance away, and let it settle.</li>
+                <li>
+                  Hold the colour sensor square to the panel, a fixed distance away, and let it
+                  settle.
+                </li>
                 <li>Record the R/G/B (or XYZ) reading and enter it above.</li>
-                <li>Apply the resulting profile, show full white again, and confirm the reading is now neutral.</li>
+                <li>
+                  Apply the resulting profile, show full white again, and confirm the reading is now
+                  neutral.
+                </li>
               </ol>
             </CardContent>
           </Card>
@@ -219,9 +247,14 @@ function GainBars({ r, g, b }: { r: number; g: number; b: number }) {
       {rows.map(({ c, v }, i) => (
         <div key={i} className="flex items-center gap-2">
           <span className="h-px flex-1 bg-border">
-            <span className="block h-[3px] -translate-y-px" style={{ width: `${Math.min(1, v / 2) * 100}%`, background: c, opacity: 0.85 }} />
+            <span
+              className="block h-[3px] -translate-y-px"
+              style={{ width: `${Math.min(1, v / 2) * 100}%`, background: c, opacity: 0.85 }}
+            />
           </span>
-          <span className="num w-10 text-right text-[9px] text-muted-foreground">{v.toFixed(2)}</span>
+          <span className="num w-10 text-right text-[9px] text-muted-foreground">
+            {v.toFixed(2)}
+          </span>
         </div>
       ))}
     </div>

@@ -27,7 +27,7 @@ struct HeardleBoard: View {
                 ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
                     let used = i < tries.count
                     let open = i <= (game.state["step"].int ?? 0)
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: Round.chip)
                         .fill(used ? (tries[i]["skipped"].bool == true ? Ink.faint : tileRedish) : open ? tileYellow : Ink.plaster)
                         .frame(width: CGFloat(s) * 14, height: 14)
                 }
@@ -39,7 +39,7 @@ struct HeardleBoard: View {
                 }
                 .font(.ui(16, .semibold)).foregroundStyle(Ink.ground)
                 .frame(maxWidth: .infinity, minHeight: 56)
-                .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(accent))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(accent))
             }
             .buttonStyle(PressStyle(scale: 0.96))
             .disabled(game.over)
@@ -51,7 +51,7 @@ struct HeardleBoard: View {
                 Text(t["skipped"].bool == true ? "skipped" : (t["text"].string ?? ""))
                     .font(.ui(14)).foregroundStyle(Ink.dim).frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 14).frame(minHeight: 34)
-                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Ink.plaster))
+                    .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.plaster))
             }
             if game.over, let a = game.state["answer"].object["title"]?.string {
                 Text("\(game.state["answer"]["artist"].string ?? "") — \(a)").font(.ui(15, .semibold)).foregroundStyle(Ink.ink)
@@ -110,7 +110,7 @@ struct SlidingBoard: View {
                 ZStack {
                     PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                         .frame(width: side, height: side)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                     ForEach(0..<(n * n), id: \.self) { i in
                         Rectangle().stroke(Ink.hairline, lineWidth: 1)
                             .frame(width: cell, height: cell)
@@ -152,7 +152,7 @@ struct ReactionBoard: View {
                     .font(.system(size: 34, weight: .black, design: .rounded))
                     .foregroundStyle(phase == "red" || phase == "green" ? .white : Ink.ink)
                     .frame(maxWidth: .infinity, minHeight: 220)
-                    .background(RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .background(RoundedRectangle(cornerRadius: Round.hero, style: .continuous)
                         .fill(phase == "red" ? Color(red: 0.6, green: 0.1, blue: 0.1) : phase == "green" ? Color(red: 0.12, green: 0.6, blue: 0.2) : Ink.plaster))
             }
             .buttonStyle(PressStyle(scale: 0.97))
@@ -167,7 +167,7 @@ struct ReactionBoard: View {
                     Text(best[who]?.int.map { "\($0) ms" } ?? "—").font(.machine(13)).foregroundStyle(Ink.dim)
                 }
                 .padding(.horizontal, 14).frame(minHeight: 34)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.plaster))
             }
         }
     }
@@ -187,10 +187,10 @@ struct WhistleBirdBoard: View {
             HStack(spacing: 12) {
                 PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                     .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                 GeometryReader { geo in
                     ZStack(alignment: .top) {
-                        RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Ink.plaster)
+                        RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster)
                         Circle().fill(accent).frame(width: 30, height: 30)
                             .offset(y: CGFloat(game.state["y"].double ?? 0.5) * (geo.size.height - 30))
                     }
@@ -286,7 +286,7 @@ struct PictionaryBoard: View {
         VStack(spacing: 10) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
             if game.state["drawing"].bool == true {
                 Text("Drawing.").font(.ui(13)).foregroundStyle(Ink.dim)
             } else {
@@ -332,11 +332,11 @@ struct PongBoard: View {
         VStack(spacing: 12) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
             GeometryReader { geo in
                 ZStack(alignment: .top) {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Ink.plaster)
-                    RoundedRectangle(cornerRadius: 8).fill(accent).frame(width: 60, height: 12)
+                    RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster)
+                    RoundedRectangle(cornerRadius: Round.control).fill(accent).frame(width: 60, height: 12)
                         .offset(y: tilt.y * (geo.size.height - 12))
                 }
                 .contentShape(Rectangle())
@@ -374,7 +374,7 @@ struct SnakeBoard: View {
         VStack(spacing: 12) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                 .gesture(DragGesture(minimumDistance: 12).onEnded { v in
                     let dx = v.translation.width, dy = v.translation.height
                     send(["dir": abs(dx) > abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")])
@@ -398,7 +398,7 @@ struct DPad: View {
         Button { send(["dir": dir]) } label: {
             Image(systemName: symbol).font(.system(size: 20, weight: .bold)).foregroundStyle(Ink.ink)
                 .frame(width: 64, height: 48)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
         }
         .buttonStyle(PressStyle(scale: 0.92))
     }
@@ -414,7 +414,7 @@ struct TetrisBoard: View {
         VStack(spacing: 12) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                 .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                 .gesture(DragGesture(minimumDistance: 12).onEnded { v in
                     let dx = v.translation.width, dy = v.translation.height
                     if abs(dx) > abs(dy) { send(["move": dx > 0 ? "right" : "left"]) }
@@ -434,7 +434,7 @@ struct TetrisBoard: View {
         Button { send(["move": move]) } label: {
             Image(systemName: symbol).font(.system(size: 18, weight: .bold)).foregroundStyle(Ink.ink)
                 .frame(maxWidth: .infinity, minHeight: 48)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
         }
         .buttonStyle(PressStyle(scale: 0.92))
     }

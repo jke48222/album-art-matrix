@@ -93,7 +93,7 @@ struct IPodView: View {
             IPodBody()
             screen
                 .frame(width: IPodMetrics.screen.width, height: IPodMetrics.screen.height)
-                .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Round.chip, style: .continuous))
                 .offset(x: IPodMetrics.screen.minX, y: IPodMetrics.screen.minY)
             ClickWheel(
                 accent: accent,
@@ -367,11 +367,11 @@ struct IPodBody: View {
                 .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.04), Color.white.opacity(0.08)],
                                              startPoint: .top, endPoint: .bottom), lineWidth: 1)
             // the bezel: a black plate the screen sits in, with a lip
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                 .fill(Color.black)
                 .frame(width: IPodMetrics.bezel.width, height: IPodMetrics.bezel.height)
                 .overlay {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                         .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
                 }
                 .shadow(color: .black.opacity(0.6), radius: 1, y: 1)

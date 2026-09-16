@@ -28,7 +28,8 @@ export function WallCanvas({
     if (!canvas) return;
     const buf = buffer ?? new Uint8Array(size * size * 3); // unlit = true black
     if (mode === "grid") drawPreviewGrid(canvas, buf, size, brightness, showGrid);
-    else if (mode === "wall") drawWall(canvas, buf, size, size > 128 ? 6 : size > 64 ? 8 : 12, brightness, showSeams);
+    else if (mode === "wall")
+      drawWall(canvas, buf, size, size > 128 ? 6 : size > 64 ? 8 : 12, brightness, showSeams);
     else drawNearest(canvas, buf, size, Math.max(1, Math.round(rawZoom)), brightness);
   }, [buffer, size, mode, brightness, showGrid, showSeams, rawZoom]);
 

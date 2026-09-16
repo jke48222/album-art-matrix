@@ -1,13 +1,6 @@
 /** Test pattern generators. Each returns RGBA pixel data at a chosen size. */
 
-export type PatternId =
-  | "synthetic"
-  | "white"
-  | "red"
-  | "green"
-  | "blue"
-  | "ramp"
-  | "checker";
+export type PatternId = "synthetic" | "white" | "red" | "green" | "blue" | "ramp" | "checker";
 
 export interface RgbaImage {
   data: Uint8ClampedArray;
@@ -21,11 +14,19 @@ export const PATTERNS: { id: PatternId; label: string; purpose: string }[] = [
     label: "Synthetic cover",
     purpose: "Gradient, vinyl disc and fine detail - exposes banding, aliasing and downscale mush.",
   },
-  { id: "white", label: "Full white", purpose: "Every pixel 255. Measure white balance against a real panel." },
+  {
+    id: "white",
+    label: "Full white",
+    purpose: "Every pixel 255. Measure white balance against a real panel.",
+  },
   { id: "red", label: "Full red", purpose: "Per-channel output, red emitters only." },
   { id: "green", label: "Full green", purpose: "Per-channel output, green emitters only." },
   { id: "blue", label: "Full blue", purpose: "Per-channel output, blue emitters only." },
-  { id: "ramp", label: "Greyscale ramp", purpose: "Stepped ramp for spotting banding and gamma errors." },
+  {
+    id: "ramp",
+    label: "Greyscale ramp",
+    purpose: "Stepped ramp for spotting banding and gamma errors.",
+  },
   { id: "checker", label: "Pixel checkerboard", purpose: "1-pixel checker for alignment." },
 ];
 
@@ -52,8 +53,15 @@ export function makePattern(id: PatternId, size = 1024): RgbaImage {
     case "green":
     case "blue": {
       const c =
-        id === "white" ? [255, 255, 255] : id === "red" ? [255, 0, 0] : id === "green" ? [0, 255, 0] : [0, 0, 255];
-      for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) set(img, x, y, c[0], c[1], c[2]);
+        id === "white"
+          ? [255, 255, 255]
+          : id === "red"
+            ? [255, 0, 0]
+            : id === "green"
+              ? [0, 255, 0]
+              : [0, 0, 255];
+      for (let y = 0; y < size; y++)
+        for (let x = 0; x < size; x++) set(img, x, y, c[0], c[1], c[2]);
       return img;
     }
     case "ramp": {
@@ -90,7 +98,7 @@ export function makePattern(id: PatternId, size = 1024): RgbaImage {
           const v = y / (size - 1);
           let r = Math.round(255 * Math.min(1, u * 0.9 + 0.1));
           let g = Math.round(255 * Math.min(1, (1 - v) * 0.75 + 0.15));
-          let b = Math.round(255 * Math.min(1, (u * 0.4 + v * 0.6)));
+          let b = Math.round(255 * Math.min(1, u * 0.4 + v * 0.6));
 
           // vinyl-style disc with centre hole
           const dx = x - cx;
@@ -134,8 +142,20 @@ export function makePattern(id: PatternId, size = 1024): RgbaImage {
 
 /** Demo covers, drawn procedurally so nothing needs to be fetched. Labelled as demo content. */
 export const DEMO_COVERS = [
-  { id: "demo:aurora", title: "Aurora Drift", artist: "Nightpanel", album: "Aurora Drift", hue: 190 },
-  { id: "demo:emberfall", title: "Emberfall", artist: "Slow Circuit", album: "Emberfall EP", hue: 22 },
+  {
+    id: "demo:aurora",
+    title: "Aurora Drift",
+    artist: "Nightpanel",
+    album: "Aurora Drift",
+    hue: 190,
+  },
+  {
+    id: "demo:emberfall",
+    title: "Emberfall",
+    artist: "Slow Circuit",
+    album: "Emberfall EP",
+    hue: 22,
+  },
   { id: "demo:violetline", title: "Violet Line", artist: "HUB75", album: "Scanlines", hue: 288 },
   { id: "demo:tealroom", title: "Teal Room", artist: "P2.5", album: "Pitch", hue: 160 },
 ];
@@ -161,7 +181,7 @@ export function makeDemoCover(hue: number, size = 1024): RgbaImage {
       const dx = Math.abs(x - cx);
       const dy = Math.abs(y - cy);
       const ring = Math.sqrt(dx * dx + dy * dy);
-      if (ring > size * 0.26 && ring < size * 0.30) set(img, x, y, 250, 248, 240);
+      if (ring > size * 0.26 && ring < size * 0.3) set(img, x, y, 250, 248, 240);
       if (dy < size * 0.018 && dx < size * 0.34) set(img, x, y, 12, 12, 14);
     }
   }

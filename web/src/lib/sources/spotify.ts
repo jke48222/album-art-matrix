@@ -1,6 +1,20 @@
 import type { NowPlaying, NowPlayingSource, SourceConfig } from "../types";
 import { fetchJson, status, TransportError } from "./base";
 
+// As much of Spotify's currently-playing object as this file reads. Optional
+// throughout: the code below already defaults every field.
+type SpotifyNowPlaying = {
+  progress_ms?: number | null;
+  is_playing?: boolean;
+  item?: {
+    id?: string;
+    name?: string;
+    duration_ms?: number | null;
+    artists?: { name?: string }[];
+    album?: { name?: string; images?: { url?: string; width?: number }[] };
+  } | null;
+};
+
 /**
  * Authorization Code with PKCE. No client secret exists in this app, ever.
  * The user supplies their own Client ID; tokens live in localStorage on their device.
@@ -47,7 +61,9 @@ function base64url(bytes: ArrayBuffer) {
 
 export async function beginSpotifyAuth(clientId: string) {
   const verifier = base64url(crypto.getRandomValues(new Uint8Array(48)).buffer);
-  const challenge = base64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
+  const challenge = base64url(
+    await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
+  );
   sessionStorage.setItem(VERIFIER_KEY, verifier);
   const redirectUri = `${window.location.origin}/sources`;
   const url = new URL(AUTH_URL);
@@ -65,17 +81,21 @@ export async function completeSpotifyAuth(clientId: string, code: string) {
   if (!verifier) throw new Error("PKCE verifier missing - start the connection again.");
   // fetchJson, like every other adapter: a hung token endpoint must time out
   // instead of stalling the poll loop forever.
-  const res = await fetchJson(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      grant_type: "authorization_code",
-      code,
-      redirect_uri: `${window.location.origin}/sources`,
-      code_verifier: verifier,
-    }),
-  }, 10_000);
+  const res = await fetchJson(
+    TOKEN_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: `${window.location.origin}/sources`,
+        code_verifier: verifier,
+      }),
+    },
+    10_000,
+  );
   const json = (res.body ?? {}) as Record<string, unknown>;
   if (res.status < 200 || res.status >= 300)
     throw new Error(String(json.error_description ?? json.error ?? "Token exchange failed"));
@@ -102,15 +122,19 @@ export async function completeSpotifyAuth(clientId: string, code: string) {
 }
 
 async function refresh(clientId: string, tokens: SpotifyTokens): Promise<SpotifyTokens> {
-  const res = await fetchJson(TOKEN_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      grant_type: "refresh_token",
-      refresh_token: tokens.refreshToken,
-    }),
-  }, 10_000);
+  const res = await fetchJson(
+    TOKEN_URL,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: clientId,
+        grant_type: "refresh_token",
+        refresh_token: tokens.refreshToken,
+      }),
+    },
+    10_000,
+  );
   const json = (res.body ?? {}) as Record<string, unknown>;
   if (res.status < 200 || res.status >= 300)
     throw new TransportError("Spotify refresh failed - reconnect the account.", "http", res.status);
@@ -127,14 +151,20 @@ async function refresh(clientId: string, tokens: SpotifyTokens): Promise<Spotify
 export const spotifySource: NowPlayingSource = {
   id: "spotify",
   label: "Spotify",
-  description: "Authorization Code with PKCE against your own Client ID. No secret is stored in this app.",
+  description:
+    "Authorization Code with PKCE against your own Client ID. No secret is stored in this app.",
 
   probe(cfg: SourceConfig) {
     const clientId = String(cfg.config.clientId ?? "").trim();
-    if (!clientId) return status("spotify", "needs-setup", "Paste your Spotify Client ID to connect.");
+    if (!clientId)
+      return status("spotify", "needs-setup", "Paste your Spotify Client ID to connect.");
     const t = readTokens();
     if (!t) return status("spotify", "disconnected", "Client ID set. Not connected yet.");
-    return status("spotify", "connected", `Connected${t.displayName ? ` as ${t.displayName}` : ""}.`);
+    return status(
+      "spotify",
+      "connected",
+      `Connected${t.displayName ? ` as ${t.displayName}` : ""}.`,
+    );
   },
 
   async getCurrent(cfg: SourceConfig): Promise<NowPlaying | null> {
@@ -163,15 +193,15 @@ export const spotifySource: NowPlayingSource = {
     if (res.status < 200 || res.status >= 300)
       throw new TransportError(`Spotify returned HTTP ${res.status}.`, "http", res.status);
 
-    const body = res.body as any;
+    const body = res.body as SpotifyNowPlaying | undefined;
     const item = body?.item;
     if (!item) return null;
-    const images: { url: string; width: number }[] = item.album?.images ?? [];
+    const images = item.album?.images ?? [];
     const largest = images.slice().sort((a, b) => (b.width ?? 0) - (a.width ?? 0))[0];
     return {
       trackId: `spotify:${item.id}`,
       title: item.name ?? "Unknown title",
-      artist: (item.artists ?? []).map((a: any) => a.name).join(", ") || "Unknown artist",
+      artist: (item.artists ?? []).map((a) => a.name).join(", ") || "Unknown artist",
       album: item.album?.name ?? "",
       artUrl: largest?.url ?? null,
       progressMs: body.progress_ms ?? null,

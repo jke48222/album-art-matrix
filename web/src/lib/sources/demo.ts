@@ -10,16 +10,24 @@ export function demoIndex(): number {
 }
 
 export function setDemoIndex(i: number) {
-  localStorage.setItem(KEY, String(((i % DEMO_COVERS.length) + DEMO_COVERS.length) % DEMO_COVERS.length));
+  localStorage.setItem(
+    KEY,
+    String(((i % DEMO_COVERS.length) + DEMO_COVERS.length) % DEMO_COVERS.length),
+  );
 }
 
 export const demoSource: NowPlayingSource = {
   id: "demo",
   label: "Demo",
-  description: "Bundled demo covers so the app is completely usable with nothing configured. Clearly demo content.",
+  description:
+    "Bundled demo covers so the app is completely usable with nothing configured. Clearly demo content.",
 
   probe() {
-    return status("demo", "connected", "Serving bundled demo content. This is not a real now-playing reading.");
+    return status(
+      "demo",
+      "connected",
+      "Serving bundled demo content. This is not a real now-playing reading.",
+    );
   },
 
   async getCurrent(): Promise<NowPlaying | null> {

@@ -55,7 +55,11 @@ export async function fetchJson(
     try {
       body = JSON.parse(text);
     } catch {
-      throw new TransportError("The endpoint returned a body that is not valid JSON.", "parse", res.status);
+      throw new TransportError(
+        "The endpoint returned a body that is not valid JSON.",
+        "parse",
+        res.status,
+      );
     }
   }
   return { status: res.status, body, headers: res.headers };

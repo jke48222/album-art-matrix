@@ -29,11 +29,13 @@ export function writeManual(entry: ManualEntry | null) {
 export const manualSource: NowPlayingSource = {
   id: "manual",
   label: "Manual",
-  description: "Drop an image file, paste an image URL, or paste from the clipboard. Always available.",
+  description:
+    "Drop an image file, paste an image URL, or paste from the clipboard. Always available.",
 
   probe() {
     const m = readManual();
-    if (!m) return status("manual", "no-answer", "No manual image set. Drop one in to use this source.");
+    if (!m)
+      return status("manual", "no-answer", "No manual image set. Drop one in to use this source.");
     return status("manual", "connected", `Holding “${m.title || "untitled"}”.`);
   },
 

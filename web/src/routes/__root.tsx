@@ -81,7 +81,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Album Art Matrix" },
-      { name: "description", content: "LED wall simulator and image pipeline for a 3x3 HUB75 P2.5 matrix." },
+      {
+        name: "description",
+        content: "LED wall simulator and image pipeline for a 3x3 HUB75 P2.5 matrix.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "theme-color", content: "#0b0b0f" },
@@ -104,7 +107,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", type: "image/png", href: "/favicon.png" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-
     ],
   }),
   shellComponent: RootShell,

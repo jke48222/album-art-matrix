@@ -247,12 +247,12 @@ struct ControlCenterPanel: View {
                 if let sleeve {
                     Image(uiImage: sleeve).resizable().interpolation(.medium)
                 } else {
-                    RoundedRectangle(cornerRadius: 12).fill(ink.fill)
+                    RoundedRectangle(cornerRadius: Round.card).fill(ink.fill)
                         .overlay(Image(systemName: "music.note").font(.system(size: 23)).foregroundStyle(ink.dim))
                 }
             }
             .frame(width: 66, height: 66)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 Text(title ?? (wall.state.mode == "off" ? "Asleep" : "Nothing on"))
                     .font(.ui(15, .semibold)).foregroundStyle(ink.ink).lineLimit(1)
@@ -316,7 +316,7 @@ struct ControlCenterPanel: View {
             HStack(alignment: .top, spacing: 14) {
                 PanelCanvas(px: light.reading.px, duty: value)
                     .frame(width: 112, height: 112)
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                     .shadow(color: accent.opacity(0.4 * light.room), radius: 14)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("LIGHT").font(.machine(9)).kerning(1.2).foregroundStyle(ink.dim)
@@ -409,10 +409,10 @@ struct ControlCenterPanel: View {
             .frame(maxWidth: .infinity)
             .frame(height: 92)
             .background {
-                if on { RoundedRectangle(cornerRadius: 22, style: .continuous).fill(accent) }
+                if on { RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(accent) }
                 else {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous).fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
                 }
             }
         }
@@ -456,7 +456,7 @@ struct ControlCenterPanel: View {
                     .autocorrectionDisabled()
                     .submitLabel(.send)
                     .padding(.horizontal, 14).frame(height: 44)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+                    .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
                     .onSubmit(sendWords)
                 Button(action: sendWords) {
                     Text("Send").font(.ui(14, .semibold))
@@ -508,7 +508,7 @@ struct ControlCenterPanel: View {
                 .lineLimit(1).minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(on ? AnyShapeStyle(accent) : AnyShapeStyle(ink.fill)))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(on ? AnyShapeStyle(accent) : AnyShapeStyle(ink.fill)))
         }
         .buttonStyle(PressStyle(scale: 0.96))
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
@@ -782,7 +782,7 @@ struct ControlCenterPanel: View {
                     .keyboardType(.URL)
                     .submitLabel(.go)
                     .padding(.horizontal, 14).frame(height: 44)
-                    .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+                    .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
                     .onSubmit(playVideoLink)
                 Button(action: playVideoLink) {
                     Text("Play").font(.ui(14, .semibold))
@@ -804,7 +804,7 @@ struct ControlCenterPanel: View {
                 }
                 .foregroundStyle(busy ? ink.faint : ink.ink)
                 .frame(maxWidth: .infinity).frame(height: 44)
-                .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(ink.fill))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
             }
             .buttonStyle(PressStyle(scale: 0.97))
             .disabled(busy)

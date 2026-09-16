@@ -155,7 +155,10 @@ export function useNowPlaying() {
         answeredBy: silent ? null : ("demo" as SourceId),
         statuses: state.statuses,
         lastPollAt: silent ? Date.now() : Date.now(),
-        lastError: review === "source-error" ? "applemusic: Bridge unreachable at http://localhost:8787/nowplaying" : null,
+        lastError:
+          review === "source-error"
+            ? "applemusic: Bridge unreachable at http://localhost:8787/nowplaying"
+            : null,
         polling: review === "rendering",
       } satisfies NowPlayingState,
       poll,

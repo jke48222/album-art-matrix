@@ -237,6 +237,6 @@ private struct IslandKey: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
             .background(on ? Color.white : Color.white.opacity(0.13),
-                        in: RoundedRectangle(cornerRadius: 7))
+                        in: RoundedRectangle(cornerRadius: Round.chip))
     }
 }

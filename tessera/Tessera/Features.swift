@@ -43,7 +43,7 @@ struct AskPage: View {
                 }
                 .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
             }
             if let h = status?.history, !h.isEmpty {
                 SetupGroup("Asked lately", note: "Out loud or from here, the last dozen.") {
@@ -135,7 +135,7 @@ struct NotePage: View {
                 HStack(spacing: 12) {
                     PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
                         .frame(width: 72, height: 72)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("On the panel").font(.ui(11, .semibold)).foregroundStyle(accent)
                         Text(t).font(.ui(15, .semibold)).foregroundStyle(Ink.ink).lineLimit(2)
@@ -145,7 +145,7 @@ struct NotePage: View {
                     ActionPill(title: "Take down", filled: false) { take(down: true) }
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
             }
             SetupGroup("The words", note: "Runs across the panel until the time is up.") {
                 KeyField(placeholder: "Back at seven", text: $text)
@@ -240,9 +240,9 @@ struct ShowPage: View {
             if let l = last {
                 HStack(spacing: 12) {
                     if let art = l.art_url, let url = URL(string: art) {
-                        AsyncImage(url: url) { img in img.resizable().interpolation(.medium) } placeholder: { RoundedRectangle(cornerRadius: 10).fill(Ink.plaster) }
+                        AsyncImage(url: url) { img in img.resizable().interpolation(.medium) } placeholder: { RoundedRectangle(cornerRadius: Round.control).fill(Ink.plaster) }
                             .frame(width: 72, height: 72)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
                     }
                     VStack(alignment: .leading, spacing: 4) {
                         Text(l.what == "play" ? "Playing" : "On the wall").font(.ui(11, .semibold)).foregroundStyle(accent)
@@ -252,7 +252,7 @@ struct ShowPage: View {
                     Spacer(minLength: 0)
                 }
                 .padding(12)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
             }
         }
         .task {
@@ -336,9 +336,9 @@ struct EarwormPage: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(spacing: 12) {
                         if let art = f.art_url, let url = URL(string: art) {
-                            AsyncImage(url: url) { img in img.resizable().interpolation(.medium) } placeholder: { RoundedRectangle(cornerRadius: 10).fill(Ink.sunk) }
+                            AsyncImage(url: url) { img in img.resizable().interpolation(.medium) } placeholder: { RoundedRectangle(cornerRadius: Round.control).fill(Ink.sunk) }
                                 .frame(width: 84, height: 84)
-                                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                         }
                         VStack(alignment: .leading, spacing: 4) {
                             Text(f.confidence.map { $0 >= 0.7 ? "Fairly sure" : "A guess" } ?? "").font(.ui(11, .semibold)).foregroundStyle(accent)
@@ -356,7 +356,7 @@ struct EarwormPage: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(Ink.plaster))
             }
         }
     }
@@ -746,9 +746,9 @@ struct ShelfPage: View {
                         VStack(alignment: .leading, spacing: 6) {
                             AsyncImage(url: URL(string: r.cover ?? "")) { phase in
                                 if let img = phase.image { img.resizable().interpolation(.medium).aspectRatio(1, contentMode: .fill) }
-                                else { RoundedRectangle(cornerRadius: 10).fill(Ink.plaster).aspectRatio(1, contentMode: .fit) }
+                                else { RoundedRectangle(cornerRadius: Round.control).fill(Ink.plaster).aspectRatio(1, contentMode: .fit) }
                             }
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
                             Text(r.title).font(.ui(12, .semibold)).foregroundStyle(Ink.ink).lineLimit(1)
                             Text([r.artists.first ?? "", r.year.map(String.init) ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
                                 .font(.ui(11)).foregroundStyle(Ink.dim).lineLimit(1)
@@ -1112,7 +1112,7 @@ struct WakeEnrollPage: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
+        .background(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(Ink.plaster))
     }
 
     private func levelBar(_ over: Double?, recording: Bool) -> some View {
@@ -1169,7 +1169,7 @@ struct WakeEnrollPage: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: 22, style: .continuous).fill(Ink.plaster))
+        .background(RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(Ink.plaster))
     }
 
     private func qualityLine(_ q: String?) -> String {

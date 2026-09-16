@@ -29,12 +29,30 @@ export const Route = createFileRoute("/history")({
 });
 
 function toCsv(rows: HistoryEntry[]) {
-  const head = ["played_at", "title", "artist", "album", "source", "source_tier", "duration_ms", "art_url"];
+  const head = [
+    "played_at",
+    "title",
+    "artist",
+    "album",
+    "source",
+    "source_tier",
+    "duration_ms",
+    "art_url",
+  ];
   const esc = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   return [
     head.join(","),
     ...rows.map((r) =>
-      [new Date(r.playedAt).toISOString(), r.title, r.artist, r.album, r.source, r.sourceTier, r.durationMs, r.artUrl]
+      [
+        new Date(r.playedAt).toISOString(),
+        r.title,
+        r.artist,
+        r.album,
+        r.source,
+        r.sourceTier,
+        r.durationMs,
+        r.artUrl,
+      ]
         .map(esc)
         .join(","),
     ),
@@ -72,7 +90,13 @@ function ActivityChart({ history }: { history: HistoryEntry[] }) {
     <div className="placard p-4">
       <div className="flex items-baseline justify-between">
         <p className="eyebrow">fourteen days</p>
-        <p className="num text-[10px] text-muted-foreground">peak {max === 1 && days.every((d) => d.n <= 1) ? days.reduce((a, d) => Math.max(a, d.n), 0) : max} / day</p>
+        <p className="num text-[10px] text-muted-foreground">
+          peak{" "}
+          {max === 1 && days.every((d) => d.n <= 1)
+            ? days.reduce((a, d) => Math.max(a, d.n), 0)
+            : max}{" "}
+          / day
+        </p>
       </div>
       <svg viewBox={`0 0 ${W} ${H + 16}`} className="mt-2 w-full">
         <line x1="0" y1={H} x2={W} y2={H} stroke="var(--border)" />
@@ -118,7 +142,8 @@ function HistoryPage() {
       history.filter(
         (e) =>
           (source === "all" || e.source === source) &&
-          (q.trim() === "" || `${e.title} ${e.artist} ${e.album}`.toLowerCase().includes(q.trim().toLowerCase())),
+          (q.trim() === "" ||
+            `${e.title} ${e.artist} ${e.album}`.toLowerCase().includes(q.trim().toLowerCase())),
       ),
     [history, q, source],
   );
@@ -152,8 +177,8 @@ function HistoryPage() {
           <p className="eyebrow">what the wall has worn</p>
           <h1 className="display-mid text-2xl text-foreground">History</h1>
           <p className="max-w-xl text-xs leading-relaxed text-muted-foreground">
-            Every track that played, with the source and tier that answered and the settings it was rendered with. The
-            hardware brain records nothing; this is where that gets fixed.
+            Every track that played, with the source and tier that answered and the settings it was
+            rendered with. The hardware brain records nothing; this is where that gets fixed.
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -172,7 +197,12 @@ function HistoryPage() {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => download(new Blob([toCsv(history)], { type: "text/csv" }), "album-art-matrix-history.csv")}
+            onClick={() =>
+              download(
+                new Blob([toCsv(history)], { type: "text/csv" }),
+                "album-art-matrix-history.csv",
+              )
+            }
           >
             csv
           </Button>
@@ -180,7 +210,8 @@ function HistoryPage() {
             variant="ghost"
             size="sm"
             onClick={() => {
-              if (window.confirm("Clear the entire history? This cannot be undone.")) clearHistory();
+              if (window.confirm("Clear the entire history? This cannot be undone."))
+                clearHistory();
             }}
           >
             clear all
@@ -213,8 +244,9 @@ function HistoryPage() {
 
       {history.length === 0 ? (
         <HonestNote>
-          Nothing recorded yet. Every track that reaches the wall gets logged here - title, artist, album, art, the
-          source and tier that answered, and the settings active when it was rendered.
+          Nothing recorded yet. Every track that reaches the wall gets logged here - title, artist,
+          album, art, the source and tier that answered, and the settings active when it was
+          rendered.
         </HonestNote>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
@@ -247,8 +279,9 @@ function HistoryPage() {
                         </p>
                         <p className="num mt-0.5 truncate text-[9px] uppercase tracking-[0.08em] text-muted-foreground/70">
                           {new Date(e.playedAt).toLocaleTimeString()} / {e.source}
-                          {e.sourceTier ? ` / ${e.sourceTier}` : ""} / {e.settingsSnapshot.wallSize}px / r
-                          {e.settingsSnapshot.gainR.toFixed(2)} g{e.settingsSnapshot.gainG.toFixed(2)} b
+                          {e.sourceTier ? ` / ${e.sourceTier}` : ""} / {e.settingsSnapshot.wallSize}
+                          px / r{e.settingsSnapshot.gainR.toFixed(2)} g
+                          {e.settingsSnapshot.gainG.toFixed(2)} b
                           {e.settingsSnapshot.gainB.toFixed(2)}
                         </p>
                       </div>
@@ -330,7 +363,10 @@ function StatList({ title, rows }: { title: string; rows: [string, number][] }) 
             <span className="num text-[11px] text-foreground">{v}</span>
           </div>
           <div className="h-px bg-border">
-            <div className="-mt-px h-[3px] bg-[var(--art)]" style={{ width: `${(v / max) * 100}%` }} />
+            <div
+              className="-mt-px h-[3px] bg-[var(--art)]"
+              style={{ width: `${(v / max) * 100}%` }}
+            />
           </div>
         </div>
       ))}

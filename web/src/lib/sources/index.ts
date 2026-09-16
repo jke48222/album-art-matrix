@@ -1,4 +1,10 @@
-import type { NowPlaying, NowPlayingSource, SourceConfigMap, SourceId, SourceStatus } from "../types";
+import type {
+  NowPlaying,
+  NowPlayingSource,
+  SourceConfigMap,
+  SourceId,
+  SourceStatus,
+} from "../types";
 import { acoustidSource } from "./acoustid";
 import { appleMusicSource, DEFAULT_BRIDGE_URL } from "./applemusic";
 import { demoSource } from "./demo";
@@ -28,9 +34,17 @@ export const DEFAULT_ORDER: SourceId[] = [
 ];
 
 export const DEFAULT_SOURCE_CONFIG: SourceConfigMap = {
-  applemusic: { enabled: true, order: 0, config: { mode: "bridge", bridgeUrl: DEFAULT_BRIDGE_URL } },
+  applemusic: {
+    enabled: true,
+    order: 0,
+    config: { mode: "bridge", bridgeUrl: DEFAULT_BRIDGE_URL },
+  },
   spotify: { enabled: true, order: 1, config: { clientId: "" } },
-  acoustid: { enabled: true, order: 2, config: { apiKey: "", bridgeUrl: "", device: "default", captureSeconds: 8 } },
+  acoustid: {
+    enabled: true,
+    order: 2,
+    config: { apiKey: "", bridgeUrl: "", device: "default", captureSeconds: 8 },
+  },
   lastfm: { enabled: true, order: 3, config: { username: "", apiKey: "" } },
   mpris: { enabled: true, order: 4, config: { bridgeUrl: "" } },
   manual: { enabled: true, order: 5, config: {} },
@@ -67,7 +81,10 @@ export async function runChain(order: SourceId[], configs: SourceConfigMap): Pro
       continue;
     }
     if (answer) {
-      statuses[id] = { ...probe, detail: `${probe.detail} Not polled: an earlier source answered.` };
+      statuses[id] = {
+        ...probe,
+        detail: `${probe.detail} Not polled: an earlier source answered.`,
+      };
       continue;
     }
     try {
@@ -83,17 +100,29 @@ export async function runChain(order: SourceId[], configs: SourceConfigMap): Pro
           lastAnswerTier: result.tier ?? null,
         };
       } else {
-        statuses[id] = { ...probe, state: "no-answer", detail: "Working, nothing playing.", lastPollAt: now };
+        statuses[id] = {
+          ...probe,
+          state: "no-answer",
+          detail: "Working, nothing playing.",
+          lastPollAt: now,
+        };
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.warn(`[source:${id}]`, message);
-      statuses[id] = { ...probe, state: "error", detail: message, lastError: message, lastPollAt: now };
+      statuses[id] = {
+        ...probe,
+        state: "error",
+        detail: message,
+        lastError: message,
+        lastPollAt: now,
+      };
     }
   }
 
   for (const id of DEFAULT_ORDER) {
-    if (!statuses[id]) statuses[id] = SOURCES[id].probe(configs[id] ?? { enabled: false, order: 99, config: {} });
+    if (!statuses[id])
+      statuses[id] = SOURCES[id].probe(configs[id] ?? { enabled: false, order: 99, config: {} });
   }
 
   return { answer, answeredBy, statuses };

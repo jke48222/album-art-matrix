@@ -33,16 +33,31 @@ struct OnboardingFlow: View {
     var body: some View {
         ZStack {
             Ink.ground.ignoresSafeArea()
-            VStack(spacing: 0) {
-                if step != .welcome && step != .done { progress }
-                content
-                    .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
-                                            removal: .move(edge: .leading).combined(with: .opacity)))
-                    .id(step)
+            // Every step is a VStack of Spacers sized to the screen, which is
+            // right until the type grows: at accessibility sizes the content
+            // outgrew the phone, the wordmark rode up under the status bar and
+            // the line under the button fell off the bottom with no way to
+            // reach it. A scroll view with a floor the height of the screen
+            // keeps the Spacers doing their job at every normal size, and
+            // lets the screen scroll once the words need more room than there
+            // is. basedOnSize means it does not bounce when it all fits, so
+            // nothing feels different until it has to.
+            GeometryReader { geo in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        if step != .welcome && step != .done { progress }
+                        content
+                            .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
+                                                    removal: .move(edge: .leading).combined(with: .opacity)))
+                            .id(step)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
+                    .frame(minHeight: geo.size.height, alignment: .top)
+                }
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 24)
         }
         .preferredColorScheme(.dark)
         .animation(Motion.scene, value: step)
@@ -117,7 +132,7 @@ struct OnboardingFlow: View {
 
     private var wallPicture: some View {
         PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .clipShape(RoundedRectangle(cornerRadius: Round.control))
     }
 
     // 1
@@ -149,13 +164,13 @@ struct OnboardingFlow: View {
                         .scaleEffect(searching ? 1.06 : 0.94)
                         .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true).delay(Double(i) * 0.2), value: searching)
                 }
-                PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 0.35).frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: 4))
+                PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 0.35).frame(width: 72, height: 72).clipShape(RoundedRectangle(cornerRadius: Round.chip))
             }
             .frame(height: 300)
             Spacer()
             if searchedFor >= 8 {
                 Button("I don't have a wall yet") { step = .noWall }
-                    .buttonStyle(PressStyle(scale: 0.97)).font(.ui(15, .semibold)).foregroundStyle(Ink.dim)
+                    .buttonStyle(PressStyle(scale: 0.97)).quietLink()
                     .frame(height: 46)
             } else {
                 Text("Looking").font(.ui(15, .semibold)).foregroundStyle(Ink.faint).frame(height: 46)
@@ -195,14 +210,14 @@ struct OnboardingFlow: View {
             .padding(.vertical, 28)
             .frame(maxWidth: .infinity)
             .background(Ink.plaster)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
             Spacer()
             PrimaryButton(title: "This is it", accent: accent) {
                 wall.pushFlat(r: 255, g: 255, b: 255)
                 step = .glow
             }
             Button("Not this one, look again") { step = .find; startSearch() }
-                .buttonStyle(PressStyle(scale: 0.97)).font(.ui(15, .semibold)).foregroundStyle(Ink.dim)
+                .buttonStyle(PressStyle(scale: 0.97)).quietLink()
                 .frame(height: 46)
         }
     }
@@ -213,7 +228,7 @@ struct OnboardingFlow: View {
             headline("Did the wall just glow?", "It is showing a soft white for five seconds, so you know this phone is talking to that wall and not a neighbour's.")
             Spacer()
             PanelCanvas(px: Panel.blank(234), duty: 1)
-                .frame(width: 240, height: 240).clipShape(RoundedRectangle(cornerRadius: 8))
+                .frame(width: 240, height: 240).clipShape(RoundedRectangle(cornerRadius: Round.control))
             Spacer()
             PrimaryButton(title: "Yes, that's mine", accent: accent) {
                 wall.send(["mode": "art"])
@@ -223,7 +238,7 @@ struct OnboardingFlow: View {
                 wall.send(["mode": "art"])
                 step = .find; startSearch()
             }
-            .buttonStyle(PressStyle(scale: 0.97)).font(.ui(15, .semibold)).foregroundStyle(Ink.dim)
+            .buttonStyle(PressStyle(scale: 0.97)).quietLink()
             .frame(height: 46)
         }
         .task {
@@ -242,9 +257,12 @@ struct OnboardingFlow: View {
                 Text("STAND-IN").font(.machine(10)).kerning(1.2).foregroundStyle(Ink.dim)
             }
             Spacer()
-            PrimaryButton(title: "Continue with the stand-in", accent: Ink.ink) { step = .services }
+            // `accent`, like every other primary button in the app. This one
+            // passed Ink.ink, which is why the big button went amber, cream,
+            // amber across three steps in a row.
+            PrimaryButton(title: "Continue with the stand-in", accent: accent) { step = .services }
             Button("Look for a wall again") { step = .find; startSearch() }
-                .buttonStyle(PressStyle(scale: 0.97)).font(.ui(15, .semibold)).foregroundStyle(Ink.dim)
+                .buttonStyle(PressStyle(scale: 0.97)).quietLink()
                 .frame(height: 46)
         }
     }
@@ -258,8 +276,8 @@ struct OnboardingFlow: View {
                          leading: { ServiceMark(service: .appleMusic, side: 44) }) {
                     if musicConnected { Done(text: "Connected") } else {
                         ActionPill(title: "Connect") {
-                            StandIn.requestMusicAccess { [weak wall] in
-                                wall?.push.restart()
+                            StandIn.requestMusicAccess {
+                                wall.push.restart()
                                 musicConnected = Service.appleMusicAuthorized
                             }
                         }
@@ -279,7 +297,7 @@ struct OnboardingFlow: View {
             Spacer()
             PrimaryButton(title: "Continue", accent: accent) { step = .light }
             Button("Skip for now") { step = .light }
-                .buttonStyle(PressStyle(scale: 0.97)).font(.ui(15, .semibold)).foregroundStyle(Ink.dim)
+                .buttonStyle(PressStyle(scale: 0.97)).quietLink()
                 .frame(height: 46)
         }
     }
@@ -308,7 +326,7 @@ struct OnboardingFlow: View {
                 .tint(accent)
             }
             .padding(.top, 34)
-            Rule().padding(.top, 22)
+            Rule(inset: 0).padding(.top, 22)
             ToggleRow(title: "Follow the sun",
                       subtitle: "Dims after sunset, back at sunrise. Uses your location once.",
                       isOn: Binding(get: { sun }, set: { on in
@@ -317,7 +335,7 @@ struct OnboardingFlow: View {
                           if on { where0.fetch { lat, lon in wall.send(["lat": lat, "lon": lon]) } }
                       }), accent: accent)
                 .padding(.horizontal, -16)
-            Rule()
+            Rule(inset: 0)
             Spacer()
             PrimaryButton(title: "Continue", accent: accent) { step = .done }
         }
@@ -362,7 +380,7 @@ struct OnboardingFlow: View {
                 Text(value).font(.ui(13)).foregroundStyle(Ink.dim)
             }
             .padding(.vertical, 12)
-            Rule().padding(.leading, -16)
+            Rule(inset: 0)
         }
     }
 

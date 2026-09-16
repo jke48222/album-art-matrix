@@ -7,9 +7,17 @@ import type { SourceState } from "@/lib/types";
 
 const STATE_META: Record<SourceState, { label: string; dot: string; text: string }> = {
   connected: { label: "connected", dot: "bg-success", text: "text-success" },
-  disconnected: { label: "disconnected", dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
+  disconnected: {
+    label: "disconnected",
+    dot: "bg-muted-foreground/50",
+    text: "text-muted-foreground",
+  },
   "needs-setup": { label: "needs setup", dot: "bg-warning", text: "text-warning" },
-  "needs-bridge": { label: "needs bridge", dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
+  "needs-bridge": {
+    label: "needs bridge",
+    dot: "bg-muted-foreground/50",
+    text: "text-muted-foreground",
+  },
   error: { label: "error", dot: "bg-primary", text: "text-primary" },
   "no-answer": { label: "no answer", dot: "bg-muted-foreground/50", text: "text-muted-foreground" },
 };
@@ -17,7 +25,12 @@ const STATE_META: Record<SourceState, { label: string; dot: string; text: string
 export function StateBadge({ state, live }: { state: SourceState; live?: boolean }) {
   const s = STATE_META[state];
   return (
-    <span className={cn("num inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em]", s.text)}>
+    <span
+      className={cn(
+        "num inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.1em]",
+        s.text,
+      )}
+    >
       <span className={cn("h-[5px] w-[5px] rounded-full", s.dot, live && "pulse-dot")} />
       {s.label}
     </span>
@@ -26,7 +39,13 @@ export function StateBadge({ state, live }: { state: SourceState; live?: boolean
 
 /* ---------- placard furniture ---------- */
 
-export function HonestNote({ children, tone = "default" }: { children: React.ReactNode; tone?: "default" | "warn" }) {
+export function HonestNote({
+  children,
+  tone = "default",
+}: {
+  children: React.ReactNode;
+  tone?: "default" | "warn";
+}) {
   return (
     <div
       className={cn(
@@ -76,12 +95,22 @@ export function Field({
     <label className="block space-y-1.5">
       <span className="eyebrow block">{label}</span>
       {children}
-      {hint && <span className="block text-[11px] leading-relaxed text-muted-foreground">{hint}</span>}
+      {hint && (
+        <span className="block text-[11px] leading-relaxed text-muted-foreground">{hint}</span>
+      )}
     </label>
   );
 }
 
-export function SectionTitle({ eyebrow, title, right }: { eyebrow?: string; title: string; right?: React.ReactNode }) {
+export function SectionTitle({
+  eyebrow,
+  title,
+  right,
+}: {
+  eyebrow?: string;
+  title: string;
+  right?: React.ReactNode;
+}) {
   return (
     <div className="flex items-end justify-between gap-3">
       <div className="min-w-0">
@@ -94,7 +123,15 @@ export function SectionTitle({ eyebrow, title, right }: { eyebrow?: string; titl
 }
 
 /* Key/value row for machine data. */
-export function Readout({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "warn" | "alert" }) {
+export function Readout({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: "warn" | "alert";
+}) {
   return (
     <div className="flex items-baseline justify-between gap-3 py-1">
       <span className="eyebrow">{label}</span>
@@ -130,7 +167,10 @@ export function Strip<T extends string>({
   className?: string;
   size?: "sm" | "md";
 }) {
-  const idx = Math.max(0, options.findIndex((o) => o.id === value));
+  const idx = Math.max(
+    0,
+    options.findIndex((o) => o.id === value),
+  );
   const n = options.length;
   return (
     <div
@@ -186,7 +226,11 @@ export function Rolling({ value, className }: { value: string; className?: strin
   }, [value]);
   return (
     <span
-      className={cn("num inline-block transition-all duration-100", flip && "-translate-y-0.5 opacity-0", className)}
+      className={cn(
+        "num inline-block transition-all duration-100",
+        flip && "-translate-y-0.5 opacity-0",
+        className,
+      )}
     >
       {display}
     </span>

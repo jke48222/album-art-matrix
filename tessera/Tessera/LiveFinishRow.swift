@@ -50,14 +50,14 @@ struct LiveFinishRow: View {
                             }
                         }
                         .aspectRatio(1, contentMode: .fit)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
+                        .overlay(RoundedRectangle(cornerRadius: Round.card, style: .continuous)
                             .strokeBorder(on ? accent : ink.ink.opacity(0.14), lineWidth: on ? 2 : 1))
                         Text(f.1).font(.ui(13, .medium)).foregroundStyle(on ? accent : ink.ink)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
-                    .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous)
                         .fill(on ? accent.opacity(0.14) : Color.clear))
                 }
                 .buttonStyle(PressStyle(scale: 0.96))

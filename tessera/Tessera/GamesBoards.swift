@@ -55,20 +55,20 @@ struct SudokuBoard: View {
                     }
                 }
             }
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).stroke(Ink.hairline, lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Round.control, style: .continuous).stroke(Ink.hairline, lineWidth: 1))
             HStack(spacing: 6) {
                 ForEach(1...9, id: \.self) { d in
                     Button { if let i = chosen { send(["cell": i, "digit": d]) } } label: {
                         Text(String(d)).font(.system(size: 18, weight: .semibold, design: .rounded))
                             .foregroundStyle(Ink.ink).frame(maxWidth: .infinity, minHeight: 44)
-                            .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Ink.sunk))
+                            .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.sunk))
                     }
                     .buttonStyle(PressStyle(scale: 0.92))
                 }
                 Button { if let i = chosen { send(["cell": i, "digit": 0]) } } label: {
                     Image(systemName: "delete.left").foregroundStyle(Ink.dim).frame(maxWidth: .infinity, minHeight: 44)
-                        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(Ink.sunk))
+                        .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.sunk))
                 }
                 .buttonStyle(PressStyle(scale: 0.92))
             }
@@ -98,7 +98,7 @@ struct ConnectionsBoard: View {
                 }
                 .foregroundStyle(Ink.ground)
                 .frame(maxWidth: .infinity, minHeight: 60)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(groupColour(g["colour"].string)))
+                .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(groupColour(g["colour"].string)))
             }
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                 ForEach(words, id: \.self) { w in
@@ -108,7 +108,7 @@ struct ConnectionsBoard: View {
                         .minimumScaleFactor(0.6).lineLimit(2).multilineTextAlignment(.center)
                         .foregroundStyle(on ? Ink.ground : Ink.ink)
                         .frame(maxWidth: .infinity, minHeight: 60)
-                        .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(on ? Ink.ink : Ink.plaster))
+                        .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(on ? Ink.ink : Ink.plaster))
                         .contentShape(Rectangle())
                         .onTapGesture { send(["pick": w]) }
                 }
@@ -357,7 +357,7 @@ struct CrosswordBoard: View {
                             let key = "\(r),\(c)"
                             let n = slots.first(where: { $0["cells"][0][0].int == r && $0["cells"][0][1].int == c })?["n"].int
                             ZStack(alignment: .topLeading) {
-                                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
                                     .fill(v == "#" ? Ink.ground : lit.contains(key) ? accent.opacity(0.3) : Ink.plaster)
                                 if v != "#" {
                                     Text(v.uppercased()).font(.system(size: 22, weight: .bold, design: .rounded))
@@ -382,7 +382,7 @@ struct CrosswordBoard: View {
                         .font(.machine(17)).textInputAutocapitalization(.characters).autocorrectionDisabled()
                         .onSubmit { enter() }
                         .padding(.horizontal, 14).frame(minHeight: 44)
-                        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Ink.plaster))
+                        .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
                     ActionPill(title: "Enter", filled: true) { enter() }
                     ActionPill(title: "Check", filled: false) { send(["check": true]) }
                 }
@@ -429,7 +429,7 @@ struct ContextoBoard: View {
                     Text(String(r)).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(colour(r))
                 }
                 .padding(.horizontal, 14).frame(minHeight: 52)
-                .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(colour(r).opacity(0.2)))
+                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(colour(r).opacity(0.2)))
             }
             ForEach(Array(game.state["guesses"].array.prefix(12).enumerated()), id: \.offset) { _, g in
                 let r = g["rank"].int ?? 0
@@ -439,7 +439,7 @@ struct ContextoBoard: View {
                     Text(String(r)).font(.machine(13)).foregroundStyle(colour(r))
                 }
                 .padding(.horizontal, 14).frame(minHeight: 36)
-                .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Ink.plaster))
+                .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.plaster))
             }
             if let secret = game.state["secret"].string {
                 Text("It was \(secret.uppercased()).").font(.ui(15, .semibold)).foregroundStyle(Ink.ink)

@@ -37,14 +37,26 @@ export function roomLightFromFrame(buffer: Uint8Array, size: number): RoomLight 
   const sorted = Float32Array.from(lum).sort();
   const cut = sorted[Math.floor(px * 0.75)];
 
-  let hr = 0, hg = 0, hb = 0, hn = 0;
-  let lr = 0, lg = 0, lb = 0, ln = 0;
+  let hr = 0,
+    hg = 0,
+    hb = 0,
+    hn = 0;
+  let lr = 0,
+    lg = 0,
+    lb = 0,
+    ln = 0;
   for (let i = 0; i < px; i++) {
     const o = i * 3;
     if (lum[i] >= cut) {
-      hr += buffer[o]; hg += buffer[o + 1]; hb += buffer[o + 2]; hn++;
+      hr += buffer[o];
+      hg += buffer[o + 1];
+      hb += buffer[o + 2];
+      hn++;
     } else {
-      lr += buffer[o]; lg += buffer[o + 1]; lb += buffer[o + 2]; ln++;
+      lr += buffer[o];
+      lg += buffer[o + 1];
+      lb += buffer[o + 2];
+      ln++;
     }
   }
 
@@ -68,13 +80,20 @@ function dominant(buffer: Uint8Array, px: number, lum: Float32Array): string {
   for (let i = 0; i < px; i++) {
     if (lum[i] < 24) continue; // near-black never drives the accent
     const o = i * 3;
-    const r = buffer[o], g = buffer[o + 1], b = buffer[o + 2];
+    const r = buffer[o],
+      g = buffer[o + 1],
+      b = buffer[o + 2];
     const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4);
-    const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+    const mx = Math.max(r, g, b),
+      mn = Math.min(r, g, b);
     const sat = mx ? (mx - mn) / mx : 0;
     const e = counts.get(key);
     if (e) {
-      e.n++; e.r += r; e.g += g; e.b += b; e.sat += sat;
+      e.n++;
+      e.r += r;
+      e.g += g;
+      e.b += b;
+      e.sat += sat;
     } else {
       counts.set(key, { n: 1, r, g, b, sat });
     }

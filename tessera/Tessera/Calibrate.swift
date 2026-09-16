@@ -289,7 +289,7 @@ struct CalibrateScreen: View {
                 .foregroundStyle(Ink.ground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 15)
-                .background(accent, in: RoundedRectangle(cornerRadius: 12))
+                .background(accent, in: RoundedRectangle(cornerRadius: Round.card))
         }
         .buttonStyle(PressStyle(scale: 0.97))
         .padding(.horizontal, 20)

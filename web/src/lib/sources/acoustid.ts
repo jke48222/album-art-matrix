@@ -1,6 +1,18 @@
 import type { NowPlaying, NowPlayingSource, SourceConfig } from "../types";
 import { fetchJson, status, TransportError } from "./base";
 
+// The fingerprint helper's reply, and AcoustID's lookup. Someone else's JSON,
+// so every field is optional and the code below narrows before it trusts one.
+type FingerprintBody = { fingerprint?: string; duration?: number };
+type AcoustIdRecording = {
+  id?: string;
+  title?: string;
+  duration?: number;
+  artists?: { name?: string }[];
+  releasegroups?: { id?: string; title?: string }[];
+};
+type AcoustIdLookup = { results?: { recordings?: AcoustIdRecording[] }[] };
+
 /**
  * Line-in / microphone -> Chromaprint fingerprint -> AcoustID -> MusicBrainz -> Cover Art Archive.
  * The fingerprinting step (Chromaprint/fpcalc) is not something a browser can do natively,
@@ -46,10 +58,14 @@ export const acoustidSource: NowPlayingSource = {
       Math.max(8000, seconds * 1000 + 4000),
     );
     if (code === 204) return null;
-    if (code >= 400) throw new TransportError(`Fingerprint helper returned HTTP ${code}.`, "http", code);
-    const fp = body as any;
+    if (code >= 400)
+      throw new TransportError(`Fingerprint helper returned HTTP ${code}.`, "http", code);
+    const fp = body as FingerprintBody | undefined;
     if (!fp?.fingerprint || !fp?.duration) {
-      throw new TransportError("Helper response is malformed: expected { fingerprint, duration }.", "parse");
+      throw new TransportError(
+        "Helper response is malformed: expected { fingerprint, duration }.",
+        "parse",
+      );
     }
 
     const lookup = await fetchJson(
@@ -57,14 +73,14 @@ export const acoustidSource: NowPlayingSource = {
         fp.duration,
       )}&fingerprint=${encodeURIComponent(fp.fingerprint)}`,
     );
-    const r = (lookup.body as any)?.results?.[0];
+    const r = (lookup.body as AcoustIdLookup | undefined)?.results?.[0];
     const rec = r?.recordings?.[0];
     if (!rec) return null;
     const rg = rec.releasegroups?.[0];
     return {
       trackId: `acoustid:${rec.id}`,
       title: rec.title ?? "Unknown title",
-      artist: (rec.artists ?? []).map((a: any) => a.name).join(", ") || "Unknown artist",
+      artist: (rec.artists ?? []).map((a) => a.name).join(", ") || "Unknown artist",
       album: rg?.title ?? "",
       artUrl: rg?.id ? `https://coverartarchive.org/release-group/${rg.id}/front-1200` : null,
       progressMs: null,

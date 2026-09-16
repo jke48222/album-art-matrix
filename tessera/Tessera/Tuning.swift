@@ -182,9 +182,9 @@ struct PanelTuningPage: View {
             ZStack {
                 PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1)
                     .aspectRatio(1, contentMode: .fit)
-                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
                 if store.restarting {
-                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    RoundedRectangle(cornerRadius: Round.card, style: .continuous)
                         .fill(.black.opacity(0.72))
                     Text("the panel is coming back")
                         .font(.machine(11)).foregroundStyle(Ink.dim)
