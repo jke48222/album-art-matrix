@@ -18,7 +18,7 @@ from functools import lru_cache
 import numpy as np
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, YELLOW, WHITE, banner, blank, ease_out, fill, header,
+from .board import (BLACK, DIM, GREEN, INK, RED, YELLOW, WHITE, banner, blank, ease_out, fill, header,
                     mix, scale_for, text, text_centred, fit_text, text_width)
 
 VECTORS = os.path.join(os.path.dirname(__file__), "words", "vectors50.npz")

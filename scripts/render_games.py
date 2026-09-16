@@ -8,7 +8,6 @@ a few moves, and drawn at two moments.
 from __future__ import annotations
 
 import os
-import random
 import sys
 import tempfile
 import time
@@ -73,7 +72,6 @@ class ScriptedAsker:
 
 def setup(name, host):
     """Start the game and make a few moves; return the game."""
-    o = {"seed": 7}
     if name == "wordle":
         host.start(name, {"word": "crane"}); host.move(None, {"guess": "slate"}); host.move(None, {"guess": "ocean"})
     elif name == "sudoku":

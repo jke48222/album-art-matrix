@@ -26,8 +26,8 @@ import numpy as np
 from PIL import Image, ImageFilter
 
 from . import Game, register
-from .board import (BLACK, DIM, FAINT, INK, SLATE, WHITE, banner, blank, ease_out, fill, header, mix, progress,
-                    scale_for, shade, text, text_centred, fit_text)
+from .board import (BLACK, FAINT, INK, SLATE, WHITE, banner, blank, ease_out, fill, mix, progress,
+                    scale_for, shade)
 from ..art.fetch import fetch_art
 from ..art.pipeline import prepare
 
@@ -259,7 +259,6 @@ class Reveal(Game):
         src = self.sleeve if self.sleeve.size[0] == size else self.sleeve.resize((size, size), Image.LANCZOS)
         if self.over:
             f = np.asarray(src, dtype=np.uint8).copy()
-            who = self.winner or (self.players[0] if self.won else "")
             label = (f"{self.entry.get('artist', '')} — {self.entry.get('album') or self.entry.get('title', '')}"
                      if size > 96 else (self.entry.get("album") or self.entry.get("title", "")))
             banner(f, size, label, INK, mix((40, 120, 70), BLACK, 0.45) if self.won else (40, 30, 30))

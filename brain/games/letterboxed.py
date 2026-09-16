@@ -14,13 +14,12 @@ the "par". Options: {"seed": n}.
 """
 from __future__ import annotations
 
-import itertools
 import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, fill, header,
-                    line, mix, text, text_centred, fit_text)
+from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, header,
+                    line, mix, text, text_centred, fit_text, text_scrolled)
 from .words import common, common_set
 
 _WORD = re.compile(r"^(?:(?:the word is|try|then|and then|next)\s+)?([a-z]+)[.!?]*$")
@@ -224,8 +223,12 @@ class LetterBoxed(Game):
                 tx = x - off - gw
             text(c, ch.upper(), tx, ty, INK if not used else DIM, s)
         if self.words:
-            text_centred(c, fit_text(self.words[-1].upper(), (x1 - x0) - 8, s), size // 2,
-                         (y0 + y1) // 2 - 3 * s, INK, s)
+            # The word just played, in full. It was cut to fit the square
+            # ("PRECISE" came out "PREC."), which hides the thing the game is
+            # about; a long one travels across the square instead.
+            box = (x1 - x0) - 8
+            text_scrolled(c, self.words[-1].upper(), x0 + 4, (y0 + y1) // 2 - 3 * s, box, t,
+                          INK, s, height=7 if s == 1 else 9)
             if big and len(self.words) > 1:
                 text_centred(c, fit_text(" ".join(w.upper() for w in self.words[:-1]), (x1 - x0) - 12, 1), size // 2,
                              (y0 + y1) // 2 + 12, DIM, 1)

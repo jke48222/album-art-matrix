@@ -17,8 +17,8 @@ import random
 import time
 
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, glow, header, mix,
-                    text_centred, scale_for, text_width)
+from .board import (DIM, GREEN, INK, RED, WHITE, YELLOW, banner, blank, breathe, glow, header, mix,
+                    text_centred, scale_for)
 
 WAIT_MIN_S, WAIT_MAX_S = 2.0, 5.0
 SHOW_S = 2.5                      # the number stays this long before the next round

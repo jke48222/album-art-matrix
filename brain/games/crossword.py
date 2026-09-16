@@ -18,7 +18,7 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, SLATE, SLATE2, WHITE, YELLOW, banner, blank, fill, header,
+from .board import (BLACK, DIM, INK, RED, SLATE2, YELLOW, banner, blank, header,
                     mix, rounded, text, letter_tile)
 from .words import common
 

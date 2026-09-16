@@ -236,6 +236,49 @@ def text_right(canvas: np.ndarray, s: str, right: int, y: int, color=INK, scale:
     draw_text(canvas, s, int(right - text_width(s, scale)), int(y), color, scale)
 
 
+def text_scrolled(canvas: np.ndarray, s: str, x: int, y: int, w: int, t: float,
+                  color=INK, scale: int = 1, speed: float = 9.0, height: int = 9):
+    """A label wider than its box, travelling through it so all of it is read.
+
+    On one 64x64 panel a Connections tile is four characters wide and most of
+    its words are six, so the board used to cut them: PENCIL became PENC and
+    BRIDGE became BRID, which is not a word game any more. Rather than cut,
+    the word moves. Centred and still when it already fits, which is most
+    labels and every label on the nine-panel wall.
+
+    Only lit pixels are copied, so whatever the tile is painted stays behind
+    the letters."""
+    full = text_width(s, scale)
+    if full <= w:
+        text_centred(canvas, s, x + w // 2, y, color, scale)
+        return
+    gap = 5 * scale
+    span = full + gap
+    # A mask, drawn in white, rather than the glyph in its own colour: the
+    # colour here is often BLACK (a picked tile is light with dark letters on
+    # it) and a "copy the lit pixels" test would drop every one of them.
+    mask = np.zeros((height * scale, span, 3), dtype=np.uint8)
+    draw_text(mask, s, 0, 0, (255, 255, 255), scale)
+    H, W = canvas.shape[:2]
+    y0, y1 = max(0, y), min(H, y + height * scale)
+    if y1 <= y0:
+        return
+    # A beat still at the start of every lap, so the eye can catch the first
+    # letters before they move. A label that never stops is read twice as
+    # slowly as one that waits a moment and then travels.
+    hold = 1.1
+    lap = hold + span / speed
+    at = (t % lap) - hold
+    off = 0 if at < 0 else int(at * speed) % span
+    for col in range(w):
+        xx = x + col
+        if not (0 <= xx < W):
+            continue
+        lit = mask[(y0 - y):(y1 - y), (off + col) % span, 0] > 0
+        if lit.any():
+            canvas[y0:y1, xx][lit] = color
+
+
 def fit_text(s: str, width: int, scale: int = 1) -> str:
     """Cut a line to what fits, with a dot when it had to be."""
     if text_width(s, scale) <= width:

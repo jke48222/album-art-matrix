@@ -21,7 +21,7 @@ import time
 
 from . import Game, register
 from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, SLATE2, WHITE, YELLOW, banner, blank, disc, fill, glow,
-                    header, mix, rounded, scale_for, text, text_centred, fit_text)
+                    header, mix, rounded, scale_for, text_centred, fit_text)
 from ..art.fetch import fetch_art
 from ..art.pipeline import prepare
 from .pictures import _fold
