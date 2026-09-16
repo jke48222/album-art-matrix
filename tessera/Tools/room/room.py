@@ -90,7 +90,6 @@ vinyl = mat("vinyl", (0.02, 0.02, 0.02), 0.42)
 chrome = mat("chrome", (0.85, 0.85, 0.85), 0.18, 1.0)
 black = mat("black", (0.03, 0.03, 0.03), 0.5)
 rubber = mat("rubber", (0.03, 0.03, 0.03), 0.9)
-frame_m = mat("frame", (0.32, 0.32, 0.32), 0.55)
 acrylic = mat("acrylic", (0.88, 0.94, 1.0), 0.06, alpha=0.12, ior=1.49)
 amber = mat("amber", (0.2, 0.15, 0.06), 0.4, emission=(0.93, 0.62, 0.18), strength=0.0)
 amber_soft = mat("amber_soft", (0.16, 0.12, 0.05), 0.4, emission=(0.93, 0.62, 0.18), strength=0.0)
@@ -246,9 +245,49 @@ for gy in range(N):
 led.pixels = buf
 led_m = mat("led", image=led, emission=True, strength=16.0)
 white_led = mat("led_white", (0, 0, 0), emission=(1, 1, 1), strength=10.0)
-box("wallframe", (side + 0.056, 0.03, side + 0.056), (0, -0.015, cz), frame_m)
-bpy.ops.mesh.primitive_plane_add(size=side, location=(0, -0.031, cz), rotation=(math.pi / 2, 0, 0))
+# OBSIDIAN, the object actually being built, in place of the grey box that
+# stood here before. Its numbers are the ones in design/cad.py, which were
+# measured off the finished model: a 550 mm board around a 480 mm picture, so
+# a 35 mm border; 138 mm deep; and smoked acrylic the full 550, standing off
+# the face on four black standoffs 17.5 mm in from each corner. The picture in
+# this scene is `side`, so every length is that ratio of it and the object
+# keeps its real proportions whatever size the render is.
+BOARD, PICTURE, DEPTH, INSET, GLASS_AIR = 550.0, 480.0, 138.0, 17.5, 9.0
+mm = side / PICTURE                       # one millimetre of the real object
+board_side, body_d = BOARD * mm, DEPTH * mm
+glaze_y = -(body_d + GLASS_AIR * mm)      # the acrylic, proud of the LEDs
+
+# Painted plywood, two coats, matte. Darker and rougher than a first guess,
+# because the 35 mm border sits a few centimetres from an emitter and a
+# lighter, glossier board caught it as a bright gold mount inside the frame.
+# Obsidian's border is black board seen through smoke, and reads as black.
+obsidian_m = mat("obsidian", (0.012, 0.012, 0.013), 0.62)
+# Smoked acrylic. Dark, barely rough, and refracting, so the picture behind it
+# is what you see and the sheet itself shows only as an edge and a reflection.
+glaze_m = mat("glaze", (0.040, 0.040, 0.045), 0.06, alpha=0.42, ior=1.49)
+# M3 black aluminium standoffs.
+standoff_m = mat("standoff", (0.045, 0.045, 0.047), 0.34, metallic=0.85)
+
+box("wallbody", (board_side, body_d, board_side), (0, -body_d / 2, cz), obsidian_m, bevel=1.2 * mm)
+# Where the LEDs actually are. Named, because two other places need it and
+# both used to carry their own copy of the old 0.031: face_quad(), which is
+# the rectangle the app composites its live picture into, and the mark film's
+# centre. When the object got its real 138 mm depth and the LEDs moved
+# forward with it, those copies stayed behind and the app drew its grid at
+# the old distance, low and right of the lit face with the board glowing
+# around it.
+FACE_Y = -(body_d + 0.001)
+bpy.ops.mesh.primitive_plane_add(size=side, location=(0, FACE_Y, cz), rotation=(math.pi / 2, 0, 0))
 face = bpy.context.active_object; face.name = "ledface"; face.data.materials.append(led_m)
+
+_so = board_side / 2 - INSET * mm
+for _sx in (-_so, _so):
+    for _sz in (-_so, _so):
+        cyl(f"standoff_{_sx:+.3f}_{_sz:+.3f}".replace(".", "_"), 4.0 * mm, GLASS_AIR * mm,
+            (_sx, -(body_d + GLASS_AIR * mm / 2), cz + _sz), standoff_m,
+            rot=(math.pi / 2, 0, 0), verts=24)
+bpy.ops.mesh.primitive_plane_add(size=board_side, location=(0, glaze_y, cz), rotation=(math.pi / 2, 0, 0))
+glaze = bpy.context.active_object; glaze.name = "glaze"; glaze.data.materials.append(glaze_m)
 
 # the TT-900 has no dust cover; its Tessera prints are part of the model
 plates = []
@@ -281,7 +320,7 @@ aim(SPOT, (pc[0], pc[1], top + 0.06))
 def ndc(p):
     v = world_to_camera_view(sc, cam, Vector(p)); return (v.x, 1 - v.y)
 def face_quad():
-    return [ndc((sx * side / 2, -0.031, cz + sz * side / 2)) for sx, sz in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
+    return [ndc((sx * side / 2, FACE_Y, cz + sz * side / 2)) for sx, sz in ((-1, 1), (1, 1), (1, -1), (-1, -1))]
 def label_ellipse():
     m = lab.matrix_world; c = m @ Vector((0, 0, 0)); ax = m @ Vector((LABEL_R, 0, 0)); ay = m @ Vector((0, LABEL_R, 0))
     c2, a2, b2 = ndc(c), ndc(ax), ndc(ay); return [c2[0], c2[1], a2[0] - c2[0], a2[1] - c2[1], b2[0] - c2[0], b2[1] - c2[1]]
@@ -567,7 +606,7 @@ if MODE in ("mark", "marklight"):
     random.seed(11)
     sc.render.resolution_x, sc.render.resolution_y = (390, 844) if PROBE else (780, 1688)
     sc.frame_start, sc.frame_end = 1, MARK_N
-    FC = Vector((0, -0.031, cz)); FRONT = Vector((0, -0.024, 0))
+    FC = Vector((0, FACE_Y, cz)); FRONT = Vector((0, -0.024, 0))
     ps, pp, cell = side * 0.16, side * 0.22, side / 3
     def fade_alpha(m, f_on, f_off):
         a = m.node_tree.nodes["Principled BSDF"].inputs["Alpha"]
@@ -595,13 +634,18 @@ if MODE in ("mark", "marklight"):
         for k in ("location", "scale"): m.keyframe_insert(k, frame=84)
         ease_all(m)
         marks.append(m)
-    # the wall's frame grows out with the mark
-    wf = bpy.data.objects["wallframe"]
-    wf.hide_render = True; wf.keyframe_insert("hide_render", frame=1)
-    wf.hide_render = False; wf.keyframe_insert("hide_render", frame=56)
-    wf.scale = (0.6, 1, 0.6); wf.keyframe_insert("scale", frame=56)
-    wf.scale = (1, 1, 1); wf.keyframe_insert("scale", frame=84)
-    ease_all(wf)
+    # the object grows out with the mark: the board, its glass and the four
+    # standoffs between them, all on the same keys so they arrive as one thing
+    obj_parts = [bpy.data.objects[n] for n in ("wallbody", "glaze")
+                 if n in bpy.data.objects] + \
+                [o for o in bpy.data.objects if o.name.startswith("standoff_")]
+    for wf in obj_parts:
+        wf.hide_render = True; wf.keyframe_insert("hide_render", frame=1)
+        wf.hide_render = False; wf.keyframe_insert("hide_render", frame=56)
+        wf.scale = (0.6, 1, 0.6); wf.keyframe_insert("scale", frame=56)
+        wf.scale = (1, 1, 1); wf.keyframe_insert("scale", frame=84)
+        ease_all(wf)
+    wf = obj_parts[0]
     # the table and the deck: out of blocks, coarse to fine, then themselves
     keep_out = {face.name, back.name, wf.name, "ceiling", "left", "right"} | {m.name for m in marks} | {p.name for p, h in plates}
     build = [o for o in bpy.data.objects if o.type == 'MESH' and o.name not in keep_out and not o.name.startswith("floor")]
