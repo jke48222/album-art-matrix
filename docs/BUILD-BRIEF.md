@@ -609,8 +609,10 @@ Asked once, entered on the phone, never in code:
 Two builders, one wall, one phone. Nothing either does may collide with the
 other, and the owner tests each on its own.
 
-- Git: Claude works on the branch `claude/build`; Codex works on `codex/build`. `main` stays as it was until the
-  owner picks. Both branches start from the same `main`.
+- Git: one branch, `main`. The two builds ran apart on `claude/build` and `codex/build` until the owner picked,
+  on 2026-09-19. `main` took `claude/build` whole. Codex's build is kept at the tag `archive/codex-build`, so
+  any piece of it can still be ported. Both builders work on `main` from here, in small commits, and nobody
+  starts a long-lived branch again.
 - The Pi: `~/album-art-matrix` is a symlink. `~/wall-claude` and
   `~/wall-codex` are two complete trees, each with its own venv and
   `config.toml`. `pi/switch.sh claude` or `pi/switch.sh codex` re-points the
@@ -647,7 +649,7 @@ For each feature, in order:
 
 Both builders run the tests and the preview renders in their own checkout.
 Claude deploys to `~/wall-claude` on the Pi and installs "Tessera" on the
-phone. Codex, on `codex/build`, deploys to `~/wall-codex` and installs
+phone. Codex deploys to `~/wall-codex` and installs
 "Tessera Codex" when it has the `wall` ssh alias and the phone; when it does
 not, it says exactly which steps it could not run and leaves the commands
 ready. Neither touches the other's tree, branch or app. Both stop and ask only when a
