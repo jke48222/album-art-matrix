@@ -609,8 +609,8 @@ Asked once, entered on the phone, never in code:
 Two builders, one wall, one phone. Nothing either does may collide with the
 other, and the owner tests each on its own.
 
-- Git: one branch, `main`. The two builds ran apart on `claude/build` and `codex/build` until the owner picked,
-  on 2026-09-19. `main` took `claude/build` whole. Codex's build is kept at the tag `archive/codex-build`, so
+- Git: one branch, `main`. The two builds ran apart on their own branches until the owner picked,
+  on 2026-09-19. `main` took the first build whole. The second build is kept at the tag `archive/second-build`, so
   any piece of it can still be ported. Both builders work on `main` from here, in small commits, and nobody
   starts a long-lived branch again.
 - The Pi: `~/album-art-matrix` is a symlink. `~/wall-claude` and
