@@ -1,5 +1,7 @@
 # Album Art Matrix
 
+[![License](https://img.shields.io/github/license/jke48222/album-art-matrix)](LICENSE) ![Top language](https://img.shields.io/github/languages/top/jke48222/album-art-matrix) ![hardware](https://img.shields.io/badge/hardware-Raspberry%20Pi%205%2C%20HUB75-red) ![status](https://img.shields.io/badge/status-design%20only%2C%20no%20hardware%20driven%20yet-yellow)
+
 A design for an LED wall that shows the cover of whatever song is playing, rendered as a slowly
 spinning disc. Nine square LED panels tiled three by three, 480 mm on a side, driven by a Raspberry
 Pi 5.
@@ -7,6 +9,8 @@ Pi 5.
 **No hardware has been driven yet.** Not nine panels, not one. This repository is the design, the
 circuit simulation, and the software that will run on it. Some of the first light parts have since
 been ordered; no panel has arrived. The section below is exact about what exists.
+
+![Design render of the nine-panel wall. No hardware has been driven yet.](design/atelier-v2/01-hero.png)
 
 ## Building it
 
@@ -563,6 +567,10 @@ Stated plainly, because the value of everything above depends on this list being
 - **The white balance gains are unmeasured**, and labelled as such in the config.
 - **No automated tests.** `scripts/smoke_test.py` is a visual check that writes PNGs for a human to
   look at, plus one assertion on frame size. There is no test runner and no CI.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ---
 
