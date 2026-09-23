@@ -265,3 +265,31 @@ def test_a_path_that_only_looks_like_show_is_a_404_not_a_crash(api):
         code, body = api.post(path, {"query": "x"})
         assert code == 404, path
         assert isinstance(body, dict), path
+
+
+# ---- the phone's pressing ----------------------------------------------------
+
+def test_the_same_pressing_sent_again_does_not_count_as_a_new_picture(api):
+    """The phone re-sends its pressing freely (once a second while it waits
+    for the wall to say it has it, many times in the second a song changes).
+    The spin face rebuilds its record on pressing_seq, so a re-send of the
+    same picture must not bump it, or the wall flickers between records."""
+    import base64
+    px = bytes((10, 20, 30)) * (64 * 64)
+    body = {"px": base64.b64encode(px).decode(), "track": "jo1|whatcha doin"}
+    assert api.post("/pressing", body)[0] == 204
+    assert api.ctrl.pressing_seq == 1
+    for _ in range(5):
+        assert api.post("/pressing", body)[0] == 204
+    assert api.ctrl.pressing_seq == 1                    # same picture: no rebuild
+    assert api.ctrl.pressing[0] == "jo1|whatcha doin"
+
+    # a new name for the same picture is kept for the phone's sake, no rebuild
+    api.post("/pressing", {**body, "track": "jo1|whatcha doin (feat. x)"})
+    assert api.ctrl.pressing_seq == 1
+    assert api.ctrl.pressing[0] == "jo1|whatcha doin (feat. x)"
+
+    # a different picture is a new record
+    px2 = bytes((90, 20, 30)) * (64 * 64)
+    api.post("/pressing", {"px": base64.b64encode(px2).decode(), "track": "jo1|whatcha doin"})
+    assert api.ctrl.pressing_seq == 2

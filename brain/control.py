@@ -75,6 +75,7 @@ Transient things deliberately NOT persisted: the sleep fade (restarting the
 wall cancels it), the frame override, a pending replay.
 """
 import base64
+import hashlib
 import json
 import os
 import threading
@@ -199,6 +200,12 @@ class ControlState:
         # of the panel. The spin face turns this when it is here, so the wall
         # and the room's deck are playing the same pressing.
         self.pressing = None         # (track_id, bytes)
+        # Bumps only when the PICTURE changes. The spin face rebuilds its
+        # record on this, not on every upload: the phone re-sends the same
+        # pressing freely (once a second while it waits for the wall to say
+        # it has it, ten times in the second a song changes), and rebuilding
+        # the record for each one made the wall flicker between records.
+        self.pressing_seq = 0
         # The picture a finish would act on for the face that is up: the
         # sleeve for art and words, the grid for the nine. /finishes renders
         # the three from this, so the phone shows what the wall would do
@@ -1444,8 +1451,19 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                                      f"{ctrl.wall.width}x{ctrl.wall.height}, "
                                      "base64-encoded"})
                     return
-                ctrl.pressing = (str(data.get("track") or ""), px)
-                ctrl.dirty.set()
+                track = str(data.get("track") or "")
+                cur = ctrl.pressing
+                same = cur is not None and cur[1] == px
+                if same and cur[0] == track:
+                    self._empty(204)          # the wall already has this one
+                    return
+                if not same:
+                    ctrl.pressing_seq += 1
+                    print(f"[pressing] {track or 'unnamed'}: picture #{ctrl.pressing_seq} "
+                          f"({hashlib.md5(px).hexdigest()[:6]}) from {self.client_address[0]}")
+                ctrl.pressing = (track, px)
+                if not same:
+                    ctrl.dirty.set()
                 self._empty(204)
                 return
 

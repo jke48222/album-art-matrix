@@ -1104,10 +1104,12 @@ def main():
                     continue
 
                 if mode == "cd" and animator is not None:
-                    if disc_key != (id(ctrl.pressing), id(last_pre), s["spin_face"]) \
+                    # rebuilt when the picture changes (pressing_seq), not
+                    # when the phone re-sends the same one
+                    if disc_key != (ctrl.pressing_seq, id(last_pre), s["spin_face"]) \
                             and last_pre is not None:
                         animator = build_disc(last_pre)
-                        disc_key = (id(ctrl.pressing), id(last_pre), s["spin_face"])
+                        disc_key = (ctrl.pressing_seq, id(last_pre), s["spin_face"])
                     if animator.rpm != s["rpm"]:
                         animator.rpm = s["rpm"]
                     tick = time.monotonic()
