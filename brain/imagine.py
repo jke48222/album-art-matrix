@@ -292,10 +292,15 @@ class LiveDrawing:
                     # the mark going round while the model thinks: the
                     # sting's icon on its own (art/sting.py), the pencil
                     # only if the sting cannot be drawn
+                    icon = None
                     try:
                         from .art.sting import Sting
-                        f = Sting.get(size).icon_frame(t).copy()
+                        icon = Sting.get(size).icon_frame(t)
                     except Exception:
+                        icon = None
+                    if icon is not None:
+                        f = icon.copy()
+                    else:
                         breath = 0.5 - 0.5 * np.cos(t * 1.6)
                         self._glow(f, size, 6 + 8 * breath)
                         self._pencil(f, size, now, t)

@@ -473,18 +473,23 @@ def main():
           f"gains R{tune.gains[0]:.2f}/G{tune.gains[1]:.2f}/B{tune.gains[2]:.2f}")
 
     if ctrl.features.on("sting") and not args.once:
-        # The logo, at boot. The renderer takes a few seconds after its own
-        # start before it listens, and a clip's early frames are not kept
-        # for it the way a still picture is, so give it a moment to attach.
-        attached = getattr(getattr(sink, "_sink", None), "attached", None)
-        for _ in range(40):
-            if attached is None or attached():
-                break
-            time.sleep(0.25)
-        try:
-            ctrl.play_sting()
-        except Exception as exc:
-            print(f"[main] sting: {exc}", flush=True)
+        # The logo, at boot, off the loop's thread: the first time at a wall
+        # size the film is decoded and cut, which takes the Pi twenty
+        # seconds (kept on disk after that), and the renderer takes a few
+        # seconds after its own start before it listens, and a clip's early
+        # frames are not kept for it the way a still picture is. So a thread
+        # waits for the renderer to attach, has the frames made, and plays.
+        def boot_sting():
+            attached = getattr(getattr(sink, "_sink", None), "attached", None)
+            for _ in range(40):
+                if attached is None or attached():
+                    break
+                time.sleep(0.25)
+            try:
+                ctrl.play_sting()
+            except Exception as exc:
+                print(f"[main] sting: {exc}", flush=True)
+        threading.Thread(target=boot_sting, name="sting", daemon=True).start()
 
     last_track, last_pre = None, None
     animator, t0 = None, time.monotonic()

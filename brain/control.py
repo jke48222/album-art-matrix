@@ -764,6 +764,8 @@ class ControlState:
         knows to stop, and hands back to the face it interrupted."""
         from .art.sting import FPS, Sting
         frames = Sting.get(self.wall.width).boot_frames()
+        if not frames:
+            return                     # no film to be had; the sting said why
         here = self.get()["mode"]
         ret = here if here not in ("clip", "frame", "timer", "video") else "art"
         self.clip = {"fps": FPS, "frames": frames, "once": True, "ret": ret}
