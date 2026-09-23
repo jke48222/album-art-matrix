@@ -70,6 +70,13 @@ class PiRendererSink(FrameSink):
         self._keeper.start()
 
     # ---- the pipe ---------------------------------------------------------
+    def attached(self) -> bool:
+        """Whether the renderer is on the other end right now. The keeper
+        attaches as soon as there is one, so this is how a caller with a
+        moving picture (the boot sting) knows its frames will be seen."""
+        with self._lock:
+            return self._fd is not None
+
     def _connect(self) -> bool:
         """True with the pipe open for writing. A fresh connection means a
         renderer that has just come up with nothing of ours on its panel, so

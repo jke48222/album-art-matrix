@@ -202,6 +202,7 @@ port = 8788     # wall control API (iOS companion posts here)
 # weather = true
 # posters = true
 # games = true
+# sting = true
 
 [homekit]
 # The wall in the Home app, and so on Siri, the Watch and in Control Centre:

@@ -472,6 +472,20 @@ def main():
           f"wall {wall}, poll {poll_s:.0f}s, "
           f"gains R{tune.gains[0]:.2f}/G{tune.gains[1]:.2f}/B{tune.gains[2]:.2f}")
 
+    if ctrl.features.on("sting") and not args.once:
+        # The logo, at boot. The renderer takes a few seconds after its own
+        # start before it listens, and a clip's early frames are not kept
+        # for it the way a still picture is, so give it a moment to attach.
+        attached = getattr(getattr(sink, "_sink", None), "attached", None)
+        for _ in range(40):
+            if attached is None or attached():
+                break
+            time.sleep(0.25)
+        try:
+            ctrl.play_sting()
+        except Exception as exc:
+            print(f"[main] sting: {exc}", flush=True)
+
     last_track, last_pre = None, None
     animator, t0 = None, time.monotonic()
     ambient, amb_key, amb_t0 = None, None, time.monotonic()
@@ -494,7 +508,7 @@ def main():
     sun_f, sun_at = 1.0, 0.0         # evening factor, refreshed each poll
     away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
-    clip_i, clip_next = 0, 0.0
+    clip_i, clip_next, clip_id = 0, 0.0, None
     now, video_shown = None, None
     black = bytes(size * size * 3)
     idle_prev = None                 # which idle override is currently applied
@@ -1034,6 +1048,13 @@ def main():
 
                 if mode == "clip" and ctrl.clip is not None:
                     c = ctrl.clip
+                    if clip_id != id(c):
+                        clip_id, clip_i = id(c), 0        # a new clip starts at its first frame
+                    if c.get("once") and clip_i >= len(c["frames"]):
+                        # played through: back to the face it interrupted
+                        ctrl.clip = None
+                        ctrl.apply({"mode": c.get("ret") or "art"})
+                        continue
                     tick = time.monotonic()
                     if tick >= clip_next:
                         frame = c["frames"][clip_i % len(c["frames"])]

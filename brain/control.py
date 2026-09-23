@@ -758,6 +758,18 @@ class ControlState:
                 return 0
         return marked
 
+    def play_sting(self):
+        """The Tessera sting, once, on the wall's own dots (art/sting.py):
+        at boot, or asked for with POST /sting. It plays as a clip that
+        knows to stop, and hands back to the face it interrupted."""
+        from .art.sting import FPS, Sting
+        frames = Sting.get(self.wall.width).boot_frames()
+        here = self.get()["mode"]
+        ret = here if here not in ("clip", "frame", "timer", "video") else "art"
+        self.clip = {"fps": FPS, "frames": frames, "once": True, "ret": ret}
+        self.shown_seq += 1
+        self.apply({"mode": "clip"})
+
     def journal_read(self, limit: int = 50) -> list[dict]:
         try:
             with open(JOURNAL_PATH) as fh:
@@ -1469,6 +1481,14 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if not same:
                     ctrl.dirty.set()
                 self._empty(204)
+                return
+
+            if self.path.startswith("/sting"):
+                # the logo, on request: the same cut the wall plays at boot
+                if self._switched_off("sting", "the logo on the wall"):
+                    return
+                ctrl.play_sting()
+                self._json(200, ctrl.public_state())
                 return
 
             if self.path.startswith("/clip"):

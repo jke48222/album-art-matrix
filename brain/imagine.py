@@ -289,9 +289,16 @@ class LiveDrawing:
                 if stage == "failed":
                     self._words(f, size, "could not draw", (200, 90, 80))
                 elif stage == "waiting":
-                    breath = 0.5 - 0.5 * np.cos(t * 1.6)
-                    self._glow(f, size, 6 + 8 * breath)
-                    self._pencil(f, size, now, t)
+                    # the mark going round while the model thinks: the
+                    # sting's icon on its own (art/sting.py), the pencil
+                    # only if the sting cannot be drawn
+                    try:
+                        from .art.sting import Sting
+                        f = Sting.get(size).icon_frame(t).copy()
+                    except Exception:
+                        breath = 0.5 - 0.5 * np.cos(t * 1.6)
+                        self._glow(f, size, 6 + 8 * breath)
+                        self._pencil(f, size, now, t)
                     if size > 96:
                         self._words(f, size, self.prompt, (120, 118, 112))
                 return f

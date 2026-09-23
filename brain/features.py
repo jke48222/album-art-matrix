@@ -28,11 +28,12 @@ KNOWN = [
     ("airplay", "the wall as an AirPlay receiver"),
     ("shelf", "the Discogs collection, and the corner mark"),
     ("earworm", "name a song from the words you remember"),
-    ("show", "show a cover or play a video by name"),
+    ("show", "show a picture or a cover, or play a video, by name"),
     ("imagine", "a picture from a description"),
     ("weather", "the weather faces"),
     ("posters", "posters for what the Mac watches"),
     ("games", "every game"),
+    ("sting", "the logo on the wall at boot, and while it waits to draw"),
 ]
 
 
