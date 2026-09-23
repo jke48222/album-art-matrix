@@ -1,8 +1,14 @@
 """Show me, play me, and the earworm finder.
 
-    show("the Blond cover")      iTunes finds the album, the sleeve goes on
-                                 the panel in the frame face for ten minutes
-                                 or until something else is chosen
+    show("the Eiffel Tower")     a picture of it, from Wikipedia (its page's
+                                 lead image) or failing that Openverse, in the
+                                 frame face for ten minutes or until something
+                                 else is chosen
+    show("the Blond cover")      iTunes finds the album, the sleeve goes up the
+                                 same way. Plain words go to a picture unless
+                                 they name a record the wall knows; "cover",
+                                 "sleeve", "album", "by <artist>" ask for a
+                                 sleeve, "a picture of" asks for a picture
     play("the Gameboy video")    yt-dlp finds the video by name, the wall's
                                  video face plays it with the phone as the
                                  speaker, as a pasted link would
@@ -23,6 +29,7 @@ which is the voice's worker or a request handler.
 from __future__ import annotations
 
 import difflib
+import re
 import subprocess
 import threading
 import time
@@ -38,7 +45,15 @@ from .video import ytdlp
 SHOW_S = 600.0                  # a cover asked for stays this long
 EARWORM_S = 8.0                 # the found song's sleeve, before its name runs
 ITUNES = "https://itunes.apple.com/search"
+WIKIPEDIA = "https://en.wikipedia.org/w/api.php"
+OPENVERSE = "https://api.openverse.org/v1/images/"
 UA = "album-art-matrix/1.0 (github.com/jke48222/album-art-matrix)"
+
+# Words that say a sleeve is wanted, and words that say a picture is.
+_COVER_CUES = re.compile(r"\b(cover|sleeve|album|record|song|track|single|ep|lp|vinyl)\b|\bby\b")
+_PICTURE_OF = re.compile(r"^(?:a |an |the |some )?(?:picture|photo|photograph|image|pic|pictures|photos)s?"
+                         r" (?:of |for )(.+)$", re.I)
+_COVER_OF = re.compile(r"^(?:the )?(?:cover|sleeve|album art|art|artwork) (?:of |for )(.+)$", re.I)
 
 
 def _plain(s: str) -> str:
@@ -57,7 +72,7 @@ def itunes(query: str, entity: str, limit: int = 5) -> list[dict]:
 
 def find_art(query: str) -> dict | None:
     """The best sleeve for some words: an album first, then a song. Returns
-    {title, artist, album, art_url} or None."""
+    {title, artist, album, art_url, score} or None."""
     q = _plain(query)
     best, best_score = None, 0.0
     for entity, name_key in (("album", "collectionName"), ("song", "trackName")):
@@ -79,7 +94,60 @@ def find_art(query: str) -> dict | None:
     return {"title": best.get("trackName") or best.get("collectionName") or query,
             "artist": best.get("artistName") or "",
             "album": best.get("collectionName") or "",
-            "art_url": best["artworkUrl100"].replace("100x100bb", "600x600bb")}
+            "art_url": best["artworkUrl100"].replace("100x100bb", "600x600bb"),
+            "score": round(best_score, 3)}
+
+
+def wikipedia_picture(query: str) -> dict | None:
+    """The lead image of the Wikipedia page the words find, skipping
+    disambiguation pages. A landmark, a person, an animal, a painting: the
+    page's own picture is the one anyone would expect."""
+    try:
+        r = requests.get(WIKIPEDIA, params={
+            "action": "query", "generator": "search", "gsrsearch": query,
+            "gsrlimit": 4, "gsrnamespace": 0,
+            "prop": "pageimages|pageprops", "piprop": "thumbnail|original",
+            "pithumbsize": 1024, "ppprop": "disambiguation",
+            "format": "json", "formatversion": 2,
+        }, headers={"User-Agent": UA}, timeout=10)
+        pages = r.json().get("query", {}).get("pages", [])
+    except (requests.RequestException, ValueError) as exc:
+        print(f"[show] wikipedia: {exc}", flush=True)
+        return None
+    for p in sorted(pages, key=lambda p: p.get("index", 99)):
+        if "disambiguation" in (p.get("pageprops") or {}):
+            continue
+        pic = (p.get("thumbnail") or p.get("original") or {}).get("source")
+        if pic:
+            return {"title": p.get("title") or query, "art_url": pic,
+                    "credit": "Wikipedia", "source": "wikipedia"}
+    return None
+
+
+def openverse_picture(query: str) -> dict | None:
+    """An openly licensed photograph, for the things Wikipedia has no page
+    for. Anonymous use is allowed and enough for a wall."""
+    try:
+        r = requests.get(OPENVERSE, params={"q": query, "page_size": 6, "mature": "false"},
+                         headers={"User-Agent": UA}, timeout=10)
+        results = r.json().get("results", [])
+    except (requests.RequestException, ValueError) as exc:
+        print(f"[show] openverse: {exc}", flush=True)
+        return None
+    for x in results:
+        pic = x.get("thumbnail") or x.get("url")
+        if not pic:
+            continue
+        who = x.get("creator") or ""
+        lic = (x.get("license") or "").upper()
+        credit = ", ".join(s for s in (who, f"CC {lic}" if lic and lic != "PDM" else lic) if s)
+        return {"title": x.get("title") or query, "art_url": pic,
+                "credit": credit or "Openverse", "source": "openverse"}
+    return None
+
+
+def find_picture(query: str) -> dict | None:
+    return wikipedia_picture(query) or openverse_picture(query)
 
 
 class Shower:
@@ -136,16 +204,77 @@ class Shower:
             self.ctrl.apply({"mode": self._ret or "art"})
         self._ret = None
 
+    # ---- which is meant: a record the wall knows, or a thing in the world ------------------
+    def _knows(self, found: dict) -> bool:
+        """Whether the wall has met this artist: in its journal of what it
+        has worn, or on the shelf. "Show me Blond" means the record when
+        Frank Ocean has been on the wall; "show me the Eiffel Tower" does
+        not mean the song of that name by someone it has never played."""
+        artist = _plain(found.get("artist"))
+        if not artist:
+            return False
+        ctrl = self.ctrl
+        try:
+            for e in ctrl.journal_read(200):
+                if _plain(e.get("artist")) == artist:
+                    return True
+        except Exception:
+            pass
+        shelf = getattr(ctrl, "shelf", None)
+        if shelf is not None:
+            try:
+                if shelf.match(found.get("album") or "", found.get("artist") or ""):
+                    return True
+            except Exception:
+                pass
+        return False
+
     # ---- the four ---------------------------------------------------------------------------------
-    def show(self, query: str) -> dict:
-        found = find_art(query)
-        if found is None:
-            return {"error": f"I could not find a cover for {query}."}
+    def show(self, query: str, kind: str = "any") -> dict:
+        """kind is "cover", "picture" or "any". The words themselves can say:
+        "a picture of X" asks for a picture, "the cover of X" or a cover cue
+        in the words asks for a sleeve. Left to "any", a record the wall
+        knows wins, otherwise a picture, and a sleeve only if there is no
+        picture to be had."""
+        q = (query or "").strip()
+        m = _PICTURE_OF.match(q)
+        if m:
+            kind, q = "picture", m.group(1).strip()
+        else:
+            m = _COVER_OF.match(q)
+            if m:
+                kind, q = "cover", m.group(1).strip()
+            elif kind == "any" and _COVER_CUES.search(q.lower()):
+                kind = "cover"
+
+        found = find_art(q) if kind != "picture" else None
+        if kind == "cover" or (kind == "any" and found is not None
+                               and found["score"] >= 0.85 and self._knows(found)):
+            if found is None:
+                return {"error": f"I could not find a cover for {q}."}
+            return self._show_cover(found)
+
+        pic = find_picture(q)
+        if pic is not None:
+            if not self._put_up(pic["art_url"], SHOW_S):
+                return {"error": f"I found a picture of {pic['title']} but could not fetch it."}
+            out = {"what": "show", "kind": "picture", "title": pic["title"], "artist": pic["credit"],
+                   "album": "", "art_url": pic["art_url"], "credit": pic["credit"],
+                   "source": pic["source"]}
+            self.last = out
+            print(f"[show] a picture of {pic['title']} ({pic['source']}) on the wall", flush=True)
+            return {"shown": True, **out, "seconds": SHOW_S}
+        if found is not None:
+            return self._show_cover(found)
+        return {"error": f"I could not find a picture or a cover for {q}."}
+
+    def _show_cover(self, found: dict) -> dict:
         if not self._put_up(found["art_url"], SHOW_S):
             return {"error": f"I found {found['title']} but could not fetch its cover."}
-        self.last = {"what": "show", **found}
+        out = {"what": "show", "kind": "cover", **{k: v for k, v in found.items() if k != "score"}}
+        self.last = out
         print(f"[show] {found['artist']} - {found['title']} on the wall", flush=True)
-        return {"shown": True, **found, "seconds": SHOW_S}
+        return {"shown": True, **out, "seconds": SHOW_S}
 
     def play(self, query: str) -> dict:
         ctrl = self.ctrl

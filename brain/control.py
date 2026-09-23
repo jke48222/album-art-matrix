@@ -1264,7 +1264,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if not text:
                     self._json(400, {"error": "some words, please"})
                     return
-                result = getattr(sh, what)(text)
+                if what == "show":
+                    # "picture", "cover" or "any": what the words are for
+                    result = sh.show(text, kind=str(patch.get("kind") or "any"))
+                else:
+                    result = getattr(sh, what)(text)
                 code = 200 if not (isinstance(result, dict) and result.get("error")) else 404
                 self._json(code, result if isinstance(result, dict) else {"said": result})
                 return

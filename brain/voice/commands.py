@@ -94,7 +94,10 @@ PATTERNS = [
     (re.compile(r"^(?:this|that) is (.+?) by (.+?)(?:,? (?:learn|teach) (?:it|this))?$"), "teach_maybe"),
     (re.compile(r"^(?:what|which) song (?:goes|has the (?:words|lyrics?)|is it that goes)[, ]*(.+)$"), "earworm"),
     (re.compile(r"^(?:find|name) the song (?:that goes|with the words|with)[, ]*(.+)$"), "earworm"),
-    (re.compile(r"^show (?:me )?(?:the )?(.+?)(?: (?:cover|sleeve|album|art))?$"), "show"),
+    # the tail is kept as a hint: "the Blond cover" asks for a sleeve, plain
+    # words ("the Eiffel Tower") ask for a picture unless the wall knows the
+    # record; "a picture of" is read by the shower itself
+    (re.compile(r"^show (?:me )?(?:the )?(.+?)(?: (cover|sleeve|album|art))?$"), "show"),
     (re.compile(r"^play (?:me )?(?:the )?(.+?)(?: video)?$"), "play"),
     (re.compile(r"^(?:create|draw|make|imagine|paint) (?:me )?(?:a |an |the )?(.+)$"), "imagine"),
     (re.compile(r"^(?:leave a note|note|write)[:,]? (.+)$"), "note"),
@@ -128,6 +131,8 @@ def match(text: str) -> Command | None:
         if name == "earworm":
             return Command("earworm", words=m.group(1).strip())
         if name == "show":
+            if m.group(2):
+                return Command("show", query=m.group(1).strip(), kind="cover")
             return Command("show", query=m.group(1).strip())
         if name == "play":
             q = m.group(1).strip()

@@ -214,6 +214,7 @@ struct NoteStatus: Decodable {
 struct ShowPage: View {
     @Environment(WallSession.self) private var wall
     let accent: Color
+    @State private var picture = ""
     @State private var cover = ""
     @State private var video = ""
     @State private var busy: String?
@@ -222,14 +223,20 @@ struct ShowPage: View {
 
     var body: some View {
         SetupPage("Show me",
-                  blurb: "A cover by name goes up on the wall for ten minutes; a video by name plays on it with this phone as the speaker. Out loud: \"show me the Blonde cover\", \"play the Gameboy video\".") {
+                  blurb: "A picture of a thing, or a cover by name, goes up on the wall for ten minutes; a video by name plays on it with this phone as the speaker. Out loud: \"show me the Eiffel Tower\", \"show me the Blonde cover\", \"play the Gameboy video\".") {
+            SetupGroup("A picture", note: "A landmark, a person, an animal, a painting: from Wikipedia, or an open photo library.") {
+                KeyField(placeholder: "the Eiffel Tower", text: $picture)
+                Rule()
+                SaveLine(title: busy == "picture" ? "Finding" : "Show it", enabled: !picture.trimmingCharacters(in: .whitespaces).isEmpty && busy == nil,
+                         busy: busy == "picture", done: nil, accent: accent) { send("show", picture, kind: "picture") }
+            }
+            .padding(.top, -12)
             SetupGroup("A cover", note: "Found on iTunes: an album, or a song's album.") {
                 KeyField(placeholder: "the Blonde cover", text: $cover)
                 Rule()
-                SaveLine(title: busy == "show" ? "Finding" : "Show it", enabled: !cover.trimmingCharacters(in: .whitespaces).isEmpty && busy == nil,
-                         busy: busy == "show", done: nil, accent: accent) { send("show", cover) }
+                SaveLine(title: busy == "cover" ? "Finding" : "Show it", enabled: !cover.trimmingCharacters(in: .whitespaces).isEmpty && busy == nil,
+                         busy: busy == "cover", done: nil, accent: accent) { send("show", cover, kind: "cover") }
             }
-            .padding(.top, -12)
             SetupGroup("A video", note: "Found by name; the phone plays the sound.") {
                 KeyField(placeholder: "the Gameboy video", text: $video)
                 Rule()
@@ -260,14 +267,23 @@ struct ShowPage: View {
         }
     }
 
-    private func send(_ what: String, _ query: String) {
+    /// kind is "picture" or "cover" for a show, nil for a play; busy carries
+    /// it so each group's button shows its own waiting.
+    private func send(_ what: String, _ query: String, kind: String? = nil) {
         guard busy == nil else { return }
-        busy = what
+        busy = kind ?? what
         problem = nil
         let h = wall.host, q = query.trimmingCharacters(in: .whitespaces)
         Task {
-            let (r, why) = await ShowResult.post(host: h, what: what, query: q)
-            if let r { last = r; Taps.commit(); if what == "show" { cover = "" } else { video = "" } }
+            let (r, why) = await ShowResult.post(host: h, what: what, query: q, kind: kind)
+            if let r {
+                last = r; Taps.commit()
+                switch kind ?? what {
+                case "picture": picture = ""
+                case "cover": cover = ""
+                default: video = ""
+                }
+            }
             problem = why
             busy = nil
         }
@@ -293,13 +309,15 @@ struct ShowResult: Decodable {
         return try? JSONDecoder().decode(ShowResult.self, from: bytes)
     }
 
-    static func post(host: String, what: String, query: String) async -> (ShowResult?, String?) {
+    static func post(host: String, what: String, query: String, kind: String? = nil) async -> (ShowResult?, String?) {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/\(what)") else { return (nil, "No wall.") }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 60
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["query": query])
+        var body: [String: Any] = ["query": query]
+        if let kind { body["kind"] = kind }
+        req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         guard let (data, resp) = try? await URLSession.shared.data(for: req) else { return (nil, "The wall is not answering.") }
         if (resp as? HTTPURLResponse)?.statusCode == 200 {
             var r = (try? JSONDecoder().decode(ShowResult.self, from: data)) ?? ShowResult()

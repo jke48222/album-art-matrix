@@ -510,8 +510,11 @@ class Voice:
             if self.shower is None or not hasattr(self.shower, name):
                 self._answer("That is not built yet.")
                 return
-            result = getattr(self.shower, name)(cmd.args.get("query") or cmd.args.get("prompt")
-                                                or cmd.args.get("words"))
+            words = cmd.args.get("query") or cmd.args.get("prompt") or cmd.args.get("words")
+            if name == "show":
+                result = self.shower.show(words, kind=cmd.args.get("kind") or "any")
+            else:
+                result = getattr(self.shower, name)(words)
             if isinstance(result, dict) and result.get("error"):
                 self._answer(result["error"])
             elif isinstance(result, str):

@@ -10,6 +10,9 @@ import requests
 from PIL import Image
 
 CACHE_DIR = os.path.expanduser("~/.cache/album-art-matrix")
+# Wikimedia refuses a download with no descriptive User-Agent (403), and
+# the picture of the Eiffel Tower comes from there. Every fetch says who it is.
+UA = "album-art-matrix/1.0 (github.com/jke48222/album-art-matrix)"
 
 
 def _decode(data: bytes) -> Image.Image:
@@ -47,7 +50,7 @@ def fetch_art(url: str, timeout: float = 15.0) -> Image.Image:
                 os.remove(path)
             except OSError:
                 pass
-    resp = requests.get(url, timeout=timeout)
+    resp = requests.get(url, timeout=timeout, headers={"User-Agent": UA})
     resp.raise_for_status()
     data = resp.content
     # Decode BEFORE caching: a captive portal or error page served as 200
