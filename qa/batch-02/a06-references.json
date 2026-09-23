@@ -1,0 +1,33 @@
+{
+  "unit": "A06",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/099d8bfc-4a2a-44e2-b1fa-a5f0266e2208",
+      "applied": "Separate collections of scenes with quiet labels, and keep the selected scene visually explicit."
+    },
+    {
+      "url": "https://mobbin.com/screens/336dcbcf-d967-4550-8142-5dc314ac1c57",
+      "applied": "Use the active scene colour as a controlled accent while preserving distinct preview, selection and live states."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/sliders",
+      "applied": "Native range controls expose named quantities, units, limits and accessible adjustment."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/sheets",
+      "applied": "Present complete Weather, Games and colour destinations with clear dismissal."
+    }
+  ],
+  "checks": [
+    "Weather and ticker are reachable from the face picker.",
+    "Design opens Studio without sending an empty frame mode.",
+    "Preparing a video does not mark Video as the live wall face.",
+    "Only the current wall face receives the selected check.",
+    "Weather, games and imagined content no longer fall through to unrelated finish controls.",
+    "Apple Music controls require authorization and matching local title/artist.",
+    "The live panel retains every corner pixel.",
+    "Brightness and range controls use the shared accessible slider.",
+    "Video result and progress callbacks are discarded after host change or dismissal."
+  ],
+  "debug_arguments": ["-controls", "-control-detail", "-control-colour"]
+}

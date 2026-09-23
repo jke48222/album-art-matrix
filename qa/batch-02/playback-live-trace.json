@@ -1,0 +1,210 @@
+{
+  "source": "Live wall read-only /state trace",
+  "mutated_playback": false,
+  "samples": [
+    {
+      "received_at": 1790143111.843542,
+      "request_s": 0.046105146408081055,
+      "server_date": "Wed, 23 Sep 2026 05:58:31 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143112.3456624,
+      "request_s": 0.00203704833984375,
+      "server_date": "Wed, 23 Sep 2026 05:58:32 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143112.848702,
+      "request_s": 0.0029544830322265625,
+      "server_date": "Wed, 23 Sep 2026 05:58:32 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143113.351122,
+      "request_s": 0.002338409423828125,
+      "server_date": "Wed, 23 Sep 2026 05:58:33 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143113.85346,
+      "request_s": 0.0022542476654052734,
+      "server_date": "Wed, 23 Sep 2026 05:58:33 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143114.3554814,
+      "request_s": 0.001940011978149414,
+      "server_date": "Wed, 23 Sep 2026 05:58:34 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143114.8584669,
+      "request_s": 0.002880096435546875,
+      "server_date": "Wed, 23 Sep 2026 05:58:34 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143115.3606353,
+      "request_s": 0.002083301544189453,
+      "server_date": "Wed, 23 Sep 2026 05:58:35 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143115.8625047,
+      "request_s": 0.0017924308776855469,
+      "server_date": "Wed, 23 Sep 2026 05:58:35 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143116.3642662,
+      "request_s": 0.00171661376953125,
+      "server_date": "Wed, 23 Sep 2026 05:58:36 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143116.8665195,
+      "request_s": 0.0021638870239257812,
+      "server_date": "Wed, 23 Sep 2026 05:58:36 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    },
+    {
+      "received_at": 1790143117.368731,
+      "request_s": 0.0021257400512695312,
+      "server_date": "Wed, 23 Sep 2026 05:58:37 GMT",
+      "mode": "art",
+      "progress": {
+        "at": 168360,
+        "of": 183090,
+        "playing": false,
+        "stamped": 1790143107.89259
+      },
+      "track": {
+        "title": "Given-Taken",
+        "artist": "ENHYPEN",
+        "album": "BORDER : DAY ONE - EP"
+      }
+    }
+  ]
+}

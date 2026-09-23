@@ -59,7 +59,7 @@ struct ControlCenterButtons: View {
 
 /// A round key on glass.
 struct FrostedKey<Content: View>: View {
-    var size: CGFloat = 40
+    var size: CGFloat = 44
     var on: Bool = false
     var accent: Color = Ink.tile
     var ink: GlassInk = .dark
@@ -105,7 +105,9 @@ enum PanelLayout { case full, tuning }
 
 struct ControlCenterPanel: View {
     @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
     let light: Lighting
     var ink: GlassInk = .dark
     @Binding var dragLight: Double?
@@ -118,19 +120,23 @@ struct ControlCenterPanel: View {
     /// frame stands in when there is none.
     var sleeve: UIImage? = nil
 
-    @State private var lastDetent = -1
     /// The Video face is chosen here, not on the wall: a video needs a link
     /// before there is anything for the wall to be in the middle of.
     @State private var videoFace = false
     /// The games live in their own sheet: a board wants the whole screen.
     @State private var showGames = false
+    @State private var showWeather = false
+    @State private var showColour = false
+    @State private var localPlayback = false
+    @State private var controlsLocalTrack = false
+    @State private var videoTask: Task<Void, Never>?
+    @State private var videoRequest = UUID()
     @State private var videoLink = ""
     @AppStorage("video.sound") private var videoSound = true
     @State private var videoPick: PhotosPickerItem? = nil
     /// What is being done to a video of your own, and how far along.
     @State private var videoWork: (String, Double)? = nil
     @State private var videoProblem: String? = nil
-    @State private var speedDrag: Double? = nil
     /// A rail being dragged: its key and where the thumb is now, so the
     /// number under a finger is the finger's, not the wall's last word.
     @State private var railDrag: (String, Double)? = nil
@@ -167,7 +173,10 @@ struct ControlCenterPanel: View {
                         ScrollView(.vertical) {
                             VStack(spacing: gutter) {
                                 HStack {
-                                    Text("CONTROLS").font(.machine(10)).kerning(1.6).foregroundStyle(ink.dim)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Your wall").font(.display(30)).foregroundStyle(ink.ink)
+                                        Text(connectionLabel).font(.machine(9)).kerning(0.8).foregroundStyle(ink.ink.opacity(0.78))
+                                    }
                                     Spacer()
                                     closeKey
                                 }
@@ -184,13 +193,12 @@ struct ControlCenterPanel: View {
                             // clear of the page marks at the foot of the screen
                             .padding(.bottom, 60)
                             .frame(minHeight: geo.size.height)
-                            // the glass itself closes on a tap; the blocks keep their own taps
-                            .background(Color.black.opacity(0.001).onTapGesture { onClose() })
                         }
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollIndicators(.hidden)
+                        .defaultScrollAnchor(initialAnchor)
                     }
-                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .transition(reducedMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
             case .tuning:
                 // Kept to a little over half the screen and scrolled past
@@ -204,15 +212,72 @@ struct ControlCenterPanel: View {
                         context
                     }
                     .padding(.horizontal, 16)
+                    // The rendered frame extends beyond the live pixel quad.
+                    // Keep the first heading below its bezel, not on top of it.
+                    .padding(.top, 28)
+                    .padding(.bottom, 18)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
                 .frame(maxHeight: 452)
+                .clipped()
+                .background {
+                    LinearGradient(colors: [.clear, .black.opacity(0.16), .black.opacity(0.28)],
+                                   startPoint: .top, endPoint: .bottom)
+                        .allowsHitTesting(false)
+                }
             }
         }
         // the glass takes the room's own scheme: light over the white room,
         // dark over the dark designs, so it frosts instead of muddying
         .environment(\.colorScheme, ink.ink == Ink.ink ? .dark : .light)
+        .sheet(isPresented: $showGames) { GamesSheet(accent: accent).environment(wall) }
+        .sheet(isPresented: $showWeather) {
+            NavigationStack {
+                WeatherPage(accent: accent).environment(wall)
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showWeather = false } } }
+            }.preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showColour) {
+            ColourSheet(colour: Binding(get: { Color.wall(hex: wall.state.color) },
+                                       set: { wall.send(["color": $0.wallHex]) }), title: "Primary colour")
+        }
+        .onAppear {
+            refreshLocalPlayback()
+            #if DEBUG
+            if CommandLine.arguments.contains("-control-colour") { showColour = true }
+            #endif
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in refreshLocalPlayback() }
+        .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerNowPlayingItemDidChange)) { _ in refreshLocalPlayback() }
+        .onChange(of: wall.state.title) { _, _ in refreshLocalPlayback() }
+        .onChange(of: wall.host) { _, _ in
+            videoTask?.cancel(); videoRequest = UUID(); videoWork = nil
+        }
+        .onDisappear {
+            videoTask?.cancel(); videoRequest = UUID()
+            dragLight = nil; railDrag = nil
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { refreshLocalPlayback() }
+            else { dragLight = nil; railDrag = nil }
+        }
+        .accessibilityAction(.escape) { onClose() }
+    }
+
+    private var initialAnchor: UnitPoint {
+        #if DEBUG
+        if CommandLine.arguments.contains("-control-detail") { return .bottom }
+        #endif
+        return .top
+    }
+    private var connectionLabel: String {
+        switch wall.link {
+        case .live: "CONNECTED · \(faceName(wall.state.mode))"
+        case .standIn: "PHONE PREVIEW"
+        case .searching: "FINDING YOUR WALL"
+        case .offline: "WALL OFFLINE · CHANGES WAIT FOR CONNECTION"
+        }
     }
 
     /// A round key with a cross: the one sure way out.
@@ -228,7 +293,7 @@ struct ControlCenterPanel: View {
                 .stroke(ink.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
                 .frame(width: 11, height: 11)
             }
-            .frame(width: 40, height: 40)
+            .frame(width: 44, height: 44)
         }
         .buttonStyle(PressStyle(scale: 0.92))
         .accessibilityLabel("Close")
@@ -239,134 +304,129 @@ struct ControlCenterPanel: View {
     /// What is on, its sleeve, and how far the needle has got; one key to
     /// hold it or let it go.
     private var nowCard: some View {
-        let title = wall.state.title.flatMap { $0.isEmpty ? nil : $0 }
-        let elapsed = wall.state.songNow, total = wall.state.songOf
-        let fraction = wall.state.songFraction ?? 0
-        return HStack(spacing: 14) {
-            Group {
-                if let sleeve {
-                    Image(uiImage: sleeve).resizable().interpolation(.medium)
-                } else {
-                    RoundedRectangle(cornerRadius: Round.card).fill(ink.fill)
-                        .overlay(Image(systemName: "music.note").font(.system(size: 23)).foregroundStyle(ink.dim))
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top, spacing: 14) {
+                Group {
+                    if let sleeve {
+                        Image(uiImage: sleeve).resizable().interpolation(.high)
+                    } else {
+                        Rectangle().fill(ink.fill)
+                            .overlay(Image(systemName: "music.note").font(.system(size: 24)).foregroundStyle(ink.dim))
+                    }
+                }
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .accessibilityHidden(true)
+                NowPlayingIdentity(state: wall.state, link: wall.link, accent: accent,
+                                   ink: ink.ink, secondary: ink.dim, compact: true, showsProgress: false)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if controlsLocalTrack {
+                    Button {
+                        let player = MPMusicPlayerController.systemMusicPlayer
+                        if localPlayback { player.pause() } else { player.play() }
+                        refreshLocalPlayback(); Taps.detent(intensity: 0.5)
+                    } label: {
+                        Image(systemName: localPlayback ? "pause.fill" : "play.fill")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(onAccent).frame(width: 46, height: 46)
+                            .background(accent, in: Circle())
+                    }
+                    .buttonStyle(PressStyle(scale: 0.94))
+                    .accessibilityLabel(localPlayback ? "Pause Apple Music" : "Play Apple Music")
                 }
             }
-            .frame(width: 66, height: 66)
-            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
-            VStack(alignment: .leading, spacing: 5) {
-                Text(title ?? (wall.state.mode == "off" ? "Asleep" : "Nothing on"))
-                    .font(.ui(15, .semibold)).foregroundStyle(ink.ink).lineLimit(1)
-                Text(title == nil ? "Play something and it lands here." : [wall.state.artist, wall.state.album].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                    .font(.ui(12)).foregroundStyle(ink.dim).lineLimit(1)
-                if title != nil, let owned = wall.state.owned {
-                    Text(owned.line)
-                        .font(.ui(11)).foregroundStyle(accent).lineLimit(1)
-                        .onTapGesture { if let u = URL(string: owned.url) { openURL(u) } }
-                }
-                if title != nil {
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule().fill(ink.fill).frame(height: 4)
-                            Capsule().fill(accent).frame(width: max(4, geo.size.width * fraction), height: 4)
-                        }
-                        .frame(height: 4)
-                        .frame(maxHeight: .infinity, alignment: .center)
-                    }
-                    .frame(height: 10)
-                    HStack {
-                        Text(Self.clock(elapsed)).font(.machine(9)).foregroundStyle(ink.dim)
-                        Spacer()
-                        Text(total.map { "-" + Self.clock(max(0, $0 - (elapsed ?? 0))) } ?? "").font(.machine(9)).foregroundStyle(ink.dim)
-                    }
-                }
+            PlaybackProgress(state: wall.state, link: wall.link, accent: accent, secondary: ink.dim, compact: true)
+            if let owned = wall.state.owned, let url = URL(string: owned.url) {
+                Link(destination: url) {
+                    Label(owned.line, systemImage: "opticaldisc").font(.ui(12)).foregroundStyle(accent)
+                }.frame(minHeight: 44, alignment: .leading)
             }
-            if title != nil {
-                Button {
-                    let m = MPMusicPlayerController.systemMusicPlayer
-                    if wall.state.songPlaying || m.playbackState == .playing { m.pause() } else { m.play() }
-                    Taps.detent(intensity: 0.5)
-                } label: {
-                    ZStack {
-                        Circle().fill(accent)
-                        GlyphShape(glyph: (wall.state.songPlaying || MPMusicPlayerController.systemMusicPlayer.playbackState == .playing) ? .pause : .play, lineWidth: 1.6)
-                            .frame(width: 14, height: 14).foregroundStyle(onAccent)
-                    }
-                    .frame(width: 44, height: 44)
-                }
-                .buttonStyle(PressStyle(scale: 0.92))
+            if PlaybackIdentity(state: wall.state, link: wall.link).hasSong && !controlsLocalTrack {
+                Text("Playback controls are in your music player.")
+                    .font(.ui(11)).foregroundStyle(ink.dim)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
+        .padding(18).frame(maxWidth: .infinity, alignment: .leading)
         .background(Slab(radius: 26, ink: ink))
     }
 
-    private static func clock(_ s: Double?) -> String {
-        guard let s, s.isFinite else { return "0:00" }
-        let t = Int(s.rounded()); return String(format: "%d:%02d", t / 60, t % 60)
+    private func refreshLocalPlayback() {
+        guard MPMediaLibrary.authorizationStatus() == .authorized else {
+            controlsLocalTrack = false; localPlayback = false; return
+        }
+        let player = MPMusicPlayerController.systemMusicPlayer
+        localPlayback = player.playbackState == .playing
+        guard let item = player.nowPlayingItem else { controlsLocalTrack = false; return }
+        let title = (wall.state.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        controlsLocalTrack = !title.isEmpty && SleeveMatch.same(item.title ?? "", title)
+            && SleeveMatch.same(item.artist ?? "", wall.state.artist ?? "")
     }
 
-    // MARK: Light: a wide slab with a rail across it
+    // MARK: Light
 
-    private var value: Double { dragLight ?? wall.state.brightness }
+    private var value: Double {
+        let raw = dragLight ?? wall.state.brightness
+        return raw.isFinite ? min(1, max(0.05, raw)) : 1
+    }
+    private var canSetLight: Bool { !light.isOff && (wall.link.isLive || wall.link.isStandIn) }
 
     private var lightSlab: some View {
-        let f = (value - 0.05) / 0.95
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top, spacing: 14) {
-                PanelCanvas(px: light.reading.px, duty: value)
-                    .frame(width: 112, height: 112)
-                    .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
-                    .shadow(color: accent.opacity(0.4 * light.room), radius: 14)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("LIGHT").font(.machine(9)).kerning(1.2).foregroundStyle(ink.dim)
+        let heroLayout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 18))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 20))
+        return VStack(alignment: .leading, spacing: 18) {
+            heroLayout {
+                VStack(alignment: .leading, spacing: 8) {
+                    PanelCanvas(px: light.isOff ? nil : light.reading.px, duty: value)
+                        .frame(width: 106, height: 106)
+                        .overlay(Rectangle().strokeBorder(ink.ink.opacity(0.15), lineWidth: 0.5))
+                        .accessibilityLabel(light.isOff ? "Wall is asleep" : "Current wall frame")
+                    Text(wall.link.isLive ? "LIVE PIXELS" : wall.link.isStandIn ? "PHONE PREVIEW" : "LAST FRAME")
+                        .font(.machine(7)).kerning(0.6).foregroundStyle(ink.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(light.isOff ? "ASLEEP" : "BRIGHTNESS").font(.machine(9)).kerning(1).foregroundStyle(ink.dim)
+                        .lineLimit(1).minimumScaleFactor(0.8)
                     HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text("\(Int(value * 100))")
-                            .font(.display(56)).foregroundStyle(ink.ink)
+                        Text(light.isOff ? "—" : "\(Int((value * 100).rounded()))")
+                            .font(.display(typeSize.isAccessibilitySize ? 40 : 58)).foregroundStyle(ink.ink).monospacedDigit()
+                            .lineLimit(1).minimumScaleFactor(0.65)
                             .contentTransition(.numericText())
-                        Text("%").font(.ui(15, .medium)).foregroundStyle(ink.dim)
+                        if !light.isOff { Text("%").font(.ui(17)).foregroundStyle(ink.dim) }
                     }
-                    Text(wall.state.title.flatMap { $0.isEmpty ? nil : $0 } ?? (wall.state.mode == "off" ? "Asleep" : "Nothing playing"))
-                        .font(.ui(13)).foregroundStyle(ink.dim).lineLimit(2)
+                    Text(light.isOff ? "Your next moment of light." : faceName(wall.state.mode))
+                        .font(.ui(13)).foregroundStyle(ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer(minLength: 0)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(ink.fill).frame(height: 8)
-                    Capsule().fill(accent).frame(width: max(8, geo.size.width * CGFloat(f)), height: 8)
-                    Circle().fill(Color.white).frame(width: 26, height: 26)
-                        .overlay(Circle().strokeBorder(Color.black.opacity(0.14), lineWidth: 1))
-                        .offset(x: (geo.size.width - 26) * CGFloat(f))
-                        .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if light.isOff {
+                Button { wall.send(["mode": "art"]); Taps.commit() } label: {
+                    Label("Wake the wall", systemImage: "power")
+                        .font(.ui(14, .semibold)).foregroundStyle(onAccent)
+                        .frame(maxWidth: .infinity, minHeight: 46)
+                        .background(accent, in: RoundedRectangle(cornerRadius: 14))
+                }.buttonStyle(PressStyle(scale: 0.97))
+            } else {
+                WallValueSlider(value: Binding(get: { value }, set: { dragLight = $0 }),
+                                title: "Light level", accent: accent, ink: ink.ink, secondary: ink.dim,
+                                onEditingChanged: { editing in if !editing { finishLightEditing() } },
+                                onCancel: { dragLight = nil })
+                    .disabled(!canSetLight)
+                if !canSetLight {
+                    Text("Reconnect your wall to adjust its light.").font(.ui(12)).foregroundStyle(ink.dim)
                 }
-                .frame(height: 26)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 0)
-                        .onChanged { g in
-                            let t = Double((g.location.x - 13) / max(1, geo.size.width - 26))
-                            let v = min(1.0, max(0.05, 0.05 + 0.95 * min(1, max(0, t))))
-                            let stepped = (v / 0.01).rounded() * 0.01
-                            if stepped != dragLight {
-                                dragLight = stepped
-                                let d = Int(stepped * 20)
-                                if d != lastDetent { Taps.detent(intensity: 0.25 + 0.45 * stepped); lastDetent = d }
-                            }
-                        }
-                        .onEnded { _ in
-                            if let v = dragLight { wall.send(["brightness": v]); Taps.commit() }
-                            dragLight = nil
-                        }
-                )
             }
-            .frame(height: 26)
         }
-        .padding(20)
-        .background(Slab(radius: 30, ink: ink))
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Light")
-        .accessibilityValue("\(Int(value * 100)) percent")
+        .padding(20).background(Slab(radius: 28, ink: ink))
+    }
+
+    private func finishLightEditing() {
+        if let pending = dragLight, canSetLight {
+            wall.send(["brightness": min(1, max(0.05, pending))]); Taps.commit()
+        }
+        dragLight = nil
     }
 
     // MARK: Faces: capsules you flick through
@@ -374,50 +434,119 @@ struct ControlCenterPanel: View {
     /// The wall's faces: a grid of tiles, every one in view, the one that
     /// is on filled with the record's colour.
     private var faces: some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-            tile(.art, "Art", mode: "art")
-            tile(.spin, "Spin", mode: "cd")
-            tile(.lyrics, "Lyrics", mode: "lyrics")
-            tile(.nine, "Nine", mode: "nine")
-            tile(.palette, "Design", mode: "frame")
-            tile(.video, "Video", mode: "video") { videoFace = true }
-            tile(.lamp, "Lamp", mode: "ambient")
-            tile(.clock, "Clock", mode: "clock")
-            tile(.games, "Games", mode: "game") { showGames = true }
-            tile(.dark, "Off", mode: "off")
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Choose a face").font(.displayMid(23)).foregroundStyle(ink.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                if typeSize.isAccessibilitySize {
+                    Text("Current: \(faceName(wall.state.mode))")
+                        .font(.ui(11, .medium)).foregroundStyle(ink.dim)
+                }
+            }
+            faceGroup("MUSIC & CREATION") {
+                tile(.art, "Art", mode: "art")
+                tile(.spin, "Spin", mode: "cd")
+                tile(.lyrics, "Lyrics", mode: "lyrics")
+                tile(.nine, "Nine", mode: "nine")
+                tile(.palette, "Design", mode: "frame") { onClose(); onStudio() }
+                tile(.video, "Video", mode: "video") { videoFace = true }
+            }
+            faceGroup("IN YOUR ROOM") {
+                tile(.lamp, "Lamp", mode: "ambient")
+                tile(.clock, "Clock", mode: "clock")
+                tile(.art, "Weather", mode: "weather")
+                tile(.games, "Games", mode: "game") { showGames = true }
+                tile(.lyrics, "Ticker", mode: "ticker")
+                tile(.dark, "Off", mode: "off")
+            }
         }
-        .sheet(isPresented: $showGames) {
-            GamesSheet(accent: accent).environment(wall)
+    }
+
+    private func faceGroup<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 9) {
+            Text(title).font(.machine(8)).kerning(1.2).foregroundStyle(ink.dim)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 9), count: typeSize.isAccessibilitySize ? 2 : 3), spacing: 9) {
+                content()
+            }
         }
     }
 
     private func tile(_ g: Glyph, _ label: String, mode: String?, action: (() -> Void)? = nil) -> some View {
-        let on = mode == "video"
-            ? (videoFace || wall.state.mode == "video")
-            : (mode != nil && (wall.state.mode == mode || (mode == "clock" && wall.state.mode == "timer")))
+        let on = mode != nil && (wall.state.mode == mode || (mode == "clock" && wall.state.mode == "timer"))
+        let draft = mode == "video" && videoFace && !on
         return Button {
-            if mode != "video" { videoFace = false }
+            videoFace = mode == "video"
             if let action { action() }
             else if let mode { wall.send(["mode": mode == "off" && wall.state.mode == "off" ? "art" : mode]) }
+            Taps.detent(intensity: 0.4)
         } label: {
-            VStack(spacing: 8) {
-                GlyphShape(glyph: g, lineWidth: 1.5).frame(width: 22, height: 22)
-                    .foregroundStyle(on ? Ink.ground : ink.ink)
-                Text(label).font(.ui(14, .medium)).foregroundStyle(on ? Ink.ground : ink.ink)
-                    .lineLimit(1).minimumScaleFactor(0.8)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 92)
-            .background {
-                if on { RoundedRectangle(cornerRadius: Round.hero, style: .continuous).fill(accent) }
-                else {
-                    RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: Round.sheet, style: .continuous).strokeBorder(ink.ink.opacity(0.12), lineWidth: 1)
+            VStack(alignment: .leading, spacing: 11) {
+                HStack(alignment: .top) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 13).fill((on ? accent : ink.ink).opacity(on ? 0.16 : 0.045))
+                        if let sleeve, mode == "art" || mode == "cd" {
+                            Image(uiImage: sleeve).resizable().interpolation(.high)
+                                .frame(width: 38, height: 38)
+                                .clipShape(RoundedRectangle(cornerRadius: mode == "cd" ? 19 : 3))
+                                .overlay {
+                                    if mode == "cd" { Circle().fill(ink.ink).frame(width: 5, height: 5) }
+                                }
+                        } else if mode == "weather" {
+                            Image(systemName: "cloud.sun.fill").symbolRenderingMode(.hierarchical)
+                                .font(.system(size: 25)).foregroundStyle(on ? accent : ink.ink)
+                        } else {
+                            GlyphShape(glyph: g, lineWidth: 1.6).frame(width: 24, height: 24)
+                                .foregroundStyle(on ? accent : ink.ink)
+                        }
+                    }.frame(width: 49, height: 49)
+                    Spacer(minLength: 0)
+                    if on {
+                        Image(systemName: "checkmark.circle.fill").font(.system(size: 14))
+                            .foregroundStyle(accent).accessibilityHidden(true)
+                    } else if draft {
+                        Image(systemName: "pencil.circle").font(.system(size: 14)).foregroundStyle(ink.dim)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label).font(.ui(14, .semibold)).foregroundStyle(ink.ink)
+                        .lineLimit(1).minimumScaleFactor(0.8)
+                    Text(on ? (wall.link.isLive ? "On your wall" : "Selected") : draft ? "Choose a video" : faceDescription(mode))
+                        .font(.ui(9)).foregroundStyle(ink.dim)
+                        .lineLimit(typeSize.isAccessibilitySize ? 2 : 1).minimumScaleFactor(0.8)
                 }
             }
+            .padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .frame(minHeight: typeSize.isAccessibilitySize ? 144 : 116)
+            .background(Slab(radius: 20, ink: ink))
+            .overlay(RoundedRectangle(cornerRadius: 20).strokeBorder(on ? accent.opacity(0.85) : .clear, lineWidth: 1.5))
         }
-        .buttonStyle(PressStyle(scale: 0.94))
-        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
+        .buttonStyle(PressStyle(scale: 0.96))
+        .accessibilityLabel(label)
+        .accessibilityValue(on ? "Selected" : draft ? "Preparing a video" : faceDescription(mode))
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    private func faceName(_ mode: String) -> String {
+        ["art": "Album art", "cd": "Spin", "lyrics": "Lyrics", "nine": "Nine", "frame": "Design",
+         "video": "Video", "ambient": "Lamp", "clock": "Clock", "timer": "Timer", "weather": "Weather",
+         "game": "Games", "ticker": "Ticker", "off": "Off", "clip": "Clip", "imagine": "Imagine"][mode] ?? "Your wall"
+    }
+    private func faceDescription(_ mode: String?) -> String {
+        switch mode {
+        case "art": "The album sleeve"
+        case "cd": "A record in motion"
+        case "lyrics": "Follow the song"
+        case "nine": "Nine sleeves"
+        case "frame": "Open your studio"
+        case "video": "A moving picture"
+        case "ambient": "Colour & atmosphere"
+        case "clock": "Time & timers"
+        case "weather": "Your local sky"
+        case "game": "Something to play"
+        case "ticker": "Words in motion"
+        case "off": "Let the wall rest"
+        default: "Choose this face"
+        }
     }
 
     // MARK: What this face needs
@@ -439,7 +568,30 @@ struct ControlCenterPanel: View {
         case "ticker": wordsBoard
         case "off": sleepBoard
         case "frame", "clip": designBoard
-        default: finishBoard
+        case "weather":
+            board("Weather") {
+                Label(wall.state.place.isEmpty ? "Choose a place to follow its sky." : wall.state.place, systemImage: "location")
+                    .font(.ui(15)).foregroundStyle(ink.ink)
+                Button { showWeather = true } label: {
+                    Label("Forecast & place", systemImage: "arrow.up.right")
+                        .font(.ui(14, .semibold)).foregroundStyle(accent)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                }.buttonStyle(PressStyle())
+            }
+        case "game":
+            board("Games") {
+                Text("Return to your game, or choose something new.").font(.ui(14)).foregroundStyle(ink.dim)
+                Button { showGames = true } label: {
+                    Label("Open games", systemImage: "gamecontroller")
+                        .font(.ui(14, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
+                }.buttonStyle(PressStyle())
+            }
+        case "imagine":
+            board("Imagine") {
+                Text("Your generated artwork is on the wall.").font(.ui(14)).foregroundStyle(ink.dim)
+            }
+        case "art", "nine": finishBoard
+        default: EmptyView()
         }
     }
 
@@ -504,7 +656,7 @@ struct ControlCenterPanel: View {
         let on = value == current
         return Button { pick(value); Taps.detent(intensity: 0.4) } label: {
             Text(label).font(.ui(14, .medium))
-                .foregroundStyle(on ? Ink.ground : ink.ink)
+                .foregroundStyle(on ? onAccent : ink.ink)
                 .lineLimit(1).minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
@@ -542,7 +694,7 @@ struct ControlCenterPanel: View {
         board("Lamp") {
             let effects = [("plaid", "Plaid"), ("weave", "Weave"), ("deco", "Deco"), ("snake", "Snake"), ("solid", "Solid"),
                            ("breathe", "Breathe"), ("pulse", "Pulse"), ("rainbow", "Rainbow"), ("gradient", "Fade")]
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
                 ForEach(effects, id: \.0) { e in
                     choice(e.1, e.0, wall.state.effect, { wall.send(["effect": $0]) })
                 }
@@ -740,6 +892,14 @@ struct ControlCenterPanel: View {
 
     private var videoBoard: some View {
         VStack(spacing: gutter) {
+            if videoFace && wall.state.mode != "video" {
+                HStack {
+                    Label("Preparing a video", systemImage: "pencil.circle").font(.ui(12)).foregroundStyle(ink.dim)
+                    Spacer()
+                    Button("Cancel") { videoFace = false }.font(.ui(13, .semibold)).foregroundStyle(accent)
+                        .frame(minHeight: 44)
+                }
+            }
             board("Video") {
                 if let v = wall.state.video, v.live {
                     videoNow(v)
@@ -757,7 +917,8 @@ struct ControlCenterPanel: View {
         .onChange(of: videoPick) { _, item in
             guard let item else { return }
             videoPick = nil
-            Task { await sendChosenVideo(item) }
+            videoTask?.cancel()
+            videoTask = Task { await sendChosenVideo(item) }
         }
         .task { await takeHandedOverVideo() }
     }
@@ -898,16 +1059,19 @@ struct ControlCenterPanel: View {
 
     private func playVideoLink() {
         let url = videoTyped
-        guard !url.isEmpty, !wall.link.isStandIn else {
-            videoProblem = wall.link.isStandIn ? "The wall is not answering." : nil
+        guard videoWork == nil, !url.isEmpty, wall.link.isLive else {
+            if !wall.link.isLive { videoProblem = "Connect your wall before sending a video." }
             return
         }
         videoProblem = nil
         VideoSound.shared.stop()
         let h = wall.host, sound = videoSound
-        Task {
+        videoTask?.cancel()
+        let request = UUID(); videoRequest = request
+        videoTask = Task {
             videoWork = ("Handing it to the wall", 0.15)
             let why = await WallVideoLink.start(host: h, url: url, sound: sound)
+            guard !Task.isCancelled, videoRequest == request, wall.host == h else { return }
             videoWork = nil
             videoProblem = why
             if why == nil { videoLink = ""; Taps.landed() } else { Taps.error() }
@@ -917,32 +1081,46 @@ struct ControlCenterPanel: View {
     /// A video out of the library: the picture is made small here, sent up,
     /// and its sound stays on this phone.
     private func sendChosenVideo(_ item: PhotosPickerItem) async {
-        guard !wall.link.isStandIn else {
-            videoProblem = "The wall is not answering."
+        guard wall.link.isLive else {
+            videoProblem = "Connect your wall before sending a video."
             return
         }
         videoProblem = nil
         videoWork = ("Reading the video", 0)
         guard let movie = try? await item.loadTransferable(type: Movie.self) else {
+            guard !Task.isCancelled else { return }
             videoWork = nil
             videoProblem = "That video could not be read."
             Taps.error()
             return
         }
+        guard !Task.isCancelled else { return }
         await sendVideoFile(movie.url, title: "From your library")
     }
 
     private func sendVideoFile(_ file: URL, title: String) async {
+        guard !Task.isCancelled, wall.link.isLive, !VideoHandoff.inProgress else {
+            videoWork = nil
+            videoProblem = VideoHandoff.inProgress ? "Another video is already being sent." : "Connect your wall before sending a video."
+            return
+        }
+        let request = UUID(); videoRequest = request
+        let host = wall.host
         VideoSound.shared.stop()
         VideoHandoff.inProgress = true
         defer { VideoHandoff.inProgress = false }
         do {
-            _ = try await VideoHandoff.send(file: file, title: title, host: wall.host) { words, fraction in
-                Task { @MainActor in videoWork = (words, fraction) }
+            _ = try await VideoHandoff.send(file: file, title: title, host: host) { words, fraction in
+                Task { @MainActor in
+                    guard videoRequest == request, wall.host == host else { return }
+                    videoWork = (words, fraction)
+                }
             }
+            guard !Task.isCancelled, videoRequest == request, wall.host == host else { return }
             videoWork = nil
             Taps.landed()
         } catch {
+            guard !Task.isCancelled, videoRequest == request else { return }
             videoWork = nil
             videoProblem = error.localizedDescription
             Taps.error()
@@ -959,7 +1137,12 @@ struct ControlCenterPanel: View {
     private var designBoard: some View {
         VStack(spacing: gutter) {
             board("Design") {
-                StudioScreen(roomPalette: light.palette, accent: accent, inline: true)
+                Text(wall.state.mode == "clip" ? "A creation in motion." : "Your canvas, in light.")
+                    .font(.ui(15)).foregroundStyle(ink.ink)
+                Button { onClose(); onStudio() } label: {
+                    Label("Open Studio", systemImage: "paintbrush.pointed")
+                        .font(.ui(14, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
+                }.buttonStyle(PressStyle())
             }
             board("Finish") { finishes }
         }
@@ -985,9 +1168,14 @@ struct ControlCenterPanel: View {
                         set: { if !album { wall.send(["color": $0.wallHex]) } }),
                 Binding(get: { Color.wall(hex: shown[1]) },
                         set: { if !album { wall.send(["color2": $0.wallHex]) } }),
-            ], height: 44, stroke: ink.ink.opacity(0.14), enabled: !album)
+            ], height: 64, stroke: ink.ink.opacity(0.14), enabled: !album,
+                       names: ["Primary", "Secondary"])
             Toggle(isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) })) {
-                Text("Album's").font(.ui(14)).foregroundStyle(ink.ink)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Match album colours").font(.ui(14, .medium)).foregroundStyle(ink.ink)
+                    Text(album ? "Colours follow the current sleeve." : "Choose a colour above.")
+                        .font(.ui(11)).foregroundStyle(ink.dim)
+                }
             }
             .tint(accent)
         }
@@ -1003,37 +1191,24 @@ struct ControlCenterPanel: View {
     /// The same rail as the light's, for anything with a range.
     private func slider(key: String, value: Double, from lo: Double, to hi: Double,
                         step: Double, commit: @escaping (Double) -> Void) -> some View {
-        let f = (value - lo) / (hi - lo)
-        return GeometryReader { geo in
-            ZStack(alignment: .leading) {
-                Capsule().fill(ink.fill).frame(height: 8)
-                Capsule().fill(accent).frame(width: max(8, geo.size.width * CGFloat(f)), height: 8)
-                Circle().fill(Color.white).frame(width: 26, height: 26)
-                    .overlay(Circle().strokeBorder(Color.black.opacity(0.14), lineWidth: 1))
-                    .offset(x: (geo.size.width - 26) * CGFloat(min(1, max(0, f))))
-                    .shadow(color: .black.opacity(0.25), radius: 4, y: 2)
-            }
-            .frame(height: 26)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { g in
-                        let t = Double((g.location.x - 13) / max(1, geo.size.width - 26))
-                        let v = lo + (hi - lo) * min(1, max(0, t))
-                        let stepped = (v / step).rounded() * step
-                        if railDrag?.1 != stepped {
-                            railDrag = (key, stepped)
-                            let d = Int((stepped - lo) / (hi - lo) * 20)
-                            if d != lastDetent { Taps.detent(intensity: 0.3); lastDetent = d }
-                        }
-                    }
-                    .onEnded { _ in
-                        if let v = rail(key: key) { commit(v); Taps.commit() }
-                        railDrag = nil
-                    }
-            )
-        }
-        .frame(height: 26)
+        let label = ["rpm": "Record speed", "timer_min": "Duration", "lyric_offset": "Timing offset", "video": "Position"][key] ?? "Value"
+        return WallValueSlider(value: Binding(get: { rail(key: key) ?? value },
+                                             set: { railDrag = (key, $0) }),
+                               in: lo...max(lo, hi), step: step, title: label, accent: accent,
+                               ink: ink.ink, secondary: ink.dim,
+                               format: { number in
+                                   switch key {
+                                   case "rpm": String(format: "%.1f rpm", number)
+                                   case "timer_min": timerLabel(number)
+                                   case "lyric_offset": String(format: "%+.2f s", number)
+                                   case "video": PlaybackIdentity.clock(number)
+                                   default: String(format: "%.1f", number)
+                                   }
+                               }, onEditingChanged: { editing in
+                                   if !editing, let pending = rail(key: key) {
+                                       commit(pending); railDrag = nil; Taps.commit()
+                                   }
+                               }, onCancel: { railDrag = nil })
     }
 
     private var sleepBoard: some View {

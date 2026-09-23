@@ -1,6 +1,6 @@
 // The app is one room with two things in it: the wall, and what the wall has
-// worn. You move between them by swiping, not by pressing a tab bar, and the
-// only navigation chrome is two tesserae, one of them lit.
+// worn. Both pages remain available through the labeled navigation dock or a
+// horizontal swipe, while panel gestures keep ownership of their touches.
 //
 // The room is computed here rather than inside a screen, because the light is
 // a property of the app, not of a page. Both screens sit in it.
@@ -50,12 +50,11 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
-    @State private var showSetup = false
-    @State private var showStudio = false
+    @State private var router = HomeRouter()
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
     @AppStorage("intro.replay") private var replay = false
-    @State private var showOnboarding = false
     /// The room's colours, held steady. Reading them straight from the frame
     /// meant rainbow and the pattern modes strobed the whole interface: the
     /// swatches, the glyph rings and the background all chased the hue. The
@@ -104,6 +103,7 @@ struct RootView: View {
 
     var body: some View {
         let light = lighting
+        @Bindable var routes = router
 
         ZStack(alignment: .bottom) {
             Room(
@@ -122,9 +122,9 @@ struct RootView: View {
                         light: light,
                         dragLight: $dragLight,
                         onPanel: $onPanel,
-                        onSetup: { showSetup = true },
-                        onStudio: { showStudio = true },
-                        onArchive: { withAnimation(Motion.scene) { page = 1 } }
+                        onSetup: { router.present(.settings) },
+                        onStudio: { router.present(.studio) },
+                        onArchive: { selectPage(1) }
                     )
                     .containerRelativeFrame(.horizontal)
                     .id(0)
@@ -142,16 +142,14 @@ struct RootView: View {
             // after the sting in the room, the room's picture glitches in; the
             // pages themselves are never wrapped in the effect (see GlitchIn)
             .environment(\.glitchIn, glitch)
-            // the page marks own the strip at the foot: a page's controls
-            // end above them instead of running underneath (the room, which
-            // ignores the safe area, keeps its own clearance)
-            .safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: 22) }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if sting == .done, page == 1 || !marksHidden {
+                    HomeNavigation(page: page ?? 0, accent: light.steadyAccent,
+                                   select: selectPage)
+                        .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 4)
+                }
+            }
             .onPreferenceChange(PageMarksHidden.self) { marksHidden = $0 }
-
-            PageTesserae(page: page ?? 0, accent: light.roomBright ? Ink.ground : light.steadyAccent, lit: light.room)
-                .padding(.bottom, 8)
-                .opacity(marksHidden || sting != .done ? 0 : 1)
-                .animation(.easeInOut(duration: 0.2), value: marksHidden)
 
             if sting != .done {
                 StingOpening(style: introStyle, light: light, surge: arrival, phase: $sting)
@@ -169,31 +167,40 @@ struct RootView: View {
             default: break
             }
         }
-        .sheet(isPresented: $showSetup) {
+        .sheet(item: $routes.sheet, onDismiss: router.didDismiss) { _ in
             SettingsSheet(accent: light.steadyAccent).environment(wall)
+                .onAppear { router.didPresent(.settings) }
         }
         // The studio is a place you go into and come back from, not a third
         // page: drawing needs the whole surface, and a horizontal stroke must
         // not turn into a page swipe.
-        .fullScreenCover(isPresented: $showOnboarding) {
-            OnboardingFlow().environment(wall)
+        .fullScreenCover(item: $routes.cover, onDismiss: router.didDismiss) { destination in
+            switch destination {
+            case .onboarding:
+                OnboardingFlow().environment(wall)
+                    .onAppear { router.didPresent(.onboarding) }
+            case .studio:
+                StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
+                    .environment(wall)
+                    .onAppear { router.didPresent(.studio) }
+            }
         }
         .onChange(of: onboardingAgain) { _, again in
             // asked for from inside Settings: the sheet has to go first, or
             // the cover waits behind it until the sheet is closed by hand
             guard again else { return }
             onboardingAgain = false
-            showSetup = false
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { showOnboarding = true }
+            router.present(.onboarding)
         }
         .onChange(of: sting) { _, phase in
             guard case .glitch = phase else { return }
+            guard !reducedMotion, scenePhase == .active else { glitch = 1; return }
             glitch = 0
             DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.9)) { glitch = 1 } }
         }
         .onChange(of: replay) { _, on in
             // the opening plays on the wall screen, so Settings steps aside
-            if on { showSetup = false }
+            if on { router.dismiss() }
             // the sting is the root's to replay; the screens' own openings
             // put the switch back themselves
             guard on, StingFilm.plays(introStyle) else { return }
@@ -201,17 +208,16 @@ struct RootView: View {
             stingKey += 1
             sting = .film
         }
-        .fullScreenCover(isPresented: $showStudio) {
-            StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
-                .environment(wall)
-        }
         .onAppear {
             wall.start()
-            if !onboarded && !CommandLine.arguments.contains("-nointro") { showOnboarding = true }
+            if reducedMotion { sting = .done; glitch = 1 }
+            if !onboarded && !CommandLine.arguments.contains("-nointro") { router.present(.onboarding) }
             #if DEBUG
             // `-settings` on the launch line opens Setup straight away, so a
             // simulator run can be looked at without a tap nobody can make.
-            if CommandLine.arguments.contains("-settings") { showSetup = true }
+            if CommandLine.arguments.contains("-settings") { router.present(.settings) }
+            if CommandLine.arguments.contains("-archive") { page = 1 }
+            if CommandLine.arguments.contains("-studio") { router.present(.studio) }
             #endif
         }
         // The lock screen's three keys land here. Only modes: anything that
@@ -228,7 +234,7 @@ struct RootView: View {
                         file: URL(fileURLWithPath: path),
                         title: p.title, host: host) { _, _ in }
                 }
-                showSetup = false
+                router.dismiss()
                 page = 0
                 return
             }
@@ -243,7 +249,7 @@ struct RootView: View {
         .onChange(of: lighting.reading.key) { _, _ in
             guard Date().timeIntervalSince(paletteAt) > 1.2 else { return }
             paletteAt = Date()
-            withAnimation(.easeInOut(duration: 1.0)) {
+            withAnimation(reducedMotion ? nil : .easeInOut(duration: 1.0)) {
                 stablePalette = Room.palette(lighting.reading.px) ?? lighting.reading.palette
             }
         }
@@ -263,10 +269,20 @@ struct RootView: View {
                 return
             }
             lastTitle = new
+            guard !reducedMotion, scenePhase == .active else { arrival = 0; return }
             Taps.landed()
             withAnimation(.easeOut(duration: 0.25)) { arrival = 0.30 }
             withAnimation(.easeInOut(duration: 0.9).delay(0.25)) { arrival = 0 }
         }
+        .onChange(of: reducedMotion) { _, reduced in
+            if reduced { sting = .done; glitch = 1; arrival = 0 }
+        }
+    }
+
+    private func selectPage(_ destination: Int) {
+        guard !onPanel, page != destination else { return }
+        withAnimation(reducedMotion ? nil : Motion.scene) { page = destination }
+        Taps.detent(intensity: 0.35)
     }
 }
 
@@ -277,22 +293,58 @@ struct PageMarksHidden: PreferenceKey {
     static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
 
-/// The page indicator is the mark: two tiles, the one you are on is lit.
-private struct PageTesserae: View {
+/// Labeled, reachable destinations retain the two-page room gesture.
+private struct HomeNavigation: View {
     let page: Int
     let accent: Color
-    let lit: Double
+    var select: (Int) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: 7) {
+        HStack(spacing: 4) {
             ForEach(0..<2, id: \.self) { i in
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(i == page ? accent : Ink.faint.opacity(0.5))
-                    .frame(width: 7, height: 7)
-                    .shadow(color: i == page ? accent.opacity(0.6 * lit) : .clear, radius: 5)
+                Button { select(i) } label: {
+                    Group {
+                        if typeSize.isAccessibilitySize {
+                            VStack(spacing: 4) { symbol(i); title(i) }
+                        } else {
+                            HStack(spacing: 9) { symbol(i); title(i) }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 44)
+                    .padding(.vertical, typeSize.isAccessibilitySize ? 8 : 0)
+                    .background(i == page ? Ink.ink.opacity(0.09) : .clear,
+                                in: RoundedRectangle(cornerRadius: 20))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle(scale: 0.96))
+                .accessibilityLabel(i == 0 ? "Wall" : "Archive")
+                .accessibilityAddTraits(i == page ? [.isSelected] : [])
+                .accessibilityIdentifier(i == 0 ? "navigation.wall" : "navigation.archive")
             }
         }
-        .animation(Motion.settle, value: page)
-        .accessibilityHidden(true)
+        .padding(5)
+        .frame(maxWidth: typeSize.isAccessibilitySize ? 480 : 300)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 26))
+        .overlay(RoundedRectangle(cornerRadius: 26).strokeBorder(Ink.ink.opacity(0.14), lineWidth: 1))
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 4)
+        .frame(maxWidth: .infinity)
+        .environment(\.colorScheme, .dark)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Navigation")
+    }
+
+    private func symbol(_ index: Int) -> some View {
+        Image(systemName: index == 0 ? "square.grid.3x3.fill" : "square.stack.3d.up.fill")
+            .font(.system(size: 15, weight: .medium))
+            .foregroundStyle(index == page ? accent.toned(forDark: true) : Ink.dim)
+            .accessibilityHidden(true)
+    }
+
+    private func title(_ index: Int) -> some View {
+        Text(index == 0 ? "Wall" : "Archive")
+            .font(.ui(13, index == page ? .semibold : .medium))
+            .foregroundStyle(index == page ? Ink.ink : Ink.dim)
+            .lineLimit(1).minimumScaleFactor(0.8)
     }
 }

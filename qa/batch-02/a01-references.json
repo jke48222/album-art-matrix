@@ -1,0 +1,21 @@
+{
+  "unit": "A01",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/f9373c0f-243a-4b01-bf6e-0250fe2cfb93",
+      "applied": "Separate persistent destination controls from the room content; keep their labels and selected state readable."
+    },
+    {
+      "url": "https://mobbin.com/screens/707f87e1-a84e-46a8-92e9-d605e2e7a863",
+      "applied": "Give presented destinations a clear boundary and preserve the listening context behind them."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/tab-bars",
+      "applied": "Keep destinations stable and identifiable with labels, symbols, and accessible selection."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/sheets",
+      "applied": "Serialize presentation changes through dismissal completion, preserving one modal destination at a time."
+    }
+  ]
+}

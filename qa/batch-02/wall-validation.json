@@ -1,0 +1,16 @@
+{
+  "services": "both active",
+  "wall_code_changed": false,
+  "original_brightness": 1.0,
+  "target_brightness": 0.99,
+  "original_mode": "art",
+  "write_status": 200,
+  "brightness_acknowledged": true,
+  "restore_status": 200,
+  "restored_brightness": 1.0,
+  "original_brightness_restored": true,
+  "loop_age_s": 0.4,
+  "frame_bytes": 12288,
+  "frame_sha256": "d9eea2b16bbe91501b5fb84274f76089783881fd0f7fa18a75f6e503e32a203d",
+  "captured_at": "2026-09-23T06:36:38Z"
+}

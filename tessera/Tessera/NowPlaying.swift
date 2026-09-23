@@ -116,13 +116,22 @@ final class NowPlayingPush {
             "artist": item.artist ?? "",
             "album": item.albumTitle ?? "",
             "playing": playing,
-            "progress_ms": Int(music.currentPlaybackTime * 1000),
         ]
+        // The system player can briefly return an unknown position while its
+        // queue changes. Do not convert NaN/infinity to Int or send a made-up
+        // zero that would look like a seek on the wall.
+        let position = music.currentPlaybackTime
+        if position.isFinite, position >= 0, position < Double(Int.max / 1000) {
+            body["progress_ms"] = Int(position * 1000)
+        }
         // The catalog id is what lets the reporter find real artwork rather
         // than guessing from the title.
         let cid = item.playbackStoreID
         if !cid.isEmpty { body["id"] = cid }
-        if item.playbackDuration > 0 { body["duration_ms"] = Int(item.playbackDuration * 1000) }
+        let duration = item.playbackDuration
+        if duration.isFinite, duration > 0, duration < Double(Int.max / 1000) {
+            body["duration_ms"] = Int(duration * 1000)
+        }
 
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
         let title = item.title

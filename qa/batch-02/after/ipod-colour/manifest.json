@@ -1,0 +1,41 @@
+{
+  "captured_at": "2026-09-23T06:45:46.755839+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "ipod-live",
+      "image": "ipod-live.png",
+      "frame": "ipod-live-frame.png",
+      "mode": "art",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-ipod-colour"
+      ],
+      "captured_at": "2026-09-23T06:45:46.508824+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

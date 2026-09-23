@@ -56,6 +56,8 @@ struct IntroFilms {
 }
 
 struct RoomIntro: View {
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
     let light: Lighting
     let duty: Double
     /// Where the room's picture sits on the screen; the film sits there too.
@@ -74,6 +76,8 @@ struct RoomIntro: View {
     @State private var badgePlayer: AVPlayer? = nil
     @State private var ended = false
     @State private var endObserver: NSObjectProtocol? = nil
+    @State private var startTask: Task<Void, Never>?
+    @State private var finishTask: Task<Void, Never>?
 
     var body: some View {
         GeometryReader { geo in
@@ -82,7 +86,7 @@ struct RoomIntro: View {
                 if let track = IntroTrack.load(films.track), let player, !track.frames.isEmpty {
                     // a timeline proposes no size to what it holds: each layer
                     // is given the screen outright
-                    TimelineView(.animation(paused: ended)) { tl in
+                    TimelineView(.animation(minimumInterval: 1 / 30, paused: ended || reducedMotion || scenePhase != .active)) { tl in
                         let t = player.currentTime().seconds
                         let i = max(0, min(track.frames.count - 1, Int((t.isFinite ? t : 0) * track.fps)))
                         let f = track.frames[i]
@@ -113,7 +117,7 @@ struct RoomIntro: View {
                                 // cells that refine to its emitters
                                 let qx = quad.map(\.x), qy = quad.map(\.y)
                                 let cellPx = CGFloat(f.cells ?? 0) * ((qx.max() ?? 0) - (qx.min() ?? 0))
-                                WarpedPanel(px: light.reading.px, duty: duty, quad: quad)
+                                WarpedPanel(px: light.isOff ? nil : light.reading.px, duty: duty, quad: quad)
                                     .frame(width: geo.size.width, height: geo.size.height)
                                     .layerEffect(ShaderLibrary.pixelate(.float(Float(cellPx)), .float2(Float(qx.min() ?? 0), Float(qy.min() ?? 0))),
                                                  maxSampleOffset: CGSize(width: max(1, cellPx), height: max(1, cellPx)), isEnabled: cellPx > 1)
@@ -138,7 +142,10 @@ struct RoomIntro: View {
         }
         .ignoresSafeArea()
         .onAppear(perform: load)
+        .onChange(of: reducedMotion) { _, reduced in if reduced { finish() } }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { finish() } }
         .onDisappear {
+            startTask?.cancel(); finishTask?.cancel()
             // all three reels, not only the first: a replay or an early
             // finish otherwise leaves two of them decoding off screen
             for p in [player, lightPlayer, badgePlayer].compactMap({ $0 }) { p.pause() }
@@ -149,6 +156,7 @@ struct RoomIntro: View {
     }
 
     private func load() {
+        guard !reducedMotion, scenePhase == .active else { finish(); return }
         guard player == nil, let url = Bundle.main.url(forResource: films.main, withExtension: "mov") else {
             DispatchQueue.main.async { onDone() }; return
         }
@@ -157,8 +165,7 @@ struct RoomIntro: View {
         p.isMuted = true
         p.actionAtItemEnd = .pause
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { _ in
-            ended = true
-            onDone()
+            finish()
         }
         player = p
         if let lu = Bundle.main.url(forResource: films.light, withExtension: "mov") {
@@ -168,7 +175,21 @@ struct RoomIntro: View {
             let bp = AVPlayer(url: bu); bp.isMuted = true; bp.actionAtItemEnd = .pause; badgePlayer = bp
         }
         // the three films start on the same tick
-        startFilmsTogether([p, lightPlayer, badgePlayer].compactMap { $0 })
+        startTask = startFilmsTogether([p, lightPlayer, badgePlayer].compactMap { $0 })
+        let track = IntroTrack.load(films.track)
+        let duration = track.flatMap { $0.fps > 0 ? Double($0.frames.count) / $0.fps : nil } ?? 12
+        finishTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(duration + 4)) } catch { return }
+            finish()
+        }
+    }
+
+    private func finish() {
+        guard !ended else { return }
+        ended = true
+        startTask?.cancel(); finishTask?.cancel()
+        for p in [player, lightPlayer, badgePlayer].compactMap({ $0 }) { p.pause() }
+        onDone()
     }
 }
 
@@ -178,15 +199,17 @@ struct RoomIntro: View {
 /// at once; so wait, briefly, and fall back to a plain start for any film
 /// that never gets there.
 @MainActor
-func startFilmsTogether(_ players: [AVPlayer]) {
+@discardableResult
+func startFilmsTogether(_ players: [AVPlayer]) -> Task<Void, Never> {
     // a synchronised start is refused while a player may wait to avoid
     // stalling; these are files in the bundle, so it need not
     for pl in players { pl.automaticallyWaitsToMinimizeStalling = false }
-    Task { @MainActor in
+    return Task { @MainActor in
         let deadline = Date().addingTimeInterval(3)
         while Date() < deadline, players.contains(where: { $0.currentItem?.status == .unknown }) {
-            try? await Task.sleep(for: .milliseconds(16))
+            do { try await Task.sleep(for: .milliseconds(16)) } catch { return }
         }
+        guard !Task.isCancelled else { return }
         let at = CMClockGetTime(CMClockGetHostTimeClock()) + CMTime(value: 1, timescale: 20)
         for pl in players {
             if pl.currentItem?.status == .readyToPlay { pl.setRate(1, time: .zero, atHostTime: at) }
@@ -222,17 +245,17 @@ struct WarpedPanel: View {
 
     var body: some View {
         Canvas(rendersAsynchronously: false) { ctx, size in
-            guard let px, let n = Panel.square(px.count),
-                  let h = Homography.unitSquare(to: quad) else { return }
-            let fn = Double(n)
-            let d = max(0.05, min(1.0, duty))
-            let warm = 0.18 * (1 - d)
-            let gK = 1 - warm * 0.34, bK = 1 - warm
+            guard let h = Homography.unitSquare(to: quad) else { return }
             // the hole is black glass behind the emitters
             var glass = Path(); glass.move(to: quad[0])
             for k in 1..<4 { glass.addLine(to: quad[k]) }
             glass.closeSubpath()
             ctx.fill(glass, with: .color(.black))
+            guard let px, let n = Panel.square(px.count) else { return }
+            let fn = Double(n)
+            let d = max(0.05, min(1.0, duty))
+            let warm = 0.18 * (1 - d)
+            let gK = 1 - warm * 0.34, bK = 1 - warm
             let unlit = Color(white: 0.06)
             // A wall seen in perspective across a phone screen is a few
             // hundred points wide, so past a point there is nothing to gain

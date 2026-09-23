@@ -1,0 +1,37 @@
+{
+  "unit": "A03",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/18683173-9b09-413c-8933-0f5e8108b189",
+      "applied": "Preserve the physical record and wall as the focal point, place readable song information and separate controls below the scene."
+    },
+    {
+      "url": "https://mobbin.com/screens/bd85da21-3f45-4c88-bcc0-1eaeacb174a6",
+      "applied": "Give room controls a compact instrument-like surface and group playback identity without covering the record."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+      "applied": "Reduce Motion skips camera travel and settles directly into the matching overhead still."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/uikit/preparing-your-ui-to-run-in-the-background",
+      "applied": "Cancel startup and transition tasks, pause all film players and clear active brightness gestures outside the active scene."
+    }
+  ],
+  "preview_arguments": {
+    "room": ["-nointro"],
+    "wall_close": ["-nointro", "-zoomed"],
+    "record_close": ["-nointro", "-recordzoom"],
+    "controls": ["-nointro", "-controls"]
+  },
+  "checks": [
+    "Room frame continues to use the live RGB panel frame.",
+    "Room metadata explicitly distinguishes live, preview, searching and offline states.",
+    "Playback controls appear only when this phone holds the displayed track.",
+    "The listening dock scrolls for large text and long track names.",
+    "Cancelled brightness touches cannot leave the pager locked.",
+    "Horizontal travel over a zoomed wall does not accidentally exit it.",
+    "VoiceOver exposes brightness adjustment and Escape returns to the room.",
+    "Delayed camera startup and rewind tasks are cancelled when the room disappears."
+  ]
+}

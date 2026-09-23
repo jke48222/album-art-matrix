@@ -75,13 +75,22 @@ struct WallState: Equatable {
     var songOf: Double? = nil          // seconds long
     var songPlaying: Bool = false
     var songStamped: Date? = nil
+    /// The source observation's UNIX timestamp, distinct from an HTTP receipt.
+    /// Kept for sample identity and for translating a wall with a skewed clock.
+    var songSampleStamp: Double? = nil
 
     /// The position now, extrapolated. Nil when nothing has said one.
     var songNow: Double? {
-        guard let at = songAt, let stamped = songStamped else { return nil }
-        guard songPlaying else { return at }
-        let run = at + Date().timeIntervalSince(stamped)
-        return min(run, songOf ?? run)
+        songPosition(at: Date())
+    }
+
+    func songPosition(at date: Date) -> Double? {
+        guard let at = songAt, at.isFinite, at >= 0, let stamped = songStamped else { return nil }
+        let elapsed = songPlaying ? max(0, date.timeIntervalSince(stamped)) : 0
+        let position = at + elapsed
+        guard position.isFinite else { return nil }
+        if let duration = songOf, duration.isFinite, duration > 0 { return min(position, duration) }
+        return position
     }
 
     /// 0 to 1 through the track, when both ends are known.
@@ -92,7 +101,7 @@ struct WallState: Equatable {
 
     init() {}
 
-    init(json: [String: Any]) {
+    init(json: [String: Any], receivedAt: Date = Date()) {
         mode = json["mode"] as? String ?? "art"
         brightness = json["brightness"] as? Double ?? 1.0
         rpm = json["rpm"] as? Double ?? 7.5
@@ -134,13 +143,21 @@ struct WallState: Equatable {
             album = now["album"] as? String
         }
         owned = (json["owned"] as? [String: Any]).map(WallOwned.init(json:))
-        if let p = json["progress"] as? [String: Any], let at = p["at"] as? Double {
+        if let p = json["progress"] as? [String: Any], let at = p["at"] as? Double,
+           at.isFinite, at >= 0 {
             songAt = at / 1000
-            songOf = (p["of"] as? Double).map { $0 / 1000 }
+            if let duration = p["of"] as? Double, duration.isFinite, duration > 0 {
+                songOf = duration / 1000
+            }
             songPlaying = p["playing"] as? Bool ?? false
-            // The wall stamps in its own clock; what matters is elapsed since
-            // it spoke, and this is the moment it reached us.
-            songStamped = Date()
+            if let stamp = p["stamped"] as? Double, stamp.isFinite, stamp > 0, stamp < 1e12 {
+                songSampleStamp = stamp
+                songStamped = Date(timeIntervalSince1970: stamp)
+            } else {
+                // An older brain may not stamp its samples. PlaybackClock
+                // keeps an identical sample anchored to its first receipt.
+                songStamped = receivedAt
+            }
         }
         artColors = json["art_colors"] as? [String] ?? []
         sleepRemaining = json["sleep_remaining_s"] as? Int
@@ -215,6 +232,68 @@ enum LinkState: Equatable {
     var isStandIn: Bool { if case .standIn = self { true } else { false } }
 }
 
+/// Translate observations once, not every time the same observation is polled.
+/// A source timestamp identifies the actual sample: new samples (including a
+/// one-second seek) remain authoritative. There is deliberately no ratchet or
+/// animation smoothing that could conceal a real seek.
+struct PlaybackClock {
+    private var source = ""
+    private var offset: TimeInterval?
+    private var previous: WallState?
+
+    mutating func receive(_ candidate: WallState, from host: String,
+                          at receivedAt: Date, serverDate: Date? = nil) -> WallState {
+        if source != host {
+            source = host
+            offset = nil
+            previous = nil
+        }
+        var result = candidate
+        guard candidate.songAt != nil, candidate.songStamped != nil else {
+            previous = nil
+            return result
+        }
+        if let stamp = candidate.songSampleStamp {
+            if offset == nil {
+                // HTTP Date is second-precision. Synchronized devices use the
+                // precise sample timestamp unchanged. A badly skewed wall is
+                // calibrated once; recalibrating each response adds jitter.
+                let wallNow = serverDate?.timeIntervalSince1970 ?? stamp
+                let difference = receivedAt.timeIntervalSince1970 - wallNow
+                let tolerance: TimeInterval = serverDate == nil ? 300 : 5
+                offset = abs(difference) > tolerance ? difference : 0
+            }
+            result.songStamped = Date(timeIntervalSince1970: stamp + (offset ?? 0))
+        } else if let previous,
+                  previous.songSampleStamp == nil,
+                  Self.trackKey(previous) == Self.trackKey(candidate),
+                  previous.songAt == candidate.songAt,
+                  previous.songOf == candidate.songOf,
+                  previous.songPlaying == candidate.songPlaying {
+            // Timestamp-free legacy payload: repeated bytes are the same
+            // observation. A changed position or play state starts a new one.
+            result.songStamped = previous.songStamped
+        }
+        previous = result
+        return result
+    }
+
+    private static func trackKey(_ state: WallState) -> [String] {
+        [state.title, state.artist, state.album].map {
+            ($0 ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+    }
+
+    static func serverDate(_ response: URLResponse) -> Date? {
+        guard let header = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Date") else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+        return formatter.date(from: header)
+    }
+}
+
 // MARK: - Session
 
 @MainActor
@@ -276,6 +355,9 @@ final class WallSession {
     @ObservationIgnored private var lastSendSig = ""
     @ObservationIgnored private var lastSendAt = Date.distantPast
     @ObservationIgnored private var wasLive = false
+    @ObservationIgnored private var playbackClock = PlaybackClock()
+    @ObservationIgnored private var stateRequest = 0
+    @ObservationIgnored private var appliedStateRequest = 0
     /// Keys written locally and not yet echoed back. A /state poll must not
     /// clobber them: the brain persists asynchronously, so between the tap and
     /// the next poll the wall can still be reporting the old value, and the
@@ -304,6 +386,7 @@ final class WallSession {
     }
     @ObservationIgnored private let http: URLSession = {
         let cfg = URLSessionConfiguration.ephemeral
+        cfg.requestCachePolicy = .reloadIgnoringLocalCacheData
         cfg.timeoutIntervalForRequest = 3
         cfg.timeoutIntervalForResource = 5
         return URLSession(configuration: cfg)
@@ -414,13 +497,24 @@ final class WallSession {
 
     func pollState() async {
         guard let stateURL = url("/state") else { return }
+        let requestedHost = host
+        stateRequest &+= 1
+        let request = stateRequest
         do {
-            let (data, _) = try await http.data(from: stateURL)
+            let (data, response) = try await http.data(from: stateURL)
+            guard requestedHost == host, request >= appliedStateRequest else { return }
+            guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
+            let receivedAt = Date()
             guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
                 throw URLError(.cannotParseResponse)
             }
             let reconnected = !wasLive
-            var fresh = WallState(json: json)
+            var fresh = playbackClock.receive(WallState(json: json, receivedAt: receivedAt),
+                                              from: requestedHost, at: receivedAt,
+                                              serverDate: PlaybackClock.serverDate(response))
+            appliedStateRequest = request
 
             // Anything still in flight keeps the value the finger chose, and
             // stops being held the moment the wall agrees.
@@ -473,6 +567,7 @@ final class WallSession {
             syncWidget()
             live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: host)
         } catch {
+            guard requestedHost == host, request >= appliedStateRequest else { return }
             misses += 1
             // Three misses is about six seconds of asking. After that, stop
             // showing an empty room and run a wall instead. Anything the app

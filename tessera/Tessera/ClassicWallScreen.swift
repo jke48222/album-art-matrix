@@ -39,7 +39,7 @@ struct ClassicWallScreen: View {
             VStack(alignment: .leading, spacing: 0) {
                 header.padding(.horizontal, 24).padding(.bottom, 12)
                 panelCaption.padding(.horizontal, 24).padding(.bottom, 8)
-                panel.padding(.horizontal, 24)
+                panel.padding(.horizontal, 32)
                 panelFootnote.padding(.horizontal, 24).padding(.top, 4)
 
                 Placard(state: wall.state, link: wall.link, litInk: Ink.ink, litDim: Ink.dim)
@@ -84,7 +84,7 @@ struct ClassicWallScreen: View {
         }
         .scrollIndicators(.hidden)
         .clipped()
-        .padding(.bottom, 32)
+        .padding(.bottom, 8)
         .background {
             ZStack(alignment: .top) {
                 Ink.ground

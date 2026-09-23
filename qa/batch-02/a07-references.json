@@ -1,0 +1,25 @@
+{
+  "unit": "A07",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/c28aa02b-c494-4bdc-87bb-b10a85f8014f",
+      "source": "Philips Hue",
+      "applied": "Large live selected swatch and native full-spectrum choice."
+    },
+    {
+      "url": "https://mobbin.com/screens/fef54acd-4816-44d7-b987-141018058119",
+      "source": "IKEA Home smart",
+      "applied": "Useful warm presets and explicit selected state alongside precise values."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/swiftui/colorpicker",
+      "source": "Apple",
+      "applied": "Native opacity-free colour picker preserves accessibility and colour model."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/swiftui/slider",
+      "source": "Apple",
+      "applied": "Native slider with explicit accessible label/value, step constraints and edit lifecycle."
+    }
+  ]
+}

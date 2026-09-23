@@ -46,6 +46,9 @@ final class DiveFilms {
     private(set) var way: Reel? = nil       // in
     private(set) var back: Reel? = nil      // out
     private(set) var outFrames: [IntroTrack.Frame] = []
+    private var startTask: Task<Void, Never>?
+    private var primeTasks: [Task<Void, Never>] = []
+    private var rewindTasks: [Task<Void, Never>] = []
 
     func warm() {
         guard way == nil else { return }
@@ -58,19 +61,34 @@ final class DiveFilms {
 
     func start(out: Bool) {
         guard let r = reel(out: out) else { return }
-        startFilmsTogether(r.all)
+        for task in rewindTasks { task.cancel() }
+        rewindTasks.removeAll()
+        startTask?.cancel()
+        startTask = startFilmsTogether(r.all)
     }
 
     /// Back to the first frame, a beat after the reel has gone from view: a
     /// seek while its layer still shows would flash that frame.
     func rewind(out: Bool) {
         guard let r = reel(out: out) else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+        rewindTasks.append(Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(0.4)) } catch { return }
             for p in r.all {
+                guard !Task.isCancelled else { return }
                 p.pause()
-                p.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero) { _ in p.preroll(atRate: 1) { _ in } }
+                await p.seek(to: .zero, toleranceBefore: .zero, toleranceAfter: .zero)
             }
+        })
+    }
+
+    func stop() {
+        startTask?.cancel(); startTask = nil
+        for task in primeTasks + rewindTasks { task.cancel() }
+        primeTasks.removeAll(); rewindTasks.removeAll()
+        for reel in [way, back].compactMap({ $0 }) {
+            for player in reel.all { player.pause(); player.cancelPendingPrerolls() }
         }
+        way = nil; back = nil
     }
 
     private func reel(suffix: String) -> Reel? {
@@ -88,13 +106,14 @@ final class DiveFilms {
 
     /// Once ready, load the first frames so a start is instant.
     private func prime(_ players: [AVPlayer]) {
-        Task { @MainActor in
+        primeTasks.append(Task { @MainActor in
             let deadline = Date().addingTimeInterval(5)
             while Date() < deadline, players.contains(where: { $0.currentItem?.status == .unknown }) {
-                try? await Task.sleep(for: .milliseconds(30))
+                do { try await Task.sleep(for: .milliseconds(30)) } catch { return }
             }
+            guard !Task.isCancelled else { return }
             for p in players where p.currentItem?.status == .readyToPlay { p.preroll(atRate: 1) { _ in } }
-        }
+        })
     }
 }
 
@@ -139,6 +158,7 @@ struct DiveFilm: View {
         .onChange(of: out) { _, new in
             if let new { begin(new) }
         }
+        .onDisappear { films.stop(); running = nil }
     }
 
     private func begin(_ way: Bool) {
@@ -178,7 +198,7 @@ struct DiveFilm: View {
                 }
                 // the wall, through its hole, over the light pass, while it is in shot
                 if active, quad.count == 4 {
-                    WarpedPanel(px: light.reading.px, duty: duty, quad: quad)
+                    WarpedPanel(px: light.isOff ? nil : light.reading.px, duty: duty, quad: quad)
                         .frame(width: geo.width, height: geo.height)
                 }
                 if let bp = r.badge {

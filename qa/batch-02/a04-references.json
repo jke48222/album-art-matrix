@@ -1,0 +1,12 @@
+{
+  "unit": "A04",
+  "task_intent": "Improve Tessera’s native music wall controls, navigation, and listening surfaces.",
+  "references": [
+    {"source":"Mobbin","app":"Brink","url":"https://mobbin.com/screens/024da074-d0ed-470e-b30c-fbc0a49b4a46","observed":"A pale inset LCD separates album identity from a physical click wheel; the large centre button is visually quiet but unmistakable.","applied":"High-contrast inset LCD and fixed physical control geometry with accessible alternate reading."},
+    {"source":"Mobbin","app":"MD Vinyl","url":"https://mobbin.com/screens/787a2fa1-2fa2-42d3-9815-4a4a63a586b3","observed":"The rendered record is the primary object; track identity and small transport controls have a clear supporting hierarchy.","applied":"Preserve Tessera's rendered player object while separating the physical object from readable external controls."},
+    {"source":"Mobbin","app":"Poolsuite FM","url":"https://mobbin.com/screens/84e4c391-c182-461f-9b9e-76e35d91d53b","observed":"A tactile disc uses engraved detail, a restrained palette and high-contrast rectangular control selections.","applied":"Engraved player details, decisive LCD menu selection, and clearer wheel press feedback."},
+    {"source":"Apple","url":"https://cdsassets.apple.com/live/6GJYWVAV/user/ma1195_ipod_classic_160gb_user_guide.pdf","applied":"Wheel rotation changes the highlighted menu item; Centre selects; Menu backs out; holding Play sleeps the display."},
+    {"source":"Apple","url":"https://developer.apple.com/design/tips/","applied":"Menu button hit targets are at least 44 points; fixed object text has a scalable external reading view."},
+    {"source":"Apple","url":"https://developer.apple.com/design/human-interface-guidelines/accessibility","applied":"Named VoiceOver actions and adjustable values expose wheel functions without circular dragging; colour is supplemented by checkmarks, text and selected traits."}
+  ]
+}

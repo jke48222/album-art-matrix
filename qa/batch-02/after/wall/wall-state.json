@@ -1,0 +1,32 @@
+{
+  "mode": "art",
+  "brightness": 1.0,
+  "rpm": 7.5,
+  "effect": "solid",
+  "finish": "clean",
+  "match_art": false,
+  "color": "#b5d8ff",
+  "color2": "#006d8e",
+  "clock_24h": true,
+  "weather_units": "f",
+  "place": "Douglasville, Georgia",
+  "now_showing": {
+    "title": "SexOnTheBeat",
+    "artist": "AD\u00c9LA",
+    "album": "The Provocateur"
+  },
+  "progress": {},
+  "art_colors": [
+    "#9ab7e8",
+    "#c1b3e8"
+  ],
+  "shown_seq": 21,
+  "wall": {
+    "width": 64,
+    "height": 64,
+    "tile": 64,
+    "cols": 1,
+    "rows": 1,
+    "frame_side": 64
+  }
+}

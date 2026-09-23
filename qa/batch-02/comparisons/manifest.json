@@ -1,0 +1,201 @@
+{
+  "source_files_modified": false,
+  "processing": "Uniform Lanczos downscale with identical scale within each pair; no cropping or overlays inside screens.",
+  "comparisons": [
+    {
+      "unit": "A01",
+      "title": "App shell & navigation",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-02/before/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-02/after/classic-live.png",
+      "before_sha256": "e5531e6c83e65ca2259816cc6153339b4d2b6fd0b02259b8752c729a0e22b453",
+      "after_sha256": "362c433126587ad6e90bd7cc20b991093c67dc476b88c15573eb709250fae64a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-02/comparisons/a01-navigation.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "8ebad9b00ac25b5bff95d045a717136f23796fbeb4e877c2bf7011f9fac9eb5c"
+    },
+    {
+      "unit": "A03",
+      "title": "Room home",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-02/before/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-02/after/room-live.png",
+      "before_sha256": "5e4b3dd6e936caff2be0862a975ae042a4b0a5f910c871aa767dd3b14d79d0e1",
+      "after_sha256": "eaaac04c9ba4221ecd1a210f922f10cc3927908cda93bda457075a7619fb3e7c",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-02/comparisons/a03-room.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "708aa359c2c050ece350382ccb303b357b7bcf8914cd1796fec348601bfbf8be"
+    },
+    {
+      "unit": "A04",
+      "title": "iPod home",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-02/before/ipod-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-02/after/ipod-live.png",
+      "before_sha256": "a85fc11947ee8deb11f2ea4f63fce122e4c566646afde1d4e5512883f26245d3",
+      "after_sha256": "457fd3bb108ff97d613ef29ef278959bd85442216c92ea39dc65d5dc4bb7ddee",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-02/comparisons/a04-ipod.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0b7dd28548a7432f152e5b43f2ce72f4bc12531c8c2fc3a0ca485137c1c8ebbe"
+    },
+    {
+      "unit": "A06",
+      "title": "Face picker & control center",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-02/before/controls/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-02/after/controls/room-live.png",
+      "before_sha256": "4c6290d4947d1ed5dc237762a2b4e2996c2c1495af3caac92371476e25219b2d",
+      "after_sha256": "14d0c4ba738cd4cba84d301d8861c425fffc8646944f3aa009fbb364412b0417",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-02/comparisons/a06-controls.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5da03f627a015e9bc648a85e351e866b07feab219ec3cf2e7fe6ad9393e9e07f"
+    },
+    {
+      "unit": "A07",
+      "title": "Brightness & colour controls",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-02/before/lamp/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-02/after/lamp/room-live.png",
+      "before_sha256": "3504507a1ec5b3118fd83637473e6d8751ce7c89e7cbe307bfb1a472057672b7",
+      "after_sha256": "2edad486dfe8d91ff7bc176807daf9494df29733a709a5295ce437aef3a477ea",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-02/comparisons/a07-colour.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "d4f66f10d012177547221d531ce6e93e2d93aba2a6968c2e38b6c36ca277d559"
+    }
+  ]
+}

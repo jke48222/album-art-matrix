@@ -73,12 +73,19 @@ struct RoomWallScreen: View {
     @Environment(\.glitchIn) private var glitchIn
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @GestureState private var lightTouchActive = false
+    @State private var roomVisible = false
+    @State private var transitionTask: Task<Void, Never>?
+    @State private var introSettleTask: Task<Void, Never>?
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, ten times a second while the stand-in ticks, and
     // a system player read is an XPC call.
     @State private var localPlaying = false
     /// Whether this phone's own player holds the song at all.
     @State private var hasLocalItem = false
+    @State private var localTitle = ""
+    @State private var localArtist = ""
     /// How far into the song, 0 to 1, read once a second; nil with no record on.
     @State private var songProgress: Double? = nil
     @State private var introDone = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro") || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
@@ -158,13 +165,14 @@ struct RoomWallScreen: View {
                 if !zoomed {
                     chrome(size: geo.size, fit: fit, g: g)
                         .opacity((introDone && close == .none ? 1 : 0) * min(1, glitchIn * 1.6))
-                        .animation(.easeInOut(duration: 0.25), value: close == .none)
+                        .animation(reducedMotion ? nil : .easeInOut(duration: 0.25), value: close == .none)
                         .allowsHitTesting(close == .none)
+                        .accessibilityHidden(close != .none || !introDone)
                 }
                 if let g {
                     let r = rect(g.face, in: fit)
                     // the wall is a place you can go, and in close, the control
-                    wallTarget(r)
+                    if introDone, close == .none { wallTarget(r) }
                     // and so is the record: its pressing is yours to change
                     if !zoomed, close == .none, let rq = g.recordQuad, introDone {
                         let rr = rect(rq, in: fit).insetBy(dx: -8, dy: -10)
@@ -180,7 +188,7 @@ struct RoomWallScreen: View {
                 if zoomed { tuning(size: geo.size) }
                 if overheadShown { overhead(size: geo.size, fit: fit, g: g) }
                 if close == .close { pressingClose(size: geo.size, fit: fit, g: g) }
-                if DiveTrack.available, introDone {
+                if DiveTrack.available, introDone, !reducedMotion, scenePhase == .active {
                     // the stage is always up, its films warm; it plays on the way in and out
                     DiveFilm(light: light, duty: dragLight ?? wall.state.brightness, fit: fit,
                              pressing: pressing?.image, angle: turned,
@@ -196,8 +204,7 @@ struct RoomWallScreen: View {
                         // the second opening, in the room's own scene: the mark builds before
                         // the wall and grows into it as the deck builds up out of blocks
                         RoomIntro(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, sleeve: pressing?.label, pressing: pressing?.image, films: .mark) {
-                            withAnimation(.easeInOut(duration: 1.0)) { introDone = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) { introSettled = true }
+                            finishIntro(after: 0.9)
                         }
                         .id(introKey)
                         .zIndex(1)
@@ -206,15 +213,13 @@ struct RoomWallScreen: View {
                         // without its films, the flat version: the room's picture drawn in
                         RoomIntro2(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, face: rect(g.face, in: fit),
                                    picture: AnyView(picture(fit: fit, g: g, size: geo.size))) {
-                            withAnimation(.easeOut(duration: 0.3)) { introDone = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { introSettled = true }
+                            finishIntro(after: 0.2)
                         }
                         .id(introKey)
                         .zIndex(1)
                     } else {
                         RoomIntro(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, sleeve: pressing?.label, pressing: pressing?.image) {
-                            withAnimation(.easeInOut(duration: 1.4)) { introDone = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) { introSettled = true }
+                            finishIntro(after: 1.3)
                         }
                         .id(introKey)
                         .zIndex(1)
@@ -238,9 +243,13 @@ struct RoomWallScreen: View {
             // latches it on and the pill in Settings goes dead
             guard on else { return }
             replay = false
-            if !StingFilm.styles.contains(introStyle), IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
+            if !reducedMotion, !StingFilm.styles.contains(introStyle), IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
         }
         .onDisappear {
+            roomVisible = false
+            transitionTask?.cancel(); introSettleTask?.cancel()
+            settleRoomTransition()
+            cancelLightTouch()
             pressingTask?.cancel(); pressingRequest = UUID()
             turned = turnAngle(at: Date()); turningSince = nil
             MPMusicPlayerController.systemMusicPlayer.endGeneratingPlaybackNotifications()
@@ -260,6 +269,8 @@ struct RoomWallScreen: View {
             let m = MPMusicPlayerController.systemMusicPlayer
             localPlaying = m.playbackState == .playing
             hasLocalItem = m.nowPlayingItem != nil
+            localTitle = m.nowPlayingItem?.title ?? ""
+            localArtist = m.nowPlayingItem?.artist ?? ""
             songProgress = songProgressNow()
         }
         .onReceive(second) { _ in
@@ -267,6 +278,8 @@ struct RoomWallScreen: View {
             let m = MPMusicPlayerController.systemMusicPlayer
             localPlaying = m.playbackState == .playing
             hasLocalItem = m.nowPlayingItem != nil
+            localTitle = m.nowPlayingItem?.title ?? ""
+            localArtist = m.nowPlayingItem?.artist ?? ""
             songProgress = songProgressNow()
             // the wall keeps the pressing in memory; if it has lost it, send it again
             if let p = pressing {
@@ -277,6 +290,7 @@ struct RoomWallScreen: View {
         .onChange(of: reducedMotion) { _, reduced in
             turned = turnAngle(at: Date())
             turningSince = !reduced && needleDown && scenePhase == .active ? Date() : nil
+            if reduced { finishIntro(after: 0); settleRoomTransition() }
         }
         .onChange(of: turnsPerSecond) { _, rate in
             // A beat lock changes the speed, never the record's position.
@@ -289,8 +303,11 @@ struct RoomWallScreen: View {
         .onChange(of: scenePhase) { _, phase in
             turned = turnAngle(at: Date())
             turningSince = phase == .active && needleDown && !reducedMotion ? Date() : nil
+            if phase != .active { settleRoomTransition(); cancelLightTouch() }
         }
         .onAppear {
+            roomVisible = true
+            if reducedMotion { introDone = true; introSettled = true }
             turnRate = turnsPerSecond
             if needleDown && !reducedMotion { turningSince = Date() }
             // `-recorddemo`: in on the record two seconds in, out again at eight,
@@ -303,9 +320,24 @@ struct RoomWallScreen: View {
             m.beginGeneratingPlaybackNotifications()
             localPlaying = m.playbackState == .playing
             hasLocalItem = m.nowPlayingItem != nil
+            localTitle = m.nowPlayingItem?.title ?? ""
+            localArtist = m.nowPlayingItem?.artist ?? ""
             songProgress = songProgressNow()
             sleeve.refresh(title: wall.state.title, artist: wall.state.artist, album: wall.state.album, host: wall.host)
             refreshPressing()
+        }
+        .onChange(of: lightTouchActive) { _, touching in
+            if !touching {
+                Task { @MainActor in
+                    await Task.yield()
+                    if !lightTouchActive { cancelLightTouch() }
+                }
+            }
+        }
+        .accessibilityAction(.escape) {
+            if close == .close { closeRecord() }
+            else if zoomed { leaveWall() }
+            else if controls { controls = false }
         }
     }
 
@@ -452,7 +484,7 @@ struct RoomWallScreen: View {
                     .frame(width: size.width, height: size.height, alignment: .topLeading)
                     // a pressing arrives a beat after the room (it is drawn on
                     // a background task): it fades on rather than popping
-                    .animation(.easeInOut(duration: 0.35), value: pressing?.key)
+                    .animation(reducedMotion ? nil : .easeInOut(duration: 0.35), value: pressing?.key)
                 }
             }
             if let n = g.needle, let lead = g.lead, let track = g.track, let lifts = g.lifts {
@@ -518,7 +550,7 @@ struct RoomWallScreen: View {
             // back wall: behind the wall is the app's own background, the
             // sleeve's gradient, exactly as the opening shows it.
             // the wall itself, over its own light
-            RoomPanel(px: light.reading.px, duty: duty)
+            RoomPanel(px: light.isOff ? nil : light.reading.px, duty: duty)
                 .frame(width: face.width, height: face.height)
                 .position(x: face.midX, y: face.midY)
                 .allowsHitTesting(false)
@@ -554,11 +586,11 @@ struct RoomWallScreen: View {
     /// Is the song on the wall this phone's own? True with no wall song
     /// named yet, so a phone alone still drives the room.
     private var phoneHoldsTheSong: Bool {
-        guard hasLocalItem, let item = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem else { return false }
+        guard hasLocalItem else { return false }
         let wallTitle = (wall.state.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         if wallTitle.isEmpty { return true }
-        return SleeveMatch.same(item.title ?? "", wallTitle)
-            && SleeveMatch.same(item.artist ?? "", wall.state.artist ?? "")
+        return SleeveMatch.same(localTitle, wallTitle)
+            && SleeveMatch.same(localArtist, wall.state.artist ?? "")
     }
 
     /// Where the song is, 0 to 1: this phone's player while it plays, else
@@ -586,44 +618,146 @@ struct RoomWallScreen: View {
     /// for the record, centred in the grey under the table.
     @ViewBuilder
     private func chrome(size: CGSize, fit: CGRect, g: RoomGeometry?) -> some View {
-        // The sleeve's colour, always the light cut of it: the name is the
-        // pale thing on the wall whatever the record is.
         let word = light.steadyAccent.toned(forDark: true)
-        HStack(alignment: .center, spacing: 12) {
-            RecordMark(accent: word, lit: max(0.6, light.room), side: 17)
-                .shadow(color: .black.opacity(0.35), radius: 4, y: 1)
-            Text("TESSERA").font(.display(18)).kerning(3.0).foregroundStyle(word)
-                .shadow(color: .black.opacity(0.45), radius: 5, y: 1)
-            Spacer()
-            ControlCenterButtons(ink: light.roomBright ? .light : .dark, onControls: {
-                withAnimation(Motion.scene) { controls.toggle() }
-            }, onSetup: onSetup)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                RecordMark(accent: word, lit: max(0.6, light.room), side: 19)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("TESSERA").font(.display(18)).kerning(2.5).foregroundStyle(inkLight)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                    Text("THE LISTENING ROOM").font(.machine(7)).kerning(1.3).foregroundStyle(inkLightDim)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                }
+                Spacer(minLength: 8)
+                ControlCenterButtons(ink: .dark, onControls: {
+                    withAnimation(reducedMotion ? nil : Motion.scene) { controls.toggle() }
+                }, onSetup: onSetup)
+            }
+            Button {
+                if wall.link.isLive || wall.link.isStandIn { enterWall() }
+                else { onSetup() }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: roomConnectionSymbol).font(.system(size: 9, weight: .semibold))
+                    Text(roomConnectionLabel).font(.machine(8)).kerning(0.8)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                    Spacer(minLength: 4)
+                    if !typeSize.isAccessibilitySize {
+                        Text(light.isOff ? "ASLEEP" : "\(roomFaceName) · \(Int((wall.state.brightness * 100).rounded()))%")
+                            .font(.machine(8)).kerning(0.5)
+                    }
+                    Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
+                }
+                .foregroundStyle(inkLight)
+                .padding(.horizontal, 12).frame(minHeight: 30)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
+                .environment(\.colorScheme, .dark)
+            }
+            .buttonStyle(PressStyle(scale: 0.98))
+            .accessibilityLabel("\(roomConnectionLabel), \(light.isOff ? "wall asleep" : roomFaceName)")
+            .accessibilityHint(wall.link.isLive || wall.link.isStandIn ? "Open wall controls" : "Open connection settings")
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 62)
-        .frame(width: size.width, alignment: .leading)
+        .padding(.horizontal, 24).padding(.top, 62)
+        .frame(width: size.width)
+        .background {
+            // The rendered wall can be nearly white. A scrim, rather than an
+            // average sleeve colour, guarantees contrast for the small masthead.
+            LinearGradient(stops: [.init(color: .black.opacity(0.62), location: 0),
+                                   .init(color: .black.opacity(0.62), location: 0.62),
+                                   .init(color: .clear, location: 1)],
+                           startPoint: .top, endPoint: .bottom)
+                .allowsHitTesting(false)
+        }
 
-        let bandTop = min(fit.origin.y + fit.height * (g?.placard ?? 0.78) + 6, size.height - 228)
-        let bandBottom = size.height - 40
-        let bandHeight = max(180, bandBottom - bandTop)
-        VStack(spacing: 0) {
-            NowPlayingIdentity(state: wall.state, link: wall.link,
-                               accent: word, ink: inkLight, secondary: inkLightDim,
-                               compact: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 28)
-            // The words sit on the render's grey shelf, which measures around
-            // #767168. That surface cannot carry body text at any colour: even
-            // pure white reaches only 4.85:1 on it, and the artist line was at
-            // 3.38:1. So the shelf falls into shadow under the words, the way
-            // it would if the light above it is the wall. The pair then reads
-            // at 7.4:1 and 9.2:1 and keeps its tonal difference.
-            .background(alignment: .top) { wordsShadow }
-            RoomKeys(accent: light.steadyAccent)
-                .padding(.top, 18)
+        // The scene deliberately extends beneath the home indicator. Its
+        // interactive dock must stop above the labeled navigation, including
+        // the taller, stacked navigation used with accessibility text sizes.
+        let bottom = size.height - (typeSize.isAccessibilitySize ? 154 : 106)
+        let dockHeight: CGFloat = typeSize.isAccessibilitySize ? 300 : phoneHoldsTheSong ? 172 : 150
+        let bandTop = max(160, min(fit.origin.y + fit.height * (g?.placard ?? 0.78) + 3,
+                                  bottom - dockHeight))
+        let bandHeight = max(100, bottom - bandTop)
+        ScrollView(.vertical) {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 16) {
+                    roomIdentity(accent: word)
+                    if phoneHoldsTheSong { RoomKeys(accent: light.steadyAccent) }
+                    else {
+                        VStack(spacing: 8) {
+                            roomAction("The record", symbol: "opticaldisc") { openRecord() }
+                            roomAction("Wall controls", symbol: "slider.horizontal.3") { enterWall() }
+                        }
+                    }
+                }
+                .padding(18)
+            } else {
+                HStack(alignment: .center, spacing: 14) {
+                    roomIdentity(accent: word)
+                    if phoneHoldsTheSong {
+                        RoomKeys(accent: light.steadyAccent, vertical: true)
+                    } else {
+                        VStack(spacing: 8) {
+                            roomAction("The record", symbol: "opticaldisc", iconOnly: true) { openRecord() }
+                            roomAction("Wall controls", symbol: "slider.horizontal.3", iconOnly: true) { enterWall() }
+                        }
+                        .frame(width: 44)
+                    }
+                }
+                .padding(14)
+            }
         }
-        .frame(width: size.width, height: bandHeight)
+        .scrollIndicators(.hidden)
+        .frame(width: size.width - 32, height: bandHeight)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(.white.opacity(0.13), lineWidth: 0.5))
+        .environment(\.colorScheme, .dark)
         .position(x: size.width / 2, y: bandTop + bandHeight / 2)
+    }
+
+    private func roomIdentity(accent: Color) -> some View {
+        NowPlayingIdentity(state: wall.state, link: wall.link,
+                           accent: accent, ink: inkLight, secondary: inkLightDim, compact: true)
+    }
+
+    private func roomAction(_ title: String, symbol: String, iconOnly: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Group {
+                if iconOnly { Image(systemName: symbol).font(.system(size: 17, weight: .medium)) }
+                else { Label(title, systemImage: symbol).font(.ui(12, .medium)) }
+            }
+                .foregroundStyle(inkLight)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(.white.opacity(0.065), in: RoundedRectangle(cornerRadius: 13))
+                .overlay(RoundedRectangle(cornerRadius: 13).strokeBorder(.white.opacity(0.08), lineWidth: 0.5))
+        }
+        .buttonStyle(PressStyle(scale: 0.96))
+        .accessibilityLabel(title)
+    }
+
+    private var roomConnectionLabel: String {
+        switch wall.link {
+        case .live: "LIVE WALL"
+        case .standIn: "PHONE PREVIEW"
+        case .searching: "FINDING YOUR WALL"
+        case .offline: "WALL OFFLINE"
+        }
+    }
+    private var roomConnectionSymbol: String {
+        switch wall.link {
+        case .live: "dot.radiowaves.left.and.right"
+        case .standIn: "iphone"
+        case .searching: "antenna.radiowaves.left.and.right"
+        case .offline: "wifi.slash"
+        }
+    }
+    private var roomFaceName: String {
+        ["art": "ART", "cd": "SPIN", "ambient": "LAMP", "frame": "CANVAS",
+         "ticker": "TICKER", "nine": "NINE", "lyrics": "LYRICS", "weather": "WEATHER",
+         "clock": "CLOCK", "timer": "TIMER", "game": "GAME", "video": "VIDEO",
+         "clip": "CLIP", "imagine": "IMAGINE", "off": "OFF"][wall.state.mode] ?? "WALL"
     }
 
     /// Close on the wall: what it shows and how, right under it.
@@ -631,11 +765,15 @@ struct RoomWallScreen: View {
     private func tuning(size: CGSize) -> some View {
         VStack(spacing: 0) {
             HStack {
-                Text("THE WALL").font(.machine(10)).kerning(1.6).foregroundStyle(light.chromeDim)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Your wall").font(.displayMid(24)).foregroundStyle(inkLight)
+                    Text("\(roomConnectionLabel) · \(roomFaceName)")
+                        .font(.machine(8)).kerning(0.7).foregroundStyle(inkLightDim)
+                }
                 Spacer()
-                Button { withAnimation(Motion.scene) { zoomed = false } } label: {
+                Button { leaveWall() } label: {
                     Text("Done").font(.ui(14, .semibold)).foregroundStyle(light.roomBright ? Ink.ground : Ink.ink)
-                        .padding(.horizontal, 18).frame(height: 38)
+                        .padding(.horizontal, 18).frame(minHeight: 44)
                         .background(Capsule().fill(.ultraThinMaterial))
                         .overlay(Capsule().strokeBorder(light.chrome.opacity(0.18), lineWidth: 1))
                 }
@@ -643,14 +781,22 @@ struct RoomWallScreen: View {
             }
             .padding(.horizontal, 24)
             .padding(.top, 62)
+            .padding(.bottom, 12)
+            .background {
+                LinearGradient(stops: [.init(color: .black.opacity(0.64), location: 0),
+                                       .init(color: .black.opacity(0.64), location: 0.82),
+                                       .init(color: .clear, location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+                    .allowsHitTesting(false)
+            }
             Spacer()
             ControlCenterPanel(light: light, ink: panelInk, dragLight: $dragLight,
                                onStudio: onStudio, onArchive: onArchive, onSetup: onSetup,
-                               onClose: { withAnimation(Motion.scene) { zoomed = false } }, layout: .tuning,
+                               onClose: { leaveWall() }, layout: .tuning,
                                sleeve: sleeve.image)
                 // measured, so the wall above can make room for a tall board
                 .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { h in
-                    if abs(h - tuningHeight) > 0.5 { withAnimation(Motion.scene) { tuningHeight = h } }
+                    if abs(h - tuningHeight) > 0.5 { withAnimation(reducedMotion ? nil : Motion.scene) { tuningHeight = h } }
                 }
                 // clear of the page marks at the foot of the screen
                 .padding(.bottom, 60)
@@ -664,9 +810,10 @@ struct RoomWallScreen: View {
     /// Where the finger began, as a light level, and whether it has moved.
     @State private var lightStart: Double? = nil
     @State private var lightMoved = false
+    @State private var lightTravelled = false
     @State private var lightDetent = -1
 
-    private func lightNorm(_ v: Double) -> CGFloat { CGFloat((v - 0.05) / 0.95) }
+    private func lightNorm(_ v: Double) -> CGFloat { CGFloat(min(1, max(0, (v - 0.05) / 0.95))) }
 
     /// Tapping the wall goes in close. In close, the wall is the light: drag
     /// up or down on it and the wall dims under your finger, relative to
@@ -708,15 +855,19 @@ struct RoomWallScreen: View {
             .frame(width: r.width, height: r.height)
             .contentShape(Rectangle())
             .position(x: r.midX, y: r.midY)
-            .animation(.easeOut(duration: 0.15), value: dragLight == nil)
+            .animation(reducedMotion ? nil : .easeOut(duration: 0.15), value: dragLight == nil)
             .gesture(
                 DragGesture(minimumDistance: 0)
+                    .updating($lightTouchActive) { _, active, _ in active = true }
                     .onChanged { g in
                         if lightStart == nil {
-                            lightStart = wall.state.brightness; lightMoved = false; Taps.warm()
+                            lightStart = wall.state.brightness; lightMoved = false; lightTravelled = false
+                            lightDetent = -1; onPanel = true; Taps.warm()
                         }
                         guard let start = lightStart else { return }
-                        if !lightMoved, abs(g.translation.height) > 6 { lightMoved = true }
+                        if hypot(g.translation.width, g.translation.height) > 8 { lightTravelled = true }
+                        if !lightMoved, abs(g.translation.height) > 8,
+                           abs(g.translation.height) > abs(g.translation.width) * 1.3 { lightMoved = true }
                         guard lightMoved else { return }
                         // relative to touch-down; one percent steps, a detent every five
                         let delta = -Double(g.translation.height / max(1, r.height)) * 0.95
@@ -729,23 +880,46 @@ struct RoomWallScreen: View {
                     }
                     .onEnded { _ in
                         if lightMoved, let v = dragLight { wall.send(["brightness": v]); Taps.commit() }
-                        else { withAnimation(Motion.scene) { zoomed = false } }
-                        lightStart = nil; lightMoved = false; dragLight = nil
+                        else if !lightTravelled { leaveWall() }
+                        cancelLightTouch()
                     }
             )
             .accessibilityElement()
             .accessibilityLabel("The wall")
             .accessibilityValue("Light \(Int(level * 100)) percent")
             .accessibilityHint("Drag up or down to set the light. Tap to go back.")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { leaveWall() }
+            .accessibilityAdjustableAction { direction in
+                let step = direction == .increment ? 0.05 : -0.05
+                wall.send(["brightness": min(1, max(0.05, wall.state.brightness + step))])
+                Taps.detent(intensity: 0.4)
+            }
         } else {
             Color.clear
                 .contentShape(Rectangle())
                 .frame(width: r.width, height: r.height)
                 .position(x: r.midX, y: r.midY)
-                .onTapGesture { if close == .none { withAnimation(Motion.scene) { zoomed.toggle() } } }
+                .onTapGesture { if close == .none { enterWall() } }
                 .accessibilityLabel("Tune the wall")
                 .accessibilityAddTraits(.isButton)
         }
+    }
+
+    private func enterWall() {
+        guard introDone, close == .none else { return }
+        Taps.detent(intensity: 0.4)
+        withAnimation(reducedMotion ? nil : Motion.scene) { zoomed = true }
+    }
+
+    private func leaveWall() {
+        cancelLightTouch()
+        withAnimation(reducedMotion ? nil : Motion.scene) { zoomed = false }
+    }
+
+    private func cancelLightTouch() {
+        lightStart = nil; lightMoved = false; lightTravelled = false
+        lightDetent = -1; dragLight = nil; onPanel = false
     }
 
     /// From straight above: the overhead still, the pressing on the record
@@ -790,7 +964,7 @@ struct RoomWallScreen: View {
                 .offset(x: fit.origin.x, y: fit.origin.y)
         }
         .frame(width: size.width, height: size.height, alignment: .topLeading)
-        .animation(.easeInOut(duration: 0.3), value: pressing?.key)
+        .animation(reducedMotion ? nil : .easeInOut(duration: 0.3), value: pressing?.key)
         .allowsHitTesting(false)
     }
 
@@ -824,7 +998,7 @@ struct RoomWallScreen: View {
                     Spacer()
                     Button { closeRecord() } label: {
                         Text("Done").font(.ui(14, .semibold)).foregroundStyle(Ink.ink)
-                            .padding(.horizontal, 18).frame(height: 38)
+                            .padding(.horizontal, 18).frame(minHeight: 44)
                             .background(Capsule().fill(.ultraThinMaterial))
                             .overlay(Capsule().strokeBorder(light.chrome.opacity(0.18), lineWidth: 1))
                     }
@@ -848,55 +1022,70 @@ struct RoomWallScreen: View {
     /// The way in: the arm lifts home and the record stops, then the dive.
     /// Without the film, a plain crossfade to the overhead.
     private func openRecord() {
-        diveLog.notice("openRecord from \(String(describing: close))")
-        guard close == .none else { return }
+        guard roomVisible, scenePhase == .active, introDone, close == .none, !zoomed else { return }
+        transitionTask?.cancel()
         previewChoice = nil
-        close = .lifting
         Taps.detent(intensity: 0.4)
-        let lift = needleDown ? 0.85 : 0.05
-        DispatchQueue.main.asyncAfter(deadline: .now() + lift) {
-            guard close == .lifting else { return }
-            if DiveTrack.available {
-                // the film's first frame is the room; the room goes as it starts,
-                // and the overhead takes its place beneath once the wall is out of shot
-                close = .diving
-                // a film that never reports its end (a stalled player) must
-                // not strand the room mid-dive with the record untappable
-                DispatchQueue.main.asyncAfter(deadline: .now() + Self.diveLength + 1.0) {
-                    if close == .diving { overheadShown = true; close = .close }
-                }
-            } else {
-                withAnimation(.easeInOut(duration: 0.7)) { overheadShown = true; close = .close }
+        if reducedMotion || !DiveTrack.available {
+            withAnimation(reducedMotion ? nil : .easeInOut(duration: 0.25)) {
+                overheadShown = true; close = .close
             }
+            return
+        }
+        close = .lifting
+        let lift = needleDown ? 0.85 : 0.05
+        transitionTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(lift)) } catch { return }
+            guard roomVisible, scenePhase == .active, close == .lifting else { return }
+            close = .diving
+            do { try await Task.sleep(for: .seconds(Self.diveLength + 1)) } catch { return }
+            guard roomVisible, close == .diving else { return }
+            overheadShown = true; close = .close
         }
     }
 
-    /// How long the dive film runs, for the way in and the way out alike.
     private static let diveLength: Double = {
         guard let t = DiveTrack.loaded, t.fps > 0 else { return 1.2 }
         return Double(t.frames.count) / t.fps
     }()
 
-    /// And out: the film backwards, the room back beneath it, then the arm
-    /// drops back where the song has got to. What was not kept goes.
     private func closeRecord() {
-        diveLog.notice("closeRecord from \(String(describing: close))")
         guard close == .close else { return }
+        transitionTask?.cancel()
         Taps.detent(intensity: 0.3)
-        if DiveTrack.available {
-            // the panel goes as the film starts on the overhead, which it matches;
-            // the overhead itself goes once the film has it covered
-            // the film opens on the overhead still, so the scene itself can go now
-            withAnimation(.easeOut(duration: 0.2)) { close = .rising }
-            overheadShown = false
-            // and the same insurance on the way out: the draft is let go
-            // and the record is tappable again whatever the film reports
-            DispatchQueue.main.asyncAfter(deadline: .now() + Self.diveLength + 1.0) {
-                if close == .rising { overheadShown = false; close = .none; previewChoice = nil }
+        if reducedMotion || !DiveTrack.available || scenePhase != .active {
+            withAnimation(reducedMotion ? nil : .easeInOut(duration: 0.25)) {
+                overheadShown = false; close = .none; previewChoice = nil
             }
-        } else {
-            withAnimation(.easeInOut(duration: 0.7)) { overheadShown = false; close = .none }
-            previewChoice = nil
+            return
+        }
+        withAnimation(.easeOut(duration: 0.2)) { close = .rising }
+        overheadShown = false
+        transitionTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(Self.diveLength + 1)) } catch { return }
+            guard roomVisible, close == .rising else { return }
+            overheadShown = false; close = .none; previewChoice = nil
+        }
+    }
+
+    private func settleRoomTransition() {
+        transitionTask?.cancel(); transitionTask = nil
+        switch close {
+        case .lifting, .diving: overheadShown = true; close = .close
+        case .rising: overheadShown = false; close = .none; previewChoice = nil
+        case .none, .close: break
+        }
+    }
+
+    private func finishIntro(after delay: Double) {
+        guard roomVisible else { return }
+        introSettleTask?.cancel()
+        withAnimation(reducedMotion ? nil : .easeInOut(duration: min(0.4, delay))) { introDone = true }
+        if reducedMotion || delay == 0 || scenePhase != .active { introSettled = true; return }
+        introSettleTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(delay)) } catch { return }
+            guard roomVisible else { return }
+            introSettled = true
         }
     }
 
@@ -969,13 +1158,15 @@ enum NeedleDemo {
 /// The three keys under the words, in the wall's colour.
 private struct RoomKeys: View {
     let accent: Color
+    var vertical = false
     // read on appear: the keys are remade with every evaluation of the
     // room, and a system player read is an XPC call
     @State private var playing = false
     var body: some View {
-        HStack(spacing: 18) {
-            key(.rewind, 48) { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() }
-            key(playing ? .pause : .play, 60) {
+        let layout = vertical ? AnyLayout(VStackLayout(spacing: 4)) : AnyLayout(HStackLayout(spacing: 18))
+        layout {
+            key(.rewind, vertical ? 44 : 48) { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() }
+            key(playing ? .pause : .play, vertical ? 44 : 60) {
                 let m = MPMusicPlayerController.systemMusicPlayer
                 if playing { m.pause() } else {
                     StandIn.requestMusicAccess {
@@ -985,9 +1176,9 @@ private struct RoomKeys: View {
                     }
                 }
             }
-            key(.forward, 48) { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
+            key(.forward, vertical ? 44 : 48) { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: vertical ? 44 : .infinity)
         .onAppear { playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing }
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
             playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing

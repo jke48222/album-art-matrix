@@ -1,0 +1,163 @@
+{
+  "checks": [
+    {
+      "name": "six digit hex canonicalizes case",
+      "passed": true
+    },
+    {
+      "name": "shorthand expands each channel",
+      "passed": true
+    },
+    {
+      "name": "hex accepts surrounding whitespace",
+      "passed": true
+    },
+    {
+      "name": "black remains an actual colour",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: ",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #1",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #1234",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #12345",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #1234567",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #12345678",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #xyzxyz",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: 0x1234",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: \uff03ffffff",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: ##fff",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: ff ff ff",
+      "passed": true
+    },
+    {
+      "name": "invalid hex is rejected: #\uff11\uff12\uff13",
+      "passed": true
+    },
+    {
+      "name": "finite colour channels are rounded",
+      "passed": true
+    },
+    {
+      "name": "negative colour channels clamp",
+      "passed": true
+    },
+    {
+      "name": "extended colour channels clamp",
+      "passed": true
+    },
+    {
+      "name": "NaN colour channel is safe",
+      "passed": true
+    },
+    {
+      "name": "infinite colour channel is safe",
+      "passed": true
+    },
+    {
+      "name": "white swatch receives dark text",
+      "passed": true
+    },
+    {
+      "name": "black swatch receives light text",
+      "passed": true
+    },
+    {
+      "name": "saturated blue receives readable light text",
+      "passed": true
+    },
+    {
+      "name": "amber swatch receives dark text",
+      "passed": true
+    },
+    {
+      "name": "brightness lower endpoint remains reachable",
+      "passed": true
+    },
+    {
+      "name": "brightness upper endpoint remains reachable",
+      "passed": true
+    },
+    {
+      "name": "brightness has one percent detents",
+      "passed": true
+    },
+    {
+      "name": "NaN slider value cannot reach native slider",
+      "passed": true
+    },
+    {
+      "name": "infinite slider value cannot reach native slider",
+      "passed": true
+    },
+    {
+      "name": "RPM detents stay anchored to minimum",
+      "passed": true
+    },
+    {
+      "name": "RPM upper endpoint clamps",
+      "passed": true
+    },
+    {
+      "name": "non-divisible upper endpoint remains reachable",
+      "passed": true
+    },
+    {
+      "name": "invalid zero step gets finite fallback",
+      "passed": true
+    },
+    {
+      "name": "infinite step gets finite fallback",
+      "passed": true
+    },
+    {
+      "name": "subnormal step cannot overflow tick calculation",
+      "passed": true
+    },
+    {
+      "name": "zero-width range gets valid fallback",
+      "passed": true
+    },
+    {
+      "name": "nonfinite range gets valid fallback",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 39,
+  "suite": "Colour and value controls"
+}

@@ -38,15 +38,14 @@ struct PlaybackIdentity: Equatable {
         }
         advances = hasSong && hasPosition && state.songPlaying && (link.isLive || link.isStandIn)
         duration = hasSong ? Self.validSeconds(state.songOf).flatMap { $0 > 0 ? $0 : nil } : nil
-        if hasSong, let start = Self.validSeconds(state.songAt) {
+        if hasSong {
             let end: Date
             switch link {
             case .offline(let since): end = min(date, since)
             case .searching: end = state.songStamped ?? date
             default: end = date
             }
-            let delta = state.songPlaying ? max(0, end.timeIntervalSince(state.songStamped ?? end)) : 0
-            elapsed = min(duration ?? .greatestFiniteMagnitude, start + delta)
+            elapsed = state.songPosition(at: end)
         } else {
             elapsed = nil
         }

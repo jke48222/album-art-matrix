@@ -154,7 +154,7 @@ def wall_snapshot(host: str, output: Path) -> tuple[dict, bytes]:
                                 if key in {"title", "artist", "album"}}
     if "progress" in state:
         state["progress"] = {key: value for key, value in state["progress"].items()
-                             if key in {"at", "of", "playing"}}
+                             if key in {"at", "of", "playing", "stamped"}}
     (output / "wall-state.json").write_text(json.dumps(state, indent=2) + "\n")
     Image.frombytes("RGB", (side, side), frame).save(output / "wall-source.png")
     return state, frame
@@ -170,6 +170,10 @@ def main() -> int:
                         help="Any of classic-live/paused/offline/off/empty/long/large, room-live, ipod-live, classic-wall")
     parser.add_argument("--wall-host", help="Read-only capture of this real wall; adds classic-wall to the run")
     parser.add_argument("--settle", type=float, default=5.0)
+    parser.add_argument("--launch-argument", action="append", default=[],
+                        help="Extra app argument, for example --launch-argument=-controls")
+    parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker"))
+    parser.add_argument("--brightness", type=float)
     args = parser.parse_args()
     valid = set(DEFAULT_STATES) | {"classic-wall", "room-paused", "ipod-paused", "room-offline", "ipod-offline",
                                  "room-long", "ipod-long", "room-large", "ipod-large"}
@@ -179,6 +183,8 @@ def main() -> int:
         parser.error("classic-wall requires --wall-host")
     if not math.isfinite(args.settle) or not 1 <= args.settle <= 30:
         parser.error("--settle must be between 1 and 30 seconds")
+    if args.brightness is not None and (not math.isfinite(args.brightness) or not 0.05 <= args.brightness <= 1):
+        parser.error("--brightness must be between 0.05 and 1")
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     manifest_path = output / "manifest.json"
@@ -209,13 +215,18 @@ def main() -> int:
                 state, frame = fixture(variant), artwork()
                 if variant in {"empty", "off"}:
                     frame = bytes(len(frame))
+                if args.mode is not None:
+                    state["mode"] = args.mode
+                if args.brightness is not None:
+                    state["brightness"] = args.brightness
             wall.load(state, frame)
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")
             command("xcrun", "simctl", "launch", "--terminate-running-process", args.simulator,
                     args.bundle, "-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES",
                     "-intro.style", "none", "-design", design, "-wall.host", fixture_host,
-                    "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO")
+                    "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO",
+                    *args.launch_argument)
             time.sleep(args.settle)
             if variant == "offline":
                 with wall.lock:
@@ -233,6 +244,7 @@ def main() -> int:
             captures.append({"state": name, "image": image_path.name, "frame": f"{name}-frame.png",
                              "mode": state["mode"], "state_reads": reads, "fixture_writes": writes,
                              "app": str(args.app) if args.app else None,
+                             "launch_arguments": args.launch_argument,
                              "captured_at": datetime.now(timezone.utc).isoformat(),
                              "dynamic_type": "AX5" if variant == "large" else "large"})
             print(image_path, flush=True)

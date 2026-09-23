@@ -1,0 +1,138 @@
+{
+  "batch": 2,
+  "future_batch_size": {
+    "minimum": 4,
+    "maximum": 5
+  },
+  "completed_units": [
+    "A01",
+    "A03",
+    "A04",
+    "A06",
+    "A07"
+  ],
+  "regression_fixes": [
+    "A05 \u2014 repeated state polls no longer rewind elapsed playback"
+  ],
+  "previously_completed_units": [
+    "W01",
+    "A02",
+    "A05"
+  ],
+  "validated_at": "2026-09-23T07:02:54.348672+00:00",
+  "baseline_commit": "f0dc944dd22c30d12b29677112a0dbed8878c35f",
+  "builds": {
+    "ios_simulator_debug": "passed",
+    "iphone_debug": "passed",
+    "ios_release": "passed"
+  },
+  "tests": {
+    "playback_clock": {
+      "passed": 94,
+      "failed": 0
+    },
+    "colour_controls": {
+      "passed": 39,
+      "failed": 0
+    },
+    "ipod_wheel": {
+      "passed": 43,
+      "failed": 0
+    },
+    "home_router": {
+      "passed": 27,
+      "failed": 0
+    }
+  },
+  "total_assertions": 203,
+  "wall": {
+    "services": "active",
+    "runtime_code_changed": false,
+    "deployment": "Existing deployed wall runtime is compatible with this phone-only batch.",
+    "brightness_write_and_restore": "verified",
+    "frame_bytes": 12288,
+    "details": "wall-validation.json"
+  },
+  "phone": {
+    "device": "Connected iPhone 18 Pro Max",
+    "bundle": "com.jalenedusei.tessera",
+    "installed": true,
+    "launched": false,
+    "launch_blocker": "iOS denied launch because the device is locked. Unlock requested; installation succeeded."
+  },
+  "visual_checks": {
+    "normal": [
+      "Classic navigation",
+      "Room",
+      "iPod",
+      "face picker",
+      "brightness",
+      "colour sheet",
+      "iPod menu",
+      "Room zoom",
+      "night room",
+      "wall off",
+      "Archive navigation",
+      "Settings presentation"
+    ],
+    "accessibility": [
+      "Room AX5",
+      "iPod AX5",
+      "Control Center AX5",
+      "colour sheet AX5"
+    ],
+    "connection_states": [
+      "live",
+      "paused",
+      "offline"
+    ],
+    "captures": "after/",
+    "comparisons": "comparisons/"
+  },
+  "fixed_bugs": [
+    "Playback timestamps were being reset on repeated polling",
+    "Stale HTTP state responses could replace newer ones",
+    "Nonfinite music-player positions could crash integer conversion",
+    "Rapid modal requests could stall the app router",
+    "Offscreen Room could hide Archive navigation",
+    "Cancelled wheel touches could send brightness commands",
+    "Held play touches could also rotate or fire twice",
+    "iPod colour menu entries did nothing",
+    "RPM menu offered an unsupported 78 RPM value",
+    "Room films could restart after leaving the scene",
+    "Room off mode could retain a stale panel image",
+    "Cancelled sliders could send seeks or brightness changes",
+    "Large text could overlap navigation or truncate colour values"
+  ],
+  "source_sha256": {
+    "scripts/qa/capture_home.py": "4c21b36e0097259153c5eb871ad84112733e4508bd4ced44a9bcae34b8050340",
+    "scripts/qa/compare_home.py": "f98d44b6df0e091403b532aea73d1498b62e4f2b7f644e31b68dd0e9dbc70ef3",
+    "scripts/test_colour_controls.py": "dfba36c15d4ff108157061a177944c1ab57c1d513553dac1711037c8a6dd658e",
+    "scripts/test_colour_controls.swift": "4b0dbe9851678cdb2bee2834093708f394eb59569926559d8bab9879e6ef1566",
+    "scripts/test_home_router.swift": "05a8e30c5e6a135ae4c25dfca1bbc434feb6c5eb0a8fe14de0e12b766973e5d2",
+    "scripts/test_ipod_wheel.py": "bcab61049d9aae84adb78712b79e1336d26884d53c0209ac18e9a08318f5f8dc",
+    "scripts/test_ipod_wheel.swift": "ebd3bd7e808c06882c98b5361015beb724d8bb9d1d8c4007979f2780189d64b0",
+    "scripts/test_playback_identity.swift": "1a0ce32ba997a09ede10fa368c2a3cc840f7b9cd6bd2c3ea4a7fc946474ce4b7",
+    "tessera/Tessera/ClassicWallScreen.swift": "2c03d69ce898f60e0b004eb33b4c95098e6177f5e07e1ccb1f8e8ace8b5f9092",
+    "tessera/Tessera/ColourBar.swift": "3f52c80a55fe0ed90da441a103dd8c385cbc2a3035d4a92ad04bed8f8ebf005c",
+    "tessera/Tessera/ControlCenter.swift": "a5595b7cdae6b63938fb5adc8fdd7b365f3875da81342e6a9fc66870f6090fb6",
+    "tessera/Tessera/DiveFilm.swift": "175609a77787d45915c4208321fdf41215d9b1a9c23abfa3c7601d81b8afbe3c",
+    "tessera/Tessera/HomeRouter.swift": "f13b9681fb7c4abcd56c37e02c7b5b0d0cabc6cd1525f3870187b7e1911d6d57",
+    "tessera/Tessera/IPod.swift": "0b9813271809e5e92da30911e7db55e60fd87f6838d57536b9e600914caea354",
+    "tessera/Tessera/IPodWheelInteraction.swift": "e2fc75f53b746cfc2017c6b289df89e2c8ba2884d85d652fd9396dadfc4d6233",
+    "tessera/Tessera/NowPlaying.swift": "840022e19efb04f8bba1dbb55a96d63ffc8f1a26ead4a1aaaac9cc3f5b478f5e",
+    "tessera/Tessera/NowPlayingIdentity.swift": "9fc67ff15d9ee632b3e5efda2ca38ece5ba8eeb91010c117c532ef31c1e47718",
+    "tessera/Tessera/RoomIntro.swift": "50220e7e9a6e4caeade0d234271b97f552f1837ddcdb70525d57094040dac600",
+    "tessera/Tessera/RoomIntro2.swift": "ecf674d9c10ecba73d7104bc3795dbf5d17036849ed77f874d75d16a2c8df975",
+    "tessera/Tessera/RoomScreen.swift": "dc9ef551f7555b8bfffe4202d46f88765b721591f51a7db758cdc30516a73ad3",
+    "tessera/Tessera/RootView.swift": "4affaf50eb09d4d4176c4229f873a0b13a962c085de383b2fb0e4dfec39a6fad",
+    "tessera/Tessera/WallLink.swift": "bd77584f7fed259ac8ef3d31afc7af54f4be49b9e4f28581db85bad4756795ee",
+    "tessera/Tessera/WallScreen.swift": "b455008c002d594776626f54682f7739e7b4c4b3781d6f29b083a625f094cbc4",
+    "tessera/Tessera/WallValueSlider.swift": "b002418776b4934dd94ea0d81baa3336a106f8038a4afafd4fe6f5cacfcd43a3"
+  },
+  "limits": [
+    "Screenshots are native iPhone 17 Pro simulator renders; the physical iPhone installation is verified, but launch awaits unlocking.",
+    "Touch gestures, VoiceOver navigation, and optical LED colour require physical review; the production gesture and value state models were tested.",
+    "The wall brightness endpoint was exercised and its original value restored; physical music playback was not changed during validation."
+  ]
+}

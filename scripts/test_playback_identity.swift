@@ -94,9 +94,98 @@ struct PlaybackIdentityTests {
         check("clock rejects negative time", PlaybackIdentity.clock(-1) == "—:—")
         check("clock rejects overflow", PlaybackIdentity.clock(Double.greatestFiniteMagnitude) == "—:—")
 
+        // Reproduce the real /state contract: the brain polls music more
+        // slowly than the phone polls /state. Between source polls it repeats
+        // both the raw position and the original source observation stamp.
+        func sample(position: Double = 120_000, observed: Double? = 0,
+                    playing: Bool = true, title: String = "Clock test", duration: Double? = 240_000,
+                    received: Double, skew: Double = 0) -> WallState {
+            var progress: [String: Any] = ["at": position, "playing": playing]
+            if let observed { progress["stamped"] = stamp.timeIntervalSince1970 + observed + skew }
+            if let duration { progress["of"] = duration }
+            return WallState(json: ["now_showing": ["title": title, "artist": "Tessera"], "progress": progress],
+                             receivedAt: stamp.addingTimeInterval(received))
+        }
+        var clock = PlaybackClock()
+        var trace: [[String: Any]] = []
+        var lastElapsed = -1.0
+        var legacyElapsed = -1.0
+        var oldRegressionObserved = false
+        let receipts = [0.2, 0.9, 1.7, 2.6, 3.1, 3.8, 4.7, 5.6, 6.2, 7.4]
+        for (index, receipt) in receipts.enumerated() {
+            let observed = receipt >= 6 ? 6.0 : receipt >= 3 ? 3.0 : 0
+            let date = stamp.addingTimeInterval(receipt)
+            let packet = sample(position: (120 + observed) * 1000, observed: observed, received: receipt)
+            let accepted = clock.receive(packet, from: "wall", at: date)
+            let actual = PlaybackIdentity(state: accepted, link: .live, at: date).elapsed!
+            check("repeated source observations stay on time at \(receipt)s", near(actual, 120 + receipt))
+            check("poll receipt never rewinds elapsed at \(receipt)s", actual >= lastElapsed)
+            // This is the old receipt-time decoder, kept only as evidence
+            // that this trace actually reproduces the reported regression.
+            var old = packet
+            old.songStamped = date
+            let oldValue = old.songPosition(at: date)!
+            if oldValue < legacyElapsed { oldRegressionObserved = true }
+            let untilNextPoll = index + 1 < receipts.count ? receipts[index + 1] - receipt : 1
+            let displayDelta = min(0.5, untilNextPoll * 0.9)
+            let nextDisplay = date.addingTimeInterval(displayDelta)
+            legacyElapsed = old.songPosition(at: nextDisplay)!
+            trace.append(["received_s": receipt, "source_stamp_s": observed,
+                          "old_elapsed_s": oldValue, "correct_elapsed_s": actual])
+            trace.append(["display_tick_s": receipt + displayDelta, "source_stamp_s": observed,
+                          "old_elapsed_s": legacyElapsed,
+                          "correct_elapsed_s": accepted.songPosition(at: nextDisplay)!])
+            lastElapsed = actual
+        }
+        check("regression trace demonstrates old forward-backwards clock", oldRegressionObserved)
+
+        let shortSeek = clock.receive(sample(position: 126_000, observed: 8, received: 8.2), from: "wall", at: stamp.addingTimeInterval(8.2))
+        check("one-second backwards seek is preserved", near(shortSeek.songPosition(at: stamp.addingTimeInterval(8.2)), 126.2))
+        let longSeek = clock.receive(sample(position: 10_000, observed: 9, received: 9.2), from: "wall", at: stamp.addingTimeInterval(9.2))
+        check("long backwards seek is preserved", near(longSeek.songPosition(at: stamp.addingTimeInterval(9.2)), 10.2))
+        let forwardSeek = clock.receive(sample(position: 180_000, observed: 10, received: 10.2), from: "wall", at: stamp.addingTimeInterval(10.2))
+        check("forward seek is preserved", near(forwardSeek.songPosition(at: stamp.addingTimeInterval(10.2)), 180.2))
+        let paused = clock.receive(sample(position: 181_600, observed: 11, playing: false, received: 12), from: "wall", at: stamp.addingTimeInterval(12))
+        check("pause freezes at reported player position", near(paused.songPosition(at: stamp.addingTimeInterval(20)), 181.6))
+        let resumed = clock.receive(sample(position: 181_600, observed: 20, received: 20.4), from: "wall", at: stamp.addingTimeInterval(20.4))
+        check("resume uses source resume time", near(resumed.songPosition(at: stamp.addingTimeInterval(21)), 182.6))
+        let nextSong = clock.receive(sample(position: 0, observed: 22, title: "A different song", received: 22.3), from: "wall", at: stamp.addingTimeInterval(22.3))
+        check("song change starts its own clock", near(nextSong.songPosition(at: stamp.addingTimeInterval(23)), 1))
+        let offline = PlaybackIdentity(state: nextSong, link: .offline(since: stamp.addingTimeInterval(24)), at: stamp.addingTimeInterval(30))
+        check("timestamped clock freezes at actual disconnect", near(offline.elapsed, 2))
+        let missingDuration = clock.receive(sample(position: 5_000, observed: 25, duration: nil, received: 25.2), from: "wall", at: stamp.addingTimeInterval(25.2))
+        check("unknown duration still advances timestamped elapsed", near(missingDuration.songPosition(at: stamp.addingTimeInterval(27)), 7))
+
+        var legacyClock = PlaybackClock()
+        let legacyFirst = legacyClock.receive(sample(observed: nil, received: 0.1), from: "old-wall", at: stamp.addingTimeInterval(0.1))
+        let legacyRepeat = legacyClock.receive(sample(observed: nil, received: 2.1), from: "old-wall", at: stamp.addingTimeInterval(2.1))
+        check("legacy repeated payload retains first observation", legacyRepeat.songStamped == legacyFirst.songStamped)
+        check("legacy repeated payload does not restart elapsed", near(legacyRepeat.songPosition(at: stamp.addingTimeInterval(2.1)), 122))
+        let legacyPause = legacyClock.receive(sample(observed: nil, playing: false, received: 3.1), from: "old-wall", at: stamp.addingTimeInterval(3.1))
+        check("legacy pause is accepted even at unchanged position", near(legacyPause.songPosition(at: stamp.addingTimeInterval(9)), 120))
+        let legacyNext = legacyClock.receive(sample(observed: nil, title: "New legacy track", received: 4.1), from: "old-wall", at: stamp.addingTimeInterval(4.1))
+        check("legacy next track cannot inherit previous anchor", near(legacyNext.songPosition(at: stamp.addingTimeInterval(5.1)), 121))
+
+        var skewedClock = PlaybackClock()
+        let skewedFirst = skewedClock.receive(sample(received: 5, skew: -3600), from: "slow-wall", at: stamp.addingTimeInterval(5), serverDate: stamp.addingTimeInterval(5 - 3600))
+        check("HTTP date calibrates large wall clock skew", near(skewedFirst.songPosition(at: stamp.addingTimeInterval(5)), 125))
+        let skewedRepeat = skewedClock.receive(sample(received: 7.8, skew: -3600), from: "slow-wall", at: stamp.addingTimeInterval(7.8), serverDate: stamp.addingTimeInterval(7 - 3600))
+        check("second-precision HTTP date cannot introduce poll jitter", near(skewedRepeat.songPosition(at: stamp.addingTimeInterval(7.8)), 127.8))
+        let newWall = skewedClock.receive(sample(received: 8), from: "synchronized-wall", at: stamp.addingTimeInterval(8), serverDate: stamp.addingTimeInterval(8))
+        check("changing wall clears previous clock offset", near(newWall.songPosition(at: stamp.addingTimeInterval(8)), 128))
+        let headerResponse = HTTPURLResponse(url: URL(string: "http://wall/state")!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Date": "Tue, 22 Sep 2026 22:36:00 GMT"])!
+        check("HTTP clock header parses in GMT", PlaybackClock.serverDate(headerResponse) == stamp)
+        let badHeader = HTTPURLResponse(url: URL(string: "http://wall/state")!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: ["Date": "invalid"])!
+        check("malformed clock header safely falls back", PlaybackClock.serverDate(badHeader) == nil)
+
+        let malformed = sample(position: .nan, observed: 1, duration: .infinity, received: 1)
+        check("wire nonfinite position is rejected before geometry", malformed.songAt == nil && malformed.songStamped == nil)
+        let negative = sample(position: -50, observed: 1, received: 1)
+        check("wire negative position is rejected", negative.songAt == nil)
+
         let failed = checks.filter { ($0["passed"] as? Bool) != true }.count
         let result: [String: Any] = ["suite": "PlaybackIdentity", "passed": checks.count - failed,
-                                     "failed": failed, "checks": checks]
+                                     "failed": failed, "checks": checks, "poll_regression_trace": trace]
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: result, options: [.prettyPrinted, .sortedKeys]))
         FileHandle.standardOutput.write(Data([10]))
         if failed > 0 { exit(1) }

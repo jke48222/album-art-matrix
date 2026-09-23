@@ -12,6 +12,8 @@ import SwiftUI
 import UIKit
 
 struct RoomIntro2: View {
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
     let light: Lighting
     let duty: Double
     let fit: CGRect
@@ -31,7 +33,7 @@ struct RoomIntro2: View {
     private let roomEnd = 3.1
 
     var body: some View {
-        TimelineView(.animation(paused: finished)) { tl in
+        TimelineView(.animation(paused: finished || reducedMotion || scenePhase != .active)) { tl in
             let t = tl.date.timeIntervalSince(began)
             let accent = light.steadyAccent
             ZStack(alignment: .topLeading) {
@@ -60,7 +62,7 @@ struct RoomIntro2: View {
                     let cells: Float = Float(max(0, 1 - g) * face.width / 3) + (g < 1 ? 1.5 : 0)
                     let reveal: Double = min(1, g * 2.2)
                     let third = face.width / 3
-                    RoomPanel(px: light.reading.px, duty: duty)
+                    RoomPanel(px: light.isOff ? nil : light.reading.px, duty: duty)
                         .frame(width: face.width, height: face.height)
                         .layerEffect(ShaderLibrary.pixelate(.float(cells), .float2(0, 0)),
                                      maxSampleOffset: CGSize(width: third, height: third), isEnabled: g < 1)
@@ -73,7 +75,14 @@ struct RoomIntro2: View {
             }
         }
         .allowsHitTesting(false)
-        .onAppear { began = Date() }
+        .onAppear { began = Date(); if reducedMotion { finish() } }
+        .onChange(of: reducedMotion) { _, reduced in if reduced { finish() } }
+        .onChange(of: scenePhase) { _, phase in if phase != .active { finish() } }
+    }
+
+    private func finish() {
+        guard !finished else { return }
+        finished = true; onDone()
     }
 
     private func smooth(_ x: Double) -> Double {

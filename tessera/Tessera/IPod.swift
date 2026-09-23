@@ -65,6 +65,8 @@ enum IPodPage: Equatable {
 
 struct IPodView: View {
     @Environment(WallSession.self) private var wall
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
     let light: Lighting
     @Binding var dragLight: Double?
     @Binding var touching: Bool
@@ -72,12 +74,16 @@ struct IPodView: View {
     var onStudio: () -> Void
     var onArchive: () -> Void
     var onZoom: () -> Void
+    var onHintChange: (String) -> Void = { _ in }
 
     @State private var pages: [IPodPage] = []            // empty = Now Playing
     @State private var selected: [IPodPage: Int] = [:]
     @State private var scrub: Scrub = .light
     @State private var scrubbing: Double? = nil
-    @State private var scrubShownUntil: Date = .distantPast
+    @State private var scrubVisible = false
+    @State private var scrubHideTask: Task<Void, Never>?
+    @State private var editingColour: ColourTarget?
+    @State private var beats = BeatBook()
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, and a system player read is an XPC call.
     @State private var playing = false
@@ -85,6 +91,11 @@ struct IPodView: View {
     @AppStorage("spin.beat") private var beatOn = false
 
     private enum Scrub { case light, speed }
+    private enum ColourTarget: String, Identifiable {
+        case first, second
+        var id: String { rawValue }
+        var title: String { self == .first ? "Lamp colour" : "Second colour" }
+    }
     private var page: IPodPage? { pages.last }
     private var accent: Color { light.steadyAccent }
 
@@ -95,23 +106,28 @@ struct IPodView: View {
                 .frame(width: IPodMetrics.screen.width, height: IPodMetrics.screen.height)
                 .clipShape(RoundedRectangle(cornerRadius: Round.chip, style: .continuous))
                 .offset(x: IPodMetrics.screen.minX, y: IPodMetrics.screen.minY)
+            HStack(spacing: 6) {
+                Circle().fill(accent.toned(forDark: true)).frame(width: 3, height: 3)
+                Text("TESSERA").font(.custom(Face.displayMid, fixedSize: 9)).tracking(2.6)
+                    .foregroundStyle(Ink.ink.opacity(0.65))
+            }
+            .frame(width: IPodMetrics.bodyW, height: 28)
+            .offset(y: 264)
+            .accessibilityHidden(true)
             ClickWheel(
                 accent: accent,
+                accessibilityValue: wheelDescription,
                 onTurn: { turn($0) },
                 onMenu: { menu() },
                 onSelect: { select() },
-                onPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem(); Taps.commit() },
-                onNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem(); Taps.commit() },
+                onPrev: { skip(previous: true) },
+                onNext: { skip(previous: false) },
                 onPlay: { togglePlay() },
                 onHoldPlay: { wall.send(["mode": wall.state.mode == "off" ? "art" : "off"]); Taps.found() },
-                onTouch: { on in
-                    touching = on
-                    if !on, let v = scrubbing {
-                        if scrub == .light { wall.send(["brightness": v]); dragLight = nil }
-                        else { wall.send(["rpm": v]) }
-                        scrubbing = nil
-                        Taps.commit()
-                    }
+                onTouch: { active, cancelled in
+                    touching = active
+                    if active { scrubHideTask?.cancel() }
+                    else { finishScrub(commit: !cancelled) }
                 }
             )
             .frame(width: IPodMetrics.wheelR * 2, height: IPodMetrics.wheelR * 2)
@@ -125,15 +141,42 @@ struct IPodView: View {
         .onAppear {
             MPMusicPlayerController.systemMusicPlayer.beginGeneratingPlaybackNotifications()
             playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+            beats.retune(title: wall.state.title, artist: wall.state.artist)
+            #if DEBUG
+            if CommandLine.arguments.contains("-ipod-menu") { pages = [.root] }
+            if CommandLine.arguments.contains("-ipod-colour") { editingColour = .first }
+            #endif
         }
-        .onDisappear { MPMusicPlayerController.systemMusicPlayer.endGeneratingPlaybackNotifications() }
+        .onDisappear {
+            MPMusicPlayerController.systemMusicPlayer.endGeneratingPlaybackNotifications()
+            finishScrub(commit: false)
+            scrubHideTask?.cancel()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { finishScrub(commit: false) }
+        }
+        .onChange(of: wall.state.mode) { _, mode in
+            if mode != "cd" { scrub = .light }
+            finishScrub(commit: false)
+        }
+        .onChange(of: wall.state.title) {
+            beats.retune(title: wall.state.title, artist: wall.state.artist)
+        }
+        .onChange(of: wheelHint, initial: true) { _, hint in onHintChange(hint) }
+        .onChange(of: beats.phase) {
+            guard beatOn, wall.state.mode == "cd", scenePhase == .active else { return }
+            if case .locked(let reading) = beats.phase { wall.send(["rpm": reading.rpm]) }
+        }
+        .sheet(item: $editingColour) { target in
+            ColourSheet(colour: colourBinding(target), title: target.title)
+        }
     }
 
     // MARK: - Screen
 
     @ViewBuilder private var screen: some View {
         ZStack {
-            Color.black
+            IPodLCD.paper
             if let page {
                 IPodMenuView(
                     title: page.title,
@@ -152,14 +195,20 @@ struct IPodView: View {
                     link: wall.link,
                     scrub: scrubLabel,
                     scrubValue: scrubValue,
-                    showScrub: scrubbing != nil || Date() < scrubShownUntil,
+                    showScrub: scrubbing != nil || scrubVisible,
                     accent: accent,
                     onTapWall: onZoom
                 )
                 .transition(.move(edge: .leading).combined(with: .opacity))
             }
         }
-        .animation(Motion.settle, value: pages)
+        .dynamicTypeSize(.large)
+        .overlay {
+            RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
+                .strokeBorder(Color.black.opacity(0.24), lineWidth: 1)
+                .allowsHitTesting(false)
+        }
+        .animation(reducedMotion ? nil : Motion.settle, value: pages)
     }
 
     private var scrubLabel: String {
@@ -211,7 +260,7 @@ struct IPodView: View {
             beatOn = false
             Taps.detent(intensity: 0.5)
         }
-        scrubShownUntil = Date().addingTimeInterval(1.6)
+        showScrubBriefly()
     }
 
     private func menu() {
@@ -230,7 +279,7 @@ struct IPodView: View {
             // the way it walked the scrub bar on the classic.
             if wall.state.mode == "cd" {
                 scrub = scrub == .light ? .speed : .light
-                scrubShownUntil = Date().addingTimeInterval(1.6)
+                showScrubBriefly()
                 Taps.detent(intensity: 0.5)
             } else {
                 pages = [.root]
@@ -264,6 +313,73 @@ struct IPodView: View {
                 m.play()
             }
         }
+    }
+
+    private var wheelDescription: String {
+        if let page {
+            let entries = items(for: page)
+            let index = min(max(0, selected[page] ?? 0), max(0, entries.count - 1))
+            return entries.isEmpty ? page.title : "\(page.title). \(entries[index].title). \(index + 1) of \(entries.count)."
+        }
+        return "\(scrub == .light ? "Brightness" : "Speed"), \(scrubValue.1)"
+    }
+
+    private var wheelHint: String {
+        if page != nil { return "Turn to browse · press centre to choose" }
+        if wall.state.mode == "off" { return "Hold play to wake the wall" }
+        return scrub == .speed ? "Turn the wheel to change the speed" : "Turn the wheel to change the light"
+    }
+
+    private var beatDescription: String {
+        guard beatOn else { return "off" }
+        switch beats.phase {
+        case .listening: return "listening"
+        case .locked(let reading): return "\(Int(reading.bpm.rounded())) bpm"
+        case .missed: return "try again"
+        case .idle: return "ready"
+        }
+    }
+
+    private func skip(previous: Bool) {
+        guard MPMediaLibrary.authorizationStatus() == .authorized else { return }
+        let player = MPMusicPlayerController.systemMusicPlayer
+        if previous { player.skipToPreviousItem() } else { player.skipToNextItem() }
+        Taps.commit()
+    }
+
+    private func showScrubBriefly() {
+        scrubVisible = true
+        scrubHideTask?.cancel()
+        scrubHideTask = Task { @MainActor in
+            do { try await Task.sleep(for: .seconds(1.6)) } catch { return }
+            guard !Task.isCancelled else { return }
+            scrubVisible = false
+        }
+    }
+
+    private func finishScrub(commit: Bool) {
+        if commit, let value = scrubbing {
+            wall.send(scrub == .light ? ["brightness": value] : ["rpm": value])
+            Taps.commit()
+            showScrubBriefly()
+        } else if !commit {
+            scrubHideTask?.cancel()
+            scrubVisible = false
+        }
+        touching = false
+        dragLight = nil
+        scrubbing = nil
+    }
+
+    private func colourBinding(_ target: ColourTarget) -> Binding<Color> {
+        Binding(get: {
+            Color(wallHex: target == .first ? wall.state.color : wall.state.color2) ?? Ink.tile
+        }, set: { colour in
+            var change: [String: Any] = [target == .first ? "color" : "color2": colour.wallHex,
+                                          "match_art": false]
+            if wall.state.effect == "rainbow" { change["effect"] = "solid" }
+            wall.send(change)
+        })
     }
 
     // MARK: - Items
@@ -304,20 +420,30 @@ struct IPodView: View {
             out.append(IPodItem(id: "settings", title: "Settings", kind: .action { onSetup() }))
             return out
         case .speed:
-            return [("33⅓", 33.333), ("45", 45.0), ("78", 45.0), ("Slow", 7.5), ("Free", s.rpm)].enumerated().map { i, o in
-                IPodItem(id: "sp\(i)", title: o.0, value: abs(s.rpm - o.1) < 0.2 && o.0 != "Free" ? "on" : nil,
-                         kind: .pick(abs(s.rpm - o.1) < 0.2) { wall.send(["rpm": min(45.0, o.1)]) })
-            } + [IPodItem(id: "beat", title: "Spin on the beat", value: beatOn ? "on" : "off",
-                          kind: .toggle(beatOn) { beatOn = $0 })]
+            return [("33⅓ rpm", 33.333), ("45 rpm", 45.0), ("Slow · 7½ rpm", 7.5)].enumerated().map { i, option in
+                IPodItem(id: "sp\(i)", title: option.0,
+                         kind: .pick(!beatOn && abs(s.rpm - option.1) < 0.2) {
+                    beatOn = false
+                    wall.send(["rpm": option.1])
+                })
+            } + [IPodItem(id: "free", title: "Adjust with wheel", kind: .action {
+                pages = []
+                scrub = .speed
+                showScrubBriefly()
+            }), IPodItem(id: "beat", title: "Spin on the beat", value: beatDescription,
+                        kind: .toggle(beatOn) { enabled in
+                beatOn = enabled
+                if enabled { beats.measure(title: s.title, artist: s.artist) }
+            })]
         case .effect:
             return ["plaid", "weave", "deco", "snake", "solid", "breathe", "pulse", "rainbow", "gradient"].map { e in
                 IPodItem(id: e, title: e == "gradient" ? "Fade" : e.capitalized, value: s.effect == e ? "on" : nil,
                          kind: .pick(s.effect == e) { wall.send(["effect": e]) })
             }
         case .colours:
-            return [IPodItem(id: "c1", title: "Colour", value: s.color, kind: .action {}),
-                    IPodItem(id: "c2", title: "Second colour", value: s.color2, kind: .action {}),
-                    IPodItem(id: "hint", title: "Pick them in Studio", kind: .action { onStudio() })]
+            return [IPodItem(id: "c1", title: "Colour", value: s.color, kind: .action { editingColour = .first }),
+                    IPodItem(id: "c2", title: "Second colour", value: s.color2, kind: .action { editingColour = .second }),
+                    IPodItem(id: "match", title: "Album colours", kind: .toggle(s.matchArt) { wall.send(["match_art": $0]) })]
         case .finish:
             return [("clean", "Clean"), ("dither", "Dither"), ("poster", "Poster")].map { f in
                 IPodItem(id: f.0, title: f.1, value: s.finish == f.0 ? "on" : nil,
@@ -393,6 +519,7 @@ struct IPodBody: View {
 struct ClickWheel: View {
     let accent: Color
     var drawn: Bool = IPodBody.rendered == nil
+    var accessibilityValue: String
     var onTurn: (Int) -> Void
     var onMenu: () -> Void
     var onSelect: () -> Void
@@ -400,167 +527,159 @@ struct ClickWheel: View {
     var onNext: () -> Void
     var onPlay: () -> Void
     var onHoldPlay: () -> Void
-    var onTouch: (Bool) -> Void
+    var onTouch: (Bool, Bool) -> Void
 
-    @State private var lastAngle: Double? = nil
-    @State private var travel: Double = 0
-    @State private var moved: CGFloat = 0
-    @State private var down = false
-    @State private var startSector: Sector? = nil
-    @State private var holdWork: DispatchWorkItem? = nil
-    @State private var held = false
-    @State private var pressed: Sector? = nil
-    @State private var downAt: CGPoint = .zero
-
-    enum Sector { case center, top, bottom, left, right }
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @State private var interaction = IPodWheelInteraction()
+    @State private var holdTask: Task<Void, Never>?
+    @State private var pressed: IPodWheelInteraction.Sector?
+    @FocusState private var focused: Bool
 
     private let r = IPodMetrics.wheelR
     private let br = IPodMetrics.buttonR
+    private var highlight: Color { accent.toned(forDark: true) }
 
     var body: some View {
         ZStack {
-            // the ring: a shade lighter than the body, faintly concave.
-            // With the render underneath, the ring is already there.
             if drawn {
-                Circle()
-                    .fill(RadialGradient(colors: [Color(hex: 0x1A1816), Color(hex: 0x232020)],
-                                         center: .center, startRadius: br, endRadius: r))
-                Circle().strokeBorder(Color.white.opacity(0.10), lineWidth: 1)
-                Circle().strokeBorder(Color.black.opacity(0.5), lineWidth: 1).padding(1)
+                Circle().fill(RadialGradient(colors: [Color(hex: 0x1A1816), Color(hex: 0x292623)],
+                                              center: .center, startRadius: br, endRadius: r))
+                Circle().strokeBorder(Color.white.opacity(0.12), lineWidth: 1)
             }
-            // labels, in the wheel's own quiet ink
+            Circle().strokeBorder(highlight.opacity(focused ? 0.85 : 0), lineWidth: 2)
+                .padding(3)
             Text("MENU")
-                .font(.display(10)).kerning(1.6)
-                .foregroundStyle(pressed == .top ? Ink.ink : Ink.dim)
-                .offset(y: -(r - 24))
-            GlyphShape(glyph: .rewind, lineWidth: 1.5).frame(width: 16, height: 16)
-                .foregroundStyle(pressed == .left ? Ink.ink : Ink.dim)
-                .offset(x: -(r - 24))
-            GlyphShape(glyph: .forward, lineWidth: 1.5).frame(width: 16, height: 16)
-                .foregroundStyle(pressed == .right ? Ink.ink : Ink.dim)
-                .offset(x: r - 24)
-            HStack(spacing: 3) {
-                GlyphShape(glyph: .play, lineWidth: 1.5).frame(width: 10, height: 10)
-                GlyphShape(glyph: .pause, lineWidth: 1.5).frame(width: 10, height: 10)
-            }
-            .foregroundStyle(pressed == .bottom ? Ink.ink : Ink.dim)
-            .offset(y: r - 24)
-            // the centre button, a dish; on the render, only its press shows
-            Circle()
-                .fill(drawn
-                      ? AnyShapeStyle(RadialGradient(colors: [Color(hex: 0x0C0B0A), Color(hex: 0x141210)],
-                                                     center: .center, startRadius: 0, endRadius: br))
-                      : AnyShapeStyle(Color.white.opacity(pressed == .center ? 0.06 : 0)))
-                .frame(width: br * 2, height: br * 2)
-                .overlay { Circle().strokeBorder(Color.white.opacity(pressed == .center ? 0.22 : (drawn ? 0.09 : 0)), lineWidth: 1) }
-                .scaleEffect(pressed == .center ? 0.97 : 1)
+                .font(.custom(Face.displayMid, fixedSize: 11)).tracking(1.3)
+                .foregroundStyle(pressed == .top ? highlight : Ink.ink.opacity(0.85))
+                .offset(y: -(r - 25))
+            wheelSymbol("backward.end.fill", sector: .left).offset(x: -(r - 25))
+            wheelSymbol("forward.end.fill", sector: .right).offset(x: r - 25)
+            Image(systemName: "playpause.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(pressed == .bottom ? highlight : Ink.ink.opacity(0.85))
+                .offset(y: r - 25)
+            centerButton
         }
-        // The ZStack takes the size of its children, and with the rendered
-        // front underneath the ring is no longer one of them: only the 84
-        // point button is. Everything below assumes a square the size of
-        // the whole wheel, so give it that size, or touches land in a
-        // coordinate space a third the size with its centre in the wrong
-        // place, which is exactly how the wheel felt.
         .frame(width: r * 2, height: r * 2)
         .contentShape(Circle())
-        // The touches come through UIKit, not a SwiftUI DragGesture: the
-        // paging scroll view around the screen took every circular drag as
-        // a page swipe and every tap as the start of one. A UIKit recognizer
-        // can tell the pager's pan to wait for it, and it never yields once
-        // a finger is on the wheel. See WheelTouches below.
         .overlay {
             WheelTouches(radius: r,
                          onDown: { began(at: $0) },
                          onMove: { moved(to: $0) },
-                         onUp: { p, cancelled in ended(at: p, cancelled: cancelled) })
+                         onUp: { point, cancelled in ended(at: point, cancelled: cancelled) })
+                .accessibilityHidden(true)
         }
-        .animation(Motion.blink, value: pressed)
+        .focusable()
+        .focused($focused)
+        .focusEffectDisabled()
+        .onKeyPress(.upArrow) { accessibleTurn(-1); return .handled }
+        .onKeyPress(.downArrow) { accessibleTurn(1); return .handled }
+        .onKeyPress(.leftArrow) { onMenu(); return .handled }
+        .onKeyPress(.rightArrow) { onSelect(); return .handled }
+        .onKeyPress(.return) { onSelect(); return .handled }
+        .onKeyPress(.space) { onPlay(); return .handled }
+        .onKeyPress(.escape) { onMenu(); return .handled }
+        .animation(reducedMotion ? nil : Motion.blink, value: pressed)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Click wheel")
-    }
-
-    private func began(at p: CGPoint) {
-        let c = CGPoint(x: r, y: r)
-        let dx = p.x - c.x, dy = p.y - c.y
-        let dist = hypot(dx, dy)
-        down = true
-        downAt = p
-        onTouch(true)
-        Taps.warm()
-        travel = 0; moved = 0; held = false
-        lastAngle = dist > br * 0.7 ? atan2(dy, dx) : nil
-        startSector = sector(dx: dx, dy: dy, dist: dist)
-        pressed = startSector
-        if startSector == .bottom { scheduleHold() }
-    }
-
-    private func moved(to p: CGPoint) {
-        guard down else { return }
-        let c = CGPoint(x: r, y: r)
-        let dx = p.x - c.x, dy = p.y - c.y
-        let dist = hypot(dx, dy)
-        moved = max(moved, hypot(p.x - downAt.x, p.y - downAt.y))
-        if moved > 8 { cancelHold(); pressed = nil }
-        guard dist > br * 0.7 else { lastAngle = nil; return }   // the button does not turn
-        let a = atan2(dy, dx)
-        if let last = lastAngle {
-            var d = a - last
-            if d > .pi { d -= 2 * .pi } else if d < -.pi { d += 2 * .pi }
-            travel += d
-            let step = Double.pi / 12                   // 24 detents a turn
-            while travel >= step { travel -= step; onTurn(1) }
-            while travel <= -step { travel += step; onTurn(-1) }
-        }
-        lastAngle = a
-    }
-
-    private func ended(at p: CGPoint, cancelled: Bool) {
-        guard down else { return }
-        cancelHold()
-        let tap = !cancelled && moved < 8 && !held
-        if tap, let s = startSector {
-            switch s {
-            case .center: onSelect()
-            case .top: onMenu()
-            case .left: onPrev()
-            case .right: onNext()
-            case .bottom: onPlay()
+        .accessibilityValue(accessibilityValue)
+        .accessibilityHint("Adjust to turn the wheel. Activate to select. More actions include Menu and playback controls.")
+        .accessibilityAdjustableAction { direction in
+            switch direction {
+            case .increment: accessibleTurn(1)
+            case .decrement: accessibleTurn(-1)
+            @unknown default: break
             }
         }
+        .accessibilityAction { onSelect() }
+        .accessibilityAction(named: "Menu or back") { onMenu() }
+        .accessibilityAction(named: "Select") { onSelect() }
+        .accessibilityAction(named: "Previous track") { onPrev() }
+        .accessibilityAction(named: "Next track") { onNext() }
+        .accessibilityAction(named: "Play or pause") { onPlay() }
+        .accessibilityAction(named: "Sleep or wake the wall") { onHoldPlay() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { cancel() }
+        }
+        .onDisappear { cancel() }
+    }
+
+    private var centerButton: some View {
+        Circle()
+            .fill(drawn ? Color(hex: 0x181613) : Color.white.opacity(pressed == .center ? 0.09 : 0.015))
+            .frame(width: br * 2, height: br * 2)
+            .overlay { Circle().strokeBorder(Color.white.opacity(pressed == .center ? 0.3 : 0.09), lineWidth: 1) }
+            .overlay {
+                Circle().fill(highlight.opacity(pressed == .center ? 0.95 : 0.38))
+                    .frame(width: 5, height: 5)
+            }
+            .scaleEffect(reducedMotion ? 1 : pressed == .center ? 0.97 : 1)
+    }
+
+    private func wheelSymbol(_ name: String, sector: IPodWheelInteraction.Sector) -> some View {
+        Image(systemName: name)
+            .font(.system(size: 15, weight: .semibold))
+            .foregroundStyle(pressed == sector ? highlight : Ink.ink.opacity(0.85))
+    }
+
+    private func accessibleTurn(_ step: Int) {
+        onTouch(true, false)
+        onTurn(step)
+        onTouch(false, false)
+    }
+
+    private func began(at point: CGPoint) {
+        guard interaction.begin(x: point.x - r, y: point.y - r) else { return }
+        onTouch(true, false)
+        Taps.warm()
+        pressed = interaction.startSector
+        holdTask?.cancel()
+        if interaction.canHold {
+            holdTask = Task { @MainActor in
+                do { try await Task.sleep(for: .milliseconds(900)) } catch { return }
+                guard !Task.isCancelled, scenePhase == .active, interaction.hold() else { return }
+                onHoldPlay()
+            }
+        }
+    }
+
+    private func moved(to point: CGPoint) {
+        let steps = interaction.move(x: point.x - r, y: point.y - r)
+        if !interaction.canHold { holdTask?.cancel() }
+        if interaction.moved >= 8 { pressed = nil }
+        if steps != 0 { onTurn(steps) }
+    }
+
+    private func ended(at point: CGPoint, cancelled: Bool) {
+        guard interaction.isActive else { return }
+        holdTask?.cancel()
+        let sector = interaction.end(x: point.x - r, y: point.y - r, cancelled: cancelled)
         pressed = nil
-        down = false
-        onTouch(false)
+        // A cancelled touch drops the preview; it never writes to the wall.
+        onTouch(false, cancelled)
+        switch sector {
+        case .center: onSelect()
+        case .top: onMenu()
+        case .left: onPrev()
+        case .right: onNext()
+        case .bottom: onPlay()
+        case nil: break
+        }
     }
 
-    private func sector(dx: CGFloat, dy: CGFloat, dist: CGFloat) -> Sector {
-        if dist < br { return .center }
-        let a = atan2(dy, dx) * 180 / .pi     // 0 = right, 90 = down
-        if a > -135 && a <= -45 { return .top }
-        if a > -45 && a <= 45 { return .right }
-        if a > 45 && a <= 135 { return .bottom }
-        return .left
-    }
-
-    private func scheduleHold() {
-        let w = DispatchWorkItem { held = true; onHoldPlay() }
-        holdWork = w
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.9, execute: w)
-    }
-
-    private func cancelHold() {
-        holdWork?.cancel(); holdWork = nil
+    private func cancel() {
+        holdTask?.cancel()
+        holdTask = nil
+        let wasActive = interaction.isActive
+        interaction.cancel()
+        pressed = nil
+        if wasActive { onTouch(false, true) }
     }
 }
 
 // MARK: - Touches for the wheel
 
-/// The wheel's touch surface. UIKit, on purpose: the screen sits inside a
-/// paging scroll view, and SwiftUI cannot tell that scroll view to keep its
-/// hands off one control. UIKit can. The pager's pan is made to wait for
-/// this recognizer to fail, and this recognizer takes the touch the instant
-/// it lands on the wheel, so a circular drag turns the wheel and a tap
-/// presses it, and neither becomes a page swipe. A touch outside the ring
-/// is not this view's at all, so pages still swipe from anywhere else.
 struct WheelTouches: UIViewRepresentable {
     let radius: CGFloat
     var onDown: (CGPoint) -> Void
@@ -568,31 +687,37 @@ struct WheelTouches: UIViewRepresentable {
     var onUp: (CGPoint, Bool) -> Void
 
     func makeUIView(context: Context) -> WheelTouchView {
-        let v = WheelTouchView()
-        v.backgroundColor = .clear
-        v.isMultipleTouchEnabled = false
-        return v
+        let view = WheelTouchView()
+        view.backgroundColor = .clear
+        view.isMultipleTouchEnabled = false
+        return view
     }
 
-    func updateUIView(_ v: WheelTouchView, context: Context) {
-        v.radius = radius
-        v.onDown = onDown
-        v.onMove = onMove
-        v.onUp = onUp
+    func updateUIView(_ view: WheelTouchView, context: Context) {
+        view.radius = radius
+        view.onDown = onDown
+        view.onMove = onMove
+        view.onUp = onUp
+    }
+
+    static func dismantleUIView(_ view: WheelTouchView, coordinator: ()) {
+        view.cancelTrackingWheel()
+        view.onDown = nil
+        view.onMove = nil
+        view.onUp = nil
     }
 }
 
 final class WheelTouchView: UIControl {
-    // A UIControl, not a plain view: a scroll view will not cancel a
-    // control's touches when it decides to scroll (touchesShouldCancel says
-    // no for controls), which is half of why a slider inside a scroll view
-    // keeps working. The other half is below.
     var radius: CGFloat = 0
     var onDown: ((CGPoint) -> Void)?
     var onMove: ((CGPoint) -> Void)?
     var onUp: ((CGPoint, Bool) -> Void)?
     private let touch = ImmediateTouch()
-    private weak var pager: UIScrollView?
+    private var suspendedPans: [(recognizer: UIPanGestureRecognizer, enabled: Bool)] = []
+    private var trackingWheel = false
+    private var lastPoint = CGPoint.zero
+
     override init(frame: CGRect) {
         super.init(frame: frame)
         touch.cancelsTouchesInView = false
@@ -602,52 +727,64 @@ final class WheelTouchView: UIControl {
 
     required init?(coder: NSCoder) { fatalError("not from a nib") }
 
-    /// Only the ring and the button are the wheel; the corners of the
-    /// square belong to the body behind them.
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
-        let c = CGPoint(x: bounds.midX, y: bounds.midY)
-        return hypot(point.x - c.x, point.y - c.y) <= radius
+        hypot(point.x - bounds.midX, point.y - bounds.midY) <= radius
     }
 
-    /// The paging scroll view this wheel sits in, found when a finger
-    /// lands, by which time the view is certainly in place.
-    private func findPager() -> UIScrollView? {
-        var v = superview
-        while let s = v {
-            if let sv = s as? UIScrollView { return sv }
-            v = s.superview
-        }
-        return nil
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil { cancelTrackingWheel() }
     }
 
-    @objc private func handle(_ g: UIGestureRecognizer) {
-        let p = g.location(in: self)
-        switch g.state {
-        case .began:
-            // Take the pager's pan away for the length of this touch, right
-            // now and synchronously. SwiftUI's scrollDisabled arrives a
-            // render later, and by then the pan had begun and cancelled us.
-            if let sv = findPager() {
-                pager = sv
-                sv.panGestureRecognizer.isEnabled = false
+    func cancelTrackingWheel() {
+        restoreScrolling()
+        guard trackingWheel else { return }
+        trackingWheel = false
+        onUp?(lastPoint, true)
+        touch.isEnabled = false
+        touch.isEnabled = true
+    }
+
+    private func suspendScrolling() {
+        restoreScrolling()
+        var ancestor = superview
+        while let view = ancestor {
+            if let scroll = view as? UIScrollView {
+                let pan = scroll.panGestureRecognizer
+                suspendedPans.append((pan, pan.isEnabled))
+                pan.isEnabled = false
             }
-            onDown?(p)
+            ancestor = view.superview
+        }
+    }
+
+    private func restoreScrolling() {
+        let pans = suspendedPans
+        suspendedPans.removeAll()
+        for pan in pans { pan.recognizer.isEnabled = pan.enabled }
+    }
+
+    @objc private func handle(_ gesture: UIGestureRecognizer) {
+        let point = gesture.location(in: self)
+        lastPoint = point
+        switch gesture.state {
+        case .began:
+            trackingWheel = true
+            suspendScrolling()
+            onDown?(point)
         case .changed:
-            onMove?(p)
-        case .ended:
-            pager?.panGestureRecognizer.isEnabled = true
-            onUp?(p, false)
-        case .cancelled, .failed:
-            pager?.panGestureRecognizer.isEnabled = true
-            onUp?(p, true)
-        default:
-            break
+            guard trackingWheel else { return }
+            onMove?(point)
+        case .ended, .cancelled, .failed:
+            restoreScrolling()
+            guard trackingWheel else { return }
+            trackingWheel = false
+            onUp?(point, gesture.state != .ended)
+        default: break
         }
     }
 }
 
-/// A recognizer that begins the moment a finger lands and follows it until
-/// it lifts. There is nothing to recognise: the wheel wants every touch.
 final class ImmediateTouch: UIGestureRecognizer {
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
         super.touchesBegan(touches, with: event)
@@ -672,6 +809,14 @@ final class ImmediateTouch: UIGestureRecognizer {
 
 // MARK: - Now Playing
 
+private enum IPodLCD {
+    static let paper = Color(hex: 0xEAE6D9)
+    static let ink = Color(hex: 0x242B2A)
+    static let secondary = Color(hex: 0x59625D)
+    static let rule = Color(hex: 0xB9BDB0)
+    static let header = Color(hex: 0xD7DCCC)
+}
+
 struct NowPlayingScreen: View {
     let state: WallState
     let reading: FrameReading
@@ -688,44 +833,55 @@ struct NowPlayingScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            StatusStrip(title: song.statusLabel, playing: song.advances, link: link)
-            HStack(alignment: .top, spacing: 12) {
+            StatusStrip(title: song.statusLabel, symbol: song.statusSymbol, link: link)
+            HStack(alignment: .top, spacing: 11) {
                 Button(action: onTapWall) {
                     PanelCanvas(px: reading.px, duty: duty)
-                        .frame(width: 150, height: 150)
+                        .frame(width: 130, height: 130)
                         .clipShape(RoundedRectangle(cornerRadius: 2))
+                        .overlay { RoundedRectangle(cornerRadius: 2).strokeBorder(.black.opacity(0.15), lineWidth: 1) }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("The wall. Opens large.")
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text(song.title)
-                        .font(.display(15))
-                        .foregroundStyle(Ink.ink)
+                        .font(.custom(Face.displayMid, fixedSize: 17))
+                        .tracking(-0.3)
+                        .foregroundStyle(IPodLCD.ink)
                         .lineLimit(3)
-                        .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
                     if song.hasSong, !song.artist.isEmpty {
-                        Text(song.artist).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(2)
+                        Text(song.artist)
+                            .font(.custom(Face.uiMedium, fixedSize: 12))
+                            .foregroundStyle(IPodLCD.ink)
+                            .lineLimit(2)
                     }
                     if song.hasSong, !song.album.isEmpty {
-                        Text(song.album).font(.ui(11)).foregroundStyle(Ink.faint).lineLimit(2)
+                        Text(song.album)
+                            .font(.custom(Face.ui, fixedSize: 10))
+                            .foregroundStyle(IPodLCD.secondary)
+                            .lineLimit(1)
                     }
-                    Spacer(minLength: 0)
-                    Text(modeWord)
-                        .font(.machine(9))
-                        .textCase(.uppercase)
-                        .kerning(0.8)
-                        .foregroundStyle(Ink.faint)
+                    Spacer(minLength: 2)
+                    HStack(spacing: 4) {
+                        Image(systemName: state.mode == "off" ? "moon.zzz.fill" : "square.grid.3x3.fill")
+                            .font(.system(size: 7, weight: .semibold))
+                        Text(modeWord.uppercased())
+                            .font(.custom(Face.mono, fixedSize: 8)).tracking(0.5)
+                    }
+                    .foregroundStyle(IPodLCD.secondary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: 130)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(song.accessibilitySummary + ". Wall mode: " + modeWord)
             }
-            .padding(.horizontal, 10)
-            .padding(.top, 8)
-            Spacer(minLength: 0)
-            bar
-                .padding(.horizontal, 10)
-                .padding(.bottom, 8)
+            .padding(.horizontal, 11)
+            .padding(.top, 10)
+            Spacer(minLength: 4)
+            bar.padding(.horizontal, 11).padding(.bottom, 10)
         }
+        .background(IPodLCD.paper)
     }
 
     private var modeWord: String {
@@ -736,7 +892,7 @@ struct NowPlayingScreen: View {
         case "nine": "nine"
         case "clock": "clock"
         case "timer": "timer"
-        case "off": "off"
+        case "off": "asleep"
         case "weather": "weather"
         case "frame": "drawing"
         case "clip": "clip"
@@ -748,71 +904,81 @@ struct NowPlayingScreen: View {
         }
     }
 
-    /// The bar the classic put at the bottom: the song's progress, or while
-    /// the wheel turns, the thing it is turning.
     @ViewBuilder private var bar: some View {
         if showScrub {
-            HStack(spacing: 8) {
-                Text(scrub).font(.machine(9)).kerning(0.8).foregroundStyle(Ink.dim)
-                ScreenRule(fraction: scrubValue.0, tint: Ink.ink)
-                Text(scrubValue.1).font(.machine(9)).foregroundStyle(Ink.ink)
+            VStack(spacing: 5) {
+                HStack {
+                    Text(scrub).tracking(1)
+                    Spacer()
+                    Text(scrubValue.1).monospacedDigit()
+                }
+                .font(.custom(Face.mono, fixedSize: 9))
+                .foregroundStyle(IPodLCD.ink)
+                ScreenRule(fraction: scrubValue.0, tint: IPodLCD.ink)
             }
+            .accessibilityElement(children: .combine)
         } else if song.hasSong {
-            PlaybackProgress(state: state, link: link, accent: accent, compact: true)
+            PlaybackProgress(state: state, link: link, accent: IPodLCD.ink,
+                             secondary: IPodLCD.secondary, compact: true)
         } else {
             Text(song.context)
-                .font(.ui(10))
-                .foregroundStyle(Ink.dim)
+                .font(.custom(Face.ui, fixedSize: 11))
+                .foregroundStyle(IPodLCD.secondary)
+                .lineLimit(2)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
 
-/// The screen's top strip, as the classic drew it: what this screen is on
-/// the left, the state of things on the right.
 struct StatusStrip: View {
     let title: String
-    let playing: Bool
-    let link: LinkState
+    var symbol: String? = nil
+    var link: LinkState? = nil
+    var count: String? = nil
 
     var body: some View {
-        HStack {
-            Text(title).font(.ui(11, .semibold)).foregroundStyle(Ink.ink)
-            Spacer()
-            HStack(spacing: 6) {
-                GlyphShape(glyph: playing ? .play : .pause, lineWidth: 1.4)
-                    .frame(width: 8, height: 8)
-                    .foregroundStyle(Ink.dim)
-                Circle()
-                    .fill(link.isLive ? Ink.moss : link.isStandIn ? Ink.faint : Ink.tile)
-                    .frame(width: 6, height: 6)
+        HStack(spacing: 6) {
+            if let symbol {
+                Image(systemName: symbol).font(.system(size: 9, weight: .semibold))
+            }
+            Text(title).font(.custom(Face.uiSemibold, fixedSize: 11)).lineLimit(1)
+            Spacer(minLength: 4)
+            if let count {
+                Text(count).font(.custom(Face.mono, fixedSize: 9)).monospacedDigit()
+                    .foregroundStyle(IPodLCD.secondary)
+            }
+            if let link {
+                Image(systemName: link.isLive ? "wifi" : link.isStandIn ? "iphone" : "wifi.slash")
+                    .font(.system(size: 10, weight: .semibold))
+                    .accessibilityLabel(link.isLive ? "Wall connected" : link.isStandIn ? "Phone preview" : "Wall disconnected")
             }
         }
-        .padding(.horizontal, 10)
-        .frame(height: 20)
-        .background(Color.white.opacity(0.05))
-        .overlay(alignment: .bottom) { Rectangle().fill(Color.white.opacity(0.08)).frame(height: 1) }
+        .foregroundStyle(IPodLCD.ink)
+        .padding(.horizontal, 11)
+        .frame(height: 28)
+        .background(IPodLCD.header.gradient)
+        .overlay(alignment: .bottom) { Rectangle().fill(IPodLCD.rule).frame(height: 1) }
     }
 }
 
-/// A rule of marks, like the lock screen's.
 struct ScreenRule: View {
     let fraction: Double
     let tint: Color
     var body: some View {
-        GeometryReader { geo in
-            let n = 36
-            let cell = geo.size.width / CGFloat(n)
-            let filled = Int((max(0, min(1, fraction)) * Double(n)).rounded())
+        GeometryReader { geometry in
+            let count = 36
+            let cell = geometry.size.width / CGFloat(count)
+            let valid = fraction.isFinite ? max(0, min(1, fraction)) : 0
+            let filled = Int((valid * Double(count)).rounded())
             HStack(spacing: cell * 0.35) {
-                ForEach(0..<n, id: \.self) { i in
-                    Rectangle()
-                        .fill(i < filled ? tint : Color.white.opacity(0.14))
+                ForEach(0..<count, id: \.self) { index in
+                    Rectangle().fill(index < filled ? tint : tint.opacity(0.17))
                         .frame(width: cell * 0.65)
                 }
             }
         }
         .frame(height: 4)
+        .accessibilityHidden(true)
     }
 }
 
@@ -824,50 +990,87 @@ struct IPodMenuView: View {
     let selected: Int
     let accent: Color
     var onTap: (Int) -> Void
-
-    private let rowH: CGFloat = 26
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
 
     var body: some View {
         VStack(spacing: 0) {
-            StatusStrip(title: title, playing: false, link: .live)
-                .overlay(alignment: .trailing) { Color.black.opacity(0.001).frame(width: 40) } // no state on menus
+            StatusStrip(title: title, symbol: title == "Tessera" ? "square.grid.3x3.fill" : "chevron.left",
+                        count: "\(min(selected + 1, items.count))/\(items.count)")
             ScrollViewReader { proxy in
                 ScrollView(.vertical) {
                     VStack(spacing: 0) {
-                        ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                            let on = i == selected
-                            HStack(spacing: 8) {
-                                Text(item.title)
-                                    .font(.ui(13, on ? .semibold : .regular))
-                                    .foregroundStyle(on ? Ink.ground : Ink.ink)
-                                    .lineLimit(1)
-                                Spacer(minLength: 6)
-                                if let v = item.value {
-                                    Text(v)
-                                        .font(.ui(11))
-                                        .foregroundStyle(on ? Ink.ground.opacity(0.7) : Ink.dim)
-                                        .lineLimit(1)
-                                }
-                                if case .submenu = item.kind {
-                                    Image(systemName: "chevron.right")
-                                        .font(.system(size: 9, weight: .bold))
-                                        .foregroundStyle(on ? Ink.ground.opacity(0.7) : Ink.faint)
-                                }
-                            }
-                            .padding(.horizontal, 10)
-                            .frame(height: rowH)
-                            .background(on ? Ink.ink : Color.clear)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onTap(i) }
-                            .id(i)
+                        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                            row(item, selected: index == selected) { onTap(index) }.id(index)
                         }
                     }
                 }
                 .scrollIndicators(.hidden)
-                .onChange(of: selected) { _, new in
-                    withAnimation(Motion.blink) { proxy.scrollTo(new, anchor: .center) }
+                .onAppear { proxy.scrollTo(selected, anchor: .center) }
+                .onChange(of: selected) { _, next in
+                    withAnimation(reducedMotion ? nil : Motion.blink) { proxy.scrollTo(next, anchor: .center) }
                 }
             }
+        }
+        .background(IPodLCD.paper)
+    }
+
+    private func row(_ item: IPodItem, selected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Text(item.title)
+                    .font(.custom(selected ? Face.uiSemibold : Face.ui, fixedSize: 14))
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if let value = item.value, value != "on", value != "off" {
+                    Text(value)
+                        .font(.custom(Face.ui, fixedSize: 10))
+                        .lineLimit(1)
+                        .foregroundStyle(selected ? IPodLCD.paper.opacity(0.82) : IPodLCD.secondary)
+                }
+                trailing(item, selected: selected)
+            }
+            .foregroundStyle(selected ? IPodLCD.paper : IPodLCD.ink)
+            .padding(.horizontal, 11)
+            .frame(height: 44)
+            .background(selected ? IPodLCD.ink : .clear)
+            .overlay(alignment: .leading) {
+                if selected { Rectangle().fill(accent.toned(forDark: true)).frame(width: 3) }
+            }
+            .overlay(alignment: .bottom) {
+                if !selected { Rectangle().fill(IPodLCD.rule.opacity(0.35)).frame(height: 0.5).padding(.leading, 11) }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityValue(accessibilityValue(item))
+    }
+
+    @ViewBuilder private func trailing(_ item: IPodItem, selected: Bool) -> some View {
+        switch item.kind {
+        case .submenu:
+            Image(systemName: "chevron.right").font(.system(size: 10, weight: .bold))
+        case .toggle(let on, _):
+            Image(systemName: on ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 14, weight: .medium))
+        case .pick(let on, _):
+            Image(systemName: on ? "checkmark" : "circle")
+                .font(.system(size: on ? 12 : 5, weight: .semibold))
+                .opacity(on ? 1 : 0.35)
+        case .action:
+            if item.value == "on" {
+                Image(systemName: "checkmark").font(.system(size: 12, weight: .semibold))
+            } else {
+                Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).opacity(0.6)
+            }
+        }
+    }
+
+    private func accessibilityValue(_ item: IPodItem) -> String {
+        switch item.kind {
+        case .toggle(let on, _): return on ? "On" : "Off"
+        case .pick(let on, _): return on ? "Current setting" : ""
+        default: return item.value ?? ""
         }
     }
 }

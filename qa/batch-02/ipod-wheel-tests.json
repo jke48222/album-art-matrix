@@ -1,0 +1,179 @@
+{
+  "checks": [
+    {
+      "name": "idle cannot sleep",
+      "passed": true
+    },
+    {
+      "name": "idle movement produces no detents",
+      "passed": true
+    },
+    {
+      "name": "touch outside the ring is rejected",
+      "passed": true
+    },
+    {
+      "name": "nonfinite touch is rejected",
+      "passed": true
+    },
+    {
+      "name": "center touch begins",
+      "passed": true
+    },
+    {
+      "name": "center touch cannot sleep",
+      "passed": true
+    },
+    {
+      "name": "center tap selects",
+      "passed": true
+    },
+    {
+      "name": "release clears tracking",
+      "passed": true
+    },
+    {
+      "name": "top tap keeps its command",
+      "passed": true
+    },
+    {
+      "name": "right tap keeps its command",
+      "passed": true
+    },
+    {
+      "name": "bottom tap keeps its command",
+      "passed": true
+    },
+    {
+      "name": "left tap keeps its command",
+      "passed": true
+    },
+    {
+      "name": "bottom press can sleep",
+      "passed": true
+    },
+    {
+      "name": "hold fires once",
+      "passed": true
+    },
+    {
+      "name": "hold cannot fire again",
+      "passed": true
+    },
+    {
+      "name": "another began cannot restart a held press",
+      "passed": true
+    },
+    {
+      "name": "held finger movement cannot rotate",
+      "passed": true
+    },
+    {
+      "name": "held release does not also play",
+      "passed": true
+    },
+    {
+      "name": "hold is cleared on release",
+      "passed": true
+    },
+    {
+      "name": "movement disarms sleep",
+      "passed": true
+    },
+    {
+      "name": "moved press cannot fire delayed hold",
+      "passed": true
+    },
+    {
+      "name": "drag release cannot also play",
+      "passed": true
+    },
+    {
+      "name": "clockwise motion produces two detents",
+      "passed": true
+    },
+    {
+      "name": "stationary movement produces no duplicate detents",
+      "passed": true
+    },
+    {
+      "name": "rotation release cannot skip a song",
+      "passed": true
+    },
+    {
+      "name": "counterclockwise motion produces two negative detents",
+      "passed": true
+    },
+    {
+      "name": "cancellation clears tracking",
+      "passed": true
+    },
+    {
+      "name": "cancellation clears previous sector",
+      "passed": true
+    },
+    {
+      "name": "cancelled release sends no command",
+      "passed": true
+    },
+    {
+      "name": "crossing the angle seam advances one detent",
+      "passed": true
+    },
+    {
+      "name": "crossing back through the seam reverses one detent",
+      "passed": true
+    },
+    {
+      "name": "center drag cannot become wheel rotation",
+      "passed": true
+    },
+    {
+      "name": "center-origin circular move still does not rotate",
+      "passed": true
+    },
+    {
+      "name": "center drag cannot become a tap",
+      "passed": true
+    },
+    {
+      "name": "entering the center produces no detents",
+      "passed": true
+    },
+    {
+      "name": "crossing the center does not jump twelve detents",
+      "passed": true
+    },
+    {
+      "name": "moving far outside the ring produces no detents",
+      "passed": true
+    },
+    {
+      "name": "returning to the ring does not jump",
+      "passed": true
+    },
+    {
+      "name": "system cancellation never plays",
+      "passed": true
+    },
+    {
+      "name": "cancelled hold cannot fire later",
+      "passed": true
+    },
+    {
+      "name": "missing move events cannot turn a distant release into a tap",
+      "passed": true
+    },
+    {
+      "name": "nonfinite move is ignored",
+      "passed": true
+    },
+    {
+      "name": "nonfinite release never acts",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 43,
+  "suite": "IPodWheelInteraction"
+}

@@ -1,0 +1,115 @@
+{
+  "checks" : [
+    {
+      "name" : "first launch settings replaces unpresented onboarding without awaiting dismissal",
+      "passed" : true
+    },
+    {
+      "name" : "a requested screen does not claim to have appeared",
+      "passed" : true
+    },
+    {
+      "name" : "superseded cover appearance cannot take ownership of the new sheet",
+      "passed" : true
+    },
+    {
+      "name" : "dismissal without appeared content cannot discard a pending presentation",
+      "passed" : true
+    },
+    {
+      "name" : "an unpresented sheet can be replaced immediately by a cover",
+      "passed" : true
+    },
+    {
+      "name" : "an unpresented cover can be replaced by another cover",
+      "passed" : true
+    },
+    {
+      "name" : "repeated requests before appearance do not schedule another presentation",
+      "passed" : true
+    },
+    {
+      "name" : "dismiss before appearance releases the request immediately",
+      "passed" : true
+    },
+    {
+      "name" : "late lifecycle callbacks cannot revive a canceled unpresented request",
+      "passed" : true
+    },
+    {
+      "name" : "a canceled unpresented route does not block a later request",
+      "passed" : true
+    },
+    {
+      "name" : "settings uses one sheet",
+      "passed" : true
+    },
+    {
+      "name" : "sheet appearance confirms presentation ownership",
+      "passed" : true
+    },
+    {
+      "name" : "studio waits for settings dismissal",
+      "passed" : true
+    },
+    {
+      "name" : "the outgoing sheet retains ownership until dismissal completes",
+      "passed" : true
+    },
+    {
+      "name" : "studio opens after dismissal completes",
+      "passed" : true
+    },
+    {
+      "name" : "latest request wins during dismissal",
+      "passed" : true
+    },
+    {
+      "name" : "queued sheet cannot overlap a cover",
+      "passed" : true
+    },
+    {
+      "name" : "reselecting the presented destination does not dismiss it",
+      "passed" : true
+    },
+    {
+      "name" : "interactive dismissal still serializes the next presentation",
+      "passed" : true
+    },
+    {
+      "name" : "canceling during dismissal retains the outgoing modal until its callback",
+      "passed" : true
+    },
+    {
+      "name" : "canceling a pending route cannot reopen a dismissed screen",
+      "passed" : true
+    },
+    {
+      "name" : "onboarding opens alone",
+      "passed" : true
+    },
+    {
+      "name" : "interactive cover dismissal clears route ownership",
+      "passed" : true
+    },
+    {
+      "name" : "programmatic dismissal waits for an appeared cover to finish",
+      "passed" : true
+    },
+    {
+      "name" : "normal programmatic dismissal leaves no active or queued route",
+      "passed" : true
+    },
+    {
+      "name" : "reopening an interactively closing sheet waits for dismissal",
+      "passed" : true
+    },
+    {
+      "name" : "the closing sheet can reopen without overlapping its predecessor",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 27,
+  "suite" : "HomeRouter"
+}
