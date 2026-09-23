@@ -16,3 +16,4 @@ HAP-python[QRCode]
 # Optional: the wall runs without it, and says so when a video needs it.
 # Needs updating often; pi/install-ytdlp.sh is the one-liner for that.
 yt-dlp
+ddgs>=9.0            # the web's image search without a key, for show me (DuckDuckGo)

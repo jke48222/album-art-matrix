@@ -1,7 +1,5 @@
 # Album Art Matrix
 
-[![License](https://img.shields.io/github/license/jke48222/album-art-matrix)](LICENSE) ![Top language](https://img.shields.io/github/languages/top/jke48222/album-art-matrix) ![hardware](https://img.shields.io/badge/hardware-Raspberry%20Pi%205%2C%20HUB75-red) ![status](https://img.shields.io/badge/status-design%20only%2C%20no%20hardware%20driven%20yet-yellow)
-
 A design for an LED wall that shows the cover of whatever song is playing, rendered as a slowly
 spinning disc. Nine square LED panels tiled three by three, 480 mm on a side, driven by a Raspberry
 Pi 5.
@@ -9,8 +7,6 @@ Pi 5.
 **No hardware has been driven yet.** Not nine panels, not one. This repository is the design, the
 circuit simulation, and the software that will run on it. Some of the first light parts have since
 been ordered; no panel has arrived. The section below is exact about what exists.
-
-![Design render of the nine-panel wall. No hardware has been driven yet.](design/atelier-v2/01-hero.png)
 
 ## Building it
 
@@ -47,7 +43,7 @@ record of how the wiring was arrived at.
 | The wall's own ears, the voice (`brain/voice/`, `docs/VOICE.md`) | Built 2026-09-15. A wake word on the ear's stream, chosen on the phone from openWakeWord's Hey Jarvis, Hey Mycroft, Hey Marvin and Alexa, or a phrase of your own taught by saying it to the wall six times (matched on the same speech embeddings with the room's sound taken out; measured on synthetic voices, it heard 97% of new voices in an echoing room with no false wakes in 3.6 minutes of talk). Each word keeps its own sensitivity, with a live meter on the Voice page. Then the Horizon face while it listens, speech to text on the Pi (faster-whisper tiny, about a second and a half a sentence), a grammar of commands done with no cloud, and Claude for the rest. `GET /voice`, `GET /voice/meter`, `POST /voice/wakeword`, `POST /voice/enroll`, `POST /voice/wake` and `POST /voice/say` for testing without a microphone. |
 | Ask the wall (`brain/ask.py`) | Built 2026-09-15, waiting for the Claude key from the phone's Services page. A question by voice or `POST /ask` goes to Claude Opus 5 with the wall's own tools (what is playing, the journal, the face, brightness, a timer) and comes back as words on the panel, paged, 1x at 64 and 2x at 192. A Siri Shortcut recipe is in `docs/ASK.md`. |
 | Leave a note (`POST /note`, `docs/ASK.md`) | Built 2026-09-15. "Hey Siri, tell the wall back at six" runs the words across the panel for a while, then the wall goes back to what it was doing. Also a voice command. |
-| Show me, play me, the earworm finder (`brain/show.py`) | Built 2026-09-15, pictures 2026-09-22. A picture of a thing by name (the lead image of its Wikipedia page, or an openly licensed photo from Openverse) or a cover by name from iTunes into the frame face, a video by name through yt-dlp into the video face, and a song from the words remembered through Claude, with its sleeve. Plain words mean a picture unless they name a record the wall has worn or shelved; "cover", "album", "by" ask for a sleeve, "a picture of" asks for a picture. By voice or `POST /show` (with `kind`: picture, cover or any), `/play`, `/earworm`. |
+| Show me, play me, the earworm finder (`brain/show.py`) | Built 2026-09-15, pictures 2026-09-22. A picture of a thing by name (Google Images with a key and search engine set under Services, otherwise the web through DuckDuckGo's image search, then the lead image of its Wikipedia page, then Openverse) or a cover by name from iTunes into the frame face, a video by name through yt-dlp into the video face, and a song from the words remembered through Claude, with its sleeve. Plain words mean a picture unless they name a record the wall has worn or shelved; "cover", "album", "by" ask for a sleeve, "a picture of" asks for a picture. By voice or `POST /show` (with `kind`: picture, cover or any), `/play`, `/earworm`. |
 | Weather faces (`brain/weather.py`, `brain/art/weather.py`) | Built 2026-09-15 and redrawn the same day at full fidelity, proven on the Pi with the real forecast for the room's place. A face that is the weather: a sky the colour of the hour (blue at noon, warm at the horizon at dawn and dusk, deep at night with stars that twinkle), rolling hills in silhouette, a sun with a halo and slow rays on its real arc, the moon with tonight's phase and its seas, clouds as stacked puffs with lit tops and shaded bases in two layers that drift, rain that leans with the wind and splashes on the ground, drizzle finer, showers that come and go, snow in two sizes banking up on the hills, fog as soft banks of haze drifting through, thunder with a forked bolt and a flash that fades; the temperature outlined so it reads over anything, at 192 the high and low, the next six hours and sunrise and sunset ticks where the arc meets the hills. Everything still for the hour is drawn once and kept. Every WMO code has a scene. Open-Meteo, no key; a place named once on the phone's Weather page, which is a card now: the wall's live frame, the temperature large, the sky in words, the day's range, feels, wind, sunrise, sunset and the next six hours. Seven tests. |
 | The shelf (`brain/shelf.py`, `brain/art/mark.py`) | Built 2026-09-15, on the Pi, waiting for a Discogs token and username (Services > Discogs). The wall reads the collection's main folder every six hours, paced under Discogs's limit, and keeps it in `shelf.json`. A song from an album on the shelf gets a small record in the sleeve's corner, 5 px at 64 and 11 px at 192, dark on a light corner and light on a dark one, on every face that shows the sleeve; the Shelf knob turns it off. The pressing (year, label, catalogue number, country, the lowest price copies are going for) goes to the phone as `owned` and shows under the song; the price is fetched on a worker and cached a day. The Discogs page lists the shelf with plays per release from the journal. Matching folds case, accents, brackets, feat., Discogs's (2) and Deluxe tails, takes near titles (Blonde, Blond) and any listed artist, and prefers the vinyl. Seven tests over forty tricky releases. |
 | Posters (`brain/posters.py`) | Built 2026-09-15, on the Pi, waiting for a TMDB key (Services > Posters) and for the Mac's reporter to be restarted from this tree. A show or a film in a browser on the Mac used to be dropped by the reporter (a browser icon is not a sleeve); now its name rides on the empty answer as an `X-Mac-Show` header, a brain that does not know about shows sees nothing new, and this brain looks the name up on The Movie Database, television first, then films. The poster is the sleeve, cut square from a little above the middle rather than squashed (`brain/art/pipeline.py` `square`, which now guards every non-square picture), the answer is playing with art, the journal marks it `kind: show`. Hits kept a month, misses a day, in `posters.json`. Six tests. |
@@ -567,10 +563,6 @@ Stated plainly, because the value of everything above depends on this list being
 - **The white balance gains are unmeasured**, and labelled as such in the config.
 - **No automated tests.** `scripts/smoke_test.py` is a visual check that writes PNGs for a human to
   look at, plus one assertion on frame size. There is no test runner and no CI.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
 
 ---
 

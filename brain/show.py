@@ -1,9 +1,11 @@
 """Show me, play me, and the earworm finder.
 
-    show("the Eiffel Tower")     a picture of it, from Wikipedia (its page's
-                                 lead image) or failing that Openverse, in the
-                                 frame face for ten minutes or until something
-                                 else is chosen
+    show("the Eiffel Tower")     a picture of it: Google Images when a key and
+                                 search engine are on the wall, otherwise the
+                                 web through DuckDuckGo's image search (no
+                                 key), then the lead image of its Wikipedia
+                                 page, then Openverse; in the frame face for
+                                 ten minutes or until something else is chosen
     show("the Blond cover")      iTunes finds the album, the sleeve goes up the
                                  same way. Plain words go to a picture unless
                                  they name a record the wall knows; "cover",
@@ -45,6 +47,7 @@ from .video import ytdlp
 SHOW_S = 600.0                  # a cover asked for stays this long
 EARWORM_S = 8.0                 # the found song's sleeve, before its name runs
 ITUNES = "https://itunes.apple.com/search"
+GOOGLE = "https://www.googleapis.com/customsearch/v1"
 WIKIPEDIA = "https://en.wikipedia.org/w/api.php"
 OPENVERSE = "https://api.openverse.org/v1/images/"
 UA = "album-art-matrix/1.0 (github.com/jke48222/album-art-matrix)"
@@ -98,6 +101,66 @@ def find_art(query: str) -> dict | None:
             "score": round(best_score, 3)}
 
 
+# ---- pictures of things -------------------------------------------------------------------
+# Each finder returns a list of candidates, best first: {title, art_url,
+# thumb (a smaller copy, or None), credit, source}. The first that can be
+# fetched is the one shown.
+
+def google_pictures(query: str, api_key: str, cx: str) -> list[dict]:
+    """Google Images, through the Custom Search JSON API: a key from the
+    Cloud console and a Programmable Search Engine that searches the whole
+    web with image search on. A hundred searches a day are free."""
+    if not api_key or not cx:
+        return []
+    try:
+        r = requests.get(GOOGLE, params={
+            "key": api_key, "cx": cx, "q": query, "searchType": "image",
+            "num": 6, "safe": "active", "imgSize": "large",
+        }, headers={"User-Agent": UA}, timeout=10)
+        body = r.json()
+        if r.status_code != 200:
+            why = (body.get("error") or {}).get("message", f"http {r.status_code}")
+            print(f"[show] google: {why}", flush=True)
+            return []
+        items = body.get("items", [])
+    except (requests.RequestException, ValueError) as exc:
+        print(f"[show] google: {exc}", flush=True)
+        return []
+    out = []
+    for x in items:
+        link = x.get("link")
+        if not link:
+            continue
+        out.append({"title": x.get("title") or query, "art_url": link,
+                    "thumb": (x.get("image") or {}).get("thumbnailLink"),
+                    "credit": x.get("displayLink") or "Google", "source": "google"})
+    return out
+
+
+def web_pictures(query: str) -> list[dict]:
+    """The web's image search without a key, through DuckDuckGo (the ddgs
+    package; its results come from Bing's index). Unofficial, so a change
+    on their side is a quiet empty list here, not a broken wall."""
+    try:
+        from ddgs import DDGS
+    except ImportError:
+        return []
+    try:
+        results = DDGS().images(query, max_results=6, safesearch="moderate") or []
+    except Exception as exc:
+        print(f"[show] web: {exc}", flush=True)
+        return []
+    out = []
+    for x in results:
+        link = x.get("image")
+        if not link:
+            continue
+        out.append({"title": x.get("title") or query, "art_url": link,
+                    "thumb": x.get("thumbnail"),
+                    "credit": x.get("source") or "the web", "source": "web"})
+    return out
+
+
 def wikipedia_picture(query: str) -> dict | None:
     """The lead image of the Wikipedia page the words find, skipping
     disambiguation pages. A landmark, a person, an animal, a painting: the
@@ -119,14 +182,14 @@ def wikipedia_picture(query: str) -> dict | None:
             continue
         pic = (p.get("thumbnail") or p.get("original") or {}).get("source")
         if pic:
-            return {"title": p.get("title") or query, "art_url": pic,
+            return {"title": p.get("title") or query, "art_url": pic, "thumb": None,
                     "credit": "Wikipedia", "source": "wikipedia"}
     return None
 
 
 def openverse_picture(query: str) -> dict | None:
-    """An openly licensed photograph, for the things Wikipedia has no page
-    for. Anonymous use is allowed and enough for a wall."""
+    """An openly licensed photograph, for the things nothing else has.
+    Anonymous use is allowed and enough for a wall."""
     try:
         r = requests.get(OPENVERSE, params={"q": query, "page_size": 6, "mature": "false"},
                          headers={"User-Agent": UA}, timeout=10)
@@ -141,22 +204,31 @@ def openverse_picture(query: str) -> dict | None:
         who = x.get("creator") or ""
         lic = (x.get("license") or "").upper()
         credit = ", ".join(s for s in (who, f"CC {lic}" if lic and lic != "PDM" else lic) if s)
-        return {"title": x.get("title") or query, "art_url": pic,
+        return {"title": x.get("title") or query, "art_url": pic, "thumb": None,
                 "credit": credit or "Openverse", "source": "openverse"}
     return None
 
 
-def find_picture(query: str) -> dict | None:
-    return wikipedia_picture(query) or openverse_picture(query)
-
-
 class Shower:
-    def __init__(self, ctrl, asker=None):
+    def __init__(self, ctrl, asker=None, google_key: str = "", google_cx: str = ""):
         self.ctrl = ctrl
         self.asker = asker
         self._ret = None
         self._until = 0.0
         self.last = None
+        self.google_key, self.google_cx = google_key or "", google_cx or ""
+        self.pictures = 0            # pictures put up, for the phone's page
+        self.last_picture = None     # {title, source}
+
+    def configure(self, api_key: str | None = None, cx: str | None = None):
+        """The Google key and search engine, from the phone's Services page."""
+        self.google_key = (api_key or "").strip()
+        self.google_cx = (cx or "").strip()
+
+    def status(self) -> dict:
+        """For GET /services: whether Google is set, and what was last found."""
+        return {"key_set": bool(self.google_key), "cx_set": bool(self.google_cx),
+                "pictures": self.pictures, "last": self.last_picture, "problem": None}
 
     # ---- the frame face, for a while --------------------------------------------------------
     def _put_up(self, art_url: str, seconds: float) -> bool:
@@ -229,6 +301,33 @@ class Shower:
                 pass
         return False
 
+    def find_pictures(self, query: str) -> list[dict]:
+        """Candidates for a picture of the words, best first: Google when it
+        is set up, the web, Wikipedia's page, Openverse."""
+        out = google_pictures(query, self.google_key, self.google_cx)
+        out += web_pictures(query)
+        for one in (wikipedia_picture(query), openverse_picture(query)):
+            if one is not None:
+                out.append(one)
+        return out
+
+    def _show_picture(self, query: str) -> dict | None:
+        """The first candidate that can be fetched and shown, or None."""
+        for pic in self.find_pictures(query):
+            # the picture itself, or its smaller copy when a site will not
+            # hand the picture over (hotlinking refused, a login wall)
+            for url in (u for u in (pic["art_url"], pic.get("thumb")) if u):
+                if self._put_up(url, SHOW_S):
+                    self.pictures += 1
+                    self.last_picture = {"title": pic["title"], "source": pic["source"]}
+                    out = {"what": "show", "kind": "picture", "title": pic["title"],
+                           "artist": pic["credit"], "album": "", "art_url": url,
+                           "credit": pic["credit"], "source": pic["source"]}
+                    self.last = out
+                    print(f"[show] a picture of {pic['title']!r} ({pic['source']}) on the wall", flush=True)
+                    return {"shown": True, **out, "seconds": SHOW_S}
+        return None
+
     # ---- the four ---------------------------------------------------------------------------------
     def show(self, query: str, kind: str = "any") -> dict:
         """kind is "cover", "picture" or "any". The words themselves can say:
@@ -254,16 +353,9 @@ class Shower:
                 return {"error": f"I could not find a cover for {q}."}
             return self._show_cover(found)
 
-        pic = find_picture(q)
-        if pic is not None:
-            if not self._put_up(pic["art_url"], SHOW_S):
-                return {"error": f"I found a picture of {pic['title']} but could not fetch it."}
-            out = {"what": "show", "kind": "picture", "title": pic["title"], "artist": pic["credit"],
-                   "album": "", "art_url": pic["art_url"], "credit": pic["credit"],
-                   "source": pic["source"]}
-            self.last = out
-            print(f"[show] a picture of {pic['title']} ({pic['source']}) on the wall", flush=True)
-            return {"shown": True, **out, "seconds": SHOW_S}
+        shown = self._show_picture(q)
+        if shown is not None:
+            return shown
         if found is not None:
             return self._show_cover(found)
         return {"error": f"I could not find a picture or a cover for {q}."}

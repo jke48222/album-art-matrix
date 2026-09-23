@@ -563,6 +563,10 @@ class ControlState:
             "tmdb": (self.posters.status() if getattr(self, "posters", None)
                      else {"key_set": False, "posters": 0, "known": 0, "last": None,
                            "problem": "posters are off on this wall"}),
+            # pictures: whether Google is set up for "show me", and what was last found
+            "google": (self.shower.status() if getattr(self, "shower", None)
+                       else {"key_set": False, "cx_set": False, "pictures": 0, "last": None,
+                             "problem": "show me is off on this wall"}),
             # the shelf: whose Discogs collection, how many releases, when synced
             "discogs": (self.shelf.status() if getattr(self, "shelf", None)
                         else {"user": "", "token_set": False, "releases": 0,
@@ -608,6 +612,9 @@ class ControlState:
                                     model=store.get("images", "model") or None)
         if "tmdb" in changed and getattr(self, "posters", None):
             self.posters.configure(api_key=store.get("tmdb", "api_key"))
+        if "google" in changed and getattr(self, "shower", None):
+            self.shower.configure(api_key=store.get("google", "api_key"),
+                                  cx=store.get("google", "cx"))
         if "discogs" in changed and getattr(self, "shelf", None):
             self.shelf.configure(token=store.get("discogs", "token"),
                                  user=store.get("discogs", "user"))

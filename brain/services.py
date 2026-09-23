@@ -34,6 +34,11 @@ FIELDS = {
     # posters (brain/posters.py): a TMDB API key (v3, 32 hex) or read access
     # token (v4, a JWT), from themoviedb.org/settings/api
     "tmdb": {"api_key": r"^([0-9a-f]{32}|eyJ[A-Za-z0-9._\-]{40,800})$"},
+    # pictures (brain/show.py): Google Images through the Custom Search JSON
+    # API: an API key from the Cloud console and the id of a Programmable
+    # Search Engine set to search the whole web with image search on
+    "google": {"api_key": r"^[A-Za-z0-9_\-]{30,80}$",
+               "cx": r"^[A-Za-z0-9:_\-]{8,80}$"},
     # the shelf (brain/shelf.py): a Discogs personal access token, from
     # discogs.com/settings/developers, and the username whose collection it is
     "discogs": {"token": r"^[A-Za-z0-9]{20,100}$",

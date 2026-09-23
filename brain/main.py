@@ -412,7 +412,10 @@ def main():
         print("[main] ask: " + ("key set" if ctrl.asker.ready
                                 else "no Claude key yet; set one from the phone"))
     # show me, play me, and the earworm finder: by voice or from the phone
-    ctrl.shower = Shower(ctrl, asker=ctrl.asker) if ctrl.features.on("show") else None
+    ctrl.shower = Shower(ctrl, asker=ctrl.asker,
+                         google_key=ctrl.services_store.get("google", "api_key"),
+                         google_cx=ctrl.services_store.get("google", "cx")) \
+        if ctrl.features.on("show") else None
     # games: one at a time, the wall the board and the phone the hand
     ctrl.games = GameHost(ctrl) if ctrl.features.on("games") else None
     if ctrl.games is not None:

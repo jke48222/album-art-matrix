@@ -224,7 +224,7 @@ struct ShowPage: View {
     var body: some View {
         SetupPage("Show me",
                   blurb: "A picture of a thing, or a cover by name, goes up on the wall for ten minutes; a video by name plays on it with this phone as the speaker. Out loud: \"show me the Eiffel Tower\", \"show me the Blonde cover\", \"play the Gameboy video\".") {
-            SetupGroup("A picture", note: "A landmark, a person, an animal, a painting: from Wikipedia, or an open photo library.") {
+            SetupGroup("A picture", note: "A landmark, a person, an animal, a painting: Google Images with your key under Services, Pictures; otherwise the web, then Wikipedia.") {
                 KeyField(placeholder: "the Eiffel Tower", text: $picture)
                 Rule()
                 SaveLine(title: busy == "picture" ? "Finding" : "Show it", enabled: !picture.trimmingCharacters(in: .whitespaces).isEmpty && busy == nil,
