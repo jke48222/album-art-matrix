@@ -48,8 +48,9 @@ struct TimeWorkbench: View {
                 Text("Time & alarms").font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("THE ROOM HAS ITS OWN RHYTHM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
-                    Text("Time, in light.").font(.display(34)).foregroundStyle(Ink.ink)
+                    Text(ringing ? "A MOMENT, MADE VISIBLE" : "THE ROOM HAS ITS OWN RHYTHM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
+                    Text(ringing ? (wall.state.timerKind == "alarm" ? "Your daily cue." : "Time, completed.") : "Time, in light.")
+                        .font(.display(34)).foregroundStyle(Ink.ink)
                 }
             }
             tabs
@@ -90,7 +91,14 @@ struct TimeWorkbench: View {
         .onChange(of: wall.state.alarmEnabled) { _, _ in if !alarmEditing { syncAlarm() } }
         .onChange(of: wall.state.color) { _, color in if !inkEditing { clockInk = Color.wall(hex: color) } }
         .onChange(of: wall.host) { _, _ in alarmEditing = false; inkEditing = false; syncAlarm(); clockInk = Color.wall(hex: wall.state.color); receipt = nil; problem = nil }
-        .onChange(of: wall.state.timerStatus) { _, status in if status == "ringing" { tab = .timer } }
+        .onChange(of: wall.state.timerStatus) { _, status in
+            if status == "ringing" {
+                tab = .timer
+                Taps.commit()
+                UIAccessibility.post(notification: .announcement,
+                                     argument: wall.state.timerKind == "alarm" ? "Your alarm is ringing. Stop or snooze for five minutes." : "Timer complete. Done or repeat the same duration.")
+            }
+        }
         .task(id: previewKey) { await watchPreview() }
         .toolbar {
             if durationFocused {
@@ -131,7 +139,7 @@ struct TimeWorkbench: View {
                     }.foregroundStyle(Ink.dim).padding(24)
                 }
             }.aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: typeSize.isAccessibilitySize ? 160 : (tab == .clock ? 280 : tab == .alarm ? 156 : 196))
+                .frame(maxWidth: typeSize.isAccessibilitySize ? 160 : (ringing ? 248 : tab == .clock ? 280 : tab == .alarm ? 156 : 196))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel(useLiveFrame ? "The wall’s actual \(activeTimer ? "timer" : "clock") pixels" : "\(previewFace.capitalized) preview rendered by the wall")
@@ -201,23 +209,24 @@ struct TimeWorkbench: View {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let remaining = wall.state.timerSeconds(at: ready ? context.date : wall.state.routineReceivedAt) ?? 0
                 VStack(alignment: .leading, spacing: 18) {
-                    sectionTitle(ringing ? (wall.state.timerKind == "alarm" ? "Your alarm is ringing" : "Time is up") : "A little time, set aside.",
-                                 subtitle: ringing ? "Stop the light on your wall." : "Keeps counting while you leave the app.")
-                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    if ringing {
+                        completionControls
+                    } else {
+                        sectionTitle(wall.state.timerSnoozed ? "Five more minutes." : "A little time, set aside.",
+                                     subtitle: wall.state.timerSnoozed ? "Your alarm will return when the light reaches zero." : "Keeps counting while you leave the app.")
                         Text(TimeInput.clock(remaining)).font(.display(typeSize.isAccessibilitySize ? 26 : 46)).monospacedDigit().foregroundStyle(ink)
                             .contentTransition(.numericText(countsDown: true))
                             .accessibilityLabel(TimeInput.duration(remaining) + " remaining")
-                        Spacer(minLength: 0)
-                    }
-                    action(ringing ? "Stop the light" : "Cancel timer", symbol: "stop.fill") {
-                        submit(["timer_min": 0.0], receipt: ringing ? "Alarm light stopped." : "Timer cancelled.")
-                    }
-                    if !ringing, let total = wall.state.timerTotal, total > 0 {
-                        ProgressView(value: Double(remaining), total: Double(total)).tint(ink)
-                            .accessibilityLabel("Timer remaining").accessibilityValue(TimeInput.duration(remaining))
-                        if ready, let end = wall.state.timerEndsAt, let zone {
-                            Text("Finishes at \(wallDate(end, zone: zone, includeDay: false))")
-                                .font(.ui(13)).foregroundStyle(Ink.dim)
+                        action(wall.state.timerSnoozed ? "Cancel snooze" : "Cancel timer", symbol: "stop.fill") {
+                            stopTimer(receipt: wall.state.timerSnoozed ? "Snooze cancelled. Your daily schedule is unchanged." : "Timer cancelled.")
+                        }
+                        if let total = wall.state.timerTotal, total > 0 {
+                            ProgressView(value: Double(remaining), total: Double(total)).tint(ink)
+                                .accessibilityLabel("Timer remaining").accessibilityValue(TimeInput.duration(remaining))
+                            if ready, let end = wall.state.timerEndsAt, let zone {
+                                Text("\(wall.state.timerSnoozed ? "Alarm returns" : "Finishes") at \(wallDate(end, zone: zone, includeDay: false))")
+                                    .font(.ui(13)).foregroundStyle(Ink.dim)
+                            }
                         }
                     }
                 }
@@ -250,6 +259,44 @@ struct TimeWorkbench: View {
                 }
             }
         }
+    }
+
+    private var completionControls: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(wall.state.timerKind == "alarm" ? "Your alarm is here." : "\(TimeInput.duration(wall.state.timerTotal ?? 0)), all yours.")
+                    .font(.ui(typeSize.isAccessibilitySize ? 16 : 18, .semibold)).foregroundStyle(Ink.ink)
+                Text(wall.state.timerKind == "alarm" ? "Take five more minutes, or return to your wall." : "Go again, or let the wall return to what it was showing.")
+                    .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+            }
+            action(wall.state.timerKind == "alarm" ? "Stop alarm" : "Done", symbol: "checkmark") {
+                stopTimer(receipt: wall.state.timerKind == "alarm" ? "Alarm stopped. Your daily schedule is unchanged." : "Timer complete. Your wall is back.")
+            }
+            if wall.state.timerEventID != nil {
+                let alarm = wall.state.timerKind == "alarm"
+                secondaryAction(alarm ? "Snooze for 5 minutes" : "Repeat \(TimeInput.duration(wall.state.timerTotal ?? 0))", symbol: alarm ? "zzz" : "arrow.counterclockwise") {
+                    guard let event = wall.state.timerEventID else { return }
+                    submit(["timer_action": alarm ? "snooze" : "repeat", "timer_id": event],
+                           receipt: alarm ? "Alarm snoozed for 5 minutes." : "A fresh timer, with the same duration.")
+                }
+            }
+            Text("The light settles after 3 minutes if left alone.")
+                .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        }.accessibilityIdentifier("time.completion")
+    }
+
+    private func stopTimer(receipt: String) {
+        let patch: [String: Any] = wall.state.timerEventID.map { ["timer_action": "stop", "timer_id": $0] } ?? ["timer_min": 0.0]
+        submit(patch, receipt: receipt)
+    }
+
+    private func secondaryAction(_ title: String, symbol: String, run: @escaping () -> Void) -> some View {
+        Button(action: run) {
+            Label(title, systemImage: symbol).font(.ui(15, .semibold))
+                .padding(.horizontal, 16).frame(maxWidth: .infinity, minHeight: 52)
+                .foregroundStyle(ink).background(Ink.sunk, in: RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).strokeBorder(ink.opacity(0.35), lineWidth: 1))
+        }.buttonStyle(PressStyle()).disabled(busy || !ready).opacity(!ready ? 0.5 : 1)
     }
 
     private func durationField(_ label: String, text: Binding<String>) -> some View {

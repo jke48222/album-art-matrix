@@ -1,0 +1,44 @@
+{
+  "unit": "R06",
+  "researched": "2026-09-23",
+  "task_intent": "Redesign Tessera settings and everyday interactions with expressive wall feedback and clear native navigation.",
+  "mobbin": [
+    {
+      "app": "Google Home",
+      "url": "https://mobbin.com/screens/4bd3f767-0769-4299-809f-ad2563479e0d",
+      "inspected_image": true,
+      "applied": "Separate the away trigger from its resulting light action, with an explicit state description. Put it in the same quiet-room page as idle behavior instead of repeating controls in multiple pop-ups."
+    },
+    {
+      "app": "Philips Hue",
+      "url": "https://mobbin.com/screens/0a9f1345-9a86-4a70-8014-421887c3b8a9",
+      "inspected_image": true,
+      "applied": "Use expressive named behaviors with concrete explanatory captions. Distinguish leaving-home automation from a deliberate immediate power action."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/toggles",
+      "applied": "Five mutually exclusive quiet-room choices show persistent labels and checkmarks; selection is not color-only. Away is a two-option choice with clear consequences."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/settings",
+      "applied": "One canonical Quiet moments page owns idle and away policies. Settings and Off workspace reuse the same acknowledged Off control."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+      "applied": "Only brief acknowledged state feedback animates; Reduce Motion removes it. The quiet-room contour is a static labeled plan rather than simulated live wall output."
+    }
+  ],
+  "validation": {
+    "python": "43 passed in brain/tests/test_rest_batch.py; combined rest/main suite 63 passed",
+    "native": "Parent batch owns simulator build and visual validation"
+  },
+  "behavioral_fixes": [
+    "Away is an ephemeral output override, preserving the selected face across absence and service restarts.",
+    "Away no longer cancels active timers or wake-up fades; Sleep remains active.",
+    "Explicit Off does not turn back on merely because the phone or a song returns.",
+    "Automatic output publishes its actual idle policy, away state and displayed mode.",
+    "Unavailable Weather idle falls back to holding artwork and reports that behavior."
+  ]
+}

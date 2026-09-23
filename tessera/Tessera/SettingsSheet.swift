@@ -1,289 +1,345 @@
-// Settings. A place you visit, not a place you live.
-//
-// Built the way the good hardware apps build theirs. The page opens like
-// IKEA Home smart: the word Settings, one line saying whether the wall is
-// connected, and a card for the one thing worth doing next. Then a list of
-// rows, each with a small line drawing, what it is, and where it stands,
-// with a hairline between them. Every row opens a page laid out like the
-// Sonos app: a title, a paragraph, and grouped rows with the control on the
-// right. A choice is a set of cards with a Save button, as IKEA does it.
-// Addresses and the numbers behind a correction live on the last page.
-
 import SwiftUI
 import UIKit
 
 struct SettingsSheet: View {
     @Environment(WallSession.self) private var wall
     @Environment(\.dismiss) private var dismiss
-
+    @Environment(\.dynamicTypeSize) private var typeSize
     let accent: Color
-
+    var initialDestination: SettingsDestination? = nil
+    @State private var path: [SettingsDestination] = []
+    @State private var query = ""
     @State private var musicConnected = Service.appleMusicAuthorized
     @State private var musicRefused = Service.appleMusicRefused
-    @State private var services: WallServices? = nil
+    @State private var services: WallServices?
     @State private var showCalibrate = false
-    @State private var vitals: Vitals? = nil
-    @State private var cardDismissed = false
-    #if DEBUG
-    @State private var qaRoutineOpen = false
-    private var qaRoutine: String? {
-        let args = CommandLine.arguments
-        guard let i = args.firstIndex(of: "-routine-page"), args.indices.contains(i + 1) else { return nil }
-        return args[i + 1]
-    }
-    #endif
+    @State private var vitals: Vitals?
+    @FocusState private var searching: Bool
+    @State private var openedInitialRoute = false
+
+    private var warm: Color { Color(hex: 0xE5BE83) }
+    private var results: [SettingsDestination] { SettingsDestination.results(for: query) }
+    private var filtering: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    titleBlock
-                    if let step = nextStep, !cardDismissed {
-                        NextStepCard(step: step, frame: wall.frame, accent: accent,
-                                     dismiss: { cardDismissed = true })
-                            .padding(.top, 22)
-                    }
-                    SettingsList {
-                        row("music.note", "Services", servicesLine) { ServicesPage(accent: accent, services: $services, musicConnected: $musicConnected, musicRefused: $musicRefused) }
-                        row("sun.max", "Light", "\(Int(wall.state.brightness * 100))%") { LightPage(accent: accent) }
-                        row("sunset", "Follow the sun", wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : "Off") { SunPage(accent: accent) }
-                        row("moon.zzz", "Sleep", sleepValue) { SleepPage(accent: accent) }
-                        row("sunrise", "Wake up", wall.state.wakeEnabled ? wakeValue : "Off") { WakePage(accent: accent) }
-                        row("pause.circle", "Nothing playing", idleName) { idlePage }
-                        row("lock.iphone", "Lock screen", wall.live.enabled ? "Showing the wall" : "Off") { LockScreenPage(accent: accent) }
-                    }
-                    .padding(.top, 26)
-
-                    Text("What the wall can do")
-                        .font(.displayMid(20))
-                        .foregroundStyle(Ink.ink)
-                        .padding(.top, 34)
-
-                    SettingsList {
-                        row("text.bubble", "Ask the wall", "A question, answered on the panel") { AskPage(accent: accent) }
-                        row("note.text", "Notes", "Words on the panel for a while") { NotePage(accent: accent) }
-                        row("photo.on.rectangle", "Show me", "A cover or a video, by name") { ShowPage(accent: accent) }
-                        row("ear.badge.waveform", "Earworm", "Name a song from the words you remember") { EarwormPage(accent: accent) }
-                        row("paintbrush.pointed", "Imagine", "A picture from words") { ImaginePage(accent: accent) }
-                        row("cloud.sun", "Weather", wall.state.place.isEmpty ? "No place yet" : wall.state.place) { WeatherPage(accent: accent) }
-                        row("dice", "Games", "Nineteen, on the wall and the phone") { GamesPageWrapper(accent: accent) }
-                        row("waveform", "Voice", "The wake word, and what it heard") { VoicePage(accent: accent) }
-                        row("homekit", "HomeKit", "The wall in the Home app") { HomeKitPage(accent: accent) }
-                        row("opticaldisc", "The shelf", "Your records, from Discogs") { ShelfPage(accent: accent) }
-                        row("music.mic", "Teach the wall", "Its own song library") { TeachPage(accent: accent) }
-                    }
-                    .padding(.top, 14)
-
-                    Text("Other settings")
-                        .font(.displayMid(20))
-                        .foregroundStyle(Ink.ink)
-                        .padding(.top, 34)
-
-                    SettingsList {
-                        row("camera.aperture", "True colour", corrected ? "Corrected" : "Not corrected yet") { ColourPage(accent: accent, showCalibrate: $showCalibrate) }
-                        row("checkerboard.rectangle", "Panel check", "Flat colours for a dead light") { PanelPage(accent: accent) }
-                        row("qrcode", "Guests", "Your wifi on the wall, as a code") { GuestsPage(accent: accent) }
-                        if wall.link.isLive {
-                            row("waveform.path.ecg", "How it's doing", healthValue) { HealthPage(accent: accent, vitals: $vitals) }
+                VStack(alignment: .leading, spacing: 26) {
+                    masthead
+                    searchField
+                    if !filtering {
+                        wallIdentity
+                        ForEach(SettingsSection.allCases) { section in
+                            sectionBlock(section)
                         }
-                        row("network", "Addresses", "The wall, and a Mac if you use one") { AddressesPage(accent: accent, onChange: {}) }
-                        row("info.circle", "About Tessera", nil) { AboutPage(accent: accent) }
+                        HStack(spacing: 9) {
+                            Image(systemName: "square.grid.3x3.fill").font(.system(size: 12))
+                            Text("A small wall. A world of possibilities.").font(.ui(12))
+                        }
+                        .foregroundStyle(Ink.dim).padding(.top, 4)
+                    } else {
+                        searchResults
                     }
-                    .padding(.top, 14)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 48)
+                .padding(.horizontal, 22).padding(.top, 4).padding(.bottom, 40)
             }
-            .scrollIndicators(.hidden)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                if wall.link.isLive && wall.state.timerRinging && !path.contains(.time) {
+                    TimeCompletionEntry(accent: warm) { searching = false; path.append(.time) }
+                        .padding(.horizontal, 22).padding(.vertical, 10)
+                        .background(Color(hex: 0x101212))
+                }
+            }
             #if DEBUG
-            .navigationDestination(isPresented: $qaRoutineOpen) {
-                switch qaRoutine {
-                case "sun": SunPage(accent: accent)
-                case "sleep": SleepPage(accent: accent)
-                case "wake": WakePage(accent: accent)
-                default: EmptyView()
-                }
-            }
-            .onAppear { qaRoutineOpen = qaRoutine != nil }
+            .defaultScrollAnchor(CommandLine.arguments.contains("-settings-bottom") ? .bottom : .top)
             #endif
-            .background {
-                ZStack {
-                    Ink.ground
-                    // a little of the wall's light, so the glass has something to frost
-                    RadialGradient(colors: [accent.opacity(0.28), accent.opacity(0.06), .clear],
-                                   center: .init(x: 0.5, y: 0.12), startRadius: 0, endRadius: 520)
-                }
-                .ignoresSafeArea()
+            .scrollDismissesKeyboard(.interactively)
+            .scrollIndicators(.hidden)
+            .background(Color(hex: 0x101212).ignoresSafeArea())
+            .navigationDestination(for: SettingsDestination.self) { destination in
+                destinationPage(destination)
             }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { dismiss() } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(Ink.ink)
-                            .frame(width: 36, height: 36)
-                            .background(Circle().fill(.ultraThinMaterial))
-                            .overlay(Circle().strokeBorder(Ink.ink.opacity(0.14), lineWidth: 1))
+                        Image(systemName: "xmark").font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Ink.ink).frame(width: 44, height: 44)
                     }
-                    .buttonStyle(PressStyle(scale: 0.94))
-                    .accessibilityLabel("Close settings")
+                    .buttonStyle(PressStyle(scale: 0.94)).accessibilityLabel("Close settings")
                 }
             }
             .toolbarBackground(.hidden, for: .navigationBar)
             .navigationBarTitleDisplayMode(.inline)
         }
-        .tint(accent)
-        .presentationBackground(Ink.ground)
+        .tint(warm)
+        .presentationBackground(Color(hex: 0x101212))
         .preferredColorScheme(.dark)
         .onAppear {
             musicConnected = Service.appleMusicAuthorized
             musicRefused = Service.appleMusicRefused
+            guard !openedInitialRoute else { return }
+            openedInitialRoute = true
+            if let initialDestination { path = [initialDestination] }
+            #if DEBUG
+            let args = CommandLine.arguments
+            if let i = args.firstIndex(of: "-settings-query"), args.indices.contains(i + 1) { query = args[i + 1] }
+            if let i = args.firstIndex(of: "-settings-page") ?? args.firstIndex(of: "-routine-page"), args.indices.contains(i + 1),
+               let route = SettingsDestination(rawValue: args[i + 1]) { path = [route] }
+            #endif
         }
-        .task { services = await WallServices.seeded(host: wall.host) }
-        .task {
-            if wall.link.isLive { vitals = await Vitals.read(host: wall.host) }
+        .task(id: "\(wall.host)|\(wall.link.isLive)") {
+            guard wall.link.isLive else { services = nil; vitals = nil; return }
+            let host = wall.host
+            async let readServices = WallServices.seeded(host: host)
+            async let readVitals = Vitals.read(host: host)
+            let (freshServices, freshVitals) = await (readServices, readVitals)
+            guard !Task.isCancelled, wall.host == host, wall.link.isLive else { return }
+            services = freshServices; vitals = freshVitals
         }
         .fullScreenCover(isPresented: $showCalibrate) {
             CalibrateScreen(accent: accent).environment(wall)
         }
     }
 
-    // MARK: - Title and status, as IKEA opens it
+    private var masthead: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if !typeSize.isAccessibilitySize {
+                Text("TESSERA / YOUR WALL, YOUR WAY")
+                    .font(.machine(9)).tracking(1.2).foregroundStyle(warm)
+            }
+            Text("Settings").font(typeSize.isAccessibilitySize ? .ui(23, .semibold) : .display(46))
+                .foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
+        }
+    }
 
-    private var titleBlock: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Settings")
-                .font(.display(30))
-                .foregroundStyle(Ink.ink)
-            HStack(spacing: 8) {
-                Text(statusWord)
-                    .font(.ui(15))
-                    .foregroundStyle(Ink.dim)
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 9, height: 9)
+    private var searchField: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass").font(.system(size: 17)).foregroundStyle(Ink.dim)
+            TextField(text: $query, prompt: Text("Find a setting or feature").foregroundStyle(Ink.dim)) { Text("Search settings") }
+                .font(.ui(16)).foregroundStyle(Ink.ink).focused($searching)
+                .autocorrectionDisabled().textInputAutocapitalization(.never)
+                .submitLabel(.search).onSubmit { searching = false }
+                .accessibilityLabel("Search settings and features").accessibilityIdentifier("settings.search")
+            if !query.isEmpty {
+                Button { query = "" } label: {
+                    Image(systemName: "xmark.circle.fill").font(.system(size: 18)).foregroundStyle(Ink.dim)
+                        .frame(width: 44, height: 44)
+                }.accessibilityLabel("Clear search")
             }
         }
-        .padding(.top, 6)
+        .padding(.leading, 17).padding(.trailing, query.isEmpty ? 17 : 4)
+        .frame(minHeight: 54)
+        .background(.white.opacity(0.055), in: RoundedRectangle(cornerRadius: 17))
+        .overlay(RoundedRectangle(cornerRadius: 17).strokeBorder(searching ? warm.opacity(0.65) : .white.opacity(0.09), lineWidth: 1))
+    }
+
+    private var wallIdentity: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            NavigationLink(value: SettingsDestination.addresses) {
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: 18) { identityWords; Spacer(minLength: 4); if !typeSize.isAccessibilitySize { identityImage } }
+                    VStack(alignment: .leading, spacing: 18) { identityWords }
+                }
+                .padding(20).contentShape(Rectangle())
+            }
+            .buttonStyle(PressStyle(scale: 0.99))
+            .accessibilityHint("Opens the wall’s connection settings")
+            if let suggestion {
+                Rectangle().fill(warm.opacity(0.15)).frame(height: 1).padding(.horizontal, 20)
+                Button {
+                    if !wall.link.isLive && !wall.link.isStandIn { wall.lookForWallAgain() }
+                    else { path.append(suggestion.route) }
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: suggestion.symbol).font(.system(size: 14))
+                        Text(suggestion.title).font(.ui(13, .medium)).fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 8)
+                        Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(warm).padding(.horizontal, 20).padding(.vertical, 16).frame(minHeight: 48)
+                    .contentShape(Rectangle())
+                }.buttonStyle(PressStyle(scale: 0.99))
+            }
+        }
+        .background {
+            RoundedRectangle(cornerRadius: 25).fill(
+                LinearGradient(colors: [Color(hex: 0x2D302C), Color(hex: 0x1A201E)], startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(warm.opacity(0.18), lineWidth: 1))
+        .accessibilityIdentifier("settings.wall")
+    }
+
+    private var identityWords: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            HStack(spacing: 6) {
+                Circle().fill(statusColor).frame(width: 6, height: 6)
+                Text(statusWord.uppercased()).font(.machine(8)).tracking(0.5).foregroundStyle(Ink.ink)
+            }
+            Text("Your wall").font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(26)).foregroundStyle(Ink.ink)
+            Text(wall.link.isLive ? "\(Panel.side) × \(Panel.side) · \(wall.state.mode == "off" ? "Lights out" : "\(Int(wall.state.brightness * 100))% light")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
+                .font(.ui(12)).foregroundStyle(Color(hex: 0xB8BBAF))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var identityImage: some View {
+        WallThumb(frame: wall.frame, live: wall.link.isLive)
+            .padding(6).background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: 14))
+            .rotationEffect(.degrees(-3))
+            .shadow(color: .black.opacity(0.35), radius: 12, x: 0, y: 8)
+            .accessibilityHidden(true)
+    }
+
+    private func sectionBlock(_ section: SettingsSection) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(section.title).font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(25)).foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
+                if !typeSize.isAccessibilitySize { Text(section.caption).font(.machine(8)).tracking(0.7).foregroundStyle(Ink.dim) }
+            }
+            .padding(.top, 5)
+            routeList(section.entries)
+        }
+    }
+
+    private var searchResults: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("\(results.count) \(results.count == 1 ? "result" : "results")")
+                .font(.ui(14)).foregroundStyle(Ink.dim).accessibilityAddTraits(.updatesFrequently)
+            if results.isEmpty {
+                VStack(alignment: .leading, spacing: 14) {
+                    Image(systemName: "magnifyingglass").font(.system(size: 28, weight: .light)).foregroundStyle(warm)
+                    Text("Nothing here yet.").font(.displayMid(25)).foregroundStyle(Ink.ink)
+                    Text("Try a feature, like “timer”, or something you want to change, like “brightness”.")
+                        .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                    Button("Browse all settings") { query = ""; searching = false }
+                        .font(.ui(15, .semibold)).foregroundStyle(warm).frame(minHeight: 44)
+                }.padding(.vertical, 20)
+            } else { routeList(results) }
+        }.accessibilityIdentifier("settings.results")
+    }
+
+    private func routeList(_ entries: [SettingsDestination]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(entries) { item in
+                NavigationLink(value: item) {
+                    HStack(alignment: .center, spacing: 13) {
+                        Image(systemName: item.symbol).font(.system(size: 19, weight: .regular))
+                            .foregroundStyle(tint(item.section)).frame(width: 38, height: 40)
+                            .background(tint(item.section).opacity(0.085), in: RoundedRectangle(cornerRadius: 11))
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(item.title).font(.ui(16, .medium)).foregroundStyle(Ink.ink)
+                            Text(detail(item)).font(.ui(12)).foregroundStyle(Ink.dim)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right").font(.system(size: 10, weight: .semibold)).foregroundStyle(Ink.dim)
+                    }
+                    .padding(.horizontal, 15).padding(.vertical, 14).frame(minHeight: 74)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressStyle(scale: 0.99)).accessibilityIdentifier("settings.route.\(item.rawValue)")
+                if item != entries.last {
+                    Rectangle().fill(.white.opacity(0.06)).frame(height: 1).padding(.leading, 66)
+                }
+            }
+        }
+        .background(Color(hex: 0x191C1C), in: RoundedRectangle(cornerRadius: 21))
+        .overlay(RoundedRectangle(cornerRadius: 21).strokeBorder(.white.opacity(0.055), lineWidth: 1))
+    }
+
+    private func tint(_ section: SettingsSection) -> Color {
+        switch section {
+        case .rhythm: warm
+        case .music: Color(hex: 0xB6AEDC)
+        case .explore: Color(hex: 0x9DCAC1)
+        case .home: Color(hex: 0xB4C493)
+        case .care: Color(hex: 0xACBDD0)
+        }
+    }
+
+    @ViewBuilder private func destinationPage(_ route: SettingsDestination) -> some View {
+        switch route {
+        case .light: LightPage(accent: accent)
+        case .time:
+            ScrollView { TimeWorkbench(accent: accent).padding(22).padding(.bottom, 30) }
+                .background(Ink.ground).navigationTitle("Time & alarms").navigationBarTitleDisplayMode(.inline)
+        case .sun: SunPage(accent: accent)
+        case .sleep: SleepPage(accent: accent)
+        case .wake: WakePage(accent: accent)
+        case .idle: IdlePage(accent: accent)
+        case .services: ServicesPage(accent: accent, services: $services, musicConnected: $musicConnected, musicRefused: $musicRefused)
+        case .voice: VoicePage(accent: accent)
+        case .shelf: ShelfPage(accent: accent)
+        case .teach: TeachPage(accent: accent)
+        case .ask: AskPage(accent: accent)
+        case .note: NotePage(accent: accent)
+        case .show: ShowPage(accent: accent)
+        case .earworm: EarwormPage(accent: accent)
+        case .imagine: ImaginePage(accent: accent)
+        case .weather: WeatherPage(accent: accent)
+        case .games: GamesPageWrapper(accent: accent)
+        case .lockScreen: LockScreenPage(accent: accent)
+        case .homeKit: HomeKitPage(accent: accent)
+        case .guests: GuestsPage(accent: accent)
+        case .colour: ColourPage(accent: accent, showCalibrate: $showCalibrate)
+        case .panel: PanelPage(accent: accent)
+        case .health: HealthPage(accent: accent, vitals: $vitals)
+        case .addresses: AddressesPage(accent: accent, onChange: {})
+        case .about: AboutPage(accent: accent)
+        }
     }
 
     private var statusWord: String {
         switch wall.link {
-        case .live: "Connected"
-        case .searching: "Looking for the wall"
-        case .offline: "Not connected"
-        case .standIn: "Running on this phone"
+        case .live: wall.state.mode == "off" ? "Connected · off" : "Connected"
+        case .searching: "Finding the wall"
+        case .offline: "Offline"
+        case .standIn: "Phone preview"
         }
     }
-
     private var statusColor: Color {
-        switch wall.link {
-        case .live: Ink.moss
-        case .searching: Ink.tile
-        case .offline: Ink.signal
-        case .standIn: Ink.faint
-        }
+        switch wall.link { case .live: Ink.moss; case .searching: warm; case .offline: Ink.signal; case .standIn: Ink.dim }
     }
-
-    // MARK: - The one thing worth doing next
-
-    private var nextStep: NextStep? {
-        if !wall.link.isLive && !wall.link.isStandIn {
-            return NextStep(title: "Find your wall",
-                            body: "Tessera looks for it on your network. If it is on, one more look usually does it.",
-                            button: "Look again", go: .look)
-        }
-        if !musicConnected && !musicRefused {
-            return NextStep(title: "Connect Apple Music",
-                            body: "So the wall shows what you play.",
-                            button: "Connect", go: .music)
-        }
-        if let sv = services, sv.spotify.client_id.isEmpty, !sv.spotify.linked {
-            return NextStep(title: "Connect Spotify",
-                            body: "A couple of minutes, all on this phone. The wall then follows what you play on any device.",
-                            button: "Set up", go: .music)
-        }
-        if let sv = services, !sv.spotify.client_id.isEmpty, !sv.spotify.linked,
-           sv.lastfm.user.isEmpty {
-            return NextStep(title: "Connect Spotify",
-                            body: "Premium: sign in once. Free: link Spotify to Last.fm and give the wall your Last.fm name. Services shows both.",
-                            button: "Open", go: .music)
-        }
-        if wall.link.isLive && !corrected {
-            return NextStep(title: "Calibrate the colour",
-                            body: "Panels lean green out of the box. Your camera reads the wall and Tessera corrects it.",
-                            button: "Calibrate", go: .colour)
-        }
+    private var corrected: Bool { wall.state.wbR < 0.995 || wall.state.wbG < 0.995 || wall.state.wbB < 0.995 }
+    private var suggestion: (title: String, symbol: String, route: SettingsDestination)? {
+        if !wall.link.isLive && !wall.link.isStandIn { return ("Look for your wall again", "arrow.clockwise", .addresses) }
+        if !musicConnected && !musicRefused { return ("Connect Apple Music", "music.note", .services) }
+        if let services, !services.spotify.linked, services.lastfm.user.isEmpty { return ("Connect your music services", "music.note", .services) }
+        if wall.link.isLive && !corrected { return ("Find your panel’s true colour", "camera.aperture", .colour) }
         return nil
     }
-
-    // MARK: - Rows
-
-    private func row<Page: View>(_ symbol: String, _ title: String, _ subtitle: String?,
-                                 @ViewBuilder page: @escaping () -> Page) -> some View {
-        NavigationLink { page() } label: {
-            IconRow(symbol: symbol, title: title, subtitle: subtitle)
+    private func detail(_ item: SettingsDestination) -> String {
+        guard wall.link.isLive || wall.link.isStandIn else { return item.detail }
+        switch item {
+        case .light: return "\(Int(wall.state.brightness * 100))% brightness"
+        case .time:
+            if wall.state.timerRinging { return wall.state.timerKind == "alarm" ? "Your alarm is ringing" : "Timer complete" }
+            if let left = wall.state.timerSeconds() { return "Timer · \(TimeInput.clock(left)) remaining" }
+            return item.detail
+        case .sun: return wall.state.sun == "on" ? "On · \(Int(wall.state.sunNight * 100))% after dark" : item.detail
+        case .sleep:
+            if let left = wall.state.sleepSeconds(), left > 0 { return "Fading · \(max(1, (left + 59) / 60)) min remaining" }
+            return item.detail
+        case .wake: return wall.state.wakeEnabled ? "Every day · \(TimeInput.timeLabel(wall.state.wakeTime, twentyFour: wall.state.clock24h))" : item.detail
+        case .idle:
+            let names = ["black": "Go dark", "hold": "Hold the sleeve", "dim": "Dim the sleeve", "ambient": "Drift", "weather": "Show the weather"]
+            return "\(names[wall.state.idle] ?? "Go dark") · \(wall.state.away == "off" ? "Off when away" : "Stay on when away")"
+        case .services:
+            var connected: [String] = []
+            if musicConnected { connected.append("Apple Music") }
+            if services?.spotify.linked == true { connected.append("Spotify") }
+            if let user = services?.lastfm.user, !user.isEmpty { connected.append("Last.fm") }
+            if let user = services?.listenbrainz?.user, !user.isEmpty { connected.append("ListenBrainz") }
+            return connected.isEmpty ? item.detail : connected.joined(separator: " · ")
+        case .weather: return wall.state.place.isEmpty ? item.detail : wall.state.place
+        case .lockScreen: return wall.live.enabled ? "Live Activity is on" : item.detail
+        case .colour: return corrected ? "Your panel is calibrated" : item.detail
+        case .health:
+            if let vitals, vitals.throttled?.now == true { return "Thermal throttling · open details" }
+            if let temperature = vitals?.tempC { return String(format: "%.0f°C · diagnostics", temperature) }
+            return item.detail
+        default: return item.detail
         }
-        .buttonStyle(PressStyle(scale: 0.99))
-    }
-
-    private var idlePage: some View {
-        ChoicePage(title: "Nothing playing",
-                   blurb: "What the wall does between songs, or when the music stops for the night.",
-                   accent: accent,
-                   options: [
-                    ("moon", "Go dark", "Lights off until the next song.", "black"),
-                    ("photo", "Hold the last sleeve", "Keeps the cover up at full light.", "hold"),
-                    ("sun.min", "Dim it", "Keeps the cover up, turned down.", "dim"),
-                    ("wind", "Drift", "Slow colour and no picture.", "ambient"),
-                    ("cloud.sun", "The weather", "The forecast, drawn, with the temperature.", "weather"),
-                   ],
-                   selected: wall.state.idle) { wall.send(["idle": $0]) }
-    }
-
-    // MARK: - Words for the rows
-
-    private var servicesLine: String {
-        var on: [String] = []
-        if musicConnected { on.append("Apple Music") }
-        if services?.spotify.linked == true { on.append("Spotify") }
-        if let u = services?.lastfm.user, !u.isEmpty { on.append("Last.fm") }
-        if let u = services?.listenbrainz?.user, !u.isEmpty { on.append("ListenBrainz") }
-        return on.isEmpty ? "Nothing connected yet" : on.joined(separator: " · ")
-    }
-
-    private var sleepValue: String {
-        if let left = wall.state.sleepRemaining, left > 0 { return "\(max(1, left / 60)) min left" }
-        return "Off"
-    }
-
-    private var wakeValue: String {
-        let bits = wall.state.wakeTime.split(separator: ":")
-        guard bits.count == 2, let h = Int(bits[0]), let m = Int(bits[1]),
-              let d = Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date())
-        else { return wall.state.wakeTime }
-        return d.formatted(date: .omitted, time: .shortened)
-    }
-
-    private var idleName: String {
-        switch wall.state.idle {
-        case "hold": "Hold the last sleeve"
-        case "dim": "Dim it"
-        case "ambient": "Drift"
-        case "weather": "The weather"
-        default: "Go dark"
-        }
-    }
-
-    private var corrected: Bool {
-        wall.state.wbR < 0.995 || wall.state.wbG < 0.995 || wall.state.wbB < 0.995
-    }
-
-    private var healthValue: String {
-        guard let v = vitals else { return "Asking the wall" }
-        if let th = v.throttled, th.now { return "Running hot" }
-        if let t = v.tempC { return String(format: "%.0f°C, fine", t) }
-        return v.fps > 0 ? "Fine" : "Idle"
     }
 }
 
@@ -345,87 +401,6 @@ struct IconRow: View {
     }
 }
 
-struct NextStep {
-    enum Go { case look, music, colour }
-    let title: String
-    let body: String
-    let button: String
-    let go: Go
-}
-
-/// The card above the list for the one setup step still open, with the
-/// wall itself where an illustration would go.
-struct NextStepCard: View {
-    @Environment(WallSession.self) private var wall
-    let step: NextStep
-    let frame: Data?
-    let accent: Color
-    var dismiss: () -> Void
-
-    @State private var openMusic = false
-    @State private var openColour = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .top) {
-                WallThumb(frame: frame, live: wall.link.isLive)
-                Spacer()
-                // Words, not a second X. This card sat under the sheet's own
-                // close button: two dark circles with the same glyph, fifty
-                // points apart, one closing Settings and one waving off a
-                // suggestion. It was also a 30pt target, under the 44 a
-                // finger needs. "Not now" says which one it is and cannot be
-                // mistaken for the other.
-                Button(action: dismiss) {
-                    Text("Not now")
-                        .font(.ui(14, .medium))
-                        .foregroundStyle(Ink.dim)
-                        .padding(.horizontal, Space.step)
-                        .frame(height: 44)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(PressStyle(scale: 0.96))
-                .accessibilityLabel("Not now, hide this suggestion")
-            }
-            Text(step.title)
-                .font(.displayMid(21))
-                .foregroundStyle(Ink.ink)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(step.body)
-                .font(.ui(14))
-                .foregroundStyle(Ink.dim)
-                .fixedSize(horizontal: false, vertical: true)
-            Button {
-                switch step.go {
-                case .look: wall.lookForWallAgain()
-                case .music: openMusic = true
-                case .colour: openColour = true
-                }
-            } label: {
-                Text(step.button)
-                    .font(.ui(16, .semibold))
-                    .foregroundStyle(Ink.ground)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
-                    .background(Capsule().fill(Ink.ink))
-                    .contentShape(Capsule())
-            }
-            .buttonStyle(PressStyle(scale: 0.98))
-            .padding(.top, 4)
-        }
-        .padding(20)
-        .background(Glass(radius: 24))
-        .navigationDestination(isPresented: $openMusic) {
-            ServicesPage(accent: accent, services: .constant(nil),
-                         musicConnected: .constant(Service.appleMusicAuthorized),
-                         musicRefused: .constant(Service.appleMusicRefused))
-        }
-        .navigationDestination(isPresented: $openColour) {
-            ColourPage(accent: accent, showCalibrate: .constant(false))
-        }
-    }
-}
-
 // MARK: - Services: see Services.swift (the hub and one page per service)
 
 struct LightPage: View {
@@ -453,12 +428,7 @@ struct LightPage: View {
                 .padding(.vertical, 14)
             }
             .padding(.top, -12)
-            SetupGroup("When I leave", note: "After fifteen quiet minutes with your phone off the network, the wall turns off. It comes back when you do.") {
-                ToggleRow(title: "Turn off when I leave", subtitle: nil,
-                          isOn: Binding(get: { wall.state.away == "off" },
-                                        set: { wall.send(["away": $0 ? "off" : "stay"]); Taps.detent(intensity: 0.4) }),
-                          accent: accent)
-            }
+
         }
         .onAppear { brightness = wall.state.brightness }
     }

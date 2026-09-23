@@ -1,0 +1,45 @@
+{
+  "files": [
+    {
+      "path": "brain/art/text_modes.py",
+      "before_sha256": "dd7c9d975fb91e05f9e4aa80265d55345b1df5a95cd8dfbc9875996ce7bd2b0c",
+      "after_sha256": "030f5ab66e967e90dba354551caa984d4a080b24ac3c08ff88756b4270b05bb5"
+    },
+    {
+      "path": "brain/ask.py",
+      "before_sha256": "ff84deb671299291a3398c2db5b34a61661612af1ce9e68e3dfbbb660020753d",
+      "after_sha256": "18a82371fd5d7502424c1351c399c27e74ab7a0e0ebf4536ab01f2547c70f92a",
+      "source_sha256": "dac5653711c5c00a605251d5eb74c5af09baf322dfd42f9f8661f376e70745fe",
+      "preserved_remote_delta": "Existing local anthropic import in earworm()"
+    },
+    {
+      "path": "brain/control.py",
+      "before_sha256": "bc82868bc35b15fc4817f645fca3dc633ca2bdac615f069f472c21fe5c9bd0b5",
+      "after_sha256": "648e8e7a5baf8946f76344a2b4bb90b3ea030c0b7b169e8b3c4a91883d9be3ba"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "047fb3611e3371fb2162ddb05dc8684b9a0adc0cc376b2cb7ec83cd338c7a24e",
+      "after_sha256": "d8ada9c3b51641ddc7455d76606605a6464298b295ebf739b712a57cce41b557"
+    },
+    {
+      "path": "brain/routines.py",
+      "before_sha256": "87d856cd9a0ab9214f5ddd4c12cc5ca7d42c8a582e9871455aa7c21d15b7d70c",
+      "after_sha256": "ea3fdfbda83d928dda4ef86485d8b85e4afc63c347b3ba105614fa08306b3493"
+    },
+    {
+      "path": "brain/rest.py",
+      "before_sha256": null,
+      "after_sha256": "3ab2c01135a7f833fb053188928a40fbe17cac85803194d9f445dae6ed4b9883"
+    }
+  ],
+  "managed_services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": 533304,
+  "current_pid": 1702429,
+  "mode_before": "off",
+  "mode_after": "off",
+  "wall_timezone": "America/New_York"
+}

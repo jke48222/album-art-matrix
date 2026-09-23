@@ -1,0 +1,122 @@
+{
+  "checks": [
+    {
+      "name": "Every route occurs exactly once in the grouped directory",
+      "passed": true
+    },
+    {
+      "name": "Whitespace restores all settings",
+      "passed": true
+    },
+    {
+      "name": "Search titles before incidental aliases",
+      "passed": true
+    },
+    {
+      "name": "Find light with brightness",
+      "passed": true
+    },
+    {
+      "name": "Find time with timer",
+      "passed": true
+    },
+    {
+      "name": "Find time with snooze",
+      "passed": true
+    },
+    {
+      "name": "Find idle with nothing playing",
+      "passed": true
+    },
+    {
+      "name": "Find idle with leave",
+      "passed": true
+    },
+    {
+      "name": "Find idle with off",
+      "passed": true
+    },
+    {
+      "name": "Find ask with CLAUDE",
+      "passed": true
+    },
+    {
+      "name": "Find services with api key",
+      "passed": true
+    },
+    {
+      "name": "Find colour with color",
+      "passed": true
+    },
+    {
+      "name": "Find colour with COLOUR",
+      "passed": true
+    },
+    {
+      "name": "Find earworm with \u00e9\u00e1rw\u00f6rm",
+      "passed": true
+    },
+    {
+      "name": "Find time with \uff54\uff49\uff4d\uff45",
+      "passed": true
+    },
+    {
+      "name": "Find addresses with ip address",
+      "passed": true
+    },
+    {
+      "name": "Find guests with wifi password",
+      "passed": true
+    },
+    {
+      "name": "Find weather with temperature",
+      "passed": true
+    },
+    {
+      "name": "Find lockScreen with dynamic island",
+      "passed": true
+    },
+    {
+      "name": "Find panel with dead pixel",
+      "passed": true
+    },
+    {
+      "name": "Find health with diagnostics",
+      "passed": true
+    },
+    {
+      "name": "Find note with expiry",
+      "passed": true
+    },
+    {
+      "name": "Find time with minute",
+      "passed": true
+    },
+    {
+      "name": "Find wake with morning",
+      "passed": true
+    },
+    {
+      "name": "Find sun with night",
+      "passed": true
+    },
+    {
+      "name": "All query words must match the same destination",
+      "passed": true
+    },
+    {
+      "name": "Unknown query has an honest empty result",
+      "passed": true
+    },
+    {
+      "name": "All results have unique navigation identity",
+      "passed": true
+    },
+    {
+      "name": "Route strings round-trip without alternate editors",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 29
+}

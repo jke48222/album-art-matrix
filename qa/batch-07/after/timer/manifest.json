@@ -1,0 +1,118 @@
+{
+  "captured_at": "2026-09-23T12:06:42.557006+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "timer",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-controls",
+        "-control-workspace"
+      ],
+      "captured_at": "2026-09-23T12:06:28.874923+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "room-large",
+      "image": "room-large.png",
+      "frame": "room-large-frame.png",
+      "mode": "timer",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-controls",
+        "-control-workspace"
+      ],
+      "captured_at": "2026-09-23T12:06:33.666684+00:00",
+      "dynamic_type": "AX5"
+    },
+    {
+      "state": "room-offline",
+      "image": "room-offline.png",
+      "frame": "room-offline-frame.png",
+      "mode": "timer",
+      "state_reads": 9,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-controls",
+        "-control-workspace"
+      ],
+      "captured_at": "2026-09-23T12:06:42.442481+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

@@ -84,6 +84,8 @@ class Asker:
         self.history: list[dict] = []          # the last questions and answers, newest first
         self._client = None
         self._lock = threading.Lock()
+        self._ask_lock = threading.Lock()
+        self.pending = False
         self.problem = None
         self.answers = 0
         self.cost_usd = 0.0
@@ -98,8 +100,6 @@ class Asker:
             self.workspace = workspace.strip()
             self._client = None
             self.problem = None
-            self._client = None
-            self.problem = None
 
     @property
     def ready(self) -> bool:
@@ -109,7 +109,8 @@ class Asker:
         if self._client is None:
             import anthropic
             headers = {"anthropic-workspace-id": self.workspace} if self.workspace else None
-            self._client = anthropic.Anthropic(api_key=self.api_key, default_headers=headers)
+            self._client = anthropic.Anthropic(api_key=self.api_key, default_headers=headers,
+                                                timeout=75.0, max_retries=0)
         return self._client
 
     # ---- the tools ------------------------------------------------------------------------
@@ -153,10 +154,34 @@ class Asker:
 
     # ---- asking -----------------------------------------------------------------------------
     def ask(self, question: str, size: int = 64) -> str:
-        """The answer, as words for the panel. Never raises: a problem is
-        an answer that says so, and a log line."""
-        if not self.ready:
-            return "I have no Claude key yet."
+        """Voice-compatible words; HTTP callers use ask_reply for error status."""
+        reply = self.ask_reply(question, size)
+        return reply.get("answer") or reply.get("error") or "The wall could not answer."
+
+    def ask_reply(self, question: str, size: int = 64) -> dict:
+        """One charged question at a time, with honest success/error semantics."""
+        if not self._ask_lock.acquire(blocking=False):
+            return {"answer": None, "error": "The wall is already answering a question.", "busy": True}
+        self.pending = True
+        try:
+            if not self.ready:
+                return {"answer": None, "error": "Add your Claude key in Services to begin.", "busy": False}
+            self.problem = None
+            try:
+                answer = self._ask_answer(question, size)
+            except Exception as exc:
+                # Client construction and optional dependencies can fail before
+                # the request itself. Never strand a phone's pending state.
+                self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
+                answer = "The wall couldn't reach Claude. Check Services and try again."
+            if self.problem:
+                return {"answer": None, "error": answer, "busy": False}
+            return {"answer": answer, "error": None, "busy": False}
+        finally:
+            self.pending = False
+            self._ask_lock.release()
+
+    def _ask_answer(self, question: str, size: int = 64) -> str:
         import anthropic
         t0 = time.monotonic()
         client = self._client_()
@@ -165,10 +190,13 @@ class Asker:
         used = []
         try:
             for _ in range(MAX_TOOL_ROUNDS):
+                remaining = 75.0 - (time.monotonic() - t0)
+                if remaining <= 0:
+                    raise TimeoutError("Question exceeded its response window")
                 resp = client.messages.create(
                     model=self.model, max_tokens=MAX_TOKENS,
                     system=system_prompt(size), tools=TOOLS, messages=messages,
-                    output_config={"effort": "low"},
+                    output_config={"effort": "low"}, timeout=remaining,
                 )
                 usage_in += getattr(resp.usage, "input_tokens", 0) or 0
                 usage_out += getattr(resp.usage, "output_tokens", 0) or 0
@@ -190,6 +218,9 @@ class Asker:
                 break
             else:
                 answer = "That took too many steps; ask me again more simply."
+        except TimeoutError:
+            self.problem = "answer timed out"
+            return "That took too long. Try a shorter question."
         except anthropic.AuthenticationError:
             self.problem = "Claude rejected the key"
             return "Claude rejected the key on this wall."
@@ -205,6 +236,7 @@ class Asker:
         except Exception as exc:
             self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
             return "Something went wrong asking."
+        answer = answer or "I have nothing to say to that."
         usd = usage_in * PRICE_IN + usage_out * PRICE_OUT
         self.cost_usd += usd
         self.answers += 1
@@ -412,6 +444,6 @@ class Asker:
             return None
 
     def status(self) -> dict:
-        return {"ready": self.ready, "model": self.model, "answers": self.answers,
+        return {"ready": self.ready, "pending": self.pending, "model": self.model, "answers": self.answers,
                 "cost_usd": round(self.cost_usd, 4), "last": self.last, "problem": self.problem,
                 "workspace_set": bool(self.workspace), "history": list(self.history)}

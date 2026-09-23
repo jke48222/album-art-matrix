@@ -639,24 +639,24 @@ struct RoomWallScreen: View {
                 else { onSetup() }
             } label: {
                 HStack(spacing: 7) {
-                    Image(systemName: roomConnectionSymbol).font(.system(size: 9, weight: .semibold))
-                    Text(roomConnectionLabel).font(.machine(8)).kerning(0.8)
+                    Image(systemName: roomCompletion ? (wall.state.timerKind == "alarm" ? "bell.fill" : "checkmark.circle.fill") : roomConnectionSymbol).font(.system(size: roomCompletion ? 13 : 9, weight: .semibold))
+                    Text(roomCompletion ? (wall.state.timerKind == "alarm" ? "ALARM RINGING" : "TIMER COMPLETE") : roomConnectionLabel).font(.machine(8)).kerning(0.8)
                         .lineLimit(1).minimumScaleFactor(0.75)
                     Spacer(minLength: 4)
                     if !typeSize.isAccessibilitySize {
-                        Text(light.isOff ? "ASLEEP" : "\(roomFaceName) · \(Int((wall.state.brightness * 100).rounded()))%")
+                        Text(roomCompletion ? "OPEN" : (light.isOff ? "ASLEEP" : "\(roomFaceName) · \(Int((wall.state.brightness * 100).rounded()))%"))
                             .font(.machine(8)).kerning(0.5)
                     }
                     Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
                 }
                 .foregroundStyle(inkLight)
-                .padding(.horizontal, 12).frame(minHeight: 30)
+                .padding(.horizontal, 12).frame(minHeight: roomCompletion ? 44 : 30)
                 .background(.ultraThinMaterial, in: Capsule())
                 .overlay(Capsule().strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
                 .environment(\.colorScheme, .dark)
             }
             .buttonStyle(PressStyle(scale: 0.98))
-            .accessibilityLabel("\(roomConnectionLabel), \(light.isOff ? "wall asleep" : roomFaceName)")
+            .accessibilityLabel(roomCompletion ? (wall.state.timerKind == "alarm" ? "Alarm ringing. Open to stop or snooze." : "Timer complete. Open to finish or repeat.") : "\(roomConnectionLabel), \(light.isOff ? "wall asleep" : roomFaceName)")
             .accessibilityHint(wall.link.isLive || wall.link.isStandIn ? "Open wall controls" : "Open connection settings")
         }
         .padding(.horizontal, 24).padding(.top, 62)
@@ -736,6 +736,8 @@ struct RoomWallScreen: View {
         .buttonStyle(PressStyle(scale: 0.96))
         .accessibilityLabel(title)
     }
+
+    private var roomCompletion: Bool { wall.link.isLive && wall.state.timerRinging }
 
     private var roomConnectionLabel: String {
         switch wall.link {

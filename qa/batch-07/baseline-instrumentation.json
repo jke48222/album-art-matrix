@@ -1,0 +1,5 @@
+{
+  "base": "cb5acad",
+  "purpose": "DEBUG-only native navigation to existing Ask/Note/Idle pages. No UI changes.",
+  "patch": "diff --git a/tessera/Tessera/SettingsSheet.swift b/tessera/Tessera/SettingsSheet.swift\nindex 30390d3..63aa766 100644\n--- a/tessera/Tessera/SettingsSheet.swift\n+++ b/tessera/Tessera/SettingsSheet.swift\n@@ -98,6 +98,9 @@ struct SettingsSheet: View {\n             #if DEBUG\n             .navigationDestination(isPresented: $qaRoutineOpen) {\n                 switch qaRoutine {\n+                case \"ask\": AskPage(accent: accent)\n+                case \"note\": NotePage(accent: accent)\n+                case \"idle\": idlePage\n                 case \"sun\": SunPage(accent: accent)\n                 case \"sleep\": SleepPage(accent: accent)\n                 case \"wake\": WakePage(accent: accent)\n"
+}

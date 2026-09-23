@@ -1,0 +1,19 @@
+{
+  "passed": 368,
+  "failed": 0,
+  "suite": [
+    "test_control",
+    "test_chain",
+    "test_main",
+    "test_display_batch",
+    "test_ticker_batch",
+    "test_ticker_api",
+    "test_video_clock_batch",
+    "test_routines_batch",
+    "test_timer_endings",
+    "test_rest_batch",
+    "test_ask_notes_batch"
+  ],
+  "summary": "367 passed in 70.95s (0:01:10)",
+  "additional_regression": "1 passed: real Timer expiry with concurrent HTTP and routine polling"
+}

@@ -1,0 +1,108 @@
+{
+  "passed": 24,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "countdown ending preview matches exact production RGB",
+      "passed": true
+    },
+    {
+      "name": "alarm ending preview matches exact production RGB",
+      "passed": true
+    },
+    {
+      "name": "Read-only completion previews do not start a timer",
+      "passed": true
+    },
+    {
+      "name": "Six-second countdown reaches its identified ending",
+      "passed": true
+    },
+    {
+      "name": "Completion is illuminated on the actual wall",
+      "passed": true
+    },
+    {
+      "name": "Repeat retains original duration with a new event ID",
+      "passed": true
+    },
+    {
+      "name": "Delayed old Stop cannot stop the repeat",
+      "passed": true
+    },
+    {
+      "name": "Mixed timer action rejects atomically",
+      "passed": true
+    },
+    {
+      "name": "Done restores the previous face",
+      "passed": true
+    },
+    {
+      "name": "New note is acknowledged with its own identity",
+      "passed": true
+    },
+    {
+      "name": "Note renders on actual wall",
+      "passed": true
+    },
+    {
+      "name": "Replacing a note gives it a new identity",
+      "passed": true
+    },
+    {
+      "name": "Old note Take down rejects without deleting replacement",
+      "passed": true
+    },
+    {
+      "name": "Nonfinite note duration is rejected without replacing it",
+      "passed": true
+    },
+    {
+      "name": "Take down confirms removal",
+      "passed": true
+    },
+    {
+      "name": "Taking down a note restores the original clock face",
+      "passed": true
+    },
+    {
+      "name": "Temporary note duration is reported",
+      "passed": true
+    },
+    {
+      "name": "Note expiry returns automatically and clears active receipt",
+      "passed": true
+    },
+    {
+      "name": "Explicit Off stays Off when the app contacts the wall",
+      "passed": true
+    },
+    {
+      "name": "Off reports zero effective brightness",
+      "passed": true
+    },
+    {
+      "name": "Off output contains no residual light",
+      "passed": true
+    },
+    {
+      "name": "Empty Ask fails before a paid request",
+      "passed": true
+    },
+    {
+      "name": "Ask reports explicit pending state",
+      "passed": true
+    },
+    {
+      "name": "Every touched setting restored",
+      "passed": true
+    }
+  ],
+  "restored_mode": "off",
+  "limitations": [
+    "Daily alarm firing skipped on this run because it was already checked today or a future user alarm must be preserved.",
+    "No live inference charge was made. Ask inference failure/busy behavior is tested with controlled provider responses.",
+    "Native RGB does not certify physical LED colour; inspect the panel in person."
+  ]
+}

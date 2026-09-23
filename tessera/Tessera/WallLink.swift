@@ -39,6 +39,9 @@ struct WallState: Equatable {
     var panelBrightness: Double = 160
     var idle: String = "black"
     var away: String = "stay"
+    var idleActive: String? = nil
+    var awayActive = false
+    var displayedMode: String = "art"
     var alarmEnabled: Bool = false
     var alarmTime: String = "07:00"
     var wakeEnabled: Bool = false
@@ -65,6 +68,9 @@ struct WallState: Equatable {
     var timerKind: String? = nil
     var timerStatus: String = "idle"
     var timerRinging = false
+    var timerEventID: String? = nil
+    var timerSnoozed = false
+    var timerRingElapsed: Double = 0
     var alarmNext: Date? = nil
     var sunPhase: String? = nil
     var sunFactor: Double? = nil
@@ -174,6 +180,9 @@ struct WallState: Equatable {
         panelBrightness = json["panel_brightness"] as? Double ?? 160
         idle = json["idle"] as? String ?? "black"
         away = json["away"] as? String ?? "stay"
+        idleActive = json["idle_active"] as? String
+        awayActive = json["away_active"] as? Bool ?? false
+        displayedMode = json["display_mode"] as? String ?? mode
         alarmEnabled = json["alarm_enabled"] as? Bool ?? false
         alarmTime = json["alarm_time"] as? String ?? "07:00"
         wakeEnabled = json["wake_enabled"] as? Bool ?? false
@@ -207,6 +216,10 @@ struct WallState: Equatable {
         if let offset = json["wall_utc_offset_s"] as? Int, (-18 * 3600...18 * 3600).contains(offset) { wallUTCOffset = offset }
         timerEndsAt = stamp("timer_ends_at")
         timerKind = json["timer_kind"] as? String
+        timerEventID = json["timer_id"] as? String
+        timerSnoozed = json["timer_snoozed"] as? Bool ?? false
+        let ringElapsed = json["timer_ring_elapsed_s"] as? Double ?? 0
+        timerRingElapsed = ringElapsed.isFinite ? max(0, ringElapsed) : 0
         timerStatus = json["timer_state"] as? String ?? (timerRemaining == nil ? "idle" : (timerRemaining == 0 ? "ringing" : "counting"))
         timerRinging = json["timer_ringing"] as? Bool ?? (timerStatus == "ringing")
         alarmNext = stamp("alarm_next_at")

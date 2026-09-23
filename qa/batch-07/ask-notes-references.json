@@ -1,0 +1,69 @@
+{
+  "task_intent": "Redesign Tessera settings and everyday interactions with expressive wall feedback and clear native navigation.",
+  "features": [
+    {
+      "id": "F01",
+      "sources": [
+        {
+          "title": "Perplexity \u00b7 prompt composer",
+          "url": "https://mobbin.com/screens/181b0438-4252-4c71-a36c-acb69bcda63d",
+          "inspected": true,
+          "applied": "One generously sized composer with its primary send action in place; useful contextual prompts sit adjacent to entry."
+        },
+        {
+          "title": "WhatsApp \u00b7 Ask Meta AI",
+          "url": "https://mobbin.com/screens/7e088896-8ec9-42c2-927e-00e4cd7549bf",
+          "inspected": true,
+          "applied": "A calm entry state with a distinct visual identity and optional suggestions, adapted to Tessera's pixel vocabulary rather than copied."
+        },
+        {
+          "title": "Apple Human Interface Guidelines \u00b7 Text fields",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/text-fields",
+          "applied": "Persistent label, multiline question entry, accessible Clear control, and no premature keyboard focus."
+        },
+        {
+          "title": "Apple Human Interface Guidelines \u00b7 Progress indicators",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+          "applied": "Use indeterminate progress for an answer with an unknown completion time; clearly state that leaving the page is allowed."
+        },
+        {
+          "title": "Anthropic Python SDK \u00b7 bounded requests",
+          "url": "https://github.com/anthropics/anthropic-sdk-python/blob/main/src/anthropic/resources/messages/messages.py",
+          "applied": "Bound the full question to a 75-second window using per-request timeout, with automatic retries disabled so paid requests are not repeated invisibly after the phone timeout."
+        },
+        {
+          "title": "Apple AVSpeechSynthesizer \u00b7 system-managed audio session",
+          "url": "https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer/usesapplicationaudiosession",
+          "applied": "Read aloud is an explicit action. Its separate system-managed audio session preserves video playback configuration, and speech stops when leaving Ask or backgrounding the app."
+        }
+      ]
+    },
+    {
+      "id": "F02",
+      "sources": [
+        {
+          "title": "WhatsApp \u00b7 text status composition",
+          "url": "https://mobbin.com/screens/39dcd7ab-67b2-48d8-bbfd-41209e293f33",
+          "inspected": true,
+          "applied": "Prioritize the actual message as the main canvas; keep the send action beside composition rather than in a second configuration popup."
+        },
+        {
+          "title": "ID \u00b7 message editing",
+          "url": "https://mobbin.com/screens/a45795ec-0682-41d5-b76b-e54f0bfc2ec8",
+          "inspected": true,
+          "applied": "Keep a visible preview while editing, with compact contextual choices. Tessera uses the exact wall-produced pixels instead of a decorative substitute."
+        },
+        {
+          "title": "Apple Human Interface Guidelines \u00b7 Feedback",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/feedback",
+          "applied": "Confirm the wall's acknowledgement inline and separate draft state from a live note; show recovery text without an interrupting alert."
+        },
+        {
+          "title": "Apple Human Interface Guidelines \u00b7 Writing",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/writing",
+          "applied": "Use direct actions such as Take down and Replace the current note, with concise explanation of expiry and return behavior."
+        }
+      ]
+    }
+  ]
+}

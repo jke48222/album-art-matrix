@@ -6,7 +6,7 @@ treats every mode the same way: generate, white-balance, ship.
 import time
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from .effects import _hex_rgb
 from .pixelfont import cell, draw_text, normalize, text_width
@@ -179,11 +179,10 @@ class Clock(_TimeFace):
 
 
 class Countdown(_TimeFace):
-    """A readable pair of time units surrounded by a draining perimeter.
+    """A time stack that resolves into a crafted light ceremony at zero.
 
-    At zero the words change to TIME UP and a slow breathing perimeter
-    replaces the drain. The result remains legible, without full-screen
-    strobing or randomly hiding the digits behind an animation.
+    Completion keeps its meaning visible while slow orbital accents move
+    around it. Alarms have a separate amber bell; no all-panel flashes.
     """
     def __init__(self, size: int, color: str = "#f4f1ea", accent: str = "#e8b04b"):
         super().__init__(size, color)
@@ -196,19 +195,24 @@ class Countdown(_TimeFace):
                      [(x, end) for x in range(end - 1, inset - 1, -1)] +
                      [(inset, y) for y in range(end - 1, inset - 1, -1)] +
                      [(x, inset) for x in range(inset + 1, mid)])
+        axis = (np.arange(size) + .5) * 64 / size - 32
+        self._x, self._y = np.meshgrid(axis, axis)
+        self._radius = np.hypot(self._x, self._y)
+        self._angle = np.arctan2(self._y, self._x)
 
-    def frame_at(self, remaining: float, total: float) -> Image.Image:
+    def frame_at(self, remaining: float, total: float, kind: str = "countdown",
+                 snoozed: bool = False) -> Image.Image:
+        if remaining <= 0:
+            return self._ending(max(0.0, -remaining), kind == "alarm")
         canvas = self.canvas()
-        ringing = remaining <= 0
         frac = max(0, min(1, remaining / max(1, total)))
-        pulse = 0.55 + 0.45 * (0.5 + 0.5 * np.cos(min(0, remaining) * np.pi))
-        fill = len(self.path) if ringing else round(len(self.path) * frac)
-        color = tuple(round(c * pulse) for c in self.accent) if ringing else self.accent
+        fill = round(len(self.path) * frac)
+        color = (236, 174, 90) if snoozed else self.accent
         for index, (x, y) in enumerate(self.path):
             if index < fill:
                 canvas[y:y + self.unit, x:x + self.unit] = color
         # Header sits just inside the perimeter and never shares its pixels.
-        self.text(canvas, "TIME UP" if ringing else "REMAIN", 5, self.paper)
+        self.text(canvas, "SNOOZE" if snoozed else "REMAIN", 5, self.paper)
         seconds = int(np.ceil(max(0, remaining)))
         minutes, seconds = divmod(seconds, 60)
         top, bottom, labels = f"{minutes:02d}", f"{seconds:02d}", ("M", "S")
@@ -216,6 +220,57 @@ class Countdown(_TimeFace):
             hour, minutes = divmod(minutes, 60)
             top, bottom, labels = f"{hour:02d}", f"{minutes:02d}", ("H", "M")
         self.pair(canvas, top, bottom, labels)
+        return Image.fromarray(canvas, "RGB")
+
+    def _ending(self, elapsed: float, alarm: bool) -> Image.Image:
+        canvas = self.canvas()
+        jewel = np.array((239, 175, 89) if alarm else (127, 208, 186), dtype=float)
+        # The rings occupy only the quiet middle band. Labels remain crisp
+        # and still, even on the smallest panel and at the dimmest setting.
+        band = (self._y > -20) & (self._y < 20)
+        halo = np.exp(-((self._radius - 16.5) / 4.0) ** 2) * .07
+        canvas[:] = np.round(halo[..., None] * jewel).astype(np.uint8)
+        canvas[~band] = 0
+        disk = self._radius < 13.8
+        canvas[disk] = (10, 16, 18) if not alarm else (19, 14, 10)
+
+        phase = elapsed * 2 * np.pi / (10 if alarm else 12)
+        # Two broad, softly tailed light arcs orbit in opposite directions.
+        # Their total brightness stays steady; movement provides the cue.
+        for radius, direction, offset, strength in ((16.5, 1, 0, 1.0), (20.5, -1, np.pi, .5)):
+            ring = (np.abs(self._radius - radius) < .65) & band
+            distance = np.mod(self._angle * direction - phase + offset, 2 * np.pi)
+            trail = .16 + .84 * np.exp(-distance * 1.2)
+            light = jewel[None, None, :] * trail[..., None] * strength
+            canvas[ring] = np.round(light[ring]).astype(np.uint8)
+        # A permanent four-point dial makes the artwork feel resolved rather
+        # than a loading spinner. Outer points never cross either label.
+        for angle in (0, np.pi):
+            for radius in (25, 27):
+                x, y = np.cos(angle) * radius, np.sin(angle) * radius
+                mark = (np.abs(self._x - x) < .7) & (np.abs(self._y - y) < .7)
+                canvas[mark] = np.round(jewel * .4).astype(np.uint8)
+
+        image = Image.fromarray(canvas, "RGB")
+        draw = ImageDraw.Draw(image)
+        scale = self.size / 64
+        point = lambda x, y: (round(x * scale), round(y * scale))
+        box = lambda x0, y0, x1, y1: (*point(x0, y0), *point(x1, y1))
+        width = max(1, round(2 * scale))
+        if alarm:
+            # The bell's solid footing and two curved shoulders remain
+            # recognizable at 64px; unlike a glyph, none of it can truncate.
+            draw.arc(box(25, 23, 39, 37), 180, 360, fill=self.paper, width=width)
+            draw.line([point(25, 30), point(25, 35), point(22, 39), point(42, 39),
+                       point(39, 35), point(39, 30)], fill=self.paper, width=width)
+            draw.line([point(29, 43), point(35, 43)], fill=tuple(jewel.astype(int)), width=width)
+            draw.line([point(32, 20), point(32, 22)], fill=tuple(jewel.astype(int)), width=width)
+        else:
+            draw.line([point(23, 32), point(29, 38), point(41, 26)],
+                      fill=self.paper, width=max(2, round(3 * scale)), joint="curve")
+        canvas = np.asarray(image).copy()
+        self.text(canvas, "ALARM" if alarm else "TIME UP", 3, self.paper)
+        self.text(canvas, "YOUR CUE" if alarm else "ALL DONE", 55, tuple(jewel.astype(int)))
         return Image.fromarray(canvas, "RGB")
 
 

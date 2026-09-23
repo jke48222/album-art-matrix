@@ -29,6 +29,7 @@ from .art.effects import Ambient
 from .art.fetch import fetch_art
 from .art.lyrics import LyricBook, LyricCanvas
 from .playback import ReplayHold
+from .rest import resolve_rest
 from .art.nine import NineBuilder
 from . import halo as halo_mod
 from . import homekit as homekit_mod
@@ -277,7 +278,15 @@ class _FrameTee:
     def show(self, rgb888: bytes, pre_wb_img=None):
         # a face opening from the voice's line: the frames after a command
         # are unmasked from the middle outwards for a moment (art/horizon.py)
+        settings = self._ctrl.get()
         tr = getattr(self._ctrl, "transition", None)
+        if tr is not None and (settings["mode"] in ("off", "timer")
+                               or getattr(self._ctrl, "display_mode", None) in ("off", "timer")):
+            # Opening a black frame adds coloured edge lines. Off paints only
+            # once, so those lines could otherwise remain on a resting wall.
+            # A timer/alarm also needs its unobscured face immediately.
+            self._ctrl.transition = None
+            tr = None
         if tr is not None:
             kind, t0, ink = tr
             k = (time.monotonic() - t0) / VOICE_OPEN_S
@@ -300,7 +309,7 @@ class _FrameTee:
         # one call and follows album art, video and effects alike
         if self._halo is not None and pre_wb_img is not None:
             self._halo.show(pre_wb_img)
-        self._sink.brightness = self._ctrl.get()["panel_brightness"]
+        self._sink.brightness = settings["panel_brightness"]
         if self._ctrl.tuning is not None:
             self._sink.dither = self._ctrl.tuning.get("dither")
         self._sink.show(rgb888, pre_wb_img=pre_wb_img)
@@ -513,7 +522,6 @@ def main():
     ctrl.lyric_book = lyric_book
     lyric_canvas, lyric_key = None, None
     routine_eff = None
-    away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
     clip_i, clip_next, clip_id = 0, 0.0, None
     now, video_shown = None, None
@@ -658,36 +666,6 @@ def main():
             except Exception as exc:
                 print(f"[main] teach: {exc}", flush=True)
 
-        # ---- nobody home ------------------------------------------------
-        # Presence is the phone talking to the reporter, or the app talking
-        # to us. Both quiet for 15 minutes with nothing playing reads as an
-        # empty house, and a lamp burning for an empty house is the owner's
-        # choice to make, not a default.
-        if ctrl.get().get("away") == "off":
-            ages = []
-            phone_age = next((sc.phone_age for sc in source.sources
-                              if getattr(sc, "phone_age", None) is not None), None)
-            if phone_age is not None:
-                ages.append(phone_age)
-            if ctrl.last_client is not None:
-                ages.append(time.monotonic() - ctrl.last_client)
-            present_age = min(ages) if ages else None
-            mode_now = ctrl.get()["mode"]
-            if away_forced and mode_now != "off":
-                away_forced = None           # someone chose something; defer
-            if present_age is not None:
-                playing = bool(now and now.is_playing)
-                if present_age > 900 and not playing and mode_now != "off":
-                    away_forced = mode_now
-                    ctrl.apply({"mode": "off"})
-                    print("[main] nobody around for a while; wall off")
-                elif away_forced and present_age < 60 and mode_now == "off":
-                    print("[main] someone is back; wall on")
-                    ctrl.apply({"mode": away_forced})
-                    away_forced = None
-        else:
-            away_forced = None
-
         if now is not None and now.progress_ms is not None:
             # stamped with the poll's own moment, not this pass's: the loop
             # comes round more often than the poller answers
@@ -808,42 +786,54 @@ def main():
                     # person returns to it, even when its text is unchanged.
                     ticker, ticker_key = None, None
 
-                # ---- the voice's face -----------------------------------------
-                # While someone is talking to the wall, and while the answer is
-                # up, the Horizon face and the answer face take the panel; the
-                # wall's own faces resume the moment the voice hands back.
+                # Quiet and away only override the output. Persisting Off
+                # here used to cancel timers and could revive a manually
+                # switched-off wall when the phone returned.
+                rest_tick = time.monotonic()
+                ages = [age for sc in source.sources
+                        if (age := getattr(sc, "phone_age", None)) is not None]
+                if ctrl.last_client is not None:
+                    ages.append(max(0.0, rest_tick - ctrl.last_client))
+                rest = resolve_rest(mode, idle=s.get("idle", "black"),
+                                    quiet_for=None if quiet_since is None else rest_tick - quiet_since,
+                                    away=s.get("away", "stay"),
+                                    presence_age=min(ages) if ages else None,
+                                    playing=bool(now and now.is_playing),
+                                    waking=waking, sleeping=sl is not None,
+                                    weather_available=ctrl.weather is not None)
+                mode = rest.mode
+                eff = tuple(g * rest.brightness for g in eff)
+                ctrl.idle_now, ctrl.away_now = rest.idle, rest.away
+                ctrl.display_mode = mode
+                rest_key = (rest.idle, rest.away, mode)
+                if rest_key != idle_prev:
+                    # engaging or lifting the override is a repaint, or the
+                    # dimmed sleeve never shows and black outlives the silence.
+                    # Still-frame faces cache their own last paint; invalidating
+                    # only need_show leaves drawings/grids black after Away,
+                    # or leaves a timer's final image on a restored drawing.
+                    idle_prev = rest_key
+                    need_show = True
+                    frame_shown = None
+                    nine_shown = None
+
+                # An answer can outlive the action that opened it. Resolve
+                # power and routine priority first, so an existing answer
+                # cannot cover Off, automatic darkness, or a new timer/alarm.
+                # Still advance a hidden answer so it expires normally and
+                # cannot leave the voice permanently busy behind a dark wall.
                 voice = ctrl.voice
                 if voice is not None and voice.state != "idle":
                     tick = time.monotonic()
                     vf = voice.frame(tick, size)
-                    if vf is not None:
+                    if vf is not None and mode not in ("off", "timer"):
                         sink.show(white_balance(vf, eff).tobytes(), pre_wb_img=vf)
+                        blacked = False
+                        need_show = True
+                        frame_shown = None
+                        nine_shown = None
                         pace(tick)
                         continue
-                    need_show = True
-
-                # A minute of silence, and only for the modes that are about a
-                # track. Choosing a lamp or a clock is a decision the music
-                # stopping does not get to overrule.
-                idle_now = None
-                if quiet_since is not None and mode in ("art", "cd") \
-                        and time.monotonic() - quiet_since > 60 and not waking:
-                    idle = s.get("idle", "black")
-                    if idle == "black":
-                        mode, idle_now = "off", "black"
-                    elif idle == "dim":
-                        eff = tuple(g * 0.3 for g in eff)
-                        idle_now = "dim"
-                    elif idle == "ambient":
-                        mode, idle_now = "ambient", "ambient"
-                    elif idle == "weather" and ctrl.weather is not None:
-                        mode, idle_now = "weather", "weather"
-                ctrl.idle_now = idle_now
-                if idle_now != idle_prev:
-                    # engaging or lifting the override is a repaint, or the
-                    # dimmed sleeve never shows and black outlives the silence
-                    idle_prev = idle_now
-                    need_show = True
 
                 if mode == "off":
                     if not blacked:
@@ -979,7 +969,8 @@ def main():
                                               accent=s["color2"])
                         countdown_key = key
                     left = tm["end"] - time.monotonic()
-                    f = countdown.frame_at(left, tm["total"])
+                    f = countdown.frame_at(left, tm["total"], tm.get("kind", "countdown"),
+                                           tm.get("snoozed", False))
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     # the ring drains continuously and the alarm is motion:
                     # a steady thirty frames a second, both ways

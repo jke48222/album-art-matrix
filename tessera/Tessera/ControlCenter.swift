@@ -745,11 +745,8 @@ struct ControlCenterPanel: View {
     }
 
     private var sleepBoard: some View {
-        board("Asleep") {
-            HStack(spacing: 8) {
-                choice("Wake it", true, false, { _ in wall.send(["mode": "art"]) })
-                choice("Leave it", false, true, { _ in onClose() })
-            }
+        board("Off") {
+            WallRestWorkbench(accent: accent, ink: ink)
         }
     }
 

@@ -1,0 +1,22 @@
+{
+  "mode": "off",
+  "finish": "clean",
+  "color": "#b5d8ff",
+  "color2": "#006d8e",
+  "match_art": true,
+  "brightness": 1.0,
+  "sun": "on",
+  "sun_night": 0.25,
+  "alarm_enabled": true,
+  "alarm_time": "08:12",
+  "wake_enabled": false,
+  "wake_time": "07:00",
+  "wake_fade_min": 20.0,
+  "idle": "ambient",
+  "away": "stay",
+  "ticker_text": "UNTIL NEXT TIME",
+  "ticker_style": "across",
+  "ticker_colors": [],
+  "ticker_loop": true,
+  "speed": 1.961728395061728
+}

@@ -1,0 +1,9 @@
+{
+  "device": "Connected iPhone 18 Pro Max",
+  "bundle": "com.jalenedusei.tessera",
+  "install": "success",
+  "foreground_launch": "blocked_locked_device",
+  "binary_sha256": "3ef37b00c245d4a4945d86b2c203c938285c03dcfe1be7f38ec360cb373ff069",
+  "source": "Final signed Debug build",
+  "launch_block": "iOS SBMainWorkspace refuses launching apps while device locked; user asked to unlock."
+}

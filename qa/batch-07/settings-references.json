@@ -1,0 +1,52 @@
+{
+  "unit": "D02",
+  "date": "2026-09-23",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/2b68dff9-43a7-42e7-9e9a-996daa2c3d1f",
+      "app": "Sonos",
+      "applied": "Separate daily controls from hardware care; retain device context and use clear disclosure destinations."
+    },
+    {
+      "url": "https://mobbin.com/screens/f2eeb985-af5b-4267-8606-d958534c9101",
+      "app": "Sonos",
+      "applied": "Use scannable category headings and stable row geometry."
+    },
+    {
+      "url": "https://mobbin.com/screens/80a23d62-0707-448b-905d-63e7d2667072",
+      "app": "IKEA Home smart",
+      "applied": "Connect the page to the actual device with live identity, connection state and a received wall frame."
+    },
+    {
+      "url": "https://mobbin.com/screens/267ea2f0-480e-4579-9ea8-543b8db82fc4",
+      "app": "IKEA Home smart",
+      "applied": "Use restrained category color to help orientation rather than duplicate feature controls."
+    },
+    {
+      "url": "https://mobbin.com/screens/57c4fabc-4942-47af-a6cf-4a835d2fdc06",
+      "app": "Google",
+      "applied": "Place search directly below the Settings heading and make every result a destination."
+    },
+    {
+      "url": "https://mobbin.com/screens/a9bfbae3-fa67-4c28-97d6-1b63a5af6777",
+      "app": "Outlook",
+      "applied": "Use grouped rows with secondary context, and preserve findability in a long feature list."
+    }
+  ],
+  "inspectedImages": 6,
+  "primary": [
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/settings",
+      "applied": "One place for each customization, searchable meaningful groups."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/searching",
+      "applied": "Explicit search scope, immediate filtered routes, clear and empty states."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/lists-and-tables",
+      "applied": "Consistent rows and disclosure affordances; current state is secondary text."
+    }
+  ],
+  "scope": "Native implementation, not a replica. All references researched and screenshots inspected this pass."
+}

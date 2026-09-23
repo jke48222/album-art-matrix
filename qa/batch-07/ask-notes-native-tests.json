@@ -1,0 +1,122 @@
+{
+  "checks" : [
+    {
+      "name" : "Countdown keeps the server note identity for safe dismissal",
+      "passed" : true
+    },
+    {
+      "name" : "Initial countdown keeps all wall-reported seconds",
+      "passed" : true
+    },
+    {
+      "name" : "Countdown advances from monotonic uptime",
+      "passed" : true
+    },
+    {
+      "name" : "Clock reset cannot add time beyond original duration",
+      "passed" : true
+    },
+    {
+      "name" : "Countdown reaches zero exactly",
+      "passed" : true
+    },
+    {
+      "name" : "Completed countdown never becomes negative",
+      "passed" : true
+    },
+    {
+      "name" : "Nonfinite uptime cannot crash integer conversion",
+      "passed" : true
+    },
+    {
+      "name" : "Inactive server receipt wins over stale text",
+      "passed" : true
+    },
+    {
+      "name" : "Expired note does not render as active",
+      "passed" : true
+    },
+    {
+      "name" : "Invalid negative note duration is ignored",
+      "passed" : true
+    },
+    {
+      "name" : "Missing note text cannot claim active note",
+      "passed" : true
+    },
+    {
+      "name" : "Legacy active note snapshots still work",
+      "passed" : true
+    },
+    {
+      "name" : "Long notes show hours without minute overflow",
+      "passed" : true
+    },
+    {
+      "name" : "Short note duration is explicit",
+      "passed" : true
+    },
+    {
+      "name" : "Negative note duration is clipped",
+      "passed" : true
+    },
+    {
+      "name" : "Valid HTTP acknowledgement accepts actual answer",
+      "passed" : true
+    },
+    {
+      "name" : "Wall receipt preserves actual display acknowledgement",
+      "passed" : true
+    },
+    {
+      "name" : "Text-only answer does not invent a wall receipt",
+      "passed" : true
+    },
+    {
+      "name" : "Backend errors retain actionable text",
+      "passed" : true
+    },
+    {
+      "name" : "Even a malformed 200 cannot mark an error successful",
+      "passed" : true
+    },
+    {
+      "name" : "HTTP rejection cannot mark note as sent",
+      "passed" : true
+    },
+    {
+      "name" : "Non-JSON replies produce a recoverable error",
+      "passed" : true
+    },
+    {
+      "name" : "Explicit note clear is acknowledged",
+      "passed" : true
+    },
+    {
+      "name" : "Pending and history decode together",
+      "passed" : true
+    },
+    {
+      "name" : "Missing optional fields do not break older walls",
+      "passed" : true
+    },
+    {
+      "name" : "Request uses selected wall including its control port",
+      "passed" : true
+    },
+    {
+      "name" : "Status requests cannot reuse stale cache receipts",
+      "passed" : true
+    },
+    {
+      "name" : "Request preserves bounded timeout",
+      "passed" : true
+    },
+    {
+      "name" : "Empty wall address rejected",
+      "passed" : true
+    }
+  ],
+  "passed" : 29,
+  "total" : 29
+}

@@ -98,6 +98,8 @@ class FixtureWall:
             {"at": 90, "text": "a little colour in the quiet", "words": [{"at":90,"text":"a little"},{"at":92,"text":"colour"},{"at":96,"text":"in the quiet"}]},
             {"at": 110, "text": "we leave the window open", "words": []}]}
         self.studies = {}
+        self.ask = {"ready": True, "pending": False, "history": [], "problem": None}
+        self.note = {"text": None, "seconds_left": None, "active": False}
 
     def load(self, state: dict, frame: bytes) -> None:
         with self.lock:
@@ -143,6 +145,10 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 return
             if path == "/lyrics":
                 payload = wall.lyrics if state.get("now_showing") else {"state":"idle","lines":[]}
+                self.response(200, json.dumps(payload).encode(), "application/json")
+                return
+            if path in {"/ask", "/note"}:
+                payload = wall.ask if path == "/ask" else wall.note
                 self.response(200, json.dumps(payload).encode(), "application/json")
                 return
             payload = (state if path == "/state" else {"entries": wall.journal} if path == "/journal"
@@ -222,6 +228,8 @@ def main() -> int:
                         help="Extra app argument, for example --launch-argument=-controls")
     parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker"))
     parser.add_argument("--routine-state", choices=("idle", "active", "complete", "ringing", "location"))
+    parser.add_argument("--timer-kind", choices=("countdown", "alarm"), default="countdown")
+    parser.add_argument("--message-state", choices=("ready", "history", "thinking", "missing-key", "note-active", "note-expired"), default="ready")
     parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
     parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
@@ -253,6 +261,16 @@ def main() -> int:
         states.append("classic-wall")
     previous_size = command("xcrun", "simctl", "ui", args.simulator, "content_size", capture=True)
     wall = FixtureWall()
+    if args.message_state == "history":
+        wall.ask["history"] = [{"q": "What played this morning?", "a": "The room began with Into the Quiet by The Tessera Sessions. A slow start, with a little warmth.", "ts": 1790163024}]
+    elif args.message_state == "thinking":
+        wall.ask["pending"] = True
+    elif args.message_state == "missing-key":
+        wall.ask["ready"] = False
+    elif args.message_state == "note-active":
+        wall.note = {"id": "qa-note-1", "text": "Take your time. The music will wait.", "seconds_left": 420, "active": True}
+    elif args.message_state == "note-expired":
+        wall.note = {"text": None, "seconds_left": 0, "active": False}
     server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(wall))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -337,8 +355,13 @@ def main() -> int:
                     if state["mode"] == "timer":
                         remaining = 0 if args.routine_state == "ringing" else 462
                         state.update({"timer_remaining_s":remaining,"timer_total_s":600,"timer_ends_at":now+remaining,
-                            "timer_state":"ringing" if remaining == 0 else "counting","timer_ringing":remaining==0,"timer_kind":"countdown"})
-                        frame=Countdown(64).frame_at(remaining,600).tobytes()
+                            "timer_state":"ringing" if remaining == 0 else "counting","timer_ringing":remaining==0,"timer_kind":args.timer_kind,"timer_id":"qa-timer-001","timer_snoozed":False,"timer_ring_elapsed_s":2.5 if remaining == 0 else 0})
+                        import inspect
+                        renderer = Countdown(64)
+                        if "kind" in inspect.signature(renderer.frame_at).parameters:
+                            frame = renderer.frame_at(-2.5 if remaining == 0 else remaining,600,kind=args.timer_kind).tobytes()
+                        else:
+                            frame = renderer.frame_at(remaining,600).tobytes()
                     elif state["mode"] == "clock":
                         with patch("brain.art.text_modes.time.localtime", return_value=time.struct_time((2026,9,23,7,30,24,2,266,1))):
                             frame=Clock(64).frame_at(0).tobytes()

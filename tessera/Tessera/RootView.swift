@@ -39,6 +39,7 @@ struct RootView: View {
     @Environment(WallSession.self) private var wall
 
     @State private var page: Int? = 0
+    @AppStorage("design") private var design = Design.room.rawValue
     /// One list of what the wall has worn, shared: the Archive shows it as a
     /// grid, and the panel scrubs through it. Two fetches of the same journal
     /// would be two slightly different pasts.
@@ -55,6 +56,7 @@ struct RootView: View {
     @State private var listening = ListeningStore.shared
     @State private var qaDisplay: DisplayDetail?
     @State private var qaShelf = false
+    @State private var settingsInitialDestination: SettingsDestination?
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
@@ -126,7 +128,7 @@ struct RootView: View {
                         light: light,
                         dragLight: $dragLight,
                         onPanel: $onPanel,
-                        onSetup: { router.present(.settings) },
+                        onSetup: { settingsInitialDestination = nil; router.present(.settings) },
                         onStudio: { router.present(.studio) },
                         onArchive: { selectPage(1) }
                     )
@@ -147,10 +149,19 @@ struct RootView: View {
             // pages themselves are never wrapped in the effect (see GlitchIn)
             .environment(\.glitchIn, glitch)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                if sting == .done, page == 1 || !marksHidden {
-                    HomeNavigation(page: page ?? 0, accent: light.steadyAccent,
-                                   select: selectPage)
-                        .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 4)
+                VStack(spacing: 0) {
+                    if sting == .done, wall.link.isLive, wall.state.timerRinging,
+                       router.visible == nil, !marksHidden, design != Design.room.rawValue || page == 1 {
+                        TimeCompletionEntry(accent: light.steadyAccent) {
+                            settingsInitialDestination = .time
+                            router.present(.settings)
+                        }.padding(.horizontal, 24).padding(.bottom, 8)
+                    }
+                    if sting == .done, page == 1 || !marksHidden {
+                        HomeNavigation(page: page ?? 0, accent: light.steadyAccent,
+                                       select: selectPage)
+                            .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 4)
+                    }
                 }
             }
             .onPreferenceChange(PageMarksHidden.self) { marksHidden = $0 }
@@ -176,7 +187,7 @@ struct RootView: View {
             }
         }
         .sheet(item: $routes.sheet, onDismiss: router.didDismiss) { _ in
-            SettingsSheet(accent: light.steadyAccent).environment(wall)
+            SettingsSheet(accent: light.steadyAccent, initialDestination: settingsInitialDestination).environment(wall)
                 .onAppear { router.didPresent(.settings) }
         }
         .sheet(item: $qaDisplay) { DisplayPage(detail: $0, accent: light.steadyAccent).environment(wall) }

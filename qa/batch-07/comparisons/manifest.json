@@ -1,0 +1,241 @@
+{
+  "base": "cb5acad",
+  "processing": "Native screenshots equally scaled with no retouching; before left, after right.",
+  "comparisons": [
+    {
+      "unit": "D02",
+      "title": "Settings",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/settings/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/settings/room-live.png",
+      "before_sha256": "2bb7d827fce691f7ae3e26490452417b1dfc804ff97e8c4d48a457086302edd3",
+      "after_sha256": "708392908b35df76b563e0084c4cdd6909200090da9114056ca0dfaf6c43124b",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/settings.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "b1336c1a1b69b0dc08248f4d7daf2e4f8ccfc686e09dd6a6d2c8cee925f345cd"
+    },
+    {
+      "unit": "R02",
+      "title": "Timer complete",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/timer/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/timer/room-live.png",
+      "before_sha256": "6737d311ccb2c4ea20420343adbbfff9ac5b8f5f2e3069ca6bf078e66c3e7ec6",
+      "after_sha256": "bade044d26dc7574d2eafedb47d5fa4a7fb4249665f9a9df817cff0f8d6b4765",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/timer.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5fdd568335f498a22be3d3324328472afcc504d99a3e8018d0b558a58ba8a34e"
+    },
+    {
+      "unit": "R02",
+      "title": "Alarm & snooze",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/alarm/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/alarm/room-live.png",
+      "before_sha256": "af14145353795a35eae1ce76ef4ac9809d7d07d09c71b40845c8e8f725095527",
+      "after_sha256": "59637f56f7a4adb4992ba868c78225645bfba749afdabf9149693916be27bf93",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/alarm.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "b1c8670823d212e116b35deb5c133dc5ee79655421cfe61edb52ca40f3da098d"
+    },
+    {
+      "unit": "R06",
+      "title": "Between songs",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/idle/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/idle/room-live.png",
+      "before_sha256": "0b2f71d4f1ff4ab12b4f3550a665f12b8d8d7f4c6ddde76e63a6296bd8e4abf4",
+      "after_sha256": "8e8862ca72d012eb538da165dde0fd7fd258cf3fe4a0164d8e16a78961ffd428",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/idle.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0283c3ab5aa9bf2120bb660bdec0cf241a2d33ffa0b4eb22def6144771a07bc6"
+    },
+    {
+      "unit": "F01",
+      "title": "Ask the wall",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/ask/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/ask/room-live.png",
+      "before_sha256": "a5625dccba78bd404491963f8e689ab97aeb3b4ee1be8c9d9cbfba2e5771790f",
+      "after_sha256": "9e9d77b59c22dea1017ec06a7f87fe4886c512354ed8b721d5d7f8913c264570",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/ask.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "f3d94b4499033d741b517b716526ebbbb7787747a0daa2d7c618363232ccc21b"
+    },
+    {
+      "unit": "F02",
+      "title": "Notes",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-07/before/note/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-07/after/note/room-live.png",
+      "before_sha256": "897d0ffcda62aa8482cacb485756148628111185ea59ad8d597a2df27345c773",
+      "after_sha256": "eab5a3315aa3a1a0e9176b456786ead020d96bc530ca47c1501fc66e12a660d8",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-07/comparisons/note.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "73a6985a2417214cfc636594a0974e7e54f027f4de6197e16db2e6f32933291c"
+    }
+  ],
+  "wall": "Matched production renderer output enlarged with nearest-neighbour sampling."
+}

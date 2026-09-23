@@ -1,0 +1,208 @@
+{
+  "baseline_ref": "cb5acad",
+  "native_frames": [
+    {
+      "case": "timer-complete",
+      "side": 64,
+      "version": "before",
+      "file": "timer-complete-64-before.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "402dbce3c572ea3e63618b7ccb5b1f5adc36c1759b3266a86f7e38492928bf59"
+    },
+    {
+      "case": "timer-complete",
+      "side": 64,
+      "version": "after",
+      "file": "timer-complete-64-after.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "220dea819a55a828b11f3a75dbc8bb1a869d6eeb4dbb03f1ecf6b635cb59ce0d"
+    },
+    {
+      "case": "timer-complete",
+      "side": 192,
+      "version": "before",
+      "file": "timer-complete-192-before.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "c1d73ff1efca4d8cc43c74fa5b473924515eb75007db771107054c6a5270ccfb"
+    },
+    {
+      "case": "timer-complete",
+      "side": 192,
+      "version": "after",
+      "file": "timer-complete-192-after.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "f943aa432c081f0e295add9cc5d363186716fe1382108e5e57fd8321ff155c57"
+    },
+    {
+      "case": "timer-complete",
+      "side": 512,
+      "version": "before",
+      "file": "timer-complete-512-before.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "4799f59fda0e23f21d7c74bd6c1f727030ce09fba95b13c22c3ecc1b0de635e2"
+    },
+    {
+      "case": "timer-complete",
+      "side": 512,
+      "version": "after",
+      "file": "timer-complete-512-after.png",
+      "kind": "countdown",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 600,
+      "rgb_sha256": "b533f9e28d93f899d23946840214b17bb7baf443d4963197720650fc1a5f0275"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 64,
+      "version": "before",
+      "file": "alarm-ringing-64-before.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "402dbce3c572ea3e63618b7ccb5b1f5adc36c1759b3266a86f7e38492928bf59"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 64,
+      "version": "after",
+      "file": "alarm-ringing-64-after.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "869b3901865194607dfac2df1afa0c317ba5889983104713f52ae454cd98cbce"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 192,
+      "version": "before",
+      "file": "alarm-ringing-192-before.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "c1d73ff1efca4d8cc43c74fa5b473924515eb75007db771107054c6a5270ccfb"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 192,
+      "version": "after",
+      "file": "alarm-ringing-192-after.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "a36b5e8e9de8355a807888989529abdc80b8730231b5348575799e0edb47d837"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 512,
+      "version": "before",
+      "file": "alarm-ringing-512-before.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "4799f59fda0e23f21d7c74bd6c1f727030ce09fba95b13c22c3ecc1b0de635e2"
+    },
+    {
+      "case": "alarm-ringing",
+      "side": 512,
+      "version": "after",
+      "file": "alarm-ringing-512-after.png",
+      "kind": "alarm",
+      "snoozed": false,
+      "remaining_s": -2.5,
+      "total_s": 60,
+      "rgb_sha256": "4080fe300f012761ca33f550b045350aecbc49efdddbe1193f5510f6fce4f09b"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 64,
+      "version": "before",
+      "file": "alarm-snoozed-64-before.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "6e9a69f3eb669f3cd6f890c8926a574ff9cecb71971a5018c8663039d322f036"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 64,
+      "version": "after",
+      "file": "alarm-snoozed-64-after.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "166b42fe63a725135aaf0412e5305ce6e72d52a2f20f5eadc79078a9f0a2ae39"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 192,
+      "version": "before",
+      "file": "alarm-snoozed-192-before.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "0b81ee28624945c7f2ecef7cef398b56bebbbe664c75b4db286336896c7f8f57"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 192,
+      "version": "after",
+      "file": "alarm-snoozed-192-after.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "0d475eada0f42537d17b3e59e5938260bcb8549bc0e04b403a8596c230605321"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 512,
+      "version": "before",
+      "file": "alarm-snoozed-512-before.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "92ae681542ee409f37519518270126aeab11c1e61d4667cca10ccf1196b191d7"
+    },
+    {
+      "case": "alarm-snoozed",
+      "side": 512,
+      "version": "after",
+      "file": "alarm-snoozed-512-after.png",
+      "kind": "alarm",
+      "snoozed": true,
+      "remaining_s": 300,
+      "total_s": 300,
+      "rgb_sha256": "544cee5f4a296a0e1eeb81347c6a4b885c7bb7ea340a09a6f388698479fb2740"
+    }
+  ],
+  "source_sha256": {
+    "before": "dd7c9d975fb91e05f9e4aa80265d55345b1df5a95cd8dfbc9875996ce7bd2b0c",
+    "after": "030f5ab66e967e90dba354551caa984d4a080b24ac3c08ff88756b4270b05bb5"
+  },
+  "limits": "Native RGB matches production rendering. Comparisons use nearest-neighbour enlargement. Physical LED color requires panel inspection. The previous renderer had no distinct alarm or snooze composition."
+}

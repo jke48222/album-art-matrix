@@ -1,0 +1,59 @@
+{
+  "checks": [
+    {
+      "name": "Existing wall policy round-trips: ambient",
+      "passed": true
+    },
+    {
+      "name": "Existing wall policy round-trips: black",
+      "passed": true
+    },
+    {
+      "name": "Existing wall policy round-trips: dim",
+      "passed": true
+    },
+    {
+      "name": "Existing wall policy round-trips: hold",
+      "passed": true
+    },
+    {
+      "name": "Existing wall policy round-trips: weather",
+      "passed": true
+    },
+    {
+      "name": "Every server-supported policy is available once",
+      "passed": true
+    },
+    {
+      "name": "Unknown future firmware policy uses safe local fallback",
+      "passed": true
+    },
+    {
+      "name": "Missing or corrupt saved value uses safe local fallback",
+      "passed": true
+    },
+    {
+      "name": "All choices have distinct accessible names",
+      "passed": true
+    },
+    {
+      "name": "Compact plan choices remain distinct",
+      "passed": true
+    },
+    {
+      "name": "Every choice includes an explanatory caption and symbol",
+      "passed": true
+    },
+    {
+      "name": "Quiet plan captions describe the actual policy multiplier",
+      "passed": true
+    },
+    {
+      "name": "Changing presentation does not require translated protocol identifiers",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 13,
+  "suite": "Production IdlePolicy"
+}

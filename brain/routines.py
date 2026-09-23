@@ -138,6 +138,7 @@ class RoutineEngine:
                   "wall_utc_offset_s": getattr(local, "tm_gmtoff", -time.timezone),
                   "sleep_state": self.sleep_state, "sleep_total_s": int(self.sleep_total),
                   "timer_state": "idle", "timer_ringing": False,
+                  "timer_snoozed": False, "timer_ring_elapsed_s": 0.0,
                   "wake_active": False, "wake_progress": 0.0}
         solar_key = (state["sun"], state["lat"], state["lon"], state["sun_night"], int(now))
         if solar_key != self._solar_key:
@@ -157,6 +158,8 @@ class RoutineEngine:
             remaining = tm["end"] - mono
             result.update(timer_state="counting" if remaining > 0 else "ringing",
                           timer_ringing=remaining <= 0, timer_kind=tm.get("kind", "countdown"),
+                          timer_id=tm.get("id"), timer_snoozed=tm.get("snoozed", False),
+                          timer_ring_elapsed_s=max(0.0, -remaining),
                           timer_total_s=round(tm["total"]), timer_remaining_s=math.ceil(max(0, remaining)),
                           timer_ends_at=now + remaining)
         wake_factor = 1.0
@@ -174,6 +177,6 @@ class RoutineEngine:
         result["wake_factor"] = wake_factor
         idle = ctrl.idle_now if state["mode"] in ("art", "cd") and not result["wake_active"] else None
         idle_factor = .3 if idle == "dim" else 1
-        result["effective_brightness"] = (0 if state["mode"] == "off" or idle == "black" else
+        result["effective_brightness"] = (0 if state["mode"] == "off" or idle == "black" or ctrl.away_now else
                                           state["brightness"] * result["sun_factor"] * fade * wake_factor * idle_factor)
         return result

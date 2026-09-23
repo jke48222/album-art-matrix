@@ -81,6 +81,7 @@ import math
 import os
 import threading
 import time
+import uuid
 from dataclasses import asdict
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
@@ -177,6 +178,8 @@ class ControlState:
         self.loop_beat = None        # main loop: last pass, for /health
         self.quiet_since = None      # main loop: when the music stopped
         self.idle_now = None         # main loop: idle face in force (black|dim|ambient)
+        self.away_now = False
+        self.display_mode = self._s["mode"]
         # dirty = redraw what is up; repoll = something may be PLAYING that
         # was not a moment ago (the phone pushed, the ear heard), so the
         # main loop leaves its render stint and asks the chain now.
@@ -269,40 +272,95 @@ class ControlState:
         self.repoll.set()
         self.dirty.set()
 
-    def note(self, text: str, minutes: float):
-        """A note on the panel in the ticker style, for `minutes`, then back
-        to what was up. A second note replaces the first; the return face is
-        the one before the first note."""
-        here = self.get()["mode"]
-        if getattr(self, "_note_ret", None) is None or here != "ticker":
-            self._note_ret = here if here not in ("frame", "clip", "timer", "video", "ticker") else "art"
-        self.apply({"ticker_text": text, "ticker_colors": [], "ticker_loop": True, "ticker_style": "across",
-                    "mode": "ticker"})
-        self._note_revision = self.ticker_revision
-        self._note_text = text
-        self._note_until = time.monotonic() + minutes * 60.0
-        t = threading.Timer(minutes * 60.0, self._note_over)
-        t.daemon = True
-        t.start()
+    def _note_current(self) -> bool:
+        return (getattr(self, "_note_until", None) is not None
+                and self._s["mode"] == "ticker"
+                and self.ticker_revision == getattr(self, "_note_revision", None))
 
-    def _note_over(self):
-        until = getattr(self, "_note_until", None)
-        if until is None or time.monotonic() < until - 1.0:
-            return                                 # a later note took over
+    def _clear_note_metadata(self):
+        timer = getattr(self, "_note_timer", None)
+        if timer is not None and hasattr(timer, "cancel"):
+            timer.cancel()
+        self._note_timer = None
         self._note_until = None
         self._note_text = None
-        if self.get()["mode"] == "ticker" and self.ticker_revision == getattr(self, "_note_revision", None):
-            self.apply({"mode": getattr(self, "_note_ret", None) or "art"})
+        self._note_id = None
         self._note_ret = None
+        self._note_restore = None
+        self._note_generation = getattr(self, "_note_generation", 0) + 1
+
+    def _note_interrupted_by(self, patch: dict):
+        # A new face or ticker is intentional, even if it has the same words.
+        # The old note must never retake ownership when this face is revisited.
+        if getattr(self, "_note_until", None) is not None and (
+                ("ticker_text" in patch and isinstance(patch["ticker_text"], str))
+                or (patch.get("mode") in MODES and patch["mode"] != "ticker")):
+            self._clear_note_metadata()
+
+    def note(self, text: str, minutes: float):
+        """Replace the current note atomically, keeping its original return face."""
+        with self._lock:
+            if self._note_current():
+                restore = dict(self._note_restore)
+            else:
+                here = self._s["mode"]
+                previous = here
+                if here == "timer":
+                    previous = (self.timer or {}).get("ret", "clock")
+                elif here == "video":
+                    previous = self.video_ret or "art"
+                if previous not in MODES or previous in ("timer", "video"):
+                    previous = "art"
+                restore = {"mode": previous}
+                if here == "ticker":
+                    restore.update({key: self._s[key] for key in
+                                    ("ticker_text", "ticker_colors", "ticker_loop", "ticker_style")})
+            self._clear_note_metadata()
+            self.apply({"ticker_text": text, "ticker_colors": [], "ticker_loop": True,
+                        "ticker_style": "across", "mode": "ticker"})
+            self._note_restore = restore
+            self._note_ret = restore["mode"]
+            self._note_revision = self.ticker_revision
+            self._note_id = str(uuid.uuid4())
+            self._note_text = self._s["ticker_text"]
+            self._note_until = time.monotonic() + minutes * 60.0
+            generation = self._note_generation
+            timer = threading.Timer(minutes * 60.0, lambda: self._note_over(generation))
+            timer.daemon = True
+            self._note_timer = timer
+            timer.start()
+
+    def clear_note(self, expected_id: str | None = None) -> bool:
+        """Dismiss only a note that still owns the current display."""
+        with self._lock:
+            if expected_id is not None and expected_id != getattr(self, "_note_id", None):
+                return False
+            current = self._note_current()
+            restore = dict(getattr(self, "_note_restore", None) or {"mode": "art"})
+            self._clear_note_metadata()
+            if current:
+                self.apply(restore)
+            return current
+
+    def _note_over(self, generation=None):
+        with self._lock:
+            if generation is not None and generation != getattr(self, "_note_generation", None):
+                return
+            until = getattr(self, "_note_until", None)
+            if until is None or time.monotonic() < until:
+                return
+            self.clear_note()
 
     def note_status(self) -> dict:
-        """The note on the panel, if one is: its words and the seconds left."""
-        until = getattr(self, "_note_until", None)
-        left = None if until is None else max(0, int(until - time.monotonic()))
-        text = getattr(self, "_note_text", None)
-        if not left:
-            text = None
-        return {"text": text, "seconds_left": left}
+        with self._lock:
+            if not self._note_current():
+                self._clear_note_metadata()
+                return {"text": None, "seconds_left": None, "active": False, "id": None}
+            left = max(0, math.ceil(self._note_until - time.monotonic()))
+            if left == 0:
+                self.clear_note()
+                return {"text": None, "seconds_left": 0, "active": False, "id": None}
+            return {"text": self._note_text, "seconds_left": left, "active": True, "id": self._note_id}
 
     def knock_toggle(self, why: str, want: str | None = None) -> str:
         """Two knocks on the frame, or a whistle: off, or back to the face
@@ -451,13 +509,28 @@ class ControlState:
         self.finish_seq += 1
 
     def ring(self):
-        """The alarm: straight to the timer's zero, fireworks and all, and
-        back to whatever the wall was doing when it is done."""
-        here = self.get()["mode"]
-        ret = self.timer["ret"] if self.timer else \
-            (here if here not in ("timer", "video") else "clock")
-        self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret, "kind": "alarm"}
-        self.apply({"mode": "timer"})
+        """Start the daily alarm without losing its eventual return face."""
+        with self._lock:
+            here = self.get()["mode"]
+            ret = self.timer["ret"] if self.timer else \
+                (here if here not in ("timer", "video") else "clock")
+            self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret,
+                          "kind": "alarm", "id": str(uuid.uuid4()), "snoozed": False}
+            self.apply({"mode": "timer"})
+
+    def _timer_action(self, action, event_id):
+        """Validate before mutating: a delayed phone tap cannot end a new cue."""
+        timer = self.timer
+        if not timer or not isinstance(event_id, str) or event_id != timer.get("id"):
+            return "This timer has changed. Refresh before trying again."
+        ringing = time.monotonic() >= timer["end"]
+        if action == "stop":
+            return None
+        if action == "repeat" and ringing and timer.get("kind") == "countdown":
+            return None
+        if action == "snooze" and ringing and timer.get("kind") == "alarm":
+            return None
+        return "This action is not available for the current timer."
 
     def apply(self, patch: dict) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
@@ -466,6 +539,24 @@ class ControlState:
 
     def _apply_locked(self, patch: dict) -> dict:
         rejected_commands = {}
+        if "timer_action" in patch:
+            action = patch.pop("timer_action")
+            event_id = patch.pop("timer_id", None)
+            error = self._timer_action(action, event_id)
+            if error or patch:
+                return {"timer_action": error or "Send timer actions on their own."}
+            timer = self.timer
+            if action == "stop":
+                self.timer = None
+                patch["mode"] = timer["ret"]
+            else:
+                total = 300.0 if action == "snooze" else timer["total"]
+                self.timer = {**timer, "end": time.monotonic() + total, "total": total,
+                              "id": str(uuid.uuid4()), "snoozed": action == "snooze"}
+                patch["mode"] = "timer"
+        else:
+            # An event identifier is a command precondition, never a setting.
+            patch.pop("timer_id", None)
         for key in ("timer_min", "sleep_fade_min"):
             if key in patch:
                 try:
@@ -500,7 +591,8 @@ class ControlState:
                 ret = self.timer["ret"] if self.timer else \
                     (here if here not in ("timer", "video") else "clock")
                 self.timer = {"end": time.monotonic() + minutes * 60,
-                              "total": minutes * 60, "ret": ret, "kind": "countdown"}
+                              "total": minutes * 60, "ret": ret, "kind": "countdown",
+                              "id": str(uuid.uuid4()), "snoozed": False}
                 patch["mode"] = "timer"
             else:
                 ret = self.timer["ret"] if self.timer else "clock"
@@ -516,6 +608,7 @@ class ControlState:
         want = patch.get("panel_brightness")
         if patch.get("panel_type") is not None:
             want = True
+        self._note_interrupted_by(patch)
         rejected = {**rejected_commands, **self._merge(patch)}
         # Choosing any other face ends a video: nothing keeps decoding for a
         # picture nobody is looking at.
@@ -545,6 +638,8 @@ class ControlState:
         out = {**self.get(), "now_showing": self.now_showing,
                "progress": self.progress, "shown_seq": self.shown_seq,
                "replay_active": self.replay_active, "now_playing": self.playing_identity,
+               "idle_active": self.idle_now, "away_active": self.away_now,
+               "display_mode": self.display_mode,
                # The shape of the thing on the wall. /frame.raw still answers
                # in phone_side pixels unless asked for the full frame, so an
                # app that ignores these keys keeps working.
@@ -1226,8 +1321,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     at = float(patch.get("at", time.time()))
                     remaining = float(patch.get("remaining_s", 300))
                     total = float(patch.get("total_s", max(1, remaining)))
+                    kind = patch.get("kind", "countdown")
+                    snoozed = patch.get("snoozed", False)
                     twenty_four = patch.get("twenty_four", ctrl.get()["clock_24h"])
-                    if face not in ("clock", "timer") or not isinstance(twenty_four, bool):
+                    if (face not in ("clock", "timer") or not isinstance(twenty_four, bool)
+                            or kind not in ("countdown", "alarm") or not isinstance(snoozed, bool)):
                         raise ValueError()
                     if not all(math.isfinite(v) for v in (at, remaining, total)) or not -180 <= remaining <= 10800 or not 0 < total <= 10800:
                         raise ValueError()
@@ -1235,7 +1333,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     state = ctrl.get()
                     ink = ctrl.art_colors[0] if state["match_art"] and ctrl.art_colors else state["color"]
                     frame = (Clock(side, ink, twenty_four).frame_at(0, when=at) if face == "clock"
-                             else Countdown(side, ink, state["color2"]).frame_at(remaining, total))
+                             else Countdown(side, ink, state["color2"]).frame_at(remaining, total, kind, snoozed))
                     if face == "clock":
                         from .art.pipeline import apply_finish
                         frame = apply_finish(frame, state["finish"])
@@ -1302,43 +1400,71 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(404, {"error": "not found"})
                 return
             if self.path.startswith("/ask"):
-                # a question for Claude; the answer as text, and on the panel unless
-                # {"reply": "text"} says the caller (a Shortcut) will speak it
                 patch = self._body()
                 if patch is None:
                     return
-                text = str(patch.get("text", "")).strip()
-                if not text:
-                    self._json(400, {"error": "text, please"})
+                text = patch.get("text", "")
+                if not isinstance(text, str) or not text.strip() or len(text) > 2000:
+                    self._json(400, {"error": "Write a question from 1 to 2000 characters."})
+                    return
+                reply_mode = patch.get("reply", "wall")
+                if reply_mode not in ("wall", "text"):
+                    self._json(400, {"error": "Choose wall or text for the answer."})
                     return
                 asker = getattr(ctrl, "asker", None)
                 if asker is None or not asker.ready:
-                    self._json(503, {"error": "no Claude key on this wall yet; set one under Services"})
+                    self._json(503, {"error": "Add your Claude key in Services to begin."})
                     return
-                answer = asker.ask(text, size=ctrl.wall.width)
+                reply = asker.ask_reply(text.strip(), size=ctrl.wall.width)
+                if reply.get("busy") or reply.get("error"):
+                    self._json(409 if reply.get("busy") else 502, {"error": reply["error"]})
+                    return
+                answer = reply["answer"]
                 shown = False
-                v = getattr(ctrl, "voice", None)
-                if patch.get("reply", "wall") != "text" and v is not None:
-                    shown = v.show_answer(answer)
+                voice = getattr(ctrl, "voice", None)
+                if reply_mode == "wall" and voice is not None:
+                    with ctrl._lock:
+                        if ctrl.get()["mode"] != "off" and ctrl.display_mode != "off" and ctrl.timer is None:
+                            shown = voice.show_answer(answer)
                 self._json(200, {"answer": answer, "shown": shown})
                 return
             if self.path.startswith("/note"):
-                # words on the panel for a while, then back to what was up
                 if self._switched_off("note", "notes"):
                     return
                 patch = self._body()
                 if patch is None:
                     return
-                text = str(patch.get("text", "")).strip()[:120]
-                if not text:
-                    self._json(400, {"error": "text, please"})
+                if patch.get("clear") is True:
+                    note_id = patch.get("id")
+                    if not isinstance(note_id, str) or not note_id:
+                        self._json(400, {"error": "Refresh the current note before taking it down."})
+                        return
+                    with ctrl._lock:
+                        current = ctrl.note_status()
+                        if current.get("id") != note_id:
+                            self._json(409, {"error": "The note has changed. Refresh before taking it down."})
+                            return
+                        cleared = ctrl.clear_note(expected_id=note_id)
+                        self._json(200, {"cleared": cleared, **ctrl.note_status()})
                     return
+                text = patch.get("text", "")
+                if not isinstance(text, str) or not text.strip():
+                    self._json(400, {"error": "Write a message first."})
+                    return
+                from .art.pixelfont import normalize
+                text = normalize(text.strip())[:120]
                 try:
-                    minutes = float(patch.get("minutes", 30))
-                except (TypeError, ValueError):
-                    minutes = 30.0
-                ctrl.note(text, max(0.5, min(720.0, minutes)))
-                self._json(200, {"shown": True, "minutes": minutes})
+                    raw_minutes = patch.get("minutes", 30)
+                    if isinstance(raw_minutes, bool):
+                        raise ValueError()
+                    minutes = float(raw_minutes)
+                    if not math.isfinite(minutes) or not 0.5 <= minutes <= 720:
+                        raise ValueError()
+                except (TypeError, ValueError, OverflowError):
+                    self._json(400, {"error": "Choose a duration from 0.5 to 720 minutes."})
+                    return
+                ctrl.note(text, minutes)
+                self._json(200, {"shown": True, "minutes": minutes, **ctrl.note_status()})
                 return
             if self.path.startswith("/airplay/restart"):
                 rx = getattr(ctrl, "airplay_receiver", None)
