@@ -6,7 +6,9 @@ import UIKit
 @MainActor
 @Observable
 final class SleeveArt {
+    enum Phase: Equatable { case empty, loading, ready, unavailable }
     private(set) var image: UIImage?
+    private(set) var phase: Phase = .empty
     private(set) var songKey = ""
     private(set) var title = ""
     private(set) var artist = ""
@@ -56,7 +58,9 @@ final class SleeveArt {
             task?.cancel(); requestID = UUID(); pending = false; retryAfter = .distantPast
             songKey = k; sourceHost = host
             self.title = title; self.artist = artist; self.album = album
-            image = cache[k]; revision += 1
+            image = cache[k]
+            phase = k.isEmpty ? .empty : image == nil ? .loading : .ready
+            revision += 1
         }
         // an album arriving after its song is news too: the pressing is kept
         // by album, so the record has to be looked up again
@@ -64,10 +68,11 @@ final class SleeveArt {
         guard !k.isEmpty else { return }
         if image == nil, let localImage = localImage() {
             task?.cancel(); requestID = UUID(); pending = false
-            image = localImage.squared(512); cache[k] = image; revision += 1
+            image = localImage.squared(512); cache[k] = image; phase = .ready; revision += 1
         }
         guard image == nil, !pending, Date() >= retryAfter else { return }
         pending = true
+        phase = .loading
         let id = UUID(); requestID = id
         let loader = load
         task = Task { [weak self] in
@@ -76,8 +81,9 @@ final class SleeveArt {
             self.pending = false
             if let result {
                 if self.cache.count >= 48 { self.cache.removeAll(keepingCapacity: true) }
-                self.image = result; self.cache[k] = result; self.revision += 1
+                self.image = result; self.cache[k] = result; self.phase = .ready; self.revision += 1
             } else {
+                self.phase = .unavailable
                 self.retryAfter = Date().addingTimeInterval(5)
             }
         }
@@ -118,6 +124,7 @@ extension UIImage {
     /// The middle square, at a size that suits a label.
     func squared(_ side: CGFloat) -> UIImage {
         let s = min(size.width, size.height)
+        guard s > 0, s.isFinite, side > 0, side.isFinite else { return self }
         let crop = CGRect(x: (size.width - s) / 2, y: (size.height - s) / 2, width: s, height: s)
         let fmt = UIGraphicsImageRendererFormat.default()
         fmt.scale = 1

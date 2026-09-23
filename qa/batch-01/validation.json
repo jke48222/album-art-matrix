@@ -1,0 +1,83 @@
+{
+  "batch": 1,
+  "completed_units": [
+    "W01",
+    "A02",
+    "A05"
+  ],
+  "validated_at": "2026-09-23T05:34:02.505203+00:00",
+  "builds": {
+    "ios_simulator_debug": "passed",
+    "iphone_debug": "passed",
+    "ios_release": "passed"
+  },
+  "tests": {
+    "python_weather_show_sting": {
+      "passed": 43,
+      "failed": 0
+    },
+    "panel_interaction": {
+      "passed": 44,
+      "failed": 0
+    },
+    "playback_identity": {
+      "passed": 54,
+      "failed": 0
+    }
+  },
+  "wall": {
+    "deployment": "verified",
+    "service": "album-art-matrix.service",
+    "renderer_service": "album-art-renderer.service",
+    "candidate_warm_frame_ms": {
+      "64": 3.32,
+      "192": 9.8
+    },
+    "manual_refresh": "verified",
+    "actual_weather_frame": "wall-weather-deployed-64.png",
+    "original_mode_restored": "art",
+    "details": "wall-validation.json"
+  },
+  "phone": {
+    "device": "iPhone 18 Pro Max",
+    "bundle": "com.jalenedusei.tessera",
+    "installed": true,
+    "launched": true,
+    "running_process_verified": true
+  },
+  "visual_checks": {
+    "weather": [
+      "matched-temperature-and-time composition at native, 64, 192 and 512 pixels",
+      "loading",
+      "unavailable",
+      "long place at accessibility text size"
+    ],
+    "home": [
+      "live",
+      "paused",
+      "offline",
+      "off",
+      "empty",
+      "long title",
+      "accessibility text size",
+      "scroll viewport isolates pager marks"
+    ],
+    "identity": [
+      "Classic",
+      "Room",
+      "iPod"
+    ]
+  },
+  "source_sha256": {
+    "brain/weather.py": "1ec7712d43f87c54194a8e35b2a24922ca0a97d1b8e6375f9b79960d878a6158",
+    "brain/art/weather.py": "c68ffd1a1988ea58b38f75076f73b3f70ce1bd45057145981ac64b001882b647",
+    "tessera/Tessera/ClassicWallScreen.swift": "f8629c9abe54b61419a23c2905c8f90b32f0bc0287d16154225e9c5e802e073f",
+    "tessera/Tessera/FrameView.swift": "0d9da3ce4654b688e73a8f3272c6b94081802eecf6eff0c2c1407b0294ec107b",
+    "tessera/Tessera/NowPlayingIdentity.swift": "fb56daa1160dd29c33bca8fb90227be9e87c51de562adb73b644b29458fe9146"
+  },
+  "limits": [
+    "Actual wall RGB output was inspected; the LEDs physical colour was not optically measured.",
+    "Screenshots use the iPhone 17 Pro simulator; installation and launch were verified on the connected iPhone 18 Pro Max.",
+    "Gesture decisions were exercised through the production Swift state machine; physical touch and VoiceOver operation were not manually exercised."
+  ]
+}

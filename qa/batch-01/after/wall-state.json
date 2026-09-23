@@ -1,0 +1,36 @@
+{
+  "mode": "art",
+  "brightness": 1.0,
+  "rpm": 7.5,
+  "effect": "solid",
+  "finish": "clean",
+  "match_art": false,
+  "color": "#b5d8ff",
+  "color2": "#006d8e",
+  "clock_24h": true,
+  "weather_units": "f",
+  "place": "Douglasville, Georgia",
+  "now_showing": {
+    "title": "petal",
+    "artist": "Ariana Grande",
+    "album": "petal"
+  },
+  "progress": {
+    "at": 132086,
+    "of": 184249,
+    "playing": true
+  },
+  "art_colors": [
+    "#e8e8e8",
+    "#a7a7a7"
+  ],
+  "shown_seq": 12,
+  "wall": {
+    "width": 64,
+    "height": 64,
+    "tile": 64,
+    "cols": 1,
+    "rows": 1,
+    "frame_side": 64
+  }
+}

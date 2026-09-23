@@ -1,0 +1,223 @@
+{
+  "checks": [
+    {
+      "name": "identity trims title and artist",
+      "passed": true
+    },
+    {
+      "name": "duplicate album identity is removed case-insensitively",
+      "passed": true
+    },
+    {
+      "name": "art without playback clock is explicitly displayed",
+      "passed": true
+    },
+    {
+      "name": "missing time is not invented",
+      "passed": true
+    },
+    {
+      "name": "live position advances from observation",
+      "passed": true
+    },
+    {
+      "name": "live progress fraction is accurate",
+      "passed": true
+    },
+    {
+      "name": "playing enables clock scheduling",
+      "passed": true
+    },
+    {
+      "name": "elapsed does not exceed duration",
+      "passed": true
+    },
+    {
+      "name": "clock skew cannot reverse the song",
+      "passed": true
+    },
+    {
+      "name": "pause freezes position",
+      "passed": true
+    },
+    {
+      "name": "pause stops scheduled updates",
+      "passed": true
+    },
+    {
+      "name": "paused phone preview does not claim playing",
+      "passed": true
+    },
+    {
+      "name": "offline position freezes at disconnect",
+      "passed": true
+    },
+    {
+      "name": "offline clock is stopped",
+      "passed": true
+    },
+    {
+      "name": "offline identity is labeled last-known",
+      "passed": true
+    },
+    {
+      "name": "searching freezes position at observation",
+      "passed": true
+    },
+    {
+      "name": "weather retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "weather missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "frame retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "frame missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "clip retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "clip missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "video retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "video missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "clock retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "clock missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "timer retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "timer missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "ambient retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "ambient missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "game retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "game missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "imagine retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "imagine missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "off retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "off missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "ticker retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "ticker missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "audio accompanying weather is separately named",
+      "passed": true
+    },
+    {
+      "name": "paused audio accompanying weather is separately named",
+      "passed": true
+    },
+    {
+      "name": "nonfinite values cannot enter progress geometry",
+      "passed": true
+    },
+    {
+      "name": "nonfinite position stops clock scheduling",
+      "passed": true
+    },
+    {
+      "name": "negative values are unavailable",
+      "passed": true
+    },
+    {
+      "name": "unknown duration keeps elapsed but hides fraction",
+      "passed": true
+    },
+    {
+      "name": "blank title means empty identity",
+      "passed": true
+    },
+    {
+      "name": "empty weather title describes current mode",
+      "passed": true
+    },
+    {
+      "name": "empty identity has no progress",
+      "passed": true
+    },
+    {
+      "name": "off mode reads asleep",
+      "passed": true
+    },
+    {
+      "name": "clock formats elapsed minutes",
+      "passed": true
+    },
+    {
+      "name": "clock supports long recordings",
+      "passed": true
+    },
+    {
+      "name": "clock rejects NaN",
+      "passed": true
+    },
+    {
+      "name": "clock rejects infinity",
+      "passed": true
+    },
+    {
+      "name": "clock rejects negative time",
+      "passed": true
+    },
+    {
+      "name": "clock rejects overflow",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 54,
+  "suite": "PlaybackIdentity"
+}

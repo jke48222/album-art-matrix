@@ -1,0 +1,20 @@
+{
+  "unit": "A05",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/b766b650-9cf6-4de7-a2bb-202db47e086c",
+      "source": "MD Vinyl",
+      "applied": "Record remains the dominant object; title and artist read in a calm hierarchy outside the artwork."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/swiftui/timelineview",
+      "source": "Apple",
+      "applied": "Progress refreshes at one second; record refreshes at 30fps only while active."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion",
+      "source": "Apple",
+      "applied": "Record remains still and needle resolves directly to its correct state when Reduce Motion is enabled."
+    }
+  ]
+}

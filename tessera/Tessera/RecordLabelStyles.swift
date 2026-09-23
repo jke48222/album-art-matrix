@@ -49,12 +49,11 @@ extension RecordLabel {
         let head = UIFont(name: "Technor-Bold", size: 34) ?? .systemFont(ofSize: 34, weight: .heavy)
         let sub = UIFont(name: "Switzer-Medium", size: 14) ?? .systemFont(ofSize: 14, weight: .medium)
         let small = UIFont(name: "Technor-Semibold", size: 11) ?? .systemFont(ofSize: 11, weight: .semibold)
-        let para = NSMutableParagraphStyle(); para.alignment = .center
         let img = UIGraphicsImageRenderer(size: CGSize(width: d, height: d), format: fmt).image { rc in
             let ctx = rc.cgContext
             let full = CGRect(x: 0, y: 0, width: d, height: d)
             func text(_ s: String, _ font: UIFont, _ y: CGFloat, _ colour: UIColor, kern: CGFloat = 0, glow: UIColor? = nil) {
-                var a: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: colour, .paragraphStyle: para, .kern: kern]
+                var a = fittedAttributes(s, font: font, width: d - 40, colour: colour, kern: kern)
                 if let glow {
                     let sh = NSShadow(); sh.shadowColor = glow; sh.shadowBlurRadius = 14; sh.shadowOffset = .zero
                     a[.shadow] = sh

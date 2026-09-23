@@ -1,0 +1,17 @@
+{
+  "weather_refresh_seconds": 2.3,
+  "weather_before_age_s": 32,
+  "weather_after_age_s": 0,
+  "refreshing": false,
+  "weather_place": "Douglasville, Georgia",
+  "weather_problem": null,
+  "frame_bytes": 12288,
+  "frame_sha256": "185bfa18eef7b9e9538cba93618b812d33f412330ab9e45d8cfd2e5951e13d02",
+  "loop_age_s": 1.0,
+  "mode": "art",
+  "idle": "weather",
+  "deployed_sha256": {
+    "brain/weather.py": "1ec7712d43f87c54194a8e35b2a24922ca0a97d1b8e6375f9b79960d878a6158",
+    "brain/art/weather.py": "c68ffd1a1988ea58b38f75076f73b3f70ce1bd45057145981ac64b001882b647"
+  }
+}

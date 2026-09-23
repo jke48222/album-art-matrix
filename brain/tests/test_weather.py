@@ -5,6 +5,7 @@ sizes on eight kinds of weather.
 """
 import os
 import sys
+import pytest
 
 import numpy as np
 
@@ -220,3 +221,111 @@ def test_place_range_staleness_and_missing_values_are_visible():
         assert (missing != b).any()
         changed = face.frame_at(0, dict(data, high=30, low=-5), place="London")
         assert (changed[int(size*.75):] != b[int(size*.75):]).any()
+
+
+def test_manual_refresh_fetches_immediately_even_when_the_cache_is_young():
+    now = 1_760_000_000.0
+    calls = []
+    def fetch(*args):
+        calls.append(args)
+        return fixture(int(now))
+    w = Weather(FakeCtrl(), fetch=fetch, clock=lambda: now)
+    w.tick()
+    w.refresh()
+    assert w.status()["refreshing"] is True
+    w.tick()
+    assert len(calls) == 2
+    assert w.status()["refreshing"] is False
+    w.tick()
+    assert len(calls) == 2
+
+
+def test_invalid_upstream_response_preserves_last_good_forecast():
+    now = 1_760_000_000.0
+    responses = iter([fixture(int(now)), {"current": {}}, {"current": None}])
+    w = Weather(FakeCtrl(), fetch=lambda *a: next(responses), clock=lambda: now)
+    w.tick()
+    for _ in range(2):
+        w.refresh()
+        w.tick()
+        assert w.current()["temp"] == 21.4
+        assert "temporarily unavailable" in w.status()["problem"]
+        assert w.status()["refreshing"] is False
+
+
+def test_location_change_during_fetch_discards_old_data_and_retries_new_place():
+    now = 1_760_000_000.0
+    ctrl = FakeCtrl()
+    calls = []
+    def fetch(*where):
+        calls.append(where)
+        if len(calls) == 1:
+            ctrl.apply({"lat": 51.5, "lon": -0.1, "place": "London"})
+        return fixture(int(now))
+    w = Weather(ctrl, fetch=fetch, clock=lambda: now)
+    w.tick()
+    assert w.current() is None
+    assert w.status()["place"] == "London"
+    assert w.status()["refreshing"] is True
+    assert w._wake.is_set()
+    w.tick()
+    assert calls == [(33.95, -84.55), (51.5, -0.1)]
+    assert w.current()["temp"] == 21.4
+    assert w.status()["refreshing"] is False
+
+
+@pytest.mark.parametrize("lat,lon", [(None, 10), ("bad", 0), (float("nan"), 0),
+                                      (0, float("inf")), (91, 0), (0, 181)])
+def test_invalid_coordinates_never_reach_the_weather_provider(lat, lon):
+    calls = []
+    w = Weather(FakeCtrl(lat=lat, lon=lon), fetch=lambda *args: calls.append(args))
+    w.tick()
+    assert not calls
+    assert w.status()["now"] is None
+    assert w.status()["refreshing"] is False
+
+
+@pytest.mark.parametrize("temperature,expected", [(22.5, 23), (23.5, 24), (-22.5, -23),
+                                                 (-23.5, -24), (0.5, 1), (-0.5, -1)])
+def test_wall_temperature_rounding_matches_swift(temperature, expected):
+    assert WeatherFace._temp(temperature, "c") == expected
+
+
+def test_clock_adjustment_never_reports_negative_forecast_age():
+    now = [1_760_000_000.0]
+    w = Weather(FakeCtrl(), fetch=lambda *a: fixture(int(now[0])), clock=lambda: now[0])
+    w.tick()
+    now[0] -= 30
+    assert w.status()["age_s"] == 0
+
+
+def test_status_never_attaches_old_weather_to_a_new_place_during_snapshot():
+    class SwitchingCtrl(FakeCtrl):
+        armed = False
+        reads = 0
+
+        def get(self):
+            snapshot = super().get()
+            if self.armed:
+                self.reads += 1
+                if self.reads == 1:
+                    self.apply({"lat": 51.5, "lon": -0.1, "place": "London", "weather_units": "c"})
+            return snapshot
+
+    now = 1_760_000_000.0
+    ctrl = SwitchingCtrl()
+    weather = Weather(ctrl, fetch=lambda *args: fixture(int(now)), clock=lambda: now)
+    weather.tick()
+    ctrl.armed = True
+    status = weather.status()
+    assert ctrl.reads == 1
+    assert status["place"] == "Marietta, Georgia"
+    assert status["where"] == (33.95, -84.55)
+    assert status["units"] == "f"
+    assert status["now"]["temp"] == 21.4
+    next_status = weather.status()
+    assert next_status["place"] == "London"
+    assert next_status["where"] == (51.5, -0.1)
+    assert next_status["units"] == "c"
+    assert next_status["now"] is None
+    assert next_status["age_s"] is None and next_status["stale"] is False

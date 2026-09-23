@@ -391,13 +391,13 @@ struct WallHero: View {
     var onFlickPrev: () -> Void = {}
     var onFlickNext: () -> Void = {}
 
-    @State private var startValue: Double? = nil
-    @State private var lastDetent: Int = -1
-    @State private var holdWork: DispatchWorkItem? = nil
-    @State private var moved = false
-    @State private var axis: Axis? = nil
-
-    private enum Axis { case light, song }
+    @State private var interaction = PanelInteraction()
+    @State private var lastDetent = -1
+    @State private var holdWork: DispatchWorkItem?
+    @State private var arrivalTask: Task<Void, Never>?
+    @GestureState private var gestureActive = false
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     // Arrival: a new sleeve does not cross-dissolve onto a wall of LEDs, it
     // repaints. The outgoing frame is extinguished column by column, then the
@@ -465,76 +465,58 @@ struct WallHero: View {
             .contentShape(Rectangle())
             .gesture(
                 DragGesture(minimumDistance: 0)
+                    .updating($gestureActive) { _, active, _ in active = true }
                     .onChanged { g in
-                        if startValue == nil {
-                            startValue = confirmed
-                            moved = false
-                            axis = nil
+                        if interaction.phase == .idle {
+                            interaction.begin(brightness: confirmed)
                             touching = true
-                            Taps.warm()          // first detent lands on time
+                            lastDetent = -1
+                            Taps.warm()
                             scheduleHold()
                         }
-                        // Whichever way you commit to first is the gesture.
-                        // Deciding once and holding to it is what stops a
-                        // slightly diagonal pull from doing both jobs badly.
-                        if axis == nil {
-                            let dx = abs(g.translation.width), dy = abs(g.translation.height)
-                            // an axis is claimed only by clear dominance, so a
-                            // diagonal wobble cannot latch the wrong gesture
-                            if dy > 8, dy > dx * 1.3 {
-                                axis = .light; moved = true; cancelHold()
-                            } else if dx > 12, dx > dy * 1.3 {
-                                axis = .song; cancelHold(); Taps.warm()
+                        if let value = interaction.update(dx: g.translation.width,
+                                                          dy: g.translation.height,
+                                                          height: geo.size.height) {
+                            dragging = value
+                            let detent = Int((value * 20).rounded())
+                            if detent != lastDetent {
+                                Taps.detent(intensity: 0.25 + 0.45 * value)
+                                lastDetent = detent
                             }
                         }
-
-                        if axis == .song { return }   // judged on release
-
-                        guard moved, let start = startValue else { return }
-                        // Relative to touch-down, so grabbing never jumps the wall.
-                        let delta = -g.translation.height / max(1, geo.size.height)
-                        // 1% resolution so the picture dissolves smoothly; the
-                        // detent is a feeling every 5%, not the step size.
-                        let stepped = ((start + delta * 0.95) / 0.01).rounded() * 0.01
-                        let v = min(1.0, max(0.05, stepped))
-                        if v != dragging {
-                            dragging = v
-                            let d = Int(v * 20)
-                            if d != lastDetent {
-                                // the control gets quieter as the room darkens
-                                Taps.detent(intensity: 0.25 + 0.45 * v)
-                                lastDetent = d
-                            }
-                        }
+                        if !interaction.canHold { cancelHold() }
                     }
                     .onEnded { g in
-                        cancelHold()
-                        touching = false
-                        if axis == .song {
-                            let dx = g.translation.width
-                            if abs(dx) > 44 {
-                                // push left for next, pull right for previous
-                                FlightLog.note("SWIPE", dx < 0 ? "next" : "previous")
-                                if dx < 0 { onFlickNext() } else { onFlickPrev() }
-                                Taps.commit()
-                            }
-                        } else if moved, let v = dragging {
-                            onCommit(v)
-                            Taps.commit()
+                        let outcome = interaction.end(dx: g.translation.width)
+                        cancelInteraction()
+                        switch outcome {
+                        case .brightness(let value): onCommit(value); Taps.commit()
+                        case .next: onFlickNext(); Taps.commit()
+                        case .previous: onFlickPrev(); Taps.commit()
+                        case nil: break
                         }
-                        startValue = nil
-                        moved = false
-                        axis = nil
-                        dragging = nil
                     }
             )
+            .onChange(of: gestureActive) { _, active in
+                if !active { cancelInteraction() }
+            }
             .overlay(alignment: .topTrailing) { staleStamp }
             .onChange(of: arrivalKey) { _, _ in arrive() }
             .onAppear { outgoing = reading.px }
+            .onDisappear { cancelInteraction(); settleArrival() }
+            .onChange(of: scenePhase) { _, phase in
+                if phase != .active { cancelInteraction(); settleArrival() }
+            }
+            .onChange(of: reducedMotion) { _, reduced in
+                if reduced { settleArrival() }
+            }
             .accessibilityElement()
             .accessibilityLabel("The wall")
             .accessibilityValue("Brightness \(Int(duty * 100)) percent")
             .accessibilityHint("Adjust to dim the wall. Press and hold to put it to sleep. Swipe left for the next track, right for the previous.")
+            .accessibilityAction(named: Text("Turn wall on or off")) { onHold() }
+            .accessibilityAction(named: Text("Next track")) { onFlickNext() }
+            .accessibilityAction(named: Text("Previous track")) { onFlickPrev() }
             .accessibilityAdjustableAction { dir in
                 onCommit(dir == .increment ? min(1.0, confirmed + 0.05) : max(0.05, confirmed - 0.05))
             }
@@ -561,34 +543,52 @@ struct WallHero: View {
     }
 
     private func arrive() {
-        guard !Motion.reduced else {
-            outgoing = reading.px
-            return
-        }
+        arrivalTask?.cancel()
+        guard !reducedMotion, scenePhase == .active else { settleArrival(); return }
         outgoing = outgoing ?? reading.px
         scanPhase = .blanking
         scan = 0
         withAnimation(.easeIn(duration: 0.18)) { scan = 1 }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) {
-            scanPhase = .lighting
-            scan = 0
-            withAnimation(.easeOut(duration: 0.32)) { scan = 1 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+        arrivalTask = Task { @MainActor in
+            do {
+                try await Task.sleep(for: .milliseconds(180))
+                try Task.checkCancellation()
+                scanPhase = .lighting
+                scan = 0
+                withAnimation(.easeOut(duration: 0.32)) { scan = 1 }
+                try await Task.sleep(for: .milliseconds(320))
+                try Task.checkCancellation()
                 scanPhase = .idle
                 outgoing = reading.px
-            }
+            } catch { }
         }
     }
 
+    private func settleArrival() {
+        arrivalTask?.cancel()
+        arrivalTask = nil
+        scanPhase = .idle
+        scan = 1
+        outgoing = reading.px
+    }
+
     private func scheduleHold() {
+        cancelHold()
         let work = DispatchWorkItem {
-            guard !moved else { return }
+            guard interaction.hold() else { return }
             dragging = nil
-            startValue = nil
             onHold()
+            Taps.commit()
         }
         holdWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.85, execute: work)
+    }
+
+    private func cancelInteraction() {
+        cancelHold()
+        interaction.cancel()
+        dragging = nil
+        touching = false
     }
 
     private func cancelHold() {
@@ -598,9 +598,11 @@ struct WallHero: View {
 
     @ViewBuilder private var staleStamp: some View {
         if case .offline(let since) = link {
-            Text(since.formatted(date: .omitted, time: .shortened))
+            Text("Saved · \(since.formatted(date: .omitted, time: .shortened))")
                 .font(.machine(9))
-                .foregroundStyle(Ink.faint)
+                .foregroundStyle(Ink.ink)
+                .padding(.horizontal, 10).padding(.vertical, 6)
+                .background(.black.opacity(0.72), in: Capsule())
                 .padding(10)
         }
     }

@@ -1,0 +1,183 @@
+{
+  "checks": [
+    {
+      "name": "idle cannot hold",
+      "passed": true
+    },
+    {
+      "name": "idle release does not send",
+      "passed": true
+    },
+    {
+      "name": "touch begins pending",
+      "passed": true
+    },
+    {
+      "name": "stationary touch can hold",
+      "passed": true
+    },
+    {
+      "name": "touch down does not change brightness",
+      "passed": true
+    },
+    {
+      "name": "small movement has no brightness",
+      "passed": true
+    },
+    {
+      "name": "small movement preserves hold",
+      "passed": true
+    },
+    {
+      "name": "tap sends no command",
+      "passed": true
+    },
+    {
+      "name": "release resets phase",
+      "passed": true
+    },
+    {
+      "name": "vertical drag resolves brightness",
+      "passed": true
+    },
+    {
+      "name": "brightness locks axis",
+      "passed": true
+    },
+    {
+      "name": "brightness cancels hold",
+      "passed": true
+    },
+    {
+      "name": "later horizontal motion does not switch axis",
+      "passed": true
+    },
+    {
+      "name": "brightness release commits exact value",
+      "passed": true
+    },
+    {
+      "name": "committed gesture clears value",
+      "passed": true
+    },
+    {
+      "name": "brightness clamps to maximum",
+      "passed": true
+    },
+    {
+      "name": "brightness clamps to minimum",
+      "passed": true
+    },
+    {
+      "name": "invalid low start is clamped",
+      "passed": true
+    },
+    {
+      "name": "invalid high start is clamped",
+      "passed": true
+    },
+    {
+      "name": "zero-height geometry stays finite",
+      "passed": true
+    },
+    {
+      "name": "horizontal gesture resolves song",
+      "passed": true
+    },
+    {
+      "name": "song gesture does not change brightness",
+      "passed": true
+    },
+    {
+      "name": "short song gesture does not skip",
+      "passed": true
+    },
+    {
+      "name": "left flick skips next",
+      "passed": true
+    },
+    {
+      "name": "right flick skips previous",
+      "passed": true
+    },
+    {
+      "name": "diagonal movement cancels long press",
+      "passed": true
+    },
+    {
+      "name": "diagonal movement does not choose an axis",
+      "passed": true
+    },
+    {
+      "name": "diagonal movement cannot fire hold",
+      "passed": true
+    },
+    {
+      "name": "diagonal release sends nothing",
+      "passed": true
+    },
+    {
+      "name": "stationary hold fires once",
+      "passed": true
+    },
+    {
+      "name": "held phase is explicit",
+      "passed": true
+    },
+    {
+      "name": "held gesture cannot fire twice",
+      "passed": true
+    },
+    {
+      "name": "repeated touch begin preserves held phase",
+      "passed": true
+    },
+    {
+      "name": "repeated touch begin cannot rearm hold",
+      "passed": true
+    },
+    {
+      "name": "motion after hold cannot dim",
+      "passed": true
+    },
+    {
+      "name": "motion after hold cannot choose song",
+      "passed": true
+    },
+    {
+      "name": "held release sends no second action",
+      "passed": true
+    },
+    {
+      "name": "interruption clears phase",
+      "passed": true
+    },
+    {
+      "name": "interruption clears transient brightness",
+      "passed": true
+    },
+    {
+      "name": "interruption cancels hold",
+      "passed": true
+    },
+    {
+      "name": "release after cancellation does not commit",
+      "passed": true
+    },
+    {
+      "name": "new gesture after cancellation has clean state",
+      "passed": true
+    },
+    {
+      "name": "repeated begin preserves initial brightness",
+      "passed": true
+    },
+    {
+      "name": "nonfinite start cannot poison rendered brightness",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 44,
+  "suite": "PanelInteraction"
+}

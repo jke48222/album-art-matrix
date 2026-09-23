@@ -1,0 +1,19 @@
+{
+  "mode": "weather",
+  "brightness": 1.0,
+  "finish": "clean",
+  "now_showing": {
+    "title": "Get out!",
+    "artist": "KCK Mixes",
+    "album": "Get out! - Single"
+  },
+  "progress": {},
+  "wall": {
+    "width": 64,
+    "height": 64,
+    "tile": 64,
+    "cols": 1,
+    "rows": 1,
+    "frame_side": 64
+  }
+}

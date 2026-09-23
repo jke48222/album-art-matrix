@@ -349,55 +349,8 @@ struct Placard: View {
     var litDim: Color = Ink.dim
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if let title = state.title, !title.isEmpty {
-                Text(title)
-                    .font(.display(29))
-                    .foregroundStyle(litInk)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(artistLine)
-                    .font(.ui(15, .medium))
-                    .foregroundStyle(litDim)
-                    .lineLimit(2)
-                if let owned = state.owned {
-                    Text(owned.line)
-                        .font(.machine(10))
-                        .foregroundStyle(litDim)
-                        .lineLimit(1)
-                        .padding(.top, 1)
-                }
-            } else {
-                Text(silence)
-                    .font(.displayMid(19))
-                    .foregroundStyle(litInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let left = state.sleepRemaining, left > 0 {
-                Text("sleeping in \(left / 60)m \(left % 60)s")
-                    .font(.machine(10))
-                    .foregroundStyle(Ink.faint)
-                    .padding(.top, 2)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .animation(Motion.settle, value: state.title)
-    }
-
-    private var artistLine: String {
-        let a = state.artist ?? ""
-        let al = state.album ?? ""
-        return al.isEmpty || al == a ? a : "\(a) · \(al)"
-    }
-
-    private var silence: String {
-        switch link {
-        case .live: state.mode == "off" ? "Asleep." : "Nothing playing."
-        case .searching: "Looking for your wall."
-        case .offline: "Showing the last thing your wall had."
-        case .standIn: "Nothing playing."
-        }
+        NowPlayingIdentity(state: state, link: link,
+                           accent: litInk, ink: litInk, secondary: litDim)
     }
 }
 

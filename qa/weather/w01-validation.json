@@ -1,0 +1,45 @@
+{
+  "unit": "W01",
+  "references": [
+    {
+      "url": "https://mobbin.com/screens/077d4f75-232d-46ac-8a77-5f8bf0e91205",
+      "applied": "Keep selected time beside forecast values and make returning to current conditions explicit."
+    },
+    {
+      "url": "https://mobbin.com/screens/849ee8e4-80c5-41a3-96b9-c750da229714",
+      "applied": "Separate the selected forecast from current-condition instruments."
+    },
+    {
+      "url": "https://open-meteo.com/en/docs",
+      "applied": "Retain local UTC offsets, Unix timestamps and current-data units."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/swiftui/environmentvalues/accessibilityreducemotion",
+      "applied": "Pause atmosphere motion and remove animated selection transitions under Reduce Motion."
+    }
+  ],
+  "matched_fixture": {
+    "phone_arguments": ["-weather-preview", "-weather-scene", "parity"],
+    "python_script": "scripts/preview_weather.py",
+    "unix_time": 1790116560,
+    "animation_time": 25,
+    "temperature_c": 22.8,
+    "high_c": 24.4,
+    "low_c": 17.2,
+    "code": 3,
+    "is_day": false,
+    "wind_kmh": 8,
+    "units": "f",
+    "place": "Douglasville, Georgia",
+    "matrix_sizes": [64, 192, 512]
+  },
+  "behavior_checks": [
+    "Manual refresh bypasses the young-cache gate exactly once.",
+    "Invalid upstream responses preserve the last good weather.",
+    "A place change during an in-flight fetch discards the old response and schedules the new place.",
+    "Invalid coordinates never reach the weather provider.",
+    "Swift and Python use identical nearest-temperature rounding, including negative ties.",
+    "Clock adjustments cannot produce a negative forecast age.",
+    "All 28 WMO codes render at 64 and 192 pixels in day and night conditions."
+  ]
+}

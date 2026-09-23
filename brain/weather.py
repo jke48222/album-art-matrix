@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import threading
 import time
+import math
 
 import requests
 
@@ -61,6 +62,10 @@ def scene_for(code) -> tuple[str, float]:
 def parse_forecast(data: dict, fetched: float | None = None) -> dict:
     """Open-Meteo's answer (unix times) into what the face keeps."""
     cur = data.get("current") or {}
+    # A 200 response without usable current data must not replace a good cache.
+    if not isinstance(cur, dict) or not any(cur.get(k) is not None for k in
+                                           ("temperature_2m", "weather_code")):
+        raise ValueError("the forecast is temporarily unavailable")
     daily = data.get("daily") or {}
     hourly = data.get("hourly") or {}
     fetched = time.time() if fetched is None else fetched
@@ -71,7 +76,7 @@ def parse_forecast(data: dict, fetched: float | None = None) -> dict:
     days = hourly.get("is_day") or []
     hours = []
     for i, t in enumerate(times):
-        if t > now_t and len(hours) < HOURS_AHEAD:
+        if isinstance(t, (int, float)) and math.isfinite(t) and t > now_t and len(hours) < HOURS_AHEAD:
             hours.append({"t": int(t), "temp": temps[i] if i < len(temps) else None,
                           "code": codes[i] if i < len(codes) else None,
                           "is_day": bool(days[i]) if i < len(days) else True})
@@ -102,16 +107,23 @@ def geocode(query: str) -> dict | None:
         r = requests.get(GEOCODE, params={"name": query, "count": 5, "language": "en",
                                           "format": "json"},
                          headers={"User-Agent": UA}, timeout=10)
+        r.raise_for_status()
         results = r.json().get("results") or []
     except (requests.RequestException, ValueError) as exc:
         print(f"[weather] geocode: {exc}", flush=True)
         return None
     if not results:
         return None
-    x = results[0]
-    return {"name": x.get("name") or query, "region": x.get("admin1") or "",
-            "country": x.get("country") or "", "lat": float(x["latitude"]),
-            "lon": float(x["longitude"])}
+    for x in results:
+        try:
+            lat, lon = float(x["latitude"]), float(x["longitude"])
+            if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat) > 90 or abs(lon) > 180:
+                continue
+            return {"name": x.get("name") or query, "region": x.get("admin1") or "",
+                    "country": x.get("country") or "", "lat": lat, "lon": lon}
+        except (TypeError, KeyError, ValueError):
+            continue
+    return None
 
 
 class Weather:
@@ -126,6 +138,9 @@ class Weather:
         self.place: str = ""
         self._for = None                 # (lat, lon) the data is for
         self._lock = threading.Lock()
+        self._fetch_lock = threading.Lock()
+        self._force = False
+        self._fetching_for = None
         self._wake = threading.Event()
         self._thread = threading.Thread(target=self._loop, name="weather", daemon=True)
 
@@ -135,9 +150,15 @@ class Weather:
 
     # ---- where -----------------------------------------------------------------------------
     def where(self) -> tuple[float, float] | None:
-        s = self.ctrl.get()
-        lat, lon = float(s.get("lat", 999.0)), float(s.get("lon", 999.0))
-        if abs(lat) > 90 or abs(lon) > 180 or (lat == 90.0 and lon == 180.0):
+        return self._coordinates(self.ctrl.get())
+
+    @staticmethod
+    def _coordinates(s: dict) -> tuple[float, float] | None:
+        try:
+            lat, lon = float(s.get("lat", 999.0)), float(s.get("lon", 999.0))
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(lat) or not math.isfinite(lon) or abs(lat) > 90 or abs(lon) > 180 or (lat == 90.0 and lon == 180.0):
             return None                 # 999 is "never told"; 90/180 is the app's own "not set"
         return lat, lon
 
@@ -148,10 +169,14 @@ class Weather:
         label = ", ".join(p for p in (found["name"], found["region"] or found["country"]) if p)
         self.ctrl.apply({"lat": found["lat"], "lon": found["lon"], "place": label[:64]})
         self.place = label
+        with self._lock:
+            self.problem = None
         self.refresh()
         return found
 
     def refresh(self):
+        with self._lock:
+            self._force = True
         self._wake.set()
 
     # ---- fetching ------------------------------------------------------------------------------
@@ -169,32 +194,54 @@ class Weather:
 
     def _loop(self):
         while True:
+            # Clear before fetching so a place change during an HTTP request is
+            # preserved and serviced immediately on the next iteration.
+            self._wake.clear()
             try:
                 self.tick()
             except Exception as exc:
                 self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
                 print(f"[weather] {self.problem}", flush=True)
             self._wake.wait(REFRESH_S)
-            self._wake.clear()
 
     def tick(self):
         """One look: fetch when the place is known and the data is due."""
+        if not self._fetch_lock.acquire(blocking=False):
+            return
+        try:
+            self._tick()
+        finally:
+            self._fetch_lock.release()
+
+    def _tick(self):
         where = self.where()
         if where is None:
             self.problem = "no place set"
             return
-        due = (self.data is None or self._for != where
-               or self._clock() - self.data["fetched"] >= REFRESH_S - 5)
+        with self._lock:
+            due = (self._force or self.data is None or self._for != where
+                   or self._clock() - self.data["fetched"] >= REFRESH_S - 5)
+            self._force = False
         if not due:
             return
+        with self._lock:
+            self._fetching_for = where
         try:
             raw = self._fetch(*where)
+            fresh = parse_forecast(raw, self._clock())
         except Exception as exc:
-            self.problem = f"no weather: {str(exc)[:80]}"
+            if self.where() == where:
+                self.problem = f"no weather: {str(exc)[:80]}"
             print(f"[weather] {self.problem}", flush=True)
             return
+        finally:
+            with self._lock:
+                self._fetching_for = None
+        if self.where() != where:
+            self.refresh()
+            return
         with self._lock:
-            self.data = parse_forecast(raw, self._clock())
+            self.data = fresh
             self._for = where
             self.problem = None
         self.place = self.ctrl.get().get("place", "") or self.place
@@ -218,13 +265,25 @@ class Weather:
         return d is not None and self._clock() - d["fetched"] > STALE_S
 
     def status(self) -> dict:
-        d = self.current()
+        # Place, coordinates and units must come from the same control snapshot.
+        # A location update may land at any point while this request is served.
         s = self.ctrl.get()
-        return {"place": s.get("place", "") or self.place, "where": self.where(),
+        where = self._coordinates(s)
+        now = self._clock()
+        with self._lock:
+            d = self.data
+            if d is None or self._for != where or now - d["fetched"] > DEAD_S:
+                d = None
+            else:
+                d = dict(d)
+            refreshing = where is not None and (self._force or self._fetching_for == where)
+            problem = self.problem
+        age = None if d is None else max(0, int(now - d["fetched"]))
+        return {"place": s.get("place", ""), "where": where,
                 "units": s.get("weather_units", "f"),
                 "utc_offset_s": (None if d is None else d.get("utc_offset_s")),
-                "age_s": (None if d is None else int(self._clock() - d["fetched"])),
-                "stale": self.stale(), "problem": self.problem,
+                "age_s": age, "refreshing": refreshing,
+                "stale": age is not None and age > STALE_S, "problem": problem,
                 "now": (None if d is None else {k: d.get(k) for k in (
                     "temp", "feels", "code", "is_day", "wind_kmh", "cloud", "precip_mm",
                     "high", "low", "sunrise", "sunset")}),

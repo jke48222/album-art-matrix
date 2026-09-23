@@ -1,0 +1,24 @@
+{
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "entry": "WeatherPreview",
+  "fixtures": {
+    "parity": [
+      "-weather-scene",
+      "parity"
+    ],
+    "loading": [
+      "-weather-scene",
+      "loading"
+    ],
+    "offline": [
+      "-weather-scene",
+      "offline"
+    ],
+    "large": [
+      "-weather-large",
+      "-weather-scene",
+      "long"
+    ]
+  },
+  "network_free": true
+}

@@ -52,13 +52,14 @@ struct WeatherAtmosphere: View {
     let mood: WeatherMood
     var wind: Double = 8
     var date: Date = .now
+    var animationTime: Double? = nil
     @Environment(\.accessibilityReduceMotion) private var reduced
     @Environment(\.scenePhase) private var phase
 
     var body: some View {
         TimelineView(.animation(minimumInterval: 1.0 / 20, paused: reduced || phase != .active)) { timeline in
             Canvas { ctx, size in
-                let t = reduced ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86400)
+                let t = animationTime ?? (reduced ? 0 : timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 86400))
                 draw(in: &ctx, size: size, time: t)
             }
         }
@@ -86,7 +87,7 @@ struct WeatherAtmosphere: View {
                 ctx.fill(Path(ellipseIn: CGRect(x: x, y: y, width: r * 2, height: r * 2)), with: .color(Color(hex: 0xE7E9E0).opacity(alpha)))
             }
         }
-        if !mood.wet && !mood.snow && mood.code != 3 {
+        if [0, 1, 2, 45, 48].contains(mood.code ?? -1) {
             let r = w * (mood.day ? 0.077 : 0.058)
             ctx.fill(bounds, with: .radialGradient(Gradient(colors: [mood.accent.opacity(0.4), mood.accent.opacity(0.08), .clear]), center: light, startRadius: r, endRadius: r * 5))
             let orb = Path(ellipseIn: CGRect(x: light.x - r, y: light.y - r, width: r * 2, height: r * 2))

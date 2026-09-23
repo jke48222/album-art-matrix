@@ -71,6 +71,8 @@ struct RoomWallScreen: View {
     /// After the sting in the room: how far the picture has come in from
     /// coarse cells, 1 when it is simply there.
     @Environment(\.glitchIn) private var glitchIn
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, ten times a second while the stand-in ticks, and
     // a system player read is an XPC call.
@@ -108,6 +110,7 @@ struct RoomWallScreen: View {
     /// when it started again.
     @State private var turned: Double = 0
     @State private var turningSince: Date? = nil
+    @State private var turnRate: Double = 33.333 / 60
     /// The tuning board's height, so the wall is fitted above it rather
     /// than under it: the lamp's board is tall enough to reach the wall.
     @State private var tuningHeight: CGFloat = 0
@@ -237,14 +240,20 @@ struct RoomWallScreen: View {
             replay = false
             if !StingFilm.styles.contains(introStyle), IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
         }
-        .onDisappear { pressingTask?.cancel(); pressingRequest = UUID() }
-        .onChange(of: wall.state.title) { _, _ in sleeve.refresh(title: wall.state.title, artist: wall.state.artist, album: wall.state.album, host: wall.host) }
+        .onDisappear {
+            pressingTask?.cancel(); pressingRequest = UUID()
+            turned = turnAngle(at: Date()); turningSince = nil
+            MPMusicPlayerController.systemMusicPlayer.endGeneratingPlaybackNotifications()
+        }
+        .onChange(of: SleeveMatch.key(title: wall.state.title ?? "", artist: wall.state.artist ?? "")) { _, _ in
+            sleeve.refresh(title: wall.state.title, artist: wall.state.artist, album: wall.state.album, host: wall.host)
+        }
         .onChange(of: sleeve.revision) { _, _ in refreshPressing() }
         .onChange(of: pressings.overrides) { _, _ in refreshPressing() }
         .onChange(of: previewChoice) { _, _ in refreshPressing() }
         .onChange(of: needleDown) { _, down in
             let now = Date()
-            if down { turningSince = now }
+            if down && !reducedMotion && scenePhase == .active { turningSince = now }
             else { turned = turnAngle(at: now); turningSince = nil }
         }
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
@@ -254,6 +263,7 @@ struct RoomWallScreen: View {
             songProgress = songProgressNow()
         }
         .onReceive(second) { _ in
+            guard scenePhase == .active else { return }
             let m = MPMusicPlayerController.systemMusicPlayer
             localPlaying = m.playbackState == .playing
             hasLocalItem = m.nowPlayingItem != nil
@@ -264,7 +274,25 @@ struct RoomWallScreen: View {
             }
             sleeve.refresh(title: wall.state.title, artist: wall.state.artist, album: wall.state.album, host: wall.host)
         }
+        .onChange(of: reducedMotion) { _, reduced in
+            turned = turnAngle(at: Date())
+            turningSince = !reduced && needleDown && scenePhase == .active ? Date() : nil
+        }
+        .onChange(of: turnsPerSecond) { _, rate in
+            // A beat lock changes the speed, never the record's position.
+            // Integrate the old rate up to this instant before accepting it.
+            let now = Date()
+            turned = turnAngle(at: now)
+            if turningSince != nil { turningSince = now }
+            turnRate = rate
+        }
+        .onChange(of: scenePhase) { _, phase in
+            turned = turnAngle(at: Date())
+            turningSince = phase == .active && needleDown && !reducedMotion ? Date() : nil
+        }
         .onAppear {
+            turnRate = turnsPerSecond
+            if needleDown && !reducedMotion { turningSince = Date() }
             // `-recorddemo`: in on the record two seconds in, out again at eight,
             // so the way in and out can be watched without a hand on the screen
             if CommandLine.arguments.contains("-recorddemo") {
@@ -395,7 +423,7 @@ struct RoomWallScreen: View {
             // while the needle is down; gated on the record's own square,
             // which is what the block draws with
             if let rq = g.recordQuad {
-                TimelineView(.animation(paused: turningSince == nil)) { tl in
+                TimelineView(.animation(minimumInterval: 1 / 30, paused: turningSince == nil || reducedMotion || scenePhase != .active)) { tl in
                     let a = turnAngle(at: tl.date)
                     ZStack(alignment: .topLeading) {
                         if let pressing {
@@ -431,6 +459,7 @@ struct RoomWallScreen: View {
                 let nr = rect(box: n, in: fit)
                 NeedleView(lead: lead, track: track, lifts: lifts, playing: introSettled && playing && close == .none,
                            progress: introSettled && close == .none ? songProgress : nil,
+                           songKey: sleeve.songKey,
                            onDown: { needleDown = $0 })
                     .frame(width: nr.width, height: nr.height)
                     .position(x: nr.midX, y: nr.midY)
@@ -501,12 +530,12 @@ struct RoomWallScreen: View {
     /// 33 1/3 a minute, or the wall's own rate while it spins.
     private var turnsPerSecond: Double {
         let rpm = wall.state.mode == "cd" ? wall.state.rpm : 33.333
-        return max(0.05, rpm) / 60
+        return rpm.isFinite ? min(78, max(0.05, rpm)) / 60 : 33.333 / 60
     }
 
     private func turnAngle(at date: Date) -> Double {
         guard let since = turningSince else { return turned }
-        return turned + date.timeIntervalSince(since) * turnsPerSecond * 2 * .pi
+        return turned + max(0, date.timeIntervalSince(since)) * turnRate * 2 * .pi
     }
 
     // MARK: - What is playing
@@ -519,7 +548,7 @@ struct RoomWallScreen: View {
         // was. When this phone holds the song, this phone decides. When the
         // wall is on a song this phone is not holding (heard through a
         // speaker, a Mac, a scrobbler), the wall decides.
-        return phoneHoldsTheSong ? localPlaying : wall.state.songPlaying
+        return phoneHoldsTheSong ? localPlaying : (wall.link.isLive || wall.link.isStandIn) && wall.state.songPlaying
     }
 
     /// Is the song on the wall this phone's own? True with no wall song
@@ -544,7 +573,7 @@ struct RoomWallScreen: View {
         }()
         if localPlaying, let local, phoneHoldsTheSong { return local }
         if let t = wall.state.title, !t.isEmpty {
-            if let f = wall.state.songFraction { return f }
+            if let f = PlaybackIdentity(state: wall.state, link: wall.link).fraction { return f }
             if wall.state.songPlaying { return 0 }
         }
         if m.playbackState == .paused, let local, phoneHoldsTheSong { return local }
@@ -574,21 +603,13 @@ struct RoomWallScreen: View {
         .padding(.top, 62)
         .frame(width: size.width, alignment: .leading)
 
-        let bandTop = fit.origin.y + fit.height * (g?.placard ?? 0.78) + 6
+        let bandTop = min(fit.origin.y + fit.height * (g?.placard ?? 0.78) + 6, size.height - 228)
         let bandBottom = size.height - 40
-        let bandHeight = max(120, bandBottom - bandTop)
+        let bandHeight = max(180, bandBottom - bandTop)
         VStack(spacing: 0) {
-            VStack(alignment: .leading, spacing: 5) {
-                if let t = wall.state.title, !t.isEmpty {
-                    Text(t).font(.display(28)).foregroundStyle(inkLight)
-                        .lineLimit(1).minimumScaleFactor(0.62)
-                    Text([wall.state.artist, wall.state.album].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · "))
-                        .font(.ui(15)).foregroundStyle(inkLightDim).lineLimit(1).truncationMode(.tail)
-                } else {
-                    Text(wall.state.mode == "off" ? "Asleep" : "Nothing playing")
-                        .font(.display(24)).foregroundStyle(inkLight)
-                }
-            }
+            NowPlayingIdentity(state: wall.state, link: wall.link,
+                               accent: word, ink: inkLight, secondary: inkLightDim,
+                               compact: true)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 28)
             // The words sit on the render's grey shelf, which measures around
@@ -956,8 +977,13 @@ private struct RoomKeys: View {
             key(.rewind, 48) { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() }
             key(playing ? .pause : .play, 60) {
                 let m = MPMusicPlayerController.systemMusicPlayer
-                if playing { m.pause() } else { StandIn.requestMusicAccess { m.play() } }
-                playing.toggle()
+                if playing { m.pause() } else {
+                    StandIn.requestMusicAccess {
+                        guard MPMediaLibrary.authorizationStatus() == .authorized,
+                              m.nowPlayingItem != nil else { return }
+                        m.play()
+                    }
+                }
             }
             key(.forward, 48) { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
         }
@@ -983,5 +1009,6 @@ private struct RoomKeys: View {
             .shadow(color: .black.opacity(0.28), radius: 8, y: 4)
         }
         .buttonStyle(PressStyle(scale: 0.92))
+        .accessibilityLabel(g == .rewind ? "Previous Apple Music track" : g == .forward ? "Next Apple Music track" : playing ? "Pause Apple Music" : "Play Apple Music")
     }
 }

@@ -126,6 +126,7 @@ struct IPodView: View {
             MPMusicPlayerController.systemMusicPlayer.beginGeneratingPlaybackNotifications()
             playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
         }
+        .onDisappear { MPMusicPlayerController.systemMusicPlayer.endGeneratingPlaybackNotifications() }
     }
 
     // MARK: - Screen
@@ -256,8 +257,13 @@ struct IPodView: View {
 
     private func togglePlay() {
         let m = MPMusicPlayerController.systemMusicPlayer
-        if playing { m.pause() } else { StandIn.requestMusicAccess { m.play() } }
-        playing.toggle()
+        if playing { m.pause() } else {
+            StandIn.requestMusicAccess {
+                guard MPMediaLibrary.authorizationStatus() == .authorized,
+                      m.nowPlayingItem != nil else { return }
+                m.play()
+            }
+        }
     }
 
     // MARK: - Items
@@ -678,9 +684,11 @@ struct NowPlayingScreen: View {
     let accent: Color
     var onTapWall: () -> Void
 
+    private var song: PlaybackIdentity { PlaybackIdentity(state: state, link: link) }
+
     var body: some View {
         VStack(spacing: 0) {
-            StatusStrip(title: "Now Playing", playing: playing, link: link)
+            StatusStrip(title: song.statusLabel, playing: song.advances, link: link)
             HStack(alignment: .top, spacing: 12) {
                 Button(action: onTapWall) {
                     PanelCanvas(px: reading.px, duty: duty)
@@ -690,17 +698,17 @@ struct NowPlayingScreen: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("The wall. Opens large.")
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(headline)
+                    Text(song.title)
                         .font(.display(15))
                         .foregroundStyle(Ink.ink)
                         .lineLimit(3)
                         .minimumScaleFactor(0.8)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let a = state.artist, !a.isEmpty, !(state.title ?? "").isEmpty {
-                        Text(a).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(2)
+                    if song.hasSong, !song.artist.isEmpty {
+                        Text(song.artist).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(2)
                     }
-                    if let al = state.album, !al.isEmpty, al != state.artist, !(state.title ?? "").isEmpty {
-                        Text(al).font(.ui(11)).foregroundStyle(Ink.faint).lineLimit(2)
+                    if song.hasSong, !song.album.isEmpty {
+                        Text(song.album).font(.ui(11)).foregroundStyle(Ink.faint).lineLimit(2)
                     }
                     Spacer(minLength: 0)
                     Text(modeWord)
@@ -720,18 +728,6 @@ struct NowPlayingScreen: View {
         }
     }
 
-    private var headline: String {
-        if let t = state.title, !t.isEmpty { return t }
-        if state.mode == "off" { return "Asleep" }
-        switch state.mode {
-        case "ambient": return "Lamp"
-        case "clock": return "Clock"
-        case "timer": return "Timer"
-        case "ticker": return "Lettering"
-        default: return "Nothing playing"
-        }
-    }
-
     private var modeWord: String {
         switch state.mode {
         case "cd": "spinning"
@@ -741,6 +737,13 @@ struct NowPlayingScreen: View {
         case "clock": "clock"
         case "timer": "timer"
         case "off": "off"
+        case "weather": "weather"
+        case "frame": "drawing"
+        case "clip": "clip"
+        case "video": "video"
+        case "game": "game"
+        case "imagine": "imagine"
+        case "ticker": "lettering"
         default: "art"
         }
     }
@@ -754,25 +757,14 @@ struct NowPlayingScreen: View {
                 ScreenRule(fraction: scrubValue.0, tint: Ink.ink)
                 Text(scrubValue.1).font(.machine(9)).foregroundStyle(Ink.ink)
             }
-        } else if let f = songFraction {
-            HStack(spacing: 8) {
-                Text(clock(state.songNow)).font(.machine(9)).foregroundStyle(Ink.dim)
-                ScreenRule(fraction: f, tint: accent)
-                Text(clock(state.songOf)).font(.machine(9)).foregroundStyle(Ink.dim)
-            }
+        } else if song.hasSong {
+            PlaybackProgress(state: state, link: link, accent: accent, compact: true)
         } else {
-            ScreenRule(fraction: 0, tint: accent)
+            Text(song.context)
+                .font(.ui(10))
+                .foregroundStyle(Ink.dim)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private var songFraction: Double? {
-        guard let of = state.songOf, of > 1, let at = state.songNow else { return nil }
-        return min(1, max(0, at / of))
-    }
-
-    private func clock(_ s: Double?) -> String {
-        guard let s, s.isFinite, s >= 0 else { return "-:--" }
-        return String(format: "%d:%02d", Int(s) / 60, Int(s) % 60)
     }
 }
 

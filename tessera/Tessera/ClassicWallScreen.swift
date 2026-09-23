@@ -11,6 +11,7 @@ import SwiftUI
 struct ClassicWallScreen: View {
     @Environment(WallSession.self) private var wall
     @Environment(ArchiveStore.self) private var worn
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     /// The room's light, computed once by RootView and shared with Archive.
     let light: Lighting
@@ -36,98 +37,196 @@ struct ClassicWallScreen: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                header
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
+                header.padding(.horizontal, 24).padding(.bottom, 12)
+                panelCaption.padding(.horizontal, 24).padding(.bottom, 8)
+                panel.padding(.horizontal, 24)
+                panelFootnote.padding(.horizontal, 24).padding(.top, 4)
 
-                // Full bleed, exactly to the screen's edges and no further:
-                // an earlier negative padding pushed the square wider than
-                // the glass and cropped the outer emitter columns.
-                WallHero(
-                    reading: reading,
-                    confirmed: isOff ? 0.05 : wall.state.brightness,
-                    dragging: $dragLight,
-                    link: wall.link,
-                    arrivalKey: wall.arrivalKey,
-                    touching: $onPanel,
-                    onCommit: { wall.send(["brightness": $0]) },
-                    onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
-                    onFlickPrev: { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() },
-                    onFlickNext: { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
-                )
-                .padding(.bottom, 18)
+                Placard(state: wall.state, link: wall.link, litInk: Ink.ink, litDim: Ink.dim)
+                    .padding(.horizontal, 24).padding(.top, 8)
 
-                // a little tighter than before, so the second row of faces
-                // rests above the page marks at the foot of the screen
-                Placard(state: wall.state, link: wall.link, litInk: litInk, litDim: litDim)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-
-                MusicBar(accent: accent, litInk: litInk)
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 14)
+                MusicBar(accent: accent, litInk: Ink.ink)
+                    .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 28)
 
                 if wall.state.mode == "timer", let left = wall.state.timerRemaining {
-                    // The running countdown is never more than one glance and
-                    // one tap away, whatever else is selected.
                     HStack(spacing: 12) {
                         Text(String(format: "%02d:%02d", left / 60, left % 60))
-                            .font(.machine(18))
-                            .foregroundStyle(accent)
+                            .font(.machine(22)).monospacedDigit().foregroundStyle(Ink.ink)
                             .contentTransition(.numericText(countsDown: true))
-                        Text("counting down")
-                            .font(.ui(13))
-                            .foregroundStyle(litDim)
+                        Text("Remaining").font(.ui(14)).foregroundStyle(Ink.dim)
                         Spacer()
-                        Button("stop") { wall.send(["timer_min": 0.0]) }
+                        Button("Stop") { wall.send(["timer_min": 0.0]) }
                             .buttonStyle(PressStyle(scale: 0.95))
-                            .font(.ui(14, .semibold))
-                            .foregroundStyle(Ink.signal)
+                            .font(.ui(15, .semibold)).foregroundStyle(Ink.signal)
+                            .frame(minWidth: 44, minHeight: 44)
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 18)
+                    .padding(.horizontal, 24).padding(.bottom, 20)
                 }
 
-                modeRow
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, isOff ? 8 : 24)
-
+                Rectangle().fill(Ink.hairline).frame(height: 0.5)
+                    .padding(.horizontal, 24)
+                HStack {
+                    Text("On the wall").font(.displayMid(21)).foregroundStyle(Ink.ink)
+                    Spacer()
+                    if !typeSize.isAccessibilitySize {
+                        Text(faceName).font(.ui(12)).foregroundStyle(Ink.dim)
+                    }
+                }
+                .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
+                modeRow.padding(.horizontal, 14).padding(.bottom, 24)
                 if !isOff {
-                    contextRow
-                        .padding(.horizontal, 20)
-                        .transition(.opacity)
+                    contextRow.padding(.horizontal, 24).transition(.opacity)
                 }
-
-                Spacer(minLength: 56)
+                Spacer(minLength: 64)
             }
-            .padding(.top, 6)
+            .padding(.top, 4)
             .animation(Motion.settle, value: isOff)
         }
         .scrollIndicators(.hidden)
+        .clipped()
+        .padding(.bottom, 32)
+        .background {
+            ZStack(alignment: .top) {
+                Ink.ground
+                LinearGradient(colors: [accent.opacity(0.10), .clear],
+                               startPoint: .topLeading, endPoint: .bottomTrailing)
+                    .frame(height: 620)
+            }.ignoresSafeArea()
+        }
     }
 
-    // MARK: - Pieces
-
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
-            RecordMark(accent: accent, lit: roomLight, side: 17)
-            Text("TESSERA")
-                .font(.display(18))
-                .kerning(3.0)
-                .foregroundStyle(litInk)
-            Spacer()
-            MiniGlyphButton(glyph: .make,
-                            label: "Make something for the wall") { onStudio() }
-
-            Button {
-                onSetup()
-            } label: {
-                LinkChip(link: wall.link)
+        HStack(spacing: 10) {
+            RecordMark(accent: accent, lit: 0.9, side: 22)
+            Text("Tessera").font(.custom(Face.displayMid, fixedSize: 27)).tracking(-0.5).foregroundStyle(Ink.ink)
+                .lineLimit(1).minimumScaleFactor(0.65)
+            Spacer(minLength: 12)
+            Button(action: onStudio) {
+                Image(systemName: "square.and.pencil").font(.system(size: 19, weight: .regular))
+                    .frame(width: 44, height: 44)
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Setup. Link is \(wall.link.isLive ? "live" : "not answering").")
+            .buttonStyle(PressStyle(scale: 0.94))
+            .accessibilityLabel("Open Studio")
+            Button(action: onSetup) {
+                Image(systemName: "slider.horizontal.3").font(.system(size: 19, weight: .regular))
+                    .frame(width: 44, height: 44)
+                    .background(Ink.plaster, in: Circle())
+            }
+            .buttonStyle(PressStyle(scale: 0.94))
+            .accessibilityLabel("Settings")
         }
-        .padding(.top, 4)
+        .foregroundStyle(Ink.ink)
+    }
+
+    private var panelCaption: some View {
+        HStack(spacing: 7) {
+            Circle().fill(wall.link.isLive ? accent : Ink.dim).frame(width: 5, height: 5)
+                .accessibilityHidden(true)
+            Text(connectionTitle).font(.ui(13, .medium)).foregroundStyle(Ink.dim)
+            Spacer()
+            if !typeSize.isAccessibilitySize, let count = reading.px?.count, let side = Panel.square(count) {
+                Text("\(side) × \(side)").font(.machine(10)).foregroundStyle(Ink.dim)
+                    .accessibilityLabel("\(side) by \(side) lights")
+            }
+        }
+    }
+
+    private var panel: some View {
+        ZStack {
+            WallHero(reading: reading,
+                     confirmed: isOff ? 0.05 : wall.state.brightness,
+                     dragging: $dragLight, link: wall.link, arrivalKey: wall.arrivalKey,
+                     touching: $onPanel,
+                     onCommit: { wall.send(["brightness": $0]) },
+                     onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
+                     onFlickPrev: { skipMusic(previous: true) },
+                     onFlickNext: { skipMusic(previous: false) })
+                .accessibilityIdentifier("home.panel")
+            if reading.px == nil || isOff {
+                VStack(spacing: 10) {
+                    Image(systemName: isOff ? "moon" : "square.grid.3x3")
+                        .font(.system(size: 28, weight: .ultraLight)).foregroundStyle(accent)
+                    Text(isOff ? "A little quiet." : wall.link.isLive ? "Waiting for the first frame" : "Your wall, right here.")
+                        .font(.displayMid(24)).foregroundStyle(Ink.ink)
+                    Text(isOff ? "Hold the panel to wake it" : wall.link.isLive ? "Play a song or make something in Studio" : "Finding the wall on your network")
+                        .font(.ui(13)).foregroundStyle(Ink.dim)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(28).allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
+        .padding(7)
+        .background(Color(hex: 0x171C1B))
+        .overlay(Rectangle().strokeBorder(LinearGradient(colors: [Ink.ink.opacity(0.18), Ink.ink.opacity(0.025)],
+                                                        startPoint: .topLeading, endPoint: .bottomTrailing), lineWidth: 1))
+        .shadow(color: .black.opacity(0.24), radius: 20, y: 12)
+    }
+
+    private var panelFootnote: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) { panelHint; Spacer(minLength: 4); powerControl }
+            VStack(alignment: .leading, spacing: 8) { panelHint; powerControl }
+        }
+    }
+
+    @ViewBuilder private var panelHint: some View {
+        switch wall.link {
+        case .offline:
+            Button { Task { await wall.poll() } } label: {
+                Label("Reconnect to the wall", systemImage: "arrow.clockwise")
+                    .font(.ui(13, .medium)).foregroundStyle(accent.toned(forDark: true)).frame(minHeight: 44)
+            }.buttonStyle(PressStyle())
+        case .searching:
+            Text("Looking for your wall…").font(.ui(12)).foregroundStyle(Ink.dim)
+        case .standIn:
+            Text("Preview on this phone").font(.ui(12)).foregroundStyle(Ink.dim)
+        case .live:
+            Text(dragLight == nil ? "Drag the artwork to dim" : "Release to set the light")
+                .font(.ui(12)).foregroundStyle(Ink.dim)
+        }
+    }
+
+    private var powerControl: some View {
+        Button {
+            wall.send(["mode": isOff ? "art" : "off"])
+            Taps.detent()
+        } label: {
+            HStack(spacing: 7) {
+                Text(isOff ? "Wake wall" : "\(Int((dragLight ?? duty) * 100))%")
+                    .font(.machine(11)).monospacedDigit().contentTransition(.numericText())
+                Image(systemName: "power").font(.system(size: 13, weight: .medium))
+            }
+            .foregroundStyle(isOff ? accent : Ink.dim).frame(minHeight: 44)
+            .padding(.leading, 8)
+        }
+        .buttonStyle(PressStyle(scale: 0.96))
+        .accessibilityLabel(isOff ? "Turn wall on" : "Turn wall off")
+        .accessibilityValue("Brightness \(Int((dragLight ?? duty) * 100)) percent")
+    }
+
+    private var connectionTitle: String {
+        switch wall.link {
+        case .live: isOff ? "Wall is resting" : "Live from the wall"
+        case .offline: "Last frame from the wall"
+        case .standIn: "Your personal preview"
+        case .searching: "Connecting"
+        }
+    }
+
+    private var faceName: String {
+        ["art": "Album art", "cd": "Spin", "ambient": "Lamp", "clock": "Clock",
+         "timer": "Timer", "off": "Off", "weather": "Weather", "lyrics": "Lyrics",
+         "nine": "Nine", "frame": "Your creation", "clip": "Clip", "ticker": "Words",
+         "game": "Game", "imagine": "Imagine", "video": "Video"][wall.state.mode] ?? "Wall"
+    }
+
+    private func skipMusic(previous: Bool) {
+        guard MPMediaLibrary.authorizationStatus() == .authorized,
+              MPMusicPlayerController.systemMusicPlayer.nowPlayingItem != nil else {
+            Taps.error(); return
+        }
+        if previous { MPMusicPlayerController.systemMusicPlayer.skipToPreviousItem() }
+        else { MPMusicPlayerController.systemMusicPlayer.skipToNextItem() }
     }
 
     /// Seven faces. Words left this row at the owner's request (text is made
@@ -166,13 +265,8 @@ struct ClassicWallScreen: View {
         .frame(maxWidth: .infinity)
     }
 
-    /// The wall may be in a mode this row does not offer (ticker, clip, frame).
-    /// Show Art rather than lying with nothing selected.
     private var normalizedMode: String {
-        let m = wall.state.mode
-        if m == "timer" { return "clock" }   // a countdown is the clock, busy
-        return ["art", "cd", "ambient", "off", "ticker", "clock", "nine", "lyrics"].contains(m)
-            ? m : "art"
+        wall.state.mode == "timer" ? "clock" : wall.state.mode
     }
 
     @ViewBuilder private var contextRow: some View {
@@ -229,7 +323,7 @@ struct ClassicWallScreen: View {
                 accent: accent
             ) { key, value in wall.send([key: value]) }
 
-        case "clock":
+        case "clock", "timer":
             VStack(alignment: .leading, spacing: 18) {
                 WallTimerRow(
                     remaining: wall.state.mode == "timer" ? (wall.state.timerRemaining ?? 0) : nil,
@@ -262,20 +356,25 @@ struct ClassicWallScreen: View {
                     options: [("sooner", -0.4), ("on time", 0.0), ("later", 0.4)],
                     selected: lyricsNudge,
                     accent: accent
-                ) { lyricsNudge = $0 }
+                ) { lyricsNudge = $0; wall.send(["lyric_offset": $0]) }
                 Text("Words come from LRCLIB; a track it has never heard shows the sleeve alone.")
                     .font(.ui(12))
                     .foregroundStyle(litDim)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-        default:
+        case "weather":
+            Text("Current conditions from your saved location. Open Weather in Settings to explore the forecast.")
+                .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        case "art", "frame", "clip", "video":
             FinishRow(
                 frame: wall.frame,
                 duty: duty,
                 selected: wall.state.finish,
                 accent: accent
             ) { wall.send(["finish": $0]) }
+        default:
+            EmptyView()
         }
     }
 
@@ -362,53 +461,59 @@ struct ClassicWallScreen: View {
 private struct MusicBar: View {
     let accent: Color
     let litInk: Color
-
-    // Read on appear: the bar is remade on every evaluation of the screen,
-    // and a system player read is an XPC call, not a property.
     @State private var playing = false
-
+    @State private var authorized = false
+    @State private var hasTrack = false
+    @Environment(\.scenePhase) private var scenePhase
     private var music: MPMusicPlayerController { .systemMusicPlayer }
 
     var body: some View {
-        HStack(spacing: 0) {
-            key(.rewind, small: true) { music.skipToPreviousItem() }
-                .frame(maxWidth: .infinity)
-            key(playing ? .pause : .play, small: false) {
-                if playing { music.pause() } else {
-                    StandIn.requestMusicAccess { music.play() }
+        VStack(spacing: 10) {
+            HStack(spacing: 32) {
+                key("backward.end.fill", title: "Previous track", primary: false) { music.skipToPreviousItem() }
+                key(playing ? "pause.fill" : "play.fill", title: playing ? "Pause Apple Music" : "Play Apple Music", primary: true) {
+                    if playing { music.pause() } else { music.play() }
+                    refresh()
                 }
-                playing.toggle()
+                key("forward.end.fill", title: "Next track", primary: false) { music.skipToNextItem() }
             }
             .frame(maxWidth: .infinity)
-            key(.forward, small: true) { music.skipToNextItem() }
-                .frame(maxWidth: .infinity)
+            if !authorized || !hasTrack {
+                Text(!authorized ? "Connect Apple Music in Settings for playback controls" : "Choose a song in Apple Music to play here")
+                    .font(.ui(12)).foregroundStyle(Ink.dim).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("Apple Music on this iPhone").font(.ui(11)).foregroundStyle(Ink.dim)
+            }
         }
-        .padding(.horizontal, 44)
-        .onAppear {
-            music.beginGeneratingPlaybackNotifications()
-            playing = music.playbackState == .playing
-        }
-        .onReceive(NotificationCenter.default.publisher(
-            for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
-            playing = music.playbackState == .playing
-        }
+        .onAppear { music.beginGeneratingPlaybackNotifications(); refresh() }
+        .onDisappear { music.endGeneratingPlaybackNotifications() }
+        .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in refresh() }
+        .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerNowPlayingItemDidChange)) { _ in refresh() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { refresh() } }
     }
 
-    private func key(_ glyph: Glyph, small: Bool,
-                     _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            ZStack {
-                Circle().strokeBorder(small ? Ink.hairline : accent.opacity(0.7),
-                                      lineWidth: small ? 1 : 1.5)
-                GlyphShape(glyph: glyph, lineWidth: 1.6)
-                    .frame(width: small ? 15 : 20, height: small ? 15 : 20)
-                    .foregroundStyle(small ? Ink.dim : litInk)
-            }
-            .frame(width: small ? 44 : 56, height: small ? 44 : 56)
+    private func refresh() {
+        authorized = MPMediaLibrary.authorizationStatus() == .authorized
+        hasTrack = authorized && music.nowPlayingItem != nil
+        playing = authorized && music.playbackState == .playing
+    }
+
+    private func key(_ symbol: String, title: String, primary: Bool, action: @escaping () -> Void) -> some View {
+        Button {
+            guard authorized && hasTrack else { return }
+            action()
+            Taps.detent(intensity: 0.4)
+        } label: {
+            Image(systemName: symbol)
+                .font(.system(size: primary ? 24 : 20, weight: .medium))
+                .foregroundStyle(primary ? Ink.ground : litInk)
+                .frame(width: primary ? 64 : 52, height: primary ? 64 : 52)
+                .background(primary ? accent.toned(forDark: true) : Ink.plaster, in: Circle())
+                .opacity(authorized && hasTrack ? 1 : 0.38)
         }
-        .buttonStyle(PressStyle(scale: 0.9))
-        .accessibilityLabel(glyph == .rewind ? "Previous track"
-                            : glyph == .forward ? "Next track"
-                            : playing ? "Pause" : "Play")
+        .disabled(!authorized || !hasTrack)
+        .buttonStyle(PressStyle(scale: 0.92))
+        .accessibilityLabel(title)
     }
 }

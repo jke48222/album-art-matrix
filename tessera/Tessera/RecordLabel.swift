@@ -1,6 +1,18 @@
 import UIKit
 
 enum RecordLabel {
+    /// A printed label has one baseline. Fit the glyphs before drawing so long
+    /// artist/title strings never spill into the sleeve or off the paper.
+    static func fittedAttributes(_ string: String, font: UIFont, width: CGFloat,
+                                 colour: UIColor, kern: CGFloat = 0) -> [NSAttributedString.Key: Any] {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = .center
+        paragraph.lineBreakMode = .byTruncatingTail
+        let measured = (string as NSString).size(withAttributes: [.font: font, .kern: kern]).width
+        let scale = max(0.60, min(1, width / max(1, measured)))
+        return [.font: font.withSize(font.pointSize * scale), .foregroundColor: colour,
+                .paragraphStyle: paragraph, .kern: kern * scale]
+    }
     /// A label the way a pressing plant prints one: paper, the artist above,
     /// the sleeve in a square in the middle with the spindle hole through
     /// it, the title and the side below, a thin ring in the sleeve's colour.
@@ -18,9 +30,8 @@ enum RecordLabel {
             ctx.fillEllipse(in: CGRect(x: 0, y: 0, width: d, height: d))
             ctx.setStrokeColor(dark.withAlphaComponent(0.85).cgColor); ctx.setLineWidth(2.2)
             ctx.strokeEllipse(in: CGRect(x: 0, y: 0, width: d, height: d).insetBy(dx: 14, dy: 14))
-            let para = NSMutableParagraphStyle(); para.alignment = .center
             func text(_ s: String, _ font: UIFont, _ y: CGFloat, _ colour: UIColor, kern: CGFloat = 0) {
-                let a: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: colour, .paragraphStyle: para, .kern: kern]
+                let a = fittedAttributes(s, font: font, width: d - 48, colour: colour, kern: kern)
                 NSAttributedString(string: s, attributes: a).draw(in: CGRect(x: 24, y: y, width: d - 48, height: font.lineHeight + 4))
             }
             let head = UIFont(name: "Technor-Bold", size: 30) ?? .systemFont(ofSize: 30, weight: .heavy)

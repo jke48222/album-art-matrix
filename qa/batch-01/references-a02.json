@@ -1,0 +1,16 @@
+{
+  "unit": "A02",
+  "mobbin": [
+    "https://mobbin.com/screens/c24a58f4-ed5c-4265-beb0-947dadc64673",
+    "https://mobbin.com/screens/031a1400-5d28-4126-9ef7-756abed9328a"
+  ],
+  "primary": [
+    "https://developer.apple.com/design/human-interface-guidelines/playing-audio",
+    "https://developer.apple.com/design/human-interface-guidelines/accessibility"
+  ],
+  "applied": [
+    "Artwork remains dominant and uncropped",
+    "Playback controls have explicit states and accessible alternatives to gestures",
+    "Playback source and physical wall connection are labeled separately"
+  ]
+}

@@ -68,9 +68,15 @@ class WeatherFace:
 
     @staticmethod
     def _temp(c, units):
-        if c is None or not math.isfinite(float(c)):
+        try:
+            c = float(c)
+        except (TypeError, ValueError):
             return None
-        return round(c * 9 / 5 + 32) if units == "f" else round(c)
+        if not math.isfinite(c):
+            return None
+        value = c * 9 / 5 + 32 if units == "f" else c
+        # Swift's rounded() is nearest, ties away from zero, not Python's ties-even.
+        return math.floor(value + .5) if value >= 0 else math.ceil(value - .5)
 
     def _prepare(self, code, day, golden):
         key = code, day, golden
@@ -91,6 +97,21 @@ class WeatherFace:
         glow *= .32 if day else .1
         sky = sky * (1 - glow) + self.accent * glow
         self._sky = Image.fromarray(np.uint8(np.clip(sky, 0, 255))).convert("RGBA")
+        # Continuous radial light, matching SwiftUI's atmosphere; no concentric
+        # LED rings when the sun is visible in a clear sky.
+        radius = .077 if day else .058
+        distance = np.sqrt((x - .77) ** 2 + (y - .46) ** 2)
+        alpha = np.interp(distance, [0, radius, radius * 3, radius * 5], [.40, .40, .08, 0])
+        celestial = np.empty((s, s, 4), np.uint8)
+        celestial[:, :, :3] = self.accent
+        celestial[:, :, 3] = np.uint8(alpha * 255)
+        disk = distance <= radius
+        gradient = np.clip(np.sqrt((x - (.77 - radius * .2)) ** 2 +
+                                   (y - (.46 - radius * .3)) ** 2) / (radius * 1.6), 0, 1)[..., None]
+        colour = _rgb(0xFFF2D4) * (1 - gradient) + self.accent * gradient
+        celestial[disk, :3] = np.uint8(colour[disk])
+        celestial[disk, 3] = 255
+        self._celestial = Image.fromarray(celestial)
 
         # Same ridgeline frequencies, phase and terrain colours as the phone.
         terrain = np.zeros((s, s, 4), np.uint8)
@@ -119,16 +140,22 @@ class WeatherFace:
         self._cloud_sprites.clear()
         clear = code in (0, 1)
         for bank in range((2 if code == 0 else 3) if clear else 7):
-            cloud = Image.new("RGBA", (s * 2, s // 3))
-            draw = ImageDraw.Draw(cloud)
+            mask = Image.new("L", (s * 2, s // 3))
+            draw = ImageDraw.Draw(mask)
             spread = s * (.42 if clear else .65)
             for puff in range(16):
                 u = puff / 15
                 height = s * (.025 + _noise(bank * 30 + puff) * .055) * math.sin(math.pi * (.08 + u * .84))
                 px = s + (u - .5) * spread
                 py = s * .11 - height * .6
-                tint = (227, 215, 191) if day else (128, 149, 173)
-                draw.ellipse((px, py, px + spread * .3, py + height), fill=(*tint, 90 if clear else 105 if day else 90))
+                draw.ellipse((px, py, px + spread * .3, py + height), fill=255)
+            cloud_y = np.arange(s // 3, dtype=np.float32)[:, None, None] / s
+            blend = np.clip((cloud_y - .05) / .11, 0, 1)
+            tint = _rgb(0xE3D7BF if day else 0x8095AD)
+            cloud_pixels = np.empty((s // 3, s * 2, 4), np.uint8)
+            cloud_pixels[:, :, :3] = tint * (1 - blend) + self.top * blend
+            cloud_pixels[:, :, 3] = np.uint8(np.asarray(mask) * (.24 if clear else .65 if day else .5))
+            cloud = Image.fromarray(cloud_pixels)
             self._cloud_sprites[bank] = cloud.filter(ImageFilter.GaussianBlur(s * (.043 if fog else .018)))
 
     def _label(self, draw, text, x, y, size, font="Switzer-Medium.otf", fill=INK, max_width=.89):
@@ -188,7 +215,8 @@ class WeatherFace:
         now = time.time() if now is None else now
         d = data or {}
         code, day = d.get("code"), bool(d.get("is_day", True))
-        wind = max(0, min(60, float(d.get("wind_kmh") or 8)))
+        raw_wind = d.get("wind_kmh")
+        wind = 8 if raw_wind is None else max(0, min(60, float(raw_wind)))
         golden = day and any(abs(now - d[k]) < 4500 for k in ("sunrise", "sunset") if d.get(k) is not None)
         self._prepare(code, day, golden)
         s = self.res
@@ -203,9 +231,8 @@ class WeatherFace:
                 draw.ellipse((x, y, x + r * 2, y + r * 2), fill=(231, 233, 224, round(alpha * 255)))
         if code in (0, 1, 2, 45, 48):
             cx, cy, radius = s * .77, s * .46, s * (.077 if day else .058)
-            for scale, alpha in ((4, 12), (2.6, 18), (1.6, 30), (1, 255)):
-                r = radius * scale
-                draw.ellipse((cx - r, cy - r, cx + r, cy + r), fill=(255, 242, 212, alpha))
+            light = Image.alpha_composite(light, self._celestial)
+            draw = ImageDraw.Draw(light)
             if not day:
                 phase = moon_phase(now)
                 for y in range(-math.ceil(radius), math.ceil(radius) + 1):

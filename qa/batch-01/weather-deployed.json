@@ -1,0 +1,82 @@
+{
+  "health": {
+    "fps": 0.0,
+    "temp_c": 57.9,
+    "throttled": {
+      "now": false,
+      "ever": false
+    },
+    "uptime_s": 116,
+    "loop_age_s": 0.9,
+    "quiet_s": null,
+    "idle": null,
+    "mode": "weather",
+    "ytdlp": "2026.08.19"
+  },
+  "weather": {
+    "place": "Douglasville, Georgia",
+    "where": [
+      33.7515,
+      -84.74771
+    ],
+    "units": "f",
+    "utc_offset_s": -14400,
+    "age_s": 77,
+    "refreshing": false,
+    "stale": false,
+    "problem": null,
+    "now": {
+      "temp": 22.8,
+      "feels": 26.9,
+      "code": 3,
+      "is_day": false,
+      "wind_kmh": 4.0,
+      "cloud": 100,
+      "precip_mm": 0.0,
+      "high": 24.1,
+      "low": 17.3,
+      "sunrise": 1790162874,
+      "sunset": 1790206457
+    },
+    "scene": "overcast",
+    "hours": [
+      {
+        "t": 1790143200,
+        "temp": 22.3,
+        "code": 3,
+        "is_day": false
+      },
+      {
+        "t": 1790146800,
+        "temp": 21.4,
+        "code": 3,
+        "is_day": false
+      },
+      {
+        "t": 1790150400,
+        "temp": 20.8,
+        "code": 0,
+        "is_day": false
+      },
+      {
+        "t": 1790154000,
+        "temp": 20.6,
+        "code": 0,
+        "is_day": false
+      },
+      {
+        "t": 1790157600,
+        "temp": 20.4,
+        "code": 3,
+        "is_day": false
+      },
+      {
+        "t": 1790161200,
+        "temp": 20.4,
+        "code": 3,
+        "is_day": false
+      }
+    ]
+  },
+  "captured_mode": "weather"
+}

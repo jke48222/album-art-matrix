@@ -27,10 +27,13 @@ struct NeedleView: View {
     let playing: Bool
     /// How far into the song, 0 to 1; nil when there is no record on.
     let progress: Double?
+    var songKey: String = ""
     /// The stylus is in the groove: the platter may turn.
     var onDown: (Bool) -> Void
 
     @State private var driver: NeedleDriver? = nil
+    @Environment(\.accessibilityReduceMotion) private var reducedMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         Group {
@@ -44,11 +47,30 @@ struct NeedleView: View {
         }
         .onAppear {
             if driver == nil { driver = NeedleDriver(lead: lead, track: track, lifts: lifts) }
-            driver?.aim(playing: playing, progress: progress)
+            driver?.aim(playing: playing, progress: progress, reducedMotion: reducedMotion)
             NeedleSprites.warm(lead: lead, lifts: lifts)
         }
-        .onChange(of: playing) { _, p in driver?.aim(playing: p, progress: progress) }
-        .onChange(of: progress) { _, p in driver?.aim(playing: playing, progress: p) }
+        .onChange(of: playing) { _, p in
+            guard scenePhase == .active else { return }
+            driver?.aim(playing: p, progress: progress, reducedMotion: reducedMotion)
+        }
+        .onChange(of: progress) { _, p in
+            guard scenePhase == .active else { return }
+            driver?.aim(playing: playing, progress: p, reducedMotion: reducedMotion)
+        }
+        .onChange(of: songKey) { _, _ in
+            guard scenePhase == .active else { return }
+            driver?.aim(playing: playing, progress: progress, reducedMotion: reducedMotion, newSong: true)
+        }
+        .onChange(of: reducedMotion) { _, _ in
+            driver?.aim(playing: playing, progress: progress, reducedMotion: reducedMotion)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { driver?.aim(playing: playing, progress: progress, reducedMotion: reducedMotion) }
+            else { driver?.suspend() }
+        }
+        .onDisappear { driver?.suspend() }
+        .accessibilityHidden(true)
         .onChange(of: driver?.down ?? false, initial: true) { _, d in onDown(d) }
     }
 }
@@ -91,17 +113,40 @@ final class NeedleDriver {
 
     /// What the song asks for. Progress picks the groove position; play
     /// asks for the stylus down; no song sends the arm home.
-    func aim(playing: Bool, progress: Double?) {
+    func aim(playing: Bool, progress: Double?, reducedMotion: Bool = false, newSong: Bool = false) {
         let target: Int
-        if let p = progress {
+        if let p = progress, p.isFinite {
             target = lead + Int((min(1, max(0, p)) * Double(track - 1)).rounded())
         } else {
             target = 0
         }
-        let down = playing && progress != nil
-        guard target != wantPlace || down != wantDown || (current == nil && !settled(target, down)) else { return }
+        let down = playing && progress?.isFinite == true
+        if reducedMotion {
+            suspend()
+            wantPlace = target; wantDown = down
+            place = Double(target); height = down || target == 0 ? 0 : 1
+            return
+        }
+        guard newSong || target != wantPlace || down != wantDown || (current == nil && !settled(target, down)) else { return }
         wantPlace = target; wantDown = down
+        if newSong, target >= lead, index >= lead {
+            suspend()
+            if height < 1 { queue.append(Segment(move: .raise, from: height, to: 1, duration: 0.4 * (1 - height))) }
+            queue.append(Segment(move: .swing(Double(lead)), from: place, to: Double(lead), duration: 0.7))
+            if target != lead {
+                queue.append(Segment(move: .swing(Double(target)), from: Double(lead), to: Double(target), duration: 0.45))
+            }
+            if down { queue.append(Segment(move: .lower, from: 1, to: 0, duration: 0.7)) }
+            next()
+            return
+        }
         plan()
+    }
+
+    func suspend() {
+        queue.removeAll()
+        current = nil
+        stop()
     }
 
     private func settled(_ target: Int, _ down: Bool) -> Bool {
