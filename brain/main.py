@@ -230,6 +230,12 @@ class _Poller(threading.Thread):
         self.source, self.interval, self.wake, self.news = source, interval, wake, news
         self.latest = None
         self.asked_at = None
+        # The answer with the moment it was true, both clocks, in one tuple
+        # so the loop reads them together. The song's position is only right
+        # at that moment; stamped with the loop's own time on a later pass
+        # it went backwards by the age of the answer, and the lyrics and the
+        # spinning record stepped back with it every couple of seconds.
+        self.answer = (None, time.monotonic(), time.time())
 
     def run(self):
         while True:
@@ -239,6 +245,7 @@ class _Poller(threading.Thread):
                 print(f"[poll] {exc}")
                 now = None
             self.latest, self.asked_at = now, time.monotonic()
+            self.answer = (now, self.asked_at, time.time())
             self.news.set()
             self.wake.wait(self.interval)
             self.wake.clear()
@@ -475,6 +482,7 @@ def main():
     # Where the song is, and when we last heard that. The record turns from
     # this rather than from the wall clock, so a seek seeks the record.
     prog = None                      # (seconds_in, monotonic_at, playing, total)
+    now, now_at, now_wall = None, time.monotonic(), time.time()   # the poll and its moment
     ticker, ticker_key, ticker_t0 = None, None, 0.0
     countdown, countdown_key = None, None
     nine = NineBuilder(size)
@@ -589,7 +597,7 @@ def main():
         ctrl.news.clear()
         if not (ctrl.video is not None and ctrl.video.busy
                 and ctrl.get()["mode"] == "video"):
-            now = poller.latest
+            now, now_at, now_wall = poller.answer
             # A paused source keeps the wall only when it is the song the
             # wall is already on: the thing that just stopped. A phone left
             # paused on some other song while a record played is not news;
@@ -660,10 +668,12 @@ def main():
             sun_f = 1.0
 
         if now is not None and now.progress_ms is not None:
-            prog = (now.progress_ms / 1000.0, time.monotonic(),
+            # stamped with the poll's own moment, not this pass's: the loop
+            # comes round more often than the poller answers
+            prog = (now.progress_ms / 1000.0, now_at,
                     now.is_playing, (now.duration_ms or 0) / 1000.0)
             ctrl.progress = {"at": now.progress_ms, "of": now.duration_ms,
-                             "playing": now.is_playing, "stamped": time.time()}
+                             "playing": now.is_playing, "stamped": now_wall}
         elif now is None:
             prog = None
             ctrl.progress = {}
