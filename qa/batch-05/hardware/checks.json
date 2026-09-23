@@ -1,0 +1,60 @@
+{
+  "checks": [
+    {
+      "name": "Lettering wall RGB exactly equals native Swift output",
+      "passed": true
+    },
+    {
+      "name": "Photo wall RGB exactly equals native crop preview",
+      "passed": true
+    },
+    {
+      "name": "Both animation frames reach the wall without changed pixels",
+      "passed": true
+    },
+    {
+      "name": "across preview is byte-identical to deployed production renderer",
+      "passed": true
+    },
+    {
+      "name": "across accepted by live wall",
+      "passed": true
+    },
+    {
+      "name": "across live wall produces illuminated text",
+      "passed": true
+    },
+    {
+      "name": "up preview is byte-identical to deployed production renderer",
+      "passed": true
+    },
+    {
+      "name": "up accepted by live wall",
+      "passed": true
+    },
+    {
+      "name": "up live wall produces illuminated text",
+      "passed": true
+    },
+    {
+      "name": "tilt preview is byte-identical to deployed production renderer",
+      "passed": true
+    },
+    {
+      "name": "tilt accepted by live wall",
+      "passed": true
+    },
+    {
+      "name": "tilt live wall produces illuminated text",
+      "passed": true
+    },
+    {
+      "name": "Original wall settings restored",
+      "passed": true
+    }
+  ],
+  "passed": 13,
+  "failed": 0,
+  "restored_mode": "clock",
+  "physical_limit": "Native RGB verified; physical LED colour and touch feel require user review."
+}

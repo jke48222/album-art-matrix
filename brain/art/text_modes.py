@@ -9,29 +9,47 @@ import numpy as np
 from PIL import Image
 
 from .effects import _hex_rgb
-from .pixelfont import draw_text, normalize, text_width
+from .pixelfont import cell, draw_text, normalize, text_width
+
+
+def _vertical_bounds(text: str) -> tuple[int, int]:
+    """The font's baseline band plus accents and descenders in this line."""
+    top, bottom = 0, 7
+    for ch in text:
+        glyph = cell(ch)
+        if glyph is not None:
+            rows, _, _, dy = glyph
+            top = min(top, dy)
+            bottom = max(bottom, dy + len(rows))
+    return top, bottom
 
 
 def wrap_text(text: str, width_px: int, scale: int) -> list[str]:
     """Greedy word wrap against the pixel font's real widths. A word wider
     than the whole line is broken hard rather than dropped."""
-    lines, cur = [], ""
-    for word in text.split():
-        cand = word if not cur else cur + " " + word
-        if text_width(cand, scale) <= width_px:
-            cur = cand
+    lines = []
+    for paragraph in text.split("\n"):
+        cur = ""
+        words = paragraph.split()
+        if not words:
+            lines.append("")
             continue
+        for word in words:
+            cand = word if not cur else cur + " " + word
+            if text_width(cand, scale) <= width_px:
+                cur = cand
+                continue
+            if cur:
+                lines.append(cur)
+            while text_width(word, scale) > width_px:
+                k = 1
+                while k < len(word) and text_width(word[:k + 1], scale) <= width_px:
+                    k += 1
+                lines.append(word[:k])
+                word = word[k:]
+            cur = word
         if cur:
             lines.append(cur)
-        while text_width(word, scale) > width_px:
-            k = 1
-            while k < len(word) and text_width(word[:k + 1], scale) <= width_px:
-                k += 1
-            lines.append(word[:k])
-            word = word[k:]
-        cur = word
-    if cur:
-        lines.append(cur)
     return lines or ["?"]
 
 
@@ -62,25 +80,28 @@ class Ticker:
                  colors: list | None = None):
         self.size = size
         self.SCALE = self._scale_for(size)
-        self.text = normalize(text) or "?"
+        self.text = normalize(text).replace("\n", " ") or "?"
         self.color = _hex_rgb(color)
         self.colors = [_hex_rgb(c) for c in (colors or [])]
-        self.px_per_s = 18.0 * max(0.1, speed)
+        self.unit = max(1, size // 64)
+        self.px_per_s = 18.0 * max(0.1, speed) * self.unit
         self.loop = loop
         self.width = text_width(self.text, self.SCALE)
+        self.travel = self.width + self.size + 4 * self.unit
+        top, bottom = _vertical_bounds(self.text)
+        self.baseline = (size - (bottom - top) * self.SCALE) // 2 - top * self.SCALE
 
     def done(self, t: float) -> bool:
         if self.loop:
             return False
-        return t * self.px_per_s > self.width + self.size + 4
+        return t * self.px_per_s >= self.travel
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-        travel = self.width + self.size + 4
-        offset = (t * self.px_per_s) % travel if self.loop \
-            else min(t * self.px_per_s, travel)
+        offset = (max(0.0, t) * self.px_per_s) % self.travel if self.loop \
+            else min(max(0.0, t) * self.px_per_s, self.travel)
         x = self.size - int(offset)
-        y = (self.size - 7 * self.SCALE) // 2
+        y = self.baseline
         if not self.colors:
             draw_text(canvas, self.text, x, y, self.color, self.SCALE)
         else:
@@ -90,7 +111,8 @@ class Ticker:
                     ink = self.colors[gi] if gi < len(self.colors) else self.color
                     draw_text(canvas, ch, x, y, ink, self.SCALE)
                     gi += 1
-                x += 6 * self.SCALE
+                glyph = cell(ch)
+                x += (glyph[2] if glyph else 6) * self.SCALE
         return Image.fromarray(canvas, "RGB")
 
 
@@ -462,21 +484,28 @@ class Crawl:
         # can read from the sofa is not a crawl.
         sc = max(1, size // 64)
         lines = wrap_text(normalize(text) or "?", size - 4 * sc, sc)
-        line_h = 9 * sc                 # 7 px of glyph, 2 of leading
-        h = len(lines) * line_h + 1
+        # Ordinary and intentionally blank lines keep their nine-cell cadence.
+        # Extended glyphs can rise above the baseline or descend below seven;
+        # give that line its actual ink height and the same two-cell leading.
+        bounds = [_vertical_bounds(line) for line in lines]
+        line_heights = [(bottom - top + 2) * sc for top, bottom in bounds]
+        h = sum(line_heights) + sc
         rgb = np.zeros((h, size, 3), dtype=np.uint8)
         # Glyph inks are baked into the plane itself; the resampler then
         # only ever moves and fades what is already the right colour. The
         # glyph counter runs across lines, so a wrapped word keeps its inks.
-        gi = 0
+        gi, y = 0, 0
         for i, ln in enumerate(lines):
             x = (size - text_width(ln, sc)) // 2
+            baseline = y - bounds[i][0] * sc
             for ch in ln:
                 if ch != " ":
                     ink = inks[gi] if gi < len(inks) else base
-                    draw_text(rgb, ch, x, i * line_h, ink, sc)
+                    draw_text(rgb, ch, x, baseline, ink, sc)
                     gi += 1
-                x += 6 * sc
+                glyph = cell(ch)
+                x += (glyph[2] if glyph else 6) * sc
+            y += line_heights[i]
         self.mask = rgb.astype(np.float32) / 255.0
         self.h = h
 
@@ -497,6 +526,7 @@ class Crawl:
         rev = np.concatenate([[0.0], np.cumsum(step[::-1][:-1])])
         self.offset = rev[::-1].astype(np.float32)
         self.span = float(self.offset[0])
+        self.travel = self.h + self.span + 8 * sc
 
         # Horizontal resampling per row: where each output pixel reads from,
         # and whether that lands on the plane at all.
@@ -514,11 +544,10 @@ class Crawl:
     def done(self, t: float) -> bool:
         if self.loop:
             return False
-        return t * self.px_per_s > self.h + self.span + 8
+        return t * self.px_per_s >= self.travel
 
     def frame_at(self, t: float) -> Image.Image:
-        travel = self.h + self.span + 8
-        p = (t * self.px_per_s) % travel if self.loop else t * self.px_per_s
+        p = (max(0.0, t) * self.px_per_s) % self.travel if self.loop else max(0.0, t) * self.px_per_s
         src = p - self.offset           # source row per output row, floats
         out = np.zeros((self.size, self.size, 3), dtype=np.float32)
         for y in range(self.size):

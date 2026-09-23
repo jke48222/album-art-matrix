@@ -1,0 +1,322 @@
+{
+  "checks" : [
+    {
+      "name" : "64 stroke reaches bottom right",
+      "passed" : true
+    },
+    {
+      "name" : "64 fast diagonal has no gaps",
+      "passed" : true
+    },
+    {
+      "name" : "64 undo restores blank and invalidates render",
+      "passed" : true
+    },
+    {
+      "name" : "64 redo restores exact pixels",
+      "passed" : true
+    },
+    {
+      "name" : "64 clear is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "64 out of bounds fill is safe",
+      "passed" : true
+    },
+    {
+      "name" : "64 invalid touch is ignored",
+      "passed" : true
+    },
+    {
+      "name" : "64 fill reaches all pixels",
+      "passed" : true
+    },
+    {
+      "name" : "64 fill is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "64 open document keeps its size after reconnect",
+      "passed" : true
+    },
+    {
+      "name" : "64 import resamples into document size",
+      "passed" : true
+    },
+    {
+      "name" : "192 stroke reaches bottom right",
+      "passed" : true
+    },
+    {
+      "name" : "192 fast diagonal has no gaps",
+      "passed" : true
+    },
+    {
+      "name" : "192 undo restores blank and invalidates render",
+      "passed" : true
+    },
+    {
+      "name" : "192 redo restores exact pixels",
+      "passed" : true
+    },
+    {
+      "name" : "192 clear is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "192 out of bounds fill is safe",
+      "passed" : true
+    },
+    {
+      "name" : "192 invalid touch is ignored",
+      "passed" : true
+    },
+    {
+      "name" : "192 fill reaches all pixels",
+      "passed" : true
+    },
+    {
+      "name" : "192 fill is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "192 open document keeps its size after reconnect",
+      "passed" : true
+    },
+    {
+      "name" : "192 import resamples into document size",
+      "passed" : true
+    },
+    {
+      "name" : "64 lettering fits requested size",
+      "passed" : true
+    },
+    {
+      "name" : "64 lettering preserves manual line break",
+      "passed" : true
+    },
+    {
+      "name" : "64 lettering frame is exact native dimensions",
+      "passed" : true
+    },
+    {
+      "name" : "64 per glyph ink is kept",
+      "passed" : true
+    },
+    {
+      "name" : "64 other letters use base ink",
+      "passed" : true
+    },
+    {
+      "name" : "64 placement reaches both margins",
+      "passed" : true
+    },
+    {
+      "name" : "64 alignment changes actual pixels",
+      "passed" : true
+    },
+    {
+      "name" : "64 invalid placement is finite",
+      "passed" : true
+    },
+    {
+      "name" : "64 empty lettering preserves art",
+      "passed" : true
+    },
+    {
+      "name" : "192 lettering fits requested size",
+      "passed" : true
+    },
+    {
+      "name" : "192 lettering preserves manual line break",
+      "passed" : true
+    },
+    {
+      "name" : "192 lettering frame is exact native dimensions",
+      "passed" : true
+    },
+    {
+      "name" : "192 per glyph ink is kept",
+      "passed" : true
+    },
+    {
+      "name" : "192 other letters use base ink",
+      "passed" : true
+    },
+    {
+      "name" : "192 placement reaches both margins",
+      "passed" : true
+    },
+    {
+      "name" : "192 alignment changes actual pixels",
+      "passed" : true
+    },
+    {
+      "name" : "192 invalid placement is finite",
+      "passed" : true
+    },
+    {
+      "name" : "192 empty lettering preserves art",
+      "passed" : true
+    },
+    {
+      "name" : "512 lettering fits requested size",
+      "passed" : true
+    },
+    {
+      "name" : "512 lettering preserves manual line break",
+      "passed" : true
+    },
+    {
+      "name" : "512 lettering frame is exact native dimensions",
+      "passed" : true
+    },
+    {
+      "name" : "512 per glyph ink is kept",
+      "passed" : true
+    },
+    {
+      "name" : "512 other letters use base ink",
+      "passed" : true
+    },
+    {
+      "name" : "512 placement reaches both margins",
+      "passed" : true
+    },
+    {
+      "name" : "512 alignment changes actual pixels",
+      "passed" : true
+    },
+    {
+      "name" : "512 invalid placement is finite",
+      "passed" : true
+    },
+    {
+      "name" : "512 empty lettering preserves art",
+      "passed" : true
+    },
+    {
+      "name" : "World glyph resources are loaded",
+      "passed" : true
+    },
+    {
+      "name" : "64 É accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "64 É never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "64 Ç accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "64 Ç never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "64 À accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "64 À never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "192 É accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "192 É never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "192 Ç accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "192 Ç never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "192 À accents and descenders survive placement",
+      "passed" : true
+    },
+    {
+      "name" : "192 À never clips a glyph pixel",
+      "passed" : true
+    },
+    {
+      "name" : "Overflow reports a fit error",
+      "passed" : true
+    },
+    {
+      "name" : "Overflow preserves background instead of clipping words",
+      "passed" : true
+    },
+    {
+      "name" : "New collection is empty",
+      "passed" : true
+    },
+    {
+      "name" : "Saved clip keeps its identity",
+      "passed" : true
+    },
+    {
+      "name" : "Gallery uses exact first frame",
+      "passed" : true
+    },
+    {
+      "name" : "Both documents survive app restart",
+      "passed" : true
+    },
+    {
+      "name" : "Animation restores all frames and speed",
+      "passed" : true
+    },
+    {
+      "name" : "Still restores exact bytes",
+      "passed" : true
+    },
+    {
+      "name" : "Delete removes only selected creation",
+      "passed" : true
+    },
+    {
+      "name" : "Delete is reversible with animation intact",
+      "passed" : true
+    },
+    {
+      "name" : "Mixed frame dimensions are rejected",
+      "passed" : true
+    },
+    {
+      "name" : "Animation rate beyond wall capability is rejected",
+      "passed" : true
+    },
+    {
+      "name" : "Nonfinite animation speed is rejected",
+      "passed" : true
+    },
+    {
+      "name" : "Failed saves leave collection unchanged",
+      "passed" : true
+    },
+    {
+      "name" : "Legacy drawings remain available",
+      "passed" : true
+    },
+    {
+      "name" : "Corrupted content fails visibly",
+      "passed" : true
+    },
+    {
+      "name" : "Corrupt document does not hide healthy creations",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 79
+}

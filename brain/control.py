@@ -217,6 +217,7 @@ class ControlState:
         self.replay = None           # journal entry the main loop should re-show
         self.replay_active = False
         self.resume_music = False
+        self.ticker_revision = 0
         self.lyric_book = None
         self._ambient_previews = (None, None)
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
@@ -272,8 +273,9 @@ class ControlState:
         here = self.get()["mode"]
         if getattr(self, "_note_ret", None) is None or here != "ticker":
             self._note_ret = here if here not in ("frame", "clip", "timer", "video", "ticker") else "art"
-        self.apply({"ticker_text": text, "ticker_loop": True, "ticker_style": "across",
+        self.apply({"ticker_text": text, "ticker_colors": [], "ticker_loop": True, "ticker_style": "across",
                     "mode": "ticker"})
+        self._note_revision = self.ticker_revision
         self._note_text = text
         self._note_until = time.monotonic() + minutes * 60.0
         t = threading.Timer(minutes * 60.0, self._note_over)
@@ -286,7 +288,7 @@ class ControlState:
             return                                 # a later note took over
         self._note_until = None
         self._note_text = None
-        if self.get()["mode"] == "ticker":
+        if self.get()["mode"] == "ticker" and self.ticker_revision == getattr(self, "_note_revision", None):
             self.apply({"mode": getattr(self, "_note_ret", None) or "art"})
         self._note_ret = None
 
@@ -383,8 +385,10 @@ class ControlState:
                                         for ch in c[1:]) for c in v):
                     self._s[k] = [c.lower() for c in v]
                 elif k == "ticker_text" and isinstance(v, str):
-                    clean = "".join(c for c in v if c.isprintable())[:120]
-                    self._s[k] = clean or "?"
+                    from .art.pixelfont import normalize
+                    clean = normalize(v)[:120]
+                    self._s[k] = clean if clean.strip() else "?"
+                    self.ticker_revision += 1
                 elif k == "brightness":
                     self._s[k] = _clamp(v, 0.05, 1.0)
                 elif k == "rpm":
@@ -1171,6 +1175,39 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if self.path == "/ticker/preview":
+                patch = self._body()
+                if patch is None:
+                    return
+                from .art.text_modes import Ticker, Crawl
+                from .art.pixelfont import normalize
+                try:
+                    text = patch.get("text", "")
+                    style = patch.get("style", "across")
+                    colors = patch.get("colors", [])
+                    color = patch.get("color", "#f4f1ea")
+                    speed = float(patch.get("speed", 1))
+                    phase = float(patch.get("phase", 0.35))
+                    import math
+                    valid_color = lambda c: isinstance(c, str) and len(c) == 7 and c[0] == "#" and all(ch in "0123456789abcdefABCDEF" for ch in c[1:])
+                    if not isinstance(text, str) or len(text) > 600 or style not in ("across", "up", "tilt"):
+                        raise ValueError("Invalid message or motion")
+                    if not isinstance(colors, list) or len(colors) > 200 or not all(valid_color(c) for c in colors) or not valid_color(color):
+                        raise ValueError("Invalid letter colours")
+                    if not math.isfinite(speed) or not math.isfinite(phase):
+                        raise ValueError("Invalid preview position")
+                    size = ctrl.wall.width
+                    args = dict(color=color, speed=max(0.1, min(3, speed)), loop=False, colors=colors)
+                    text = normalize(text)[:120]
+                    renderer = Ticker(size, text, **args) if style == "across" else Crawl(size, text, tilt=style == "tilt", **args)
+                    travel = renderer.travel
+                    duration = travel / renderer.px_per_s
+                    t = max(0, min(1, phase)) * duration
+                    pixels = renderer.frame_at(t).tobytes() if text.strip() else bytes(size * size * 3)
+                    self._json(200, {"px": base64.b64encode(pixels).decode(), "side": size, "duration": duration, "time": t})
+                except (TypeError, ValueError, OverflowError):
+                    self._json(400, {"error": "Check the message, colours and preview position."})
+                return
             if self.path.startswith("/homekit/"):
                 # the pairing code, drawn on the panel; and taken down
                 hk = getattr(ctrl, "homekit", None)
@@ -1620,8 +1657,15 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if ctrl.video is None:
                     self._json(404, {"error": "video is not available on this wall"})
                     return
+                if "url" in data and data["url"] != ctrl.video.url:
+                    self._json(409, {"error": "video changed"})
+                    return
                 try:
-                    ctrl.video.clock(float(data.get("t", 0.0)), bool(data.get("playing", True)))
+                    import math
+                    position = float(data.get("t", 0.0))
+                    if not math.isfinite(position):
+                        raise ValueError("nonfinite position")
+                    ctrl.video.clock(position, bool(data.get("playing", True)))
                 except (TypeError, ValueError):
                     self._json(400, {"error": "t must be a number"})
                     return

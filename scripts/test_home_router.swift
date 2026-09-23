@@ -98,6 +98,16 @@ import Foundation
         router.didDismiss()
         check(router.sheet == .settings && router.pending == nil && router.presented == nil,
               "the closing sheet can reopen without overlapping its predecessor")
+        let share = HomeRouter()
+        share.present(.studio); share.didPresent(.studio)
+        share.present(.video)
+        check(share.cover == nil && share.pending == .video, "video handoff dismisses Studio before presenting")
+        share.didDismiss()
+        check(share.cover == .video && share.sheet == nil, "video handoff presents one canonical editor")
+        share.didPresent(.video); share.present(.video)
+        check(share.cover == .video && share.pending == nil, "another video handoff reuses the visible editor")
+        share.dismiss(); share.didDismiss()
+        check(share.visible == nil && share.cover == nil, "video Done returns to the home without a nested sheet")
         let failed = checks.filter { !($0["passed"] as! Bool) }.count
         let result: [String: Any] = ["suite": "HomeRouter", "passed": checks.count - failed,
                                      "failed": failed, "checks": checks]

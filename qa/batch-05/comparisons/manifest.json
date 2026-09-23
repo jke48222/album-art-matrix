@@ -1,0 +1,240 @@
+{
+  "processing": "Native screenshots, equally scaled, no retouching/cropping.",
+  "baseline": "09b0baa; DEBUG entry routes only for matching lettering/framing/saved inputs.",
+  "comparisons": [
+    {
+      "unit": "C08",
+      "title": "Lettering",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/lettering/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/lettering/classic-live.png",
+      "before_sha256": "2b95d37ecfc3d8cedd895785e5c9185ba4cd8ea1dbb8a8fbf8c3ebf77c5d2f9f",
+      "after_sha256": "85b3e6d4d210e4465d82a1b114de8365d060d934d0ec29a656c1a5a2d125da0b",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/lettering.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "69524636b7da7d817b3db38a3fe9920ecb8c6b213b7bdf30dfe54d7483cd9d36"
+    },
+    {
+      "unit": "C09",
+      "title": "Photo framing",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/framing/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/framing/classic-live.png",
+      "before_sha256": "f53d6375b68c72a0c04dc0d45d0fee1bf524677998254355a9564c7202b3c75f",
+      "after_sha256": "7a9706090c75b20e85d429ed6826637c77e679627cb06eb84f527b5d972bb141",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/framing.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "560fe967f1aef95221d317d41ed7dcc872fad3bbbb14f19906c7e885b600fc42"
+    },
+    {
+      "unit": "C10",
+      "title": "Video",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/video/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/video/room-live.png",
+      "before_sha256": "4d9201ff2af3ef00d445529ad8df70ec5d8f913b99b2ea9ed67fb02bdf68a1d3",
+      "after_sha256": "73453993b1c5fbe0af31e13941d40fde76d997a4257235dafdaf66825b553d89",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/video.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "2ff2a4046cf0ee0a9923095e6ef55cc95058a280c9afda731aea08a19eb66d40"
+    },
+    {
+      "unit": "C11",
+      "title": "Made collection",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/made/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/made/classic-live.png",
+      "before_sha256": "cf6cb532390f27a0c042620576d15ca167de31738ade22df397af94f6c7a62d7",
+      "after_sha256": "30d8d3d2d78f9e1b02aab45aa408c34ef3a49313a60a94a5507bd379c973255a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/made.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "cccbaf54ac568d0766040ca596a527a353cf234f75fce7fd81ed513e7d51a345"
+    },
+    {
+      "unit": "C12",
+      "title": "Ticker",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/ticker/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/ticker/room-live.png",
+      "before_sha256": "e1e041ab62477739bfedf1ae50bc71f04c300c80fc1f8a2b4956efdaa55370db",
+      "after_sha256": "1282ce4d3a727d5384f04e242c518c115e5b230ae81ed414a43ffb74c4edecd1",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/ticker.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "a72792bffbff3d93d68094a2fcee594a2db05456ff1506cd60cfdb8bc1cd94c4"
+    },
+    {
+      "unit": "A01 / A06",
+      "title": "One place to customize",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-05/before/navigation/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-05/after/navigation/room-live.png",
+      "before_sha256": "6f1430100142469bdbc6a059c353d0cdc884411be96d65b57e09a4d57821af62",
+      "after_sha256": "7f3c4264d46900ee682dcfc8814c473cd785df3764c49a23e06dbea3885fc69f",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-05/comparisons/navigation.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "dca610d368f041be469d7cff06e9a77c43828b24bf25ecb38c9a36403bd284d2"
+    }
+  ]
+}

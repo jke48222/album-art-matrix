@@ -6,6 +6,8 @@ and the printable ASCII punctuation. Lowercase sits on an x-height of rows
 there is no row beneath it in a 7-row cell. An unmapped character renders as
 a hollow box, so a typo is visible instead of silently vanishing.
 """
+import unicodedata
+
 import numpy as np
 
 FONT = {
@@ -114,6 +116,21 @@ ALIASES = {"❤": "♥", "❤️": "♥"}
 
 
 def normalize(text: str) -> str:
+    """Canonical, visible glyph sequence shared by lettering and the ticker.
+
+    Emoji presentation selectors and joiners have no pixel cells. Keeping them
+    used to add empty boxes and shift every per-letter colour after a heart.
+    Composing Unicode first also gives accented letters and Hangul their real
+    entries in the world font rather than separate combining-mark boxes.
+    """
+    text = unicodedata.normalize("NFC", text).replace("\r\n", "\n").replace("\r", "\n")
+    text = "".join(
+        " " if ch.isspace() and ch != "\n" else ch
+        for ch in text
+        if not (0xFE00 <= ord(ch) <= 0xFE0F or 0xE0100 <= ord(ch) <= 0xE01EF)
+        and ch not in "\u200b\u200c\u200d\ufeff"
+        and (ch.isprintable() or ch.isspace())
+    )
     out = []
     skip = False
     for i, ch in enumerate(text):

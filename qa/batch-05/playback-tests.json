@@ -1,0 +1,525 @@
+{
+  "checks": [
+    {
+      "name": "identity trims title and artist",
+      "passed": true
+    },
+    {
+      "name": "duplicate album identity is removed case-insensitively",
+      "passed": true
+    },
+    {
+      "name": "art without playback clock is explicitly displayed",
+      "passed": true
+    },
+    {
+      "name": "missing time is not invented",
+      "passed": true
+    },
+    {
+      "name": "live position advances from observation",
+      "passed": true
+    },
+    {
+      "name": "live progress fraction is accurate",
+      "passed": true
+    },
+    {
+      "name": "playing enables clock scheduling",
+      "passed": true
+    },
+    {
+      "name": "elapsed does not exceed duration",
+      "passed": true
+    },
+    {
+      "name": "clock skew cannot reverse the song",
+      "passed": true
+    },
+    {
+      "name": "pause freezes position",
+      "passed": true
+    },
+    {
+      "name": "pause stops scheduled updates",
+      "passed": true
+    },
+    {
+      "name": "paused phone preview does not claim playing",
+      "passed": true
+    },
+    {
+      "name": "offline position freezes at disconnect",
+      "passed": true
+    },
+    {
+      "name": "offline clock is stopped",
+      "passed": true
+    },
+    {
+      "name": "offline identity is labeled last-known",
+      "passed": true
+    },
+    {
+      "name": "searching freezes position at observation",
+      "passed": true
+    },
+    {
+      "name": "weather retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "weather missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "frame retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "frame missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "clip retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "clip missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "video retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "video missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "clock retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "clock missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "timer retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "timer missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "ambient retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "ambient missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "game retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "game missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "imagine retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "imagine missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "off retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "off missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "ticker retained title is not labeled wall artwork",
+      "passed": true
+    },
+    {
+      "name": "ticker missing clock never schedules progress updates",
+      "passed": true
+    },
+    {
+      "name": "audio accompanying weather is separately named",
+      "passed": true
+    },
+    {
+      "name": "paused audio accompanying weather is separately named",
+      "passed": true
+    },
+    {
+      "name": "nonfinite values cannot enter progress geometry",
+      "passed": true
+    },
+    {
+      "name": "nonfinite position stops clock scheduling",
+      "passed": true
+    },
+    {
+      "name": "negative values are unavailable",
+      "passed": true
+    },
+    {
+      "name": "unknown duration keeps elapsed but hides fraction",
+      "passed": true
+    },
+    {
+      "name": "blank title means empty identity",
+      "passed": true
+    },
+    {
+      "name": "empty weather title describes current mode",
+      "passed": true
+    },
+    {
+      "name": "empty identity has no progress",
+      "passed": true
+    },
+    {
+      "name": "off mode reads asleep",
+      "passed": true
+    },
+    {
+      "name": "clock formats elapsed minutes",
+      "passed": true
+    },
+    {
+      "name": "clock supports long recordings",
+      "passed": true
+    },
+    {
+      "name": "clock rejects NaN",
+      "passed": true
+    },
+    {
+      "name": "clock rejects infinity",
+      "passed": true
+    },
+    {
+      "name": "clock rejects negative time",
+      "passed": true
+    },
+    {
+      "name": "clock rejects overflow",
+      "passed": true
+    },
+    {
+      "name": "local pause freezes the playbar immediately",
+      "passed": true
+    },
+    {
+      "name": "resume advances only from resumed position",
+      "passed": true
+    },
+    {
+      "name": "paused local song cannot freeze a different wall song",
+      "passed": true
+    },
+    {
+      "name": "expired local sample cannot override fresh wall",
+      "passed": true
+    },
+    {
+      "name": "archive artwork cannot replace playback identity",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 0.2s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 0.2s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 0.9s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 0.9s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 1.7s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 1.7s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 2.6s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 2.6s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 3.1s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 3.1s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 3.8s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 3.8s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 4.7s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 4.7s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 5.6s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 5.6s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 6.2s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 6.2s",
+      "passed": true
+    },
+    {
+      "name": "repeated source observations stay on time at 7.4s",
+      "passed": true
+    },
+    {
+      "name": "poll receipt never rewinds elapsed at 7.4s",
+      "passed": true
+    },
+    {
+      "name": "regression trace demonstrates old forward-backwards clock",
+      "passed": true
+    },
+    {
+      "name": "one-second backwards seek is preserved",
+      "passed": true
+    },
+    {
+      "name": "long backwards seek is preserved",
+      "passed": true
+    },
+    {
+      "name": "forward seek is preserved",
+      "passed": true
+    },
+    {
+      "name": "pause freezes at reported player position",
+      "passed": true
+    },
+    {
+      "name": "resume uses source resume time",
+      "passed": true
+    },
+    {
+      "name": "song change starts its own clock",
+      "passed": true
+    },
+    {
+      "name": "timestamped clock freezes at actual disconnect",
+      "passed": true
+    },
+    {
+      "name": "unknown duration still advances timestamped elapsed",
+      "passed": true
+    },
+    {
+      "name": "legacy repeated payload retains first observation",
+      "passed": true
+    },
+    {
+      "name": "legacy repeated payload does not restart elapsed",
+      "passed": true
+    },
+    {
+      "name": "legacy pause is accepted even at unchanged position",
+      "passed": true
+    },
+    {
+      "name": "legacy next track cannot inherit previous anchor",
+      "passed": true
+    },
+    {
+      "name": "HTTP date calibrates large wall clock skew",
+      "passed": true
+    },
+    {
+      "name": "second-precision HTTP date cannot introduce poll jitter",
+      "passed": true
+    },
+    {
+      "name": "changing wall clears previous clock offset",
+      "passed": true
+    },
+    {
+      "name": "HTTP clock header parses in GMT",
+      "passed": true
+    },
+    {
+      "name": "malformed clock header safely falls back",
+      "passed": true
+    },
+    {
+      "name": "wire nonfinite position is rejected before geometry",
+      "passed": true
+    },
+    {
+      "name": "wire negative position is rejected",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 99,
+  "poll_regression_trace": [
+    {
+      "correct_elapsed_s": 120.20000004768372,
+      "old_elapsed_s": 120,
+      "received_s": 0.2,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 120.70000004768372,
+      "display_tick_s": 0.7,
+      "old_elapsed_s": 120.5,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 120.89999997615814,
+      "old_elapsed_s": 120,
+      "received_s": 0.9,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 121.39999997615814,
+      "display_tick_s": 1.4,
+      "old_elapsed_s": 120.5,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 121.70000004768372,
+      "old_elapsed_s": 120,
+      "received_s": 1.7,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 122.20000004768372,
+      "display_tick_s": 2.2,
+      "old_elapsed_s": 120.5,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 122.60000002384186,
+      "old_elapsed_s": 120,
+      "received_s": 2.6,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 123.05000007152557,
+      "display_tick_s": 3.0500000000000003,
+      "old_elapsed_s": 120.45000004768372,
+      "source_stamp_s": 0
+    },
+    {
+      "correct_elapsed_s": 123.10000002384186,
+      "old_elapsed_s": 123,
+      "received_s": 3.1,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 123.60000002384186,
+      "display_tick_s": 3.6,
+      "old_elapsed_s": 123.5,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 123.79999995231628,
+      "old_elapsed_s": 123,
+      "received_s": 3.8,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 124.29999995231628,
+      "display_tick_s": 4.3,
+      "old_elapsed_s": 123.5,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 124.70000004768372,
+      "old_elapsed_s": 123,
+      "received_s": 4.7,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 125.20000004768372,
+      "display_tick_s": 5.2,
+      "old_elapsed_s": 123.5,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 125.60000002384186,
+      "old_elapsed_s": 123,
+      "received_s": 5.6,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 126.10000002384186,
+      "display_tick_s": 6.1,
+      "old_elapsed_s": 123.5,
+      "source_stamp_s": 3
+    },
+    {
+      "correct_elapsed_s": 126.20000004768372,
+      "old_elapsed_s": 126,
+      "received_s": 6.2,
+      "source_stamp_s": 6
+    },
+    {
+      "correct_elapsed_s": 126.70000004768372,
+      "display_tick_s": 6.7,
+      "old_elapsed_s": 126.5,
+      "source_stamp_s": 6
+    },
+    {
+      "correct_elapsed_s": 127.39999997615814,
+      "old_elapsed_s": 126,
+      "received_s": 7.4,
+      "source_stamp_s": 6
+    },
+    {
+      "correct_elapsed_s": 127.89999997615814,
+      "display_tick_s": 7.9,
+      "old_elapsed_s": 126.5,
+      "source_stamp_s": 6
+    }
+  ],
+  "suite": "PlaybackIdentity"
+}

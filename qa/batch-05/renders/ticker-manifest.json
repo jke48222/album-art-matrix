@@ -1,0 +1,56 @@
+[
+  {
+    "file": "ticker-across-64.png",
+    "side": 64,
+    "seconds": 3.5,
+    "renderer": "production Ticker"
+  },
+  {
+    "file": "ticker-up-64.png",
+    "side": 64,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  },
+  {
+    "file": "ticker-tilt-64.png",
+    "side": 64,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  },
+  {
+    "file": "ticker-across-192.png",
+    "side": 192,
+    "seconds": 3.5,
+    "renderer": "production Ticker"
+  },
+  {
+    "file": "ticker-up-192.png",
+    "side": 192,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  },
+  {
+    "file": "ticker-tilt-192.png",
+    "side": 192,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  },
+  {
+    "file": "ticker-across-512.png",
+    "side": 512,
+    "seconds": 3.5,
+    "renderer": "production Ticker"
+  },
+  {
+    "file": "ticker-up-512.png",
+    "side": 512,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  },
+  {
+    "file": "ticker-tilt-512.png",
+    "side": 512,
+    "seconds": 3.5,
+    "renderer": "production Crawl"
+  }
+]

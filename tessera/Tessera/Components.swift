@@ -435,84 +435,6 @@ struct LampInks: View {
 }
 
 
-// MARK: - Ticker
-
-/// What the wall should letter, in the wall's own font. Typing here is
-/// typing on the wall: it letters this itself rather than being handed a
-/// picture of it, which is what makes it scroll.
-struct TickerRow: View {
-    let text: String
-    let loop: Bool
-    let style: String
-    /// One ink per visible glyph of the SENT text, in order.
-    let colors: [String]
-    let accent: Color
-    var onSet: (String, Any) -> Void
-
-    @State private var draft = ""
-    @FocusState private var typing: Bool
-
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                TextField("say something", text: $draft)
-                    .font(.machine(14))
-                    .foregroundStyle(Ink.ink)
-                    .autocorrectionDisabled()
-                    .focused($typing)
-                    .submitLabel(.send)
-                    .padding(.vertical, 12).padding(.horizontal, 14)
-                    .background(Ink.sunk)
-                    .overlay { RoundedRectangle(cornerRadius: Round.control).strokeBorder(Ink.hairline, lineWidth: 1) }
-                    .onSubmit { Taps.commit(); send() }
-
-                Button("Send") { send() }
-                    .buttonStyle(PressStyle(scale: 0.96))
-                    .font(.ui(14, .semibold))
-                    .foregroundStyle(draft.isEmpty ? Ink.faint : accent)
-                    .disabled(draft.isEmpty)
-            }
-
-            letterInks
-
-            // How the words move. Sliding across is a sign; rising is a
-            // prompter; tilted is the one film everyone has seen.
-            PillRow(
-                label: "how it moves",
-                options: [("across", "across"), ("rising", "up"), ("crawl", "tilt")],
-                selected: style,
-                accent: accent
-            ) { onSet("ticker_style", $0) }
-
-            PillRow(
-                label: "when it reaches the end",
-                options: [("loop", true), ("back to art", false)],
-                selected: loop,
-                accent: accent
-            ) { onSet("ticker_loop", $0) }
-        }
-        .onAppear { if draft.isEmpty { draft = text } }
-    }
-
-    private func send() {
-        guard !draft.isEmpty else { return }
-        typing = false
-        onSet("ticker_text", draft)
-    }
-
-    // MARK: letter inks
-
-    @ViewBuilder private var letterInks: some View {
-        if text.contains(where: { $0 != " " }) {
-            LetterInker(text: text, colors: colors, accent: accent) {
-                onSet("ticker_colors", $0)
-            }
-        }
-    }
-}
-
-
 // MARK: - Timer
 
 /// The kitchen timer, from the clock's context row. Four durations cover
@@ -608,6 +530,7 @@ struct LetterInker: View {
     let text: String
     let colors: [String]
     let accent: Color
+    var base = "#eae4d8"
     var onChange: ([String]) -> Void
 
     @State private var brush = "#e8b04b"
@@ -615,9 +538,8 @@ struct LetterInker: View {
 
     static let well = ["#eae4d8", "#e8b04b", "#e0491f", "#7fa87a",
                        "#31c3d4", "#8b7fd4", "#d44a8b"]
-    private static let base = "#eae4d8"
 
-    private var glyphs: [Character] { text.filter { $0 != " " } }
+    private var glyphs: [Character] { Array(PixelFont.normalize(text).filter { !$0.isWhitespace }) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -626,7 +548,7 @@ struct LetterInker: View {
                 .foregroundStyle(Ink.dim)
 
             // the inkwell: pick what the finger carries
-            HStack(spacing: 10) {
+            ScrollView(.horizontal) { HStack(spacing: 10) {
                 ForEach(Self.well, id: \.self) { hex in
                     let on = brush == hex
                     Button {
@@ -642,26 +564,26 @@ struct LetterInker: View {
                                 }
                             }
                     }
+                    .frame(width: 44, height: 44)
                     .buttonStyle(PressStyle(scale: 0.85))
                     .accessibilityLabel("Ink \(hex)")
                 }
                 ColorPicker(selection: $mixed, supportsOpacity: false) { EmptyView() }
                     .labelsHidden()
-                    .frame(width: 26, height: 26)
+                    .frame(width: 44, height: 44)
                     .onChange(of: mixed) { _, c in
                         brush = Self.hex(of: c)
                         Taps.detent(intensity: 0.35)
                     }
                     .accessibilityLabel("Mix an ink")
-                Spacer()
-            }
+            } }.scrollIndicators(.hidden)
 
             // The letters. A grid that lays itself out; a tap paints one
             // letter with the carried ink. (An earlier draft painted by
             // dragging across coordinates it computed itself, and its idea
             // of the rows drifted from the real layout: exactly the kind of
             // cleverness a control that must never misfire cannot afford.)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 30), spacing: 4)],
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 6)],
                       alignment: .leading, spacing: 6) {
                 ForEach(Array(glyphs.enumerated()), id: \.offset) { (i, ch) in
                     Button {
@@ -692,11 +614,11 @@ struct LetterInker: View {
     }
 
     private func chip(_ i: Int, _ ch: Character) -> some View {
-        let hex = i < colors.count ? colors[i] : Self.base
+        let hex = i < colors.count ? colors[i] : base
         return Text(String(ch))
             .font(.machine(17))
             .foregroundStyle(Color(wallHex: hex) ?? Ink.ink)
-            .frame(width: 30, height: 38)
+            .frame(width: 44, height: 44)
             .background(Ink.sunk)
             .overlay {
                 RoundedRectangle(cornerRadius: Round.chip)
@@ -714,12 +636,12 @@ struct LetterInker: View {
         }
         .buttonStyle(PressStyle(scale: 0.96))
         .font(.ui(13, .medium))
-        .foregroundStyle(label == "one ink" ? Ink.dim : accent)
+        .foregroundStyle(label == "one ink" ? Ink.dim : accent).frame(minHeight: 44)
     }
 
     private func paint(_ i: Int) {
         var next = colors
-        while next.count < glyphs.count { next.append(Self.base) }
+        while next.count < glyphs.count { next.append(base) }
         guard next[i] != brush else { return }
         next[i] = brush
         Taps.detent(intensity: 0.3)

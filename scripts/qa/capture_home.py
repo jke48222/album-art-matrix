@@ -150,9 +150,22 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
 
         def do_POST(self) -> None:
             length = min(int(self.headers.get("Content-Length", "0")), 4 * 1024 * 1024)
-            self.rfile.read(length)
+            data = self.rfile.read(length)
+            path = urlsplit(self.path).path
             with wall.lock:
-                wall.requests.append({"method": "POST", "path": urlsplit(self.path).path})
+                wall.requests.append({"method": "POST", "path": path})
+            if path == "/ticker/preview":
+                from brain.art.text_modes import Ticker, Crawl
+                payload = json.loads(data)
+                size = math.isqrt(len(wall.frame) // 3)
+                args = dict(color=payload.get("color", "#f4f1ea"), speed=payload.get("speed",1), colors=payload.get("colors",[]), loop=False)
+                style = payload.get("style", "across")
+                renderer = Ticker(size,payload["text"],**args) if style == "across" else Crawl(size,payload["text"],tilt=style == "tilt",**args)
+                travel = renderer.width + size + 4*max(1,size//64) if style == "across" else renderer.h+renderer.span+8*max(1,size//64)
+                t = payload.get("phase",.35)*travel/renderer.px_per_s
+                encoded = base64.b64encode(renderer.frame_at(t).tobytes()).decode()
+                self.response(200,json.dumps({"px":encoded}).encode(),"application/json")
+                return
             # Acknowledge only inside this fixture. Never forward writes anywhere.
             self.response(200, b"{}", "application/json")
 

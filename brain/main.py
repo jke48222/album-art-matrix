@@ -814,6 +814,10 @@ def main():
                     colour = tuple(c / over for c in colour)
                 eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
                 mode = s["mode"]
+                if mode != "ticker":
+                    # A completed once-only message must start again when the
+                    # person returns to it, even when its text is unchanged.
+                    ticker, ticker_key = None, None
 
                 # ---- the voice's face -----------------------------------------
                 # While someone is talking to the wall, and while the answer is
@@ -941,7 +945,8 @@ def main():
                     style = s.get("ticker_style", "across")
                     key = (s["ticker_text"], ink, s["speed"],
                            s["ticker_loop"], style,
-                           tuple(s["ticker_colors"]))
+                           tuple(s["ticker_colors"]),
+                           getattr(ctrl, "ticker_revision", 0))
                     if ticker is None or key != ticker_key:
                         if style == "across":
                             ticker = Ticker(size, s["ticker_text"], color=ink,
@@ -958,6 +963,9 @@ def main():
                     tick = time.monotonic()
                     if ticker.done(tick - ticker_t0):
                         ctrl.apply({"mode": "art"})
+                        # The app can select Ticker again before the next mode
+                        # snapshot; retire this completed run immediately.
+                        ticker, ticker_key = None, None
                         continue
                     f = ticker.frame_at(tick - ticker_t0)
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)

@@ -70,7 +70,8 @@ struct WallVideo: Equatable {
     }
 
     static func clock(_ s: Double) -> String {
-        let t = max(0, Int(s.rounded()))
+        let safe = s.isFinite ? min(31_536_000, max(0, s)) : 0
+        let t = Int(safe.rounded(.down))
         return t >= 3600 ? String(format: "%d:%02d:%02d", t / 3600, t / 60 % 60, t % 60)
                          : String(format: "%d:%02d", t / 60, t % 60)
     }
@@ -99,15 +100,17 @@ enum WallVideoLink {
     }
 
     /// Hand the wall a link. Comes back with what went wrong, or nil.
-    static func start(host: String, url: String, sound: Bool) async -> String? {
-        guard let r = await post(host: host, "/video", ["url": url, "sound": sound]) else {
+    static func start(host: String, url: String, sound: Bool, loop: Bool = false) async -> String? {
+        guard let r = await post(host: host, "/video", ["url": url, "sound": sound, "loop": loop]) else {
             return "The wall is not answering right now."
         }
         return r["error"] as? String
     }
 
-    static func clock(host: String, t: Double, playing: Bool) async {
-        await post(host: host, "/video/clock", ["t": t, "playing": playing])
+    static func clock(host: String, t: Double, playing: Bool, key: String? = nil) async {
+        var body: [String: Any] = ["t": t, "playing": playing]
+        if let key { body["url"] = key }
+        await post(host: host, "/video/clock", body)
     }
 
     static func control(host: String, _ action: String, t: Double? = nil) async {
@@ -136,6 +139,11 @@ final class VideoSound {
     /// Which video the player was started for, so "ready" seen twice starts
     /// it once, and a new link starts it again.
     private(set) var key = ""
+    private(set) var error: String?
+    @ObservationIgnored private var statusWatch: NSKeyValueObservation?
+    @ObservationIgnored private var clockTask: Task<Void, Never>?
+    @ObservationIgnored private var clockGeneration = UUID()
+    @ObservationIgnored private var pendingClock: (String, Double, Bool, String)?
 
     @ObservationIgnored private var player: AVPlayer?
     @ObservationIgnored private var observer: Any?
@@ -160,6 +168,7 @@ final class VideoSound {
             if started { stop() }
             return
         }
+        if started, key != v.url || self.host != host { stop() }
         guard v.status == "ready", v.phoneClock else { return }
         if v.sound {
             begin(host: host, key: v.url, source: .wall)
@@ -195,12 +204,26 @@ final class VideoSound {
             localFile = u
         }
         let session = AVAudioSession.sharedInstance()
-        try? session.setCategory(.playback, mode: .default)
-        try? session.setActive(true)
+        do {
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
+        } catch {
+            self.error = "The iPhone could not start sound: " + error.localizedDescription
+            return
+        }
         let item = AVPlayerItem(url: url)
         let p = AVPlayer(playerItem: item)
         p.automaticallyWaitsToMinimizeStalling = false
         player = p
+        error = nil
+        statusWatch = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            guard item.status == .failed else { return }
+            let message = item.error?.localizedDescription ?? "The sound could not be played."
+            Task { @MainActor in
+                self?.error = message
+                self?.pause()
+            }
+        }
         started = true
         observer = p.addPeriodicTimeObserver(forInterval: CMTime(seconds: 1, preferredTimescale: 600),
                                              queue: .main) { [weak self] t in
@@ -233,6 +256,8 @@ final class VideoSound {
     }
 
     func seek(to t: Double) {
+        guard t.isFinite else { return }
+        let t = max(0, t)
         time = t
         player?.seek(to: CMTime(seconds: t, preferredTimescale: 600),
                      toleranceBefore: .zero, toleranceAfter: .zero) { [weak self] _ in
@@ -245,6 +270,10 @@ final class VideoSound {
         if let e = endWatch { NotificationCenter.default.removeObserver(e) }
         observer = nil
         endWatch = nil
+        statusWatch = nil
+        clockGeneration = UUID()
+        clockTask?.cancel(); clockTask = nil; pendingClock = nil
+        error = nil
         player?.pause()
         player = nil
         started = false
@@ -253,7 +282,7 @@ final class VideoSound {
         key = ""
         if let f = localFile {
             // the original was kept only for its sound
-            try? FileManager.default.removeItem(at: f)
+            if VideoHandoff.ownsSource(f) { try? FileManager.default.removeItem(at: f) }
             localFile = nil
             if VideoHandoff.localSound?.url == f { VideoHandoff.localSound = nil }
         }
@@ -275,7 +304,15 @@ final class VideoSound {
     private func tell() {
         guard started, let p = player else { return }
         let t = p.currentTime().seconds
-        let h = host, on = playing
-        Task { await WallVideoLink.clock(host: h, t: t.isFinite ? t : 0, playing: on) }
+        pendingClock = (host, t.isFinite ? t : 0, playing, key)
+        guard clockTask == nil else { return }
+        let generation = clockGeneration
+        clockTask = Task { @MainActor [weak self] in
+            while let self, let sample = self.pendingClock, !Task.isCancelled, self.clockGeneration == generation {
+                self.pendingClock = nil
+                await WallVideoLink.clock(host: sample.0, t: sample.1, playing: sample.2, key: sample.3)
+            }
+            if self?.clockGeneration == generation { self?.clockTask = nil }
+        }
     }
 }

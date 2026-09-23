@@ -1,0 +1,13 @@
+{
+  "reviewed": "2026-09-23",
+  "units": ["C08", "C11"],
+  "references": [
+    {"unit":"C08","source":"Mobbin · Freeform","url":"https://mobbin.com/screens/614471f5-87b4-4ea3-9522-d35e7a559d6a","applied":"Keep artwork visible while editing typography; direct placement on the canvas and familiar alignment choices in the same editor."},
+    {"unit":"C08","source":"Mobbin · Craft","url":"https://mobbin.com/screens/b878c0d0-a1cf-4255-a8cc-bb1ef5b02ce0","applied":"One contextual tool area follows the current creative operation, with clear completion and history controls."},
+    {"unit":"C08","source":"Apple · Adopting system selection UI in custom text views","url":"https://developer.apple.com/documentation/uikit/adopting-system-selection-ui-in-custom-text-views","applied":"Native multiline text field retains paste, dictation, cursor, and selection rather than implementing a custom keyboard or editing menu."},
+    {"unit":"C11","source":"Mobbin · Canva","url":"https://mobbin.com/screens/dcf1216d-305d-439f-949d-6e803aa01b80","applied":"Named, image-led project tiles with contextual item actions; thumbnails show actual saved artwork."},
+    {"unit":"C11","source":"Mobbin · Unfold","url":"https://mobbin.com/screens/0c85b53c-f0e1-4b37-9468-5347e5d094fd","applied":"Quiet collection space and direct return to creation; separate project action menu from the large opening target."},
+    {"unit":"C11","source":"Apple · Undo and redo","url":"https://developer.apple.com/design/human-interface-guidelines/undo-and-redo","applied":"Deleting a saved piece shows the named outcome and an immediate Undo action; failed reads preserve original files."},
+    {"unit":"C08/C11","source":"Apple · Edit menus","url":"https://developer.apple.com/design/human-interface-guidelines/edit-menus","applied":"Avoid duplicate customizations; Create and Made share one Studio destination with contextual editing controls and no duplicate customization modal."}
+  ]
+}

@@ -13,7 +13,6 @@
 // currently on the wall lends its own palette, so what you make belongs to
 // the room it will hang in.
 
-import AVFoundation
 import Combine
 import PhotosUI
 import SwiftUI
@@ -172,147 +171,27 @@ final class WallCanvas {
         revision &+= 1
     }
 
-    /// Words are the third way of filling the canvas. Laid out in the wall's
-    /// own font at the largest scale that fits, wrapped and centred, over
-    /// whatever `base` already held so typing never destroys a drawing.
+    @discardableResult
     func stamp(text: String, over base: [UInt8], rgb: (UInt8, UInt8, UInt8),
-               size: Int? = nil, colors: [(UInt8, UInt8, UInt8)] = []) {
-        var out = base
-        let words = PixelFont.normalize(text)
-        guard !words.trimmingCharacters(in: .whitespaces).isEmpty else {
-            load(out)
-            return
-        }
-
-        // Overflow is answered by getting SMALLER, not by wrapping: the
-        // whole text on one line at the biggest size that holds it. Only
-        // when even the smallest type cannot hold the line does it wrap,
-        // whole words first, and a word is broken only when no size and no
-        // wrap can save it. "tesse / ra" is never the right rendering of a
-        // word that fits smaller.
-        let chosen = min(4, max(1, size ?? 4))
-        var scale = chosen
-        var lines: [String] = []
-        var settled = false
-        for s in stride(from: chosen, through: 1, by: -1)
-        where PixelFont.textWidth(words, scale: s) <= 62 {
-            lines = [words]
-            scale = s
-            settled = true
-            break
-        }
-        if !settled {
-            for s in stride(from: chosen, through: 1, by: -1) {
-                let rows = PixelFont.wrap(words, maxWidth: 62, scale: s)
-                let blockH = rows.count * (PixelFont.height * s + s) - s
-                let unbroken = rows.joined(separator: " ") == words
-                if blockH <= 62, unbroken {
-                    lines = rows
-                    scale = s
-                    settled = true
-                    break
-                }
-            }
-        }
-        while !settled && scale >= 1 {
-            lines = PixelFont.wrap(words, maxWidth: 62, scale: scale)
-            let blockHeight = lines.count * (PixelFont.height * scale + scale) - scale
-            let widest = lines.map { PixelFont.textWidth($0, scale: scale) }.max() ?? 0
-            if blockHeight <= 62 && widest <= 62 { break }
-            scale -= 1
-        }
-        scale = max(1, scale)
-
-        let lineStep = PixelFont.height * scale + scale
-        let blockHeight = lines.count * lineStep - scale
-        var y = max(1, (side - blockHeight) / 2)
-
-        var gi = 0
-        for line in lines {
-            let w = PixelFont.textWidth(line, scale: scale)
-            var x = (side - w) / 2
-            for ch in line {
-                let (rows, gw, adv, gdy) = PixelFont.cell(ch) ?? (PixelFont.box, 5, 6, 0)
-                let glyphInk: (UInt8, UInt8, UInt8)
-                if ch != " " {
-                    glyphInk = gi < colors.count ? colors[gi] : rgb
-                    gi += 1
-                } else {
-                    glyphInk = rgb
-                }
-                for (ry, mask) in rows.enumerated() {
-                    for rx in 0..<gw where mask & (1 << (gw - 1 - rx)) != 0 {
-                        for sy in 0..<scale {
-                            for sx in 0..<scale {
-                                let xx = x + rx * scale + sx
-                                let yy = y + (ry + gdy) * scale + sy
-                                guard xx >= 0, xx < side, yy >= 0, yy < side else { continue }
-                                let o = (yy * side + xx) * 3
-                                out[o] = glyphInk.0; out[o + 1] = glyphInk.1; out[o + 2] = glyphInk.2
-                            }
-                        }
-                    }
-                }
-                x += adv * scale
-            }
-            y += lineStep
-        }
-        load(out)
+               size: Int? = nil, colors: [(UInt8, UInt8, UInt8)] = [],
+               horizontal: Double = 0.5, vertical: Double = 0.5) -> LetteringLayout {
+        let layout = LetteringLayout(text: text, side: side, size: size ?? 4,
+                                     horizontal: horizontal, vertical: vertical)
+        load(layout.render(over: base, rgb: rgb, colors: colors))
+        return layout
     }
 
 }
 
 // MARK: - Kept work
-
-/// What you have made, stored on the device as raw frames. Small enough that
-/// the frames themselves are kept, which is why these tiles, unlike the
-/// Archive's, are exactly what the wall would light.
-@MainActor
-@Observable
-final class MadeStore {
-    private(set) var made: [Made] = []
-
-    struct Made: Identifiable, Equatable {
-        let id: String
-        let px: [UInt8]
-    }
-
-    private var dir: URL? {
-        try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask,
-                                     appropriateFor: nil, create: true)
-            .appendingPathComponent("made", isDirectory: true)
-    }
-
-    func load() {
-        guard let dir else { return }
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let files = (try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? []
-        made = files.sorted(by: >).prefix(24).compactMap { name in
-            guard let d = try? Data(contentsOf: dir.appendingPathComponent(name)),
-                  Panel.square(d.count) != nil else { return nil }
-            return Made(id: name, px: [UInt8](d))
-        }
-    }
-
-    func keep(_ px: [UInt8]) {
-        guard let dir else { return }
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let name = String(Int(Date().timeIntervalSince1970)) + "-" + UUID().uuidString
-        try? Data(px).write(to: dir.appendingPathComponent(name))
-        load()
-    }
-
-    func remove(_ id: String) {
-        guard let dir else { return }
-        try? FileManager.default.removeItem(at: dir.appendingPathComponent(id))
-        load()
-    }
-}
+// Saved documents live in MadeStore.swift.
 
 // MARK: - Screen
 
 struct StudioScreen: View {
     @Environment(\.dynamicTypeSize) private var typeSize
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(WallSession.self) private var wall
     @Environment(\.dismiss) private var dismiss
 
@@ -325,11 +204,16 @@ struct StudioScreen: View {
     var inline: Bool = false
 
     @State private var canvas = WallCanvas()
-    @State private var kept = MadeStore()
+    @State private var kept: MadeStore = {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("made-sample") {
+            return MadeStore(directory: FileManager.default.temporaryDirectory
+                .appendingPathComponent("tessera-qa-made-" + UUID().uuidString, isDirectory: true))
+        }
+        #endif
+        return MadeStore()
+    }()
     @State private var ink: (UInt8, UInt8, UInt8) = (255, 255, 255)
-    /// Whatever the picker last mixed, kept as a swatch of its own so a
-    /// custom colour survives switching away and back.
-    @State private var custom: Color = .white
     /// One hand, one tool. Pen, eraser and bucket are an exclusive set with
     /// the pen as home; a mode you can only leave by re-tapping the thing
     /// that put you in it is a trap, and both of these were.
@@ -346,11 +230,26 @@ struct StudioScreen: View {
     // onReceive, every drag stroke replaced the publisher and restarted its
     // interval, so the clip preview froze for as long as a finger moved.
     @State private var clipTimer = Timer.publish(
-        every: 1 / Clip.fps, on: .main, in: .common).autoconnect()
+        every: 1 / 60, on: .main, in: .common).autoconnect()
     /// A clip loaded from a video: previewed by playing on the canvas, sent
     /// whole. Empty for a still.
     @State private var clip: [[UInt8]] = []
     @State private var clipFrame = 0
+    @State private var clipFPS = Clip.fps
+    @State private var clipPlaying = true
+    @State private var clipTick: Date?
+    @State private var importProgress: Double = 0
+    @State private var importTask: Task<Void, Never>?
+    @State private var showingMade = false
+    @State private var creationTitle = ""
+    @State private var savedID: String?
+    @State private var savedTitle = ""
+    @State private var importID = UUID()
+    @State private var savedPixels: [UInt8]?
+    @State private var savedClip: [[UInt8]]?
+    @State private var horizontal = 0.5
+    @State private var vertical = 0.5
+    @State private var moveOrigin: (Double, Double)?
     @State private var loadingMedia = false
     /// Picked media, waiting to be aimed. Nil when there is nothing to aim.
     @State private var framing: FramingJob? = nil
@@ -372,234 +271,173 @@ struct StudioScreen: View {
     @FocusState private var typing: Bool
 
     var body: some View {
-        if inline { surface } else { screen }
+        Group { if inline { editor } else { screen } }
+            .onAppear(perform: prepare)
+            .fullScreenCover(item: $framing) { job in
+                Framing(source: job.source, accent: accent) {
+                    framing = nil; media = nil
+                } onUse: { frames in
+                    framing = nil; media = nil
+                    guard let first = frames.first else { return }
+                    leaveWords(); canvas.checkpoint()
+                    clip = frames.count > 1 ? frames : []
+                    clipFrame = 0; clipFPS = Clip.fps; clipPlaying = !reduceMotion
+                    canvas.load(first); savedID = nil; sent = false; sendError = nil
+                }
+            }
+            .onChange(of: media) { _, item in if let item { importMedia(item) } }
+            .onChange(of: canvas.revision) { _, _ in
+                if clip.isEmpty { sent = false; sendError = nil }
+            }
+            .onReceive(clipTimer) { now in
+                guard scenePhase == .active, clip.count > 1, clipPlaying, !writing, !showingMade else { clipTick = nil; return }
+                guard let tick = clipTick else { clipTick = now; return }
+                let advance = Int(max(0, now.timeIntervalSince(tick)) * clipFPS)
+                guard advance > 0 else { return }
+                clipTick = tick.addingTimeInterval(Double(advance) / clipFPS)
+                clipFrame = (clipFrame + advance) % clip.count
+                canvas.load(clip[clipFrame])
+            }
+            .onDisappear { importTask?.cancel() }
     }
 
-    /// The studio itself, with nothing around it.
-    private var surface: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 22) {
-                Button { leaveWords(); clip = []; canvas.undo() } label: {
-                    GlyphShape(glyph: .undo, lineWidth: 1.7).frame(width: 18, height: 18)
-                        .foregroundStyle(canvas.canUndo ? Ink.ink : Ink.faint)
-                }
-                .buttonStyle(PressStyle(scale: 0.88)).disabled(!canvas.canUndo)
-                .accessibilityLabel("Undo")
-                Button { leaveWords(); clip = []; canvas.redo() } label: {
-                    GlyphShape(glyph: .redo, lineWidth: 1.7).frame(width: 18, height: 18)
-                        .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
-                }
-                .buttonStyle(PressStyle(scale: 0.88)).disabled(!canvas.canRedo)
-                .accessibilityLabel("Redo")
-                Spacer()
-                Button {
-                    leaveWords(); canvas.checkpoint(); clip = []; canvas.clear()
-                } label: {
-                    Text("Clear").font(.ui(14, .medium))
-                        .foregroundStyle(canvas.isEmpty ? Ink.faint : accent)
-                }
-                .disabled(canvas.isEmpty)
-            }
-            board
-            if writing { compose }
-            inks
-            tools
-            penOptions
-            send
-            if !kept.made.isEmpty { keptStrip }
-        }
-        .onAppear {
-            kept.load()
-            // the album's colours, minus any that are already on the row: the
-            // stand-in's amber is the tile amber, and it showed up twice
-            var row: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
-            for c in roomPalette.prefix(3).map({ Self.rgb(of: $0) })
-            where !row.contains(where: { Self.near($0, c) }) { row.append(c) }
-            frozen = row
-        }
-        // Aiming happens on its own surface: it needs the whole screen and it
-        // is a decision, not an adjustment you leave half-made.
-        .fullScreenCover(item: $framing) { job in
-            Framing(source: job.source, accent: accent) {
-                framing = nil
-                media = nil
-            } onUse: { frames in
-                framing = nil
-                media = nil
-                canvas.checkpoint()
-                if frames.count > 1 {
-                    clip = frames
-                    clipFrame = 0
-                    canvas.load(frames[0])
-                } else if let one = frames.first {
-                    clip = []
-                    canvas.load(one)
-                }
-            }
-        }
-        .onChange(of: media) { _, item in
-            guard let item else { return }
-            loadingMedia = true
-            clip = []
-            leaveWords()
-            Task {
-                defer { loadingMedia = false }
-                // A movie first: if it transfers as one, it is one.
-                if let movie = try? await item.loadTransferable(type: Movie.self) {
-                    let frames = await Clip.frames(from: movie.url)
-                    try? FileManager.default.removeItem(at: movie.url)
-                    if !frames.isEmpty {
-                        framing = FramingJob(source: frames)
-                        Taps.detent(intensity: 0.5)
-                        return
+    private var editor: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            studioHeading
+            Picker("Studio section", selection: $showingMade) {
+                Text("Create").tag(false)
+                Text("Made · \(kept.made.count)").tag(true)
+            }.pickerStyle(.segmented)
+            if showingMade {
+                madeCollection
+            } else {
+                board
+                if !clip.isEmpty { clipTransport }
+                if writing { compose } else { penOptions }
+                inks
+                tools
+                if loadingMedia {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("Reading media").font(.ui(13, .medium)); Spacer()
+                            Button("Cancel") { importTask?.cancel(); importID = UUID(); media = nil; loadingMedia = false }
+                                .font(.ui(13, .medium)).foregroundStyle(accent)
+                        }
+                        ProgressView(value: importProgress).tint(accent)
                     }
                 }
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let img = UIImage(data: data), let cg = Clip.upright(img) {
-                    framing = FramingJob(source: [cg])
-                    Taps.detent(intensity: 0.5)
-                }
+                if let sendError { Text(sendError).font(.ui(13)).foregroundStyle(Ink.dim).accessibilityLabel(sendError) }
+                if let error = kept.error { Text(error).font(.ui(13)).foregroundStyle(Ink.dim) }
+                if inline { send }
             }
-        }
-        // Play the clip on the canvas so the preview is the thing itself.
-        .onReceive(clipTimer) { _ in
-            guard clip.count > 1, !writing else { return }
-            clipFrame = (clipFrame + 1) % clip.count
-            canvas.load(clip[clipFrame])
         }
     }
 
     private var screen: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    studioHeading
-                    board
-                    if writing { compose }
-                    penOptions
-                    inks
-                    tools
-                    if !kept.made.isEmpty { keptStrip }
+            ScrollView { editor.padding(.horizontal, 24).padding(.bottom, 32) }
+                .safeAreaInset(edge: .bottom) {
+                    if !showingMade {
+                        send.padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 8).background(Ink.ground)
+                    }
                 }
-                .padding(.horizontal, 24)
-                .padding(.bottom, 32)
-            }
-            .safeAreaInset(edge: .bottom) {
-                send.padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 8).background(Ink.ground)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .scrollIndicators(.hidden)
-            .background(Ink.ground.ignoresSafeArea())
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                        .font(.ui(15, .medium))
-                        .foregroundStyle(Ink.dim)
-                }
-                ToolbarItemGroup(placement: .principal) {
-                    HStack(spacing: 26) {
-                        Button {
-                            leaveWords(); clip = []; canvas.undo()
-                        } label: {
-                            GlyphShape(glyph: .undo, lineWidth: 1.7)
-                                .frame(width: 19, height: 19)
-                                .foregroundStyle(canvas.canUndo ? Ink.ink : Ink.faint)
-                        }
-                        .buttonStyle(PressStyle(scale: 0.88))
-                        .disabled(!canvas.canUndo)
-                        .accessibilityLabel("Undo")
+                .navigationBarTitleDisplayMode(.inline)
+                .scrollIndicators(.hidden)
+                .scrollDismissesKeyboard(.interactively)
+                .background(Ink.ground.ignoresSafeArea())
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Done") { dismiss() }.font(.ui(15, .medium)).foregroundStyle(Ink.dim)
+                    }
+                    ToolbarItemGroup(placement: .principal) {
+                        Button { leaveWords(); clip = []; canvas.undo() } label: {
+                            Image(systemName: "arrow.uturn.backward").frame(width: 32, height: 44)
+                        }.disabled(!canvas.canUndo || showingMade).accessibilityLabel("Undo canvas change")
+                        Button { leaveWords(); clip = []; canvas.redo() } label: {
+                            Image(systemName: "arrow.uturn.forward").frame(width: 32, height: 44)
+                        }.disabled(!canvas.canRedo || showingMade).accessibilityLabel("Redo canvas change")
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Clear") {
+                            leaveWords(); canvas.checkpoint(); clip = []; canvas.clear(); savedID = nil
+                        }.font(.ui(15, .medium)).disabled(canvas.isEmpty || showingMade)
+                    }
+                }.tint(accent)
+        }.preferredColorScheme(.dark).presentationBackground(Ink.ground)
+    }
 
-                        Button {
-                            leaveWords(); clip = []; canvas.redo()
-                        } label: {
-                            GlyphShape(glyph: .redo, lineWidth: 1.7)
-                                .frame(width: 19, height: 19)
-                                .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
-                        }
-                        .buttonStyle(PressStyle(scale: 0.88))
-                        .disabled(!canvas.canRedo)
-                        .accessibilityLabel("Redo")
-                    }
+    private func prepare() {
+        kept.load()
+        guard frozen.isEmpty else { return }
+        var row: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
+        for color in roomPalette.prefix(3).map({ Self.rgb(of: $0) })
+        where !row.contains(where: { Self.near($0, color) }) { row.append(color) }
+        frozen = row
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        if let index = args.firstIndex(of: "-studio-tool"), args.indices.contains(index + 1) {
+            switch args[index + 1] {
+            case "lettering":
+                beginWords(focus: false); words = "MAKE\nLIGHT"; wordScale = 2
+                wordColors = Array(repeating: "#E8B04B", count: 4) + Array(repeating: "#F7EDDC", count: 5)
+                creationTitle = "Make light"; restamp()
+            case "framing": framing = FramingJob(source: [MediaQA.source()])
+            case "made": showingMade = true
+            case "made-sample":
+                let side = canvas.side, blank = canvas.px
+                let first = LetteringLayout(text: "MAKE\nLIGHT", side: side, size: 2)
+                    .render(over: blank, rgb: (247, 237, 220), colors: Array(repeating: (232, 176, 75), count: 4))
+                let second = LetteringLayout(text: "STAY\nLATE", side: side, size: 2)
+                    .render(over: blank, rgb: (119, 164, 156))
+                _ = kept.keep([first], title: "Make light")
+                _ = kept.keep([second], title: "Stay late")
+                var frames: [[UInt8]] = []
+                for phase in 0..<24 {
+                    var px = blank
+                    for y in 0..<side { for x in 0..<side {
+                        let offset = (y * side + x) * 3
+                        let light = 0.5 + 0.5 * sin(Double(x + y) / Double(side) * .pi * 3 + Double(phase) / 24 * .pi * 2)
+                        px[offset] = UInt8(35 + light * 130); px[offset + 1] = UInt8(42 + light * 48); px[offset + 2] = UInt8(70 + light * 42)
+                    } }
+                    frames.append(px)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Clear") {
-                        leaveWords(); canvas.checkpoint()
-                        clip = []
-                        canvas.clear()
-                    }
-                    .font(.ui(15, .medium))
-                    .foregroundStyle(canvas.isEmpty ? Ink.faint : accent)
-                    .disabled(canvas.isEmpty)
-                }
+                _ = kept.keep(frames, fps: 12, title: "Evening tide")
+                showingMade = true
+            default: break
             }
         }
-        .preferredColorScheme(.dark)
-        .presentationBackground(Ink.ground)
-        .onAppear {
-            kept.load()
-            // the album's colours, minus any that are already on the row: the
-            // stand-in's amber is the tile amber, and it showed up twice
-            var row: [(UInt8, UInt8, UInt8)] = [(255, 255, 255), (232, 176, 75)]
-            for c in roomPalette.prefix(3).map({ Self.rgb(of: $0) })
-            where !row.contains(where: { Self.near($0, c) }) { row.append(c) }
-            frozen = row
-        }
-        // Aiming happens on its own surface: it needs the whole screen and it
-        // is a decision, not an adjustment you leave half-made.
-        .fullScreenCover(item: $framing) { job in
-            Framing(source: job.source, accent: accent) {
-                framing = nil
-                media = nil
-            } onUse: { frames in
-                framing = nil
-                media = nil
-                canvas.checkpoint()
-                if frames.count > 1 {
-                    clip = frames
-                    clipFrame = 0
-                    canvas.load(frames[0])
-                } else if let one = frames.first {
-                    clip = []
-                    canvas.load(one)
+        #endif
+    }
+
+    private func importMedia(_ item: PhotosPickerItem) {
+        importTask?.cancel(); importID = UUID(); let requestID = importID
+        loadingMedia = true; importProgress = 0; sendError = nil
+        importTask = Task {
+            defer { if importID == requestID { loadingMedia = false } }
+            do {
+                if item.supportedContentTypes.contains(where: { $0.conforms(to: .movie) }) {
+                    guard let movie = try await item.loadTransferable(type: Movie.self) else { throw Clip.Failure.unreadable }
+                    defer { try? FileManager.default.removeItem(at: movie.url) }
+                    let frames = try await Clip.decode(from: movie.url) { if importID == requestID { importProgress = $0 } }
+                    try Task.checkCancellation()
+                    framing = FramingJob(source: frames)
+                } else {
+                    guard let data = try await item.loadTransferable(type: Data.self), let image = UIImage(data: data),
+                          let upright = Clip.upright(image) else { throw Clip.Failure.unreadable }
+                    try Task.checkCancellation()
+                    framing = FramingJob(source: [upright]); importProgress = 1
                 }
-            }
-        }
-        .onChange(of: media) { _, item in
-            guard let item else { return }
-            loadingMedia = true
-            clip = []
-            leaveWords()
-            Task {
-                defer { loadingMedia = false }
-                // A movie first: if it transfers as one, it is one.
-                if let movie = try? await item.loadTransferable(type: Movie.self) {
-                    let frames = await Clip.frames(from: movie.url)
-                    try? FileManager.default.removeItem(at: movie.url)
-                    if !frames.isEmpty {
-                        framing = FramingJob(source: frames)
-                        Taps.detent(intensity: 0.5)
-                        return
-                    }
-                }
-                if let data = try? await item.loadTransferable(type: Data.self),
-                   let img = UIImage(data: data), let cg = Clip.upright(img) {
-                    framing = FramingJob(source: [cg])
-                    Taps.detent(intensity: 0.5)
-                }
-            }
-        }
-        // Play the clip on the canvas so the preview is the thing itself.
-        .onReceive(clipTimer) { _ in
-            guard clip.count > 1, !writing else { return }
-            clipFrame = (clipFrame + 1) % clip.count
-            canvas.load(clip[clipFrame])
+                Taps.detent()
+            } catch is CancellationError { }
+            catch { if !Task.isCancelled && importID == requestID { sendError = "Couldn’t open this media. " + error.localizedDescription; Taps.error() } }
+            if importID == requestID { media = nil }
         }
     }
 
     // MARK: Board
 
-    /// You are not editing a picture that becomes a frame. You are lighting
-    /// the frame, so the canvas is drawn in emitters at all times.
+    /// Exact native pixels by default; the optional emitter simulation is
+    /// labeled separately because software cannot certify physical LED colour.
     private var board: some View {
         GeometryReader { geo in
             SwiftUI.Canvas { ctx, size in
@@ -638,6 +476,15 @@ struct StudioScreen: View {
             .highPriorityGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
+                        if writing {
+                            if moveOrigin == nil { moveOrigin = (horizontal, vertical) }
+                            if let origin = moveOrigin {
+                                horizontal = min(1, max(0, origin.0 + g.translation.width / geo.size.width))
+                                vertical = min(1, max(0, origin.1 + g.translation.height / geo.size.height))
+                                restamp()
+                            }
+                            return
+                        }
                         if lastF == nil {
                             Taps.warm()
                             if tool != .fill { canvas.checkpoint() }
@@ -662,6 +509,7 @@ struct StudioScreen: View {
                         lastF = (fx, fy)
                     }
                     .onEnded { g in
+                        if writing { moveOrigin = nil; Taps.detent(); return }
                         lastF = nil
                         if tool == .fill {
                             let cell = geo.size.width / CGFloat(canvas.side)
@@ -675,7 +523,7 @@ struct StudioScreen: View {
                         }
                     }
             )
-            .accessibilityLabel("Canvas, \(canvas.side) by \(canvas.side) tiles. Draw with one finger.")
+            .accessibilityLabel("Canvas, \(canvas.side) by \(canvas.side) pixels. \(writing ? "Drag to place your lettering, or use the alignment and height controls below." : "Draw with one finger.")")
         }
         .aspectRatio(1, contentMode: .fit)
         .overlay {
@@ -689,7 +537,7 @@ struct StudioScreen: View {
         .padding(1)
         .background(Ink.ink.opacity(0.2), in: RoundedRectangle(cornerRadius: 5))
         .clipShape(RoundedRectangle(cornerRadius: 5))
-        .onChange(of: canvas.revision) { _, _ in sent = false; sendError = nil }
+
     }
 
     private var studioHeading: some View {
@@ -699,7 +547,7 @@ struct StudioScreen: View {
                 VStack(alignment: .leading, spacing: 8) { studioTitle; canvasSize }
             }
             HStack {
-                Text(canvas.isEmpty ? "A little room for your imagination." : "Every pixel is yours.").font(.ui(13)).foregroundStyle(Ink.dim)
+                Text(showingMade ? "Your little collection of light." : writing ? "Drag the words into place." : clip.isEmpty ? "Every pixel is yours." : "A moving picture, made for your wall.").font(.ui(13)).foregroundStyle(Ink.dim)
                 Spacer()
                 Button { emitterPreview.toggle() } label: {
                     Image(systemName: emitterPreview ? "square.grid.3x3.fill" : "square.fill")
@@ -711,7 +559,7 @@ struct StudioScreen: View {
     }
 
     private var studioTitle: some View {
-        Text("Studio").font(.display(typeSize.isAccessibilitySize ? 20 : 38)).foregroundStyle(Ink.ink)
+        Text(showingMade ? "Made" : "Studio").font(.display(typeSize.isAccessibilitySize ? 20 : 38)).foregroundStyle(Ink.ink)
             .fixedSize(horizontal: true, vertical: false)
     }
     private var canvasSize: some View {
@@ -759,32 +607,10 @@ struct StudioScreen: View {
             }
             } }.scrollIndicators(.hidden).frame(height: 44)
             ColorPicker("Custom ink", selection: Binding(get: { inkColor }, set: { value in
-                ink = Self.rgb(of: value); custom = value
+                ink = Self.rgb(of: value)
                 if tool == .erase { tool = .pen }
             }), supportsOpacity: false).labelsHidden().frame(width: 44, height: 44)
         }
-    }
-
-    private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
-        let on = tool != .erase && rgb == ink
-        return Button {
-            ink = rgb
-            // choosing a colour is choosing to make marks, not unmake them;
-            // the bucket keeps it, since a pour has a colour too
-            if tool == .erase { tool = .pen }
-        } label: {
-            Circle()
-                .fill(Color(red: Double(rgb.0) / 255,
-                            green: Double(rgb.1) / 255,
-                            blue: Double(rgb.2) / 255))
-                .frame(width: 34, height: 34)
-                .overlay {
-                    Circle().strokeBorder(on ? Ink.ink : .clear, lineWidth: 2).padding(-4)
-                }
-        }
-        .buttonStyle(PressStyle())
-        .accessibilityLabel("Ink")
-        .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
     }
 
     static func rgb(of c: Color) -> (UInt8, UInt8, UInt8) {
@@ -806,84 +632,102 @@ struct StudioScreen: View {
     private var tools: some View {
         HStack(spacing: 12) {
             Button {
-                if writing { leaveWords() }
-                else {
-                    tool = .pen; canvas.checkpoint(); beneath = canvas.px
-                    writing = true; typing = true
-                }
+                if writing { leaveWords() } else { beginWords() }
             } label: {
-                Label(writing ? "Finish lettering" : "Add lettering", systemImage: "textformat")
-                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 44)
+                Label(writing ? "Keep lettering" : "Lettering", systemImage: writing ? "checkmark" : "textformat")
+                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 48)
             }.buttonStyle(PressStyle()).foregroundStyle(writing ? accent : Ink.dim)
             PhotosPicker(selection: $media, matching: .any(of: [.images, .videos])) {
-                Label(loadingMedia ? "Reading media…" : "Import media", systemImage: "photo.on.rectangle")
-                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 44)
+                Label("Import", systemImage: "photo.on.rectangle")
+                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 48)
                     .foregroundStyle(Ink.dim)
-            }
+            }.disabled(loadingMedia)
         }
     }
 
-    /// The wall's own font, so what you type here is what it letters.
+    private func beginWords(focus: Bool = true) {
+        tool = .pen; clip = []; canvas.checkpoint(); beneath = canvas.px
+        words = ""; wordColors = []; horizontal = 0.5; vertical = 0.5
+        writing = true; typing = focus
+    }
+
+    private var lettering: LetteringLayout {
+        LetteringLayout(text: words, side: canvas.side, size: wordSize,
+                        horizontal: horizontal, vertical: vertical)
+    }
+
+    private func restamp() {
+        guard writing else { return }
+        canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
+                     colors: wordInks, horizontal: horizontal, vertical: vertical)
+    }
+
     private var compose: some View {
-        VStack(alignment: .leading, spacing: 10) {
-        HStack(spacing: 12) {
-            TextField("say something", text: $words)
-                .font(.machine(14))
-                .foregroundStyle(Ink.ink)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .focused($typing)
-                .submitLabel(.done)
-                .padding(.vertical, 12)
-                .padding(.horizontal, 14)
-                .background(Ink.sunk)
-                .overlay { RoundedRectangle(cornerRadius: Round.control).strokeBorder(Ink.hairline, lineWidth: 1) }
-
-            Button {
-                words = ""
-                canvas.load(beneath)
-            } label: {
-                Text("undo")
-                    .font(.ui(13, .medium))
-                    .foregroundStyle(Ink.dim)
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Lettering").font(.ui(18, .semibold)).foregroundStyle(Ink.ink)
+                Spacer()
+                Text("\(words.count) / 96").font(.machine(10)).foregroundStyle(Ink.dim)
             }
-            .buttonStyle(.plain)
-        }
-        // The size is a choice, not a consequence of how much you typed;
-        // the stamp still refuses to let it overflow the panel.
-        SizeRail(value: wordSize, ink: inkColor) { wordScale = Double($0) }
-
-        // The same inker the wall's words use: both buttons, one language.
-        if words.contains(where: { $0 != " " }) {
-            LetterInker(text: words, colors: wordColors, accent: inkColor) {
-                wordColors = $0
+            TextField("Make yourself at home", text: $words, axis: .vertical)
+                .lineLimit(1...3).font(.ui(20, .medium)).foregroundStyle(Ink.ink)
+                .textInputAutocapitalization(.never).autocorrectionDisabled().focused($typing)
+                .padding(16).background(Ink.sunk, in: RoundedRectangle(cornerRadius: 12))
+                .accessibilityLabel("Words on your canvas")
+            HStack {
+                Text("Size").font(.ui(13, .medium)).foregroundStyle(Ink.dim)
+                Spacer()
+                Text(lettering.fits ? "\(lettering.scale * 7) px tall" : "Shorten your words to fit")
+                    .font(.machine(10)).foregroundStyle(lettering.fits ? Ink.dim : accent)
             }
-        }
+            SizeRail(value: wordSize, ink: inkColor) { wordScale = Double($0) }
+            HStack(spacing: 8) {
+                alignmentButton("Left", "text.alignleft", value: 0)
+                alignmentButton("Center", "text.aligncenter", value: 0.5)
+                alignmentButton("Right", "text.alignright", value: 1)
+            }
+            HStack {
+                Text("Height").font(.ui(13, .medium)).foregroundStyle(Ink.dim)
+                Slider(value: $vertical, in: 0...1).tint(accent).accessibilityLabel("Vertical position")
+                Button("Reset") { horizontal = 0.5; vertical = 0.5 }.font(.ui(12, .medium)).foregroundStyle(accent)
+            }
+            if lettering.scale < lettering.requestedScale && lettering.fits {
+                Text("Sized down to keep every letter on the wall.").font(.ui(12)).foregroundStyle(Ink.dim)
+            }
+            if words.contains(where: { !$0.isWhitespace }) {
+                LetterInker(text: words, colors: wordColors, accent: inkColor, base: inkColor.wallHex) { wordColors = $0 }
+            }
+            Button("Remove this lettering") { canvas.load(beneath); writing = false; typing = false }
+                .font(.ui(13, .medium)).foregroundStyle(Ink.dim).frame(minHeight: 44)
         }
         .onChange(of: words) { _, new in
-            canvas.stamp(text: new, over: beneath, rgb: ink, size: wordSize,
-                         colors: wordInks)
+            if new.count > 96 { words = String(new.prefix(96)) }
+            restamp()
         }
-        .onChange(of: wordScale) { _, _ in
-            Taps.detent(intensity: 0.4)
-            canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
-                         colors: wordInks)
-        }
-        .onChange(of: wordColors) { _, _ in
-            canvas.stamp(text: words, over: beneath, rgb: ink, size: wordSize,
-                         colors: wordInks)
-        }
-        // The return key puts the KEYBOARD away, nothing else: you stay on
-        // words, where the size rail and the letter inks still apply to what
-        // you just typed. Words mode ends when you pick another tool.
-        .onSubmit { typing = false }
-        .transition(.opacity)
+        .onChange(of: wordScale) { _, _ in Taps.detent(intensity: 0.4); restamp() }
+        .onChange(of: wordColors) { _, _ in restamp() }
+        .onChange(of: horizontal) { _, _ in restamp() }
+        .onChange(of: vertical) { _, _ in restamp() }
+        .onChange(of: ink.0) { _, _ in restamp() }
+        .onChange(of: ink.1) { _, _ in restamp() }
+        .onChange(of: ink.2) { _, _ in restamp() }
+        .onSubmit { typing = false }.transition(.opacity)
+    }
+
+    private func alignmentButton(_ title: String, _ symbol: String, value: Double) -> some View {
+        Button { horizontal = value; Taps.detent() } label: {
+            Image(systemName: symbol).font(.system(size: 17, weight: .medium))
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .foregroundStyle(horizontal == value ? Ink.ground : Ink.dim)
+                .background(horizontal == value ? accent : Ink.sunk, in: RoundedRectangle(cornerRadius: 10))
+        }.buttonStyle(PressStyle()).accessibilityLabel("Align \(title)")
+            .accessibilityAddTraits(horizontal == value ? .isSelected : [])
     }
 
     private var wordSize: Int { Int(wordScale) }
 
     private var wordInks: [(UInt8, UInt8, UInt8)] {
-        wordColors.compactMap { Color(wallHex: $0) }.map { Self.rgb(of: $0) }
+        wordColors.map { hex in Color(wallHex: hex).map { Self.rgb(of: $0) } ?? ink }
     }
 
     /// The pen's own pocket: how it marks, and its two alter egos. Lives
@@ -919,30 +763,6 @@ struct StudioScreen: View {
         }.buttonStyle(PressStyle()).accessibilityAddTraits(tool == value ? .isSelected : [])
     }
 
-    private var seatRule: some View {
-        Rectangle().fill(Ink.hairline).frame(width: 1, height: 22)
-    }
-
-    private func pocketSeat(label: String, on: Bool,
-                            _ action: @escaping () -> Void,
-                            @ViewBuilder icon: () -> some View) -> some View {
-        Button(action: action) {
-            HStack(spacing: 9) {
-                icon()
-                Text(label)
-                    .font(.machine(11))
-                    .textCase(.uppercase)
-                    .foregroundStyle(on ? Ink.ink : Ink.dim)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(on ? Ink.ink.opacity(0.07) : .clear)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PressStyle(scale: 0.97))
-        .clipShape(Capsule())
-    }
-
-
     /// Words mode ends the moment you reach for anything else. What was
     /// typed stays on the canvas as tiles; only the re-stamping stops, so a
     /// later brushstroke can never be wiped by an old text field.
@@ -952,28 +772,52 @@ struct StudioScreen: View {
         typing = false
     }
 
-    // MARK: Send
+    // MARK: Send and keep
+
+    private var canSend: Bool { (!canvas.isEmpty || !clip.isEmpty) && (!writing || lettering.fits) }
+    private var isSaved: Bool {
+        savedID != nil && savedTitle == titleForSave && (clip.isEmpty ? savedPixels == canvas.px : savedClip == clip)
+    }
+    private var titleForSave: String {
+        let title = creationTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !title.isEmpty { return title }
+        if writing && !words.isEmpty { return words.replacingOccurrences(of: "\n", with: " ") }
+        return clip.isEmpty ? "Untitled study" : "Moving study"
+    }
+
+    private func saveCreation() {
+        let frames = clip.isEmpty ? [canvas.px] : clip
+        if let saved = kept.keep(frames, fps: clipFPS, title: titleForSave) {
+            savedID = saved.id; savedTitle = titleForSave; savedPixels = canvas.px; savedClip = clip
+            Taps.commit()
+        } else { Taps.error() }
+    }
 
     private var send: some View {
         VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                TextField("Name this creation", text: $creationTitle)
+                    .font(.ui(13)).foregroundStyle(Ink.ink).lineLimit(1)
+                    .onChange(of: creationTitle) { _, value in if value.count > 80 { creationTitle = String(value.prefix(80)) } }
+                Button(isSaved ? "Saved" : "Save") { saveCreation() }
+                    .font(.ui(13, .semibold)).foregroundStyle(isSaved ? Ink.dim : accent)
+                    .frame(minWidth: 48, minHeight: 44).disabled(!canSend || isSaved)
+            }
             Button {
-                guard !canvas.isEmpty, !sending else { return }
-                let pixels = canvas.px
-                let revision = canvas.revision
-                if clip.count > 1 {
-                    wall.pushClip(clip, fps: Clip.fps)
-                    kept.keep(pixels)
-                    return
-                }
+                guard canSend, !sending else { return }
+                let pixels = canvas.px, movie = clip, revision = canvas.revision
+                let title = titleForSave, fps = clipFPS, alreadySaved = isSaved
                 sending = true; sendError = nil
                 Task {
-                    let ok = await wall.sendDrawing(pixels)
+                    let ok = movie.isEmpty ? await wall.sendDrawing(pixels) : await wall.sendClip(movie, fps: fps)
                     sending = false
                     if ok {
-                        kept.keep(pixels)
-                        sent = revision == canvas.revision
+                        sent = movie.isEmpty ? revision == canvas.revision : movie == clip
+                        if !alreadySaved, let saved = kept.keep(movie.isEmpty ? [pixels] : movie, fps: fps, title: title), sent {
+                            savedID = saved.id; savedTitle = title; savedPixels = pixels; savedClip = movie
+                        }
                     } else {
-                        sendError = "Couldn’t reach the wall. Your drawing is safe here; tap to try again."
+                        sendError = "Couldn’t reach the wall. Your creation is safe here; tap to try again."
                         Taps.error()
                     }
                 }
@@ -981,185 +825,111 @@ struct StudioScreen: View {
                 HStack(spacing: 10) {
                     if sending { ProgressView().tint(Ink.ground) }
                     else { Image(systemName: sent ? "checkmark" : "arrow.up.right") }
-                    Text(sending ? "Sending…" : sent ? (wall.link.isStandIn ? "Phone preview" : "Sent to wall") : sendError != nil ? "Try again" : clip.count > 1 ? "Play clip" : "Send drawing")
-                }.font(.ui(typeSize.isAccessibilitySize ? 14 : 16, .semibold)).foregroundStyle(canvas.isEmpty ? Ink.faint : Ink.ground)
+                    Text(sending ? "Sending…" : sent ? (wall.link.isStandIn ? "Phone preview" : "On the wall") : sendError != nil ? "Try again" : clip.count > 1 ? "Play on wall" : "Send to wall")
+                }.font(.ui(typeSize.isAccessibilitySize ? 14 : 16, .semibold))
+                    .foregroundStyle(canSend ? Ink.ground : Ink.faint)
                     .frame(maxWidth: .infinity, minHeight: 56)
-                    .background(canvas.isEmpty ? Ink.sunk : accent, in: RoundedRectangle(cornerRadius: 16))
-            }.buttonStyle(PressStyle()).disabled(canvas.isEmpty || sending)
-            if let sendError { Text(sendError).font(.ui(13)).foregroundStyle(Ink.dim) }
+                    .background(canSend ? accent : Ink.sunk, in: RoundedRectangle(cornerRadius: 16))
+            }.buttonStyle(PressStyle()).disabled(!canSend || sending)
         }
     }
 
-    // MARK: Kept
+    private var clipTransport: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Button { clipPlaying.toggle() } label: {
+                    Image(systemName: clipPlaying ? "pause.fill" : "play.fill").frame(width: 44, height: 44)
+                }.foregroundStyle(accent).accessibilityLabel(clipPlaying ? "Pause clip preview" : "Play clip preview")
+                Slider(value: Binding(get: { Double(clipFrame) }, set: { value in
+                    clipPlaying = false; clipFrame = min(clip.count - 1, max(0, Int(value))); canvas.load(clip[clipFrame])
+                }), in: 0...Double(max(1, clip.count - 1)), step: 1).tint(accent).accessibilityLabel("Clip frame")
+                Text(String(format: "%.1f / %.1fs", Double(clipFrame) / clipFPS, Double(clip.count) / clipFPS))
+                    .font(.machine(10)).foregroundStyle(Ink.dim)
+            }
+            Text("Silent clip · drawing on it keeps the current frame as a still.")
+                .font(.ui(12)).foregroundStyle(Ink.dim)
+        }
+    }
 
-    private var keptStrip: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("made")
-                .font(.ui(12, .medium))
-                .foregroundStyle(Ink.dim)
-            ScrollView(.horizontal) {
-                HStack(spacing: 8) {
-                    ForEach(kept.made) { m in
-                        Group {
-                            if let img = EmitterTile.render(m.px, cell: 3) {
-                                Image(uiImage: img).interpolation(.high).resizable()
-                            } else {
-                                Color.black
-                            }
-                        }
-                        .frame(width: 76, height: 76)
-                        .onTapGesture {
-                            Taps.detent()
-                            canvas.checkpoint()
-                            canvas.load(m.px)
-                        }
-                        .contextMenu {
-                            Button("Delete", role: .destructive) { kept.remove(m.id) }
-                        }
-                        .accessibilityLabel("Something you made. Tap to load it back.")
-                    }
+    // MARK: Collection, in the same Studio
+
+    private var madeCollection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            if let error = kept.error {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(error).font(.ui(13)).foregroundStyle(Ink.dim)
+                    Button("Read again") { kept.load() }.foregroundStyle(accent)
                 }
             }
-            .scrollIndicators(.hidden)
-        }
-    }
-}
-
-/// The brush shows its own footprint rather than a picture of a brush: one
-/// tile, or the five it actually lights. The control is the thing it does.
-private struct BrushButton: View {
-    let thick: Bool
-    let accent: Color
-    var action: () -> Void
-
-    var body: some View {
-        Button {
-            action()
-        } label: {
-            VStack(spacing: 8) {
-                ZStack {
-                    Circle().fill(Ink.sunk)
-                    Circle().strokeBorder(Ink.hairline, lineWidth: 1)
-                    SwiftUI.Canvas { ctx, size in
-                        let cell = size.width / 5
-                        let r = cell * 0.36
-                        let cells: [(Int, Int)] = thick
-                            ? [(2, 1), (1, 2), (2, 2), (3, 2), (2, 3)]
-                            : [(2, 2)]
-                        for (x, y) in cells {
-                            let cx = CGFloat(x) * cell + cell / 2
-                            let cy = CGFloat(y) * cell + cell / 2
-                            ctx.fill(
-                                Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2)),
-                                with: .color(accent)
-                            )
-                        }
-                    }
-                    .frame(width: 30, height: 30)
+            if let title = kept.removedTitle {
+                HStack {
+                    Text("Deleted \(title)").font(.ui(13)).foregroundStyle(Ink.dim)
+                    Spacer(); Button("Undo") { kept.undoRemove() }.font(.ui(13, .semibold)).foregroundStyle(accent)
+                }.padding(14).background(Ink.sunk, in: RoundedRectangle(cornerRadius: 12))
+            }
+            if kept.made.isEmpty {
+                VStack(alignment: .leading, spacing: 20) {
+                    Image(systemName: "square.stack.3d.up").font(.system(size: 38, weight: .ultraLight)).foregroundStyle(accent)
+                    Text("Keep a little light.").font(.display(30)).foregroundStyle(Ink.ink)
+                    Text("Save your drawings, lettering, photos and moving studies here. They stay on this iPhone, ready for another evening.")
+                        .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                    Button("Make your first piece") { showingMade = false }.font(.ui(15, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
+                }.padding(.vertical, 32)
+            } else {
+                Text("Tap a piece to bring it back to your canvas.").font(.ui(13)).foregroundStyle(Ink.dim)
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 24) {
+                    ForEach(kept.made) { item in madeTile(item) }
                 }
-                .frame(width: 54, height: 54)
-                Text(thick ? "wide" : "fine")
-                    .font(.machine(9))
-                    .textCase(.uppercase)
-                    .foregroundStyle(Ink.faint)
             }
         }
-        .buttonStyle(PressStyle())
-        .accessibilityLabel(thick ? "Wide brush" : "Fine brush")
     }
+
+    private func madeTile(_ item: MadeStore.Made) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button { openCreation(item) } label: {
+                Group {
+                    if let image = MediaRaster.image(item.px) {
+                        Image(decorative: image, scale: 1).resizable().interpolation(.none).aspectRatio(1, contentMode: .fit)
+                    } else { Color.black.aspectRatio(1, contentMode: .fit) }
+                }.overlay(alignment: .bottomLeading) {
+                    if item.animated {
+                        Label(String(format: "%.1fs", item.duration), systemImage: "play.fill")
+                            .font(.machine(10)).padding(8).foregroundStyle(.white).background(.black.opacity(0.7))
+                    }
+                }.clipShape(RoundedRectangle(cornerRadius: 5))
+            }.buttonStyle(PressStyle()).accessibilityLabel("Open \(item.title), \(item.animated ? "animated clip" : "still artwork")")
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(item.title).font(.ui(14, .medium)).foregroundStyle(Ink.ink).lineLimit(2)
+                    Text("\(item.animated ? "Clip" : "Still") · \(item.side) × \(item.side)")
+                        .font(.machine(9)).foregroundStyle(Ink.dim)
+                }
+                Spacer(minLength: 0)
+                Menu {
+                    Button("Open in Studio", systemImage: "pencil") { openCreation(item) }
+                    Button("Delete", systemImage: "trash", role: .destructive) { kept.remove(item) }
+                } label: {
+                    Image(systemName: "ellipsis").frame(width: 44, height: 44).foregroundStyle(Ink.dim)
+                }.accessibilityLabel("Actions for \(item.title)")
+            }
+        }
+    }
+
+    private func openCreation(_ item: MadeStore.Made) {
+        guard let content = kept.content(item), let first = content.frames.first else { Taps.error(); return }
+        leaveWords(); canvas.checkpoint(); canvas.load(first)
+        // Resample every animation frame into this canvas, never only its poster.
+        if content.frames.count > 1 {
+            clip = content.frames.map { frame in canvas.load(frame); return canvas.px }
+            canvas.load(clip[0])
+        } else { clip = [] }
+        clipFPS = content.fps; clipFrame = 0; clipPlaying = !reduceMotion
+        savedID = item.id; savedPixels = canvas.px; savedClip = clip
+        creationTitle = item.title; savedTitle = item.title; showingMade = false; sent = false; sendError = nil
+        Taps.detent()
+    }
+
 }
-
-// MARK: - Media
-
-/// Video, reduced to what a wall of 4,096 tiles can actually show.
-///
-/// Not a video editor. AlbumWall grew a trim rail, a crop viewport and an
-/// fps picker, which is a lot of interface for a thing that ends as twelve
-/// thousand bytes a frame. Here a clip is a clip: the first few seconds,
-/// aimed once in Framing, sampled to the panel's own resolution, previewed by
-/// playing it on the canvas, and sent whole.
-enum Clip {
-    static let fps: Double = 12
-    static let maxFrames = 120        // ten seconds; the brain's ceiling is 240
-
-    /// Frames as they came out of the video, small but uncropped: aiming the
-    /// panel is Framing's job and it cannot un-crop what this threw away.
-    static func frames(from url: URL) async -> [CGImage] {
-        let asset = AVURLAsset(url: url)
-        guard let duration = try? await asset.load(.duration) else { return [] }
-        let seconds = min(CMTimeGetSeconds(duration), Double(maxFrames) / fps)
-        guard seconds > 0 else { return [] }
-
-        let gen = AVAssetImageGenerator(asset: asset)
-        gen.appliesPreferredTrackTransform = true      // portrait stays upright
-        gen.requestedTimeToleranceBefore = .zero
-        gen.requestedTimeToleranceAfter = CMTime(value: 1, timescale: 60)
-        gen.maximumSize = CGSize(width: 256, height: 256)
-
-        let count = max(1, Int(seconds * fps))
-        let times = (0..<count).map {
-            NSValue(time: CMTime(seconds: Double($0) / fps, preferredTimescale: 600))
-        }
-
-        var out: [CGImage] = []
-        for value in times {
-            guard let cg = try? await gen.image(at: value.timeValue).image else { continue }
-            out.append(cg)
-        }
-        return out
-    }
-
-    /// A photo, redrawn upright and cut down to something a gesture can
-    /// resample sixty times a second. UIImage carries rotation as a flag
-    /// rather than in its pixels, so a portrait shot handed straight to Core
-    /// Graphics arrives on its side; this is where that gets settled.
-    static func upright(_ image: UIImage, max side: CGFloat = 1200) -> CGImage? {
-        let w = image.size.width, h = image.size.height
-        guard w > 0, h > 0 else { return nil }
-        let k = min(1, side / max(w, h))
-        let size = CGSize(width: (w * k).rounded(), height: (h * k).rounded())
-        let fmt = UIGraphicsImageRendererFormat.default()
-        fmt.scale = 1
-        fmt.opaque = true
-        return UIGraphicsImageRenderer(size: size, format: fmt).image { _ in
-            image.draw(in: CGRect(origin: .zero, size: size))
-        }.cgImage
-    }
-
-    /// The wall is square and a phone video is not, so the middle of the
-    /// frame is what survives.
-    /// `side` defaults to the wall's own size. The stand-in and the archive
-    /// ask for 64: their pictures are miniatures on a phone screen, and a
-    /// tile in a dense grid gains nothing from nine times the pixels.
-    static func squareFrame(_ src: CGImage, side: Int = Panel.side) -> [UInt8]? {
-        let n = side
-        let count = n * n * 4
-        let raw = UnsafeMutablePointer<UInt8>.allocate(capacity: count)
-        raw.initialize(repeating: 0, count: count)
-        defer { raw.deallocate() }
-        guard let ctx = CGContext(
-            data: raw, width: n, height: n, bitsPerComponent: 8, bytesPerRow: n * 4,
-            space: CGColorSpaceCreateDeviceRGB(),
-            bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
-        ) else { return nil }
-        ctx.interpolationQuality = .high
-        let w = CGFloat(src.width), h = CGFloat(src.height)
-        let scale = CGFloat(n) / min(w, h)
-        let dw = w * scale, dh = h * scale
-        ctx.draw(src, in: CGRect(x: (CGFloat(n) - dw) / 2, y: (CGFloat(n) - dh) / 2, width: dw, height: dh))
-
-        // The picture as it is: the wall does its own levels on a pushed
-        // design, and the preview draws them the same way (see wallLift).
-        var px = [UInt8](repeating: 0, count: n * n * 3)
-        for i in 0..<(n * n) {
-            px[i * 3] = raw[i * 4]
-            px[i * 3 + 1] = raw[i * 4 + 1]
-            px[i * 3 + 2] = raw[i * 4 + 2]
-        }
-        return px
-    }
-}
-
 
 /// Four letters that ARE their own sizes: the control shows the choice
 /// instead of describing it. Tap one, or drag across the rail.
@@ -1206,29 +976,6 @@ private struct SizeRail: View {
         .accessibilityValue("\(value) of 4")
         .accessibilityAdjustableAction { dir in
             onPick(min(4, max(1, value + (dir == .increment ? 1 : -1))))
-        }
-    }
-}
-
-/// Picked media on its way to the framing step.
-struct FramingJob: Identifiable {
-    let id = UUID()
-    let source: [CGImage]
-}
-
-/// PhotosPicker hands a movie over as a file; this receives it into a
-/// temporary URL that AVAsset can open.
-struct Movie: Transferable {
-    let url: URL
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(contentType: .movie) { movie in
-            SentTransferredFile(movie.url)
-        } importing: { received in
-            let dest = FileManager.default.temporaryDirectory
-                .appendingPathComponent("tessera-\(UUID().uuidString).mov")
-            try? FileManager.default.removeItem(at: dest)
-            try FileManager.default.copyItem(at: received.file, to: dest)
-            return Movie(url: dest)
         }
     }
 }

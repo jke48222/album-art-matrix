@@ -117,11 +117,30 @@ enum PixelFont {
         "\\": [0x10, 0x10, 0x08, 0x04, 0x02, 0x01, 0x01],
     ]
 
-    /// "<3" is how a heart gets typed.
+
+    /// The visible, canonical glyph sequence used by the wall renderer.
     static func normalize(_ text: String) -> String {
+        let composed = text.precomposedStringWithCanonicalMapping
+            .replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\r", with: "\n")
+        var visible = String.UnicodeScalarView()
+        for scalar in composed.unicodeScalars {
+            let value = scalar.value
+            if (0xFE00...0xFE0F).contains(value) || (0xE0100...0xE01EF).contains(value)
+                || [0x200B, 0x200C, 0x200D, 0xFEFF].contains(value) { continue }
+            if value == 10 { visible.append(scalar); continue }
+            if scalar.properties.isWhitespace || (0x1C...0x1F).contains(value) {
+                visible.append(" "); continue
+            }
+            switch scalar.properties.generalCategory {
+            case .control, .format, .surrogate, .privateUse, .unassigned,
+                 .spaceSeparator, .lineSeparator, .paragraphSeparator: continue
+            default: visible.append(scalar)
+            }
+        }
         var out = ""
         var skip = false
-        let chars = Array(text)
+        let chars = Array(String(visible))
         for (i, ch) in chars.enumerated() {
             if skip { skip = false; continue }
             if ch == "<", i + 1 < chars.count, chars[i + 1] == "3" {
@@ -135,6 +154,7 @@ enum PixelFont {
         }
         return out
     }
+
 
     private static let aliases: [Character: Character] = ["❤": "\u{2665}", "❤️": "\u{2665}"]
 

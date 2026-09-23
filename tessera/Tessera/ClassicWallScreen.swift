@@ -22,6 +22,7 @@ struct ClassicWallScreen: View {
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     @AppStorage("spin.beat") private var beatOn = false
     @State private var beats = BeatBook()
+    @State private var preparingVideo = false
     @State private var showArtwork = false
     @Environment(\.scenePhase) private var scenePhase
     var onSetup: () -> Void
@@ -76,15 +77,17 @@ struct ClassicWallScreen: View {
                 .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
                 if wall.state.mode == "art" || wall.state.mode == "cd" {
                     Button { showArtwork = true } label: {
-                        Label(wall.state.mode == "cd" ? "Record & rotation" : "Artwork & live wall", systemImage: wall.state.mode == "cd" ? "opticaldisc" : "photo.on.rectangle")
+                        Label(wall.state.mode == "cd" ? "View the record" : "View the original cover", systemImage: wall.state.mode == "cd" ? "opticaldisc" : "photo.on.rectangle")
                             .font(.ui(15, .semibold)).foregroundStyle(accent.toned(forDark: true))
                             .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                     }.buttonStyle(PressStyle()).padding(.horizontal, 24).padding(.bottom, 12)
                 }
                 modeRow.padding(.horizontal, 14).padding(.bottom, 16)
-                DisplayDetailLinks(accent: accent).padding(.horizontal, 24).padding(.bottom, 20)
                 if !isOff {
-                    contextRow.padding(.horizontal, 24).transition(.opacity)
+                    Group {
+                        if preparingVideo { VideoWorkbench(accent: accent) }
+                        else { contextRow }
+                    }.padding(.horizontal, 24).transition(.opacity)
                 }
                 Spacer(minLength: 64)
             }
@@ -253,12 +256,18 @@ struct ClassicWallScreen: View {
                 glyph(.nine, "nine", mode: "nine")
             }
             HStack(spacing: 0) {
-                Spacer().frame(maxWidth: .infinity)
                 glyph(.lamp, "lamp", mode: "ambient")
                 glyph(.clock, "clock", mode: "clock")
+                glyph(.ticker, "ticker", mode: "ticker")
                 glyph(.dark, "off", mode: "off")
-                Spacer().frame(maxWidth: .infinity)
             }
+            HStack(spacing: 12) {
+                Button(action: onStudio) { Label("Studio", systemImage: "square.and.pencil") }
+                Spacer()
+                Button { preparingVideo.toggle() } label: {
+                    Label(preparingVideo ? "Close video editor" : "Video", systemImage: "film")
+                }
+            }.font(.ui(14, .semibold)).foregroundStyle(accent.toned(forDark: true)).frame(minHeight: 44).padding(.horizontal, 10)
         }
     }
 
@@ -270,6 +279,7 @@ struct ClassicWallScreen: View {
             accent: accent,
             lit: roomLight
         ) {
+            preparingVideo = false
             wall.send(["mode": mode])
         }
         .frame(maxWidth: .infinity)
@@ -290,49 +300,15 @@ struct ClassicWallScreen: View {
                     wall.send(["rpm": $0])
                 }
                 beatRow
+                Picker("Record face", selection: Binding(get: { wall.state.spinFace }, set: { wall.send(["spin_face": $0]) })) {
+                    Text("Pressing").tag("pressing"); Text("Album art").tag("art")
+                }.pickerStyle(.segmented)
+                DisplayPage(detail: .finishes, accent: accent, embedded: true)
             }
 
-        case "ambient":
-            VStack(alignment: .leading, spacing: 18) {
-                PillRow(
-                    label: "light",
-                    options: [("plaid", "plaid"), ("weave", "weave"), ("deco", "deco"),
-                              ("snake", "snake"), ("solid", "solid"), ("breathe", "breathe"),
-                              ("pulse", "pulse"), ("rainbow", "rainbow"), ("fade", "gradient")],
-                    selected: wall.state.effect,
-                    accent: accent
-                ) { wall.send(["effect": $0]) }
-
-                LampInks(
-                    color: wall.state.color,
-                    color2: wall.state.color2,
-                    matchArt: wall.state.matchArt,
-                    effect: wall.state.effect,
-                    accent: accent
-                ) { key, hex in
-                    wall.send([key: hex])
-                }
-
-                Toggle(isOn: Binding(
-                    get: { wall.state.matchArt },
-                    set: { wall.send(["match_art": $0]) }
-                )) {
-                    Text("Take the album's colours")
-                        .font(.ui(15))
-                        .foregroundStyle(litInk)
-                }
-                .tint(accent)
-            }
-
-        case "ticker":
-            TickerRow(
-                text: wall.state.tickerText,
-                loop: wall.state.tickerLoop,
-                style: wall.state.tickerStyle,
-                colors: wall.state.tickerColors,
-                accent: accent
-            ) { key, value in wall.send([key: value]) }
-
+        case "ambient": DisplayPage(detail: .lamp, accent: accent, embedded: true)
+        case "ticker": TickerWorkbench(accent: accent)
+        case "video": VideoWorkbench(accent: accent)
         case "clock", "timer":
             VStack(alignment: .leading, spacing: 18) {
                 WallTimerRow(
@@ -351,33 +327,13 @@ struct ClassicWallScreen: View {
             }
 
         case "nine":
-            Text("The last nine sleeves the wall has worn, newest first.")
-                .font(.ui(13))
-                .foregroundStyle(litDim)
-                .fixedSize(horizontal: false, vertical: true)
-
-        case "lyrics":
-            VStack(alignment: .leading, spacing: 14) {
-                // The one knob syncing genuinely needs: the words files in
-                // the wild are themselves early or late, and only the person
-                // singing along can hear by how much.
-                PillRow(
-                    label: "timing",
-                    options: [("later", -0.4), ("on time", 0.2), ("sooner", 0.8)],
-                    selected: wall.state.lyricOffset,
-                    accent: accent
-                ) { lyricsNudge = $0; wall.send(["lyric_offset": $0]) }
-                Text("Words come from LRCLIB; a track it has never heard shows the sleeve alone.")
-                    .font(.ui(12))
-                    .foregroundStyle(litDim)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
+            VStack(spacing: 24) { DisplayPage(detail: .nine, accent: accent, embedded: true); DisplayPage(detail: .finishes, accent: accent, embedded: true) }
+        case "lyrics": DisplayPage(detail: .lyrics, accent: accent, embedded: true)
         case "weather":
             Text("Current conditions from your saved location. Open Weather in Settings to explore the forecast.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-        case "art", "frame", "clip", "video":
-            LiveFinishRow(host: wall.host, mode: wall.state.mode, current: wall.state.finish, accent: accent, ink: .dark) { wall.send(["finish": $0]) }
+        case "art", "frame", "clip":
+            DisplayPage(detail: .finishes, accent: accent, embedded: true)
         default:
             EmptyView()
         }

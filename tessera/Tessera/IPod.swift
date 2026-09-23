@@ -72,6 +72,7 @@ struct IPodView: View {
     @Binding var touching: Bool
     var onSetup: () -> Void
     var onStudio: () -> Void
+    var onCreation: (String) -> Void = { _ in }
     var onArchive: () -> Void
     var onZoom: () -> Void
     var onHintChange: (String) -> Void = { _ in }
@@ -412,9 +413,11 @@ struct IPodView: View {
                 out.append(IPodItem(id: "timer", title: "Timer", value: s.mode == "timer" ? "running" : nil, kind: .submenu(.timer)))
                 out.append(IPodItem(id: "clock24", title: "Clock", value: s.clock24h ? "24 hour" : "12 hour", kind: .submenu(.clock)))
             case "lyrics":
-                out.append(IPodItem(id: "timing", title: "Timing", value: lyricsNudge == 0 ? "on time" : lyricsNudge < 0 ? "sooner" : "later", kind: .submenu(.timing)))
+                out.append(IPodItem(id: "timing", title: "Timing", value: wall.state.lyricOffset == 0.2 ? "on time" : wall.state.lyricOffset < 0.2 ? "later" : "sooner", kind: .submenu(.timing)))
             default: break
             }
+            out.append(IPodItem(id: "ticker", title: "Ticker", kind: .action { onCreation("ticker") }))
+            out.append(IPodItem(id: "video", title: "Video", kind: .action { onCreation("video") }))
             out.append(IPodItem(id: "studio", title: "Studio", kind: .action { onStudio() }))
             out.append(IPodItem(id: "archive", title: "Archive", kind: .action { onArchive() }))
             out.append(IPodItem(id: "settings", title: "Settings", kind: .action { onSetup() }))
@@ -455,9 +458,9 @@ struct IPodView: View {
                 IPodItem(id: "t\(Int(m))", title: "\(Int(m)) minutes", kind: .pick(false) { wall.send(["timer_min": m]) })
             } + [IPodItem(id: "tstop", title: "Stop", kind: .pick(false) { wall.send(["timer_min": 0.0]) })]
         case .timing:
-            return [("Sooner", -0.4), ("On time", 0.0), ("Later", 0.4)].map { o in
-                IPodItem(id: o.0, title: o.0, value: lyricsNudge == o.1 ? "on" : nil,
-                         kind: .pick(lyricsNudge == o.1) { lyricsNudge = o.1 })
+            return [("Later", -0.4), ("On time", 0.2), ("Sooner", 0.8)].map { o in
+                IPodItem(id: o.0, title: o.0, value: wall.state.lyricOffset == o.1 ? "on" : nil,
+                         kind: .pick(wall.state.lyricOffset == o.1) { lyricsNudge = o.1; wall.send(["lyric_offset": o.1]) })
             }
         case .clock:
             return [("24 hour", true), ("12 hour", false)].map { o in

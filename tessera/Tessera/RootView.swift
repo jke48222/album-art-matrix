@@ -51,6 +51,7 @@ struct RootView: View {
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
     @State private var router = HomeRouter()
+    @State private var videoArrival = UUID()
     @State private var listening = ListeningStore.shared
     @State private var qaDisplay: DisplayDetail?
     @State private var qaShelf = false
@@ -190,6 +191,13 @@ struct RootView: View {
             case .onboarding:
                 OnboardingFlow().environment(wall)
                     .onAppear { router.didPresent(.onboarding) }
+            case .video:
+                NavigationStack {
+                    ScrollView { VideoWorkbench(accent: light.steadyAccent).id(videoArrival).padding(24) }
+                        .background(Ink.ground).navigationTitle("Video")
+                        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { router.dismiss() } } }
+                }.environment(wall).preferredColorScheme(.dark)
+                    .onAppear { router.didPresent(.video) }
             case .studio:
                 StudioScreen(roomPalette: light.palette, accent: light.steadyAccent)
                     .environment(wall)
@@ -238,19 +246,10 @@ struct RootView: View {
         // The lock screen's three keys land here. Only modes: anything that
         // needs a choice made about it needs the app open to make it in.
         .onOpenURL { url in
-            // a video opened in Tessera: it goes up to the wall as it is,
-            // small picture made here, and the wall plays it
-            if VideoHandoff.accept(url), let p = VideoHandoff.arrived,
-               let path = p.path {
-                VideoHandoff.arrived = nil
-                let host = wall.host
-                Task {
-                    _ = try? await VideoHandoff.send(
-                        file: URL(fileURLWithPath: path),
-                        title: p.title, host: host) { _, _ in }
-                }
-                router.dismiss()
+            if VideoHandoff.accept(url) {
+                videoArrival = UUID()
                 page = 0
+                router.present(.video)
                 return
             }
             guard url.scheme == "tessera" else { return }

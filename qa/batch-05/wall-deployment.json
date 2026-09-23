@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "brain/art/text_modes.py",
+      "before_sha256": "5aa0628df4c75f4f5b746342d36a0712c91a5cdd485a43295753a057fd6d2363",
+      "after_sha256": "918e2e29ff2185361fb446fcf857a812392e46b555d63bf2177e5313e8964f3e"
+    },
+    {
+      "path": "brain/art/pixelfont.py",
+      "before_sha256": "0b70ddc601dc12d1435a676d757a2128ac44c0a9edb1cf70b2c4144a87fbbd9f",
+      "after_sha256": "2f24bf7146efaa1a1907509d524f2042077f5aec72deca4b4f456eb9dcc9ecc0"
+    },
+    {
+      "path": "brain/control.py",
+      "before_sha256": "e208d955a881e0f4f3e9873f434fcff5009c3de70f1709efc8fde061694afa43",
+      "after_sha256": "2fd23317a9e445e872af888c28893283d715d4eb4da2434aa671a8a527fe7efd"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "500bc64e9c4b8baadd801c1d04ac7368d452b2d34738fe317a17530e545c0659",
+      "after_sha256": "2f67d8ea597cbbd2c5439253d1fd423bc1d61fc09ab0c5558c11a3de8c11ce1e"
+    }
+  ],
+  "managed_services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": 2861905,
+  "current_pid": 3877100,
+  "mode_before": "clock",
+  "mode_after": "clock"
+}

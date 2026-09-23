@@ -10,7 +10,6 @@
 // the only colour.
 
 import MediaPlayer
-import PhotosUI
 import SwiftUI
 
 /// The ink the glass is written in. Cream over the dark designs; near-black
@@ -115,7 +114,7 @@ struct ControlCenterPanel: View {
     /// The games live in their own sheet: a board wants the whole screen.
     @State private var showGames = false
     @State private var showWeather = false
-    @State private var displayDetail: DisplayDetail?
+    @State private var choosingFace = false
     @State private var returningToMusic = false
     @State private var returnFailed = false
     @State private var showArtwork = false
@@ -123,20 +122,10 @@ struct ControlCenterPanel: View {
     @State private var showColour = false
     @State private var localPlayback = false
     @State private var controlsLocalTrack = false
-    @State private var videoTask: Task<Void, Never>?
-    @State private var videoRequest = UUID()
-    @State private var videoLink = ""
-    @AppStorage("video.sound") private var videoSound = true
-    @State private var videoPick: PhotosPickerItem? = nil
-    /// What is being done to a video of your own, and how far along.
-    @State private var videoWork: (String, Double)? = nil
-    @State private var videoProblem: String? = nil
     /// A rail being dragged: its key and where the thumb is now, so the
     /// number under a finger is the finger's, not the wall's last word.
     @State private var railDrag: (String, Double)? = nil
     /// What the wall will letter, as it is typed; sent on return or Send.
-    @State private var wordsDraft = ""
-    @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     /// The countdown being dialled up, before Start sends it.
     @State private var timerDraft: Double = 10
     // The minutes, typed: tap the number and it becomes a field. "12" is
@@ -163,27 +152,31 @@ struct ControlCenterPanel: View {
             case .full:
                 ZStack(alignment: .top) {
                     Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
+                    VStack(spacing: 0) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                        Text("Your wall").font(.display(typeSize.isAccessibilitySize ? 17 : 30)).foregroundStyle(ink.ink)
+                        Text(connectionLabel).font(.machine(9)).kerning(0.8).foregroundStyle(ink.ink.opacity(0.78))
+                            }
+                            Spacer()
+                            closeKey
+                        }
+                        .padding(.top, 4)
+                        .padding(.horizontal, 18).padding(.top, Safe.top + 6).padding(.bottom, 14)
+                        .background(.ultraThinMaterial)
                     GeometryReader { geo in
+                        ScrollViewReader { scroll in
                         ScrollView(.vertical) {
                             VStack(spacing: gutter) {
-                                HStack {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Your wall").font(.display(30)).foregroundStyle(ink.ink)
-                                        Text(connectionLabel).font(.machine(9)).kerning(0.8).foregroundStyle(ink.ink.opacity(0.78))
-                                    }
-                                    Spacer()
-                                    closeKey
-                                }
-                                .padding(.top, 4)
                                 lightSlab
                                 faces
-                                context
+                                context.id("face.workspace")
                                 nowCard
                                 Spacer(minLength: 0)
                                 places
                             }
                             .padding(.horizontal, 16)
-                            .padding(.top, 58)
+                            .padding(.top, 18)
                             // clear of the page marks at the foot of the screen
                             .padding(.bottom, 60)
                             .frame(minHeight: geo.size.height)
@@ -191,6 +184,19 @@ struct ControlCenterPanel: View {
                         .scrollBounceBehavior(.basedOnSize)
                         .scrollIndicators(.hidden)
                         .defaultScrollAnchor(initialAnchor)
+                        .onChange(of: wall.state.mode) { _, _ in
+                            withAnimation(reducedMotion ? nil : Motion.settle) { scroll.scrollTo("face.workspace", anchor: .top) }
+                        }
+                        .task {
+                            #if DEBUG
+                            if CommandLine.arguments.contains("-control-workspace") {
+                                try? await Task.sleep(for: .milliseconds(500))
+                                scroll.scrollTo("face.workspace", anchor: .top)
+                            }
+                            #endif
+                        }
+                        }
+                    }
                     }
                     .transition(reducedMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
                 }
@@ -225,7 +231,6 @@ struct ControlCenterPanel: View {
         // the glass takes the room's own scheme: light over the white room,
         // dark over the dark designs, so it frosts instead of muddying
         .environment(\.colorScheme, ink.ink == Ink.ink ? .dark : .light)
-        .sheet(item: $displayDetail) { DisplayPage(detail: $0, accent: accent).environment(wall) }
         .sheet(isPresented: $showArtwork) { ArtworkPage(spin: artworkIsSpin, accent: accent).environment(wall) }
         .sheet(isPresented: $showGames) { GamesSheet(accent: accent).environment(wall) }
         .sheet(isPresented: $showWeather) {
@@ -250,11 +255,7 @@ struct ControlCenterPanel: View {
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in refreshLocalPlayback() }
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerNowPlayingItemDidChange)) { _ in refreshLocalPlayback() }
         .onChange(of: wall.state.title) { _, _ in refreshLocalPlayback() }
-        .onChange(of: wall.host) { _, _ in
-            videoTask?.cancel(); videoRequest = UUID(); videoWork = nil
-        }
         .onDisappear {
-            videoTask?.cancel(); videoRequest = UUID()
             dragLight = nil; railDrag = nil
         }
         .onChange(of: scenePhase) { _, phase in
@@ -430,15 +431,8 @@ struct ControlCenterPanel: View {
     /// The wall's faces: a grid of tiles, every one in view, the one that
     /// is on filled with the record's colour.
     private var faces: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("Choose a face").font(.displayMid(23)).foregroundStyle(ink.ink)
-                    .fixedSize(horizontal: false, vertical: true)
-                if typeSize.isAccessibilitySize {
-                    Text("Current: \(faceName(wall.state.mode))")
-                        .font(.ui(11, .medium)).foregroundStyle(ink.dim)
-                }
-            }
+        DisclosureGroup(isExpanded: $choosingFace) {
+            VStack(spacing: 16) {
             faceGroup("MUSIC & CREATION") {
                 tile(.art, "Art", mode: "art")
                 tile(.spin, "Spin", mode: "cd")
@@ -455,7 +449,16 @@ struct ControlCenterPanel: View {
                 tile(.ticker, "Ticker", mode: "ticker")
                 tile(.dark, "Off", mode: "off")
             }
-        }
+            }.padding(.top, 18)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2").font(.system(size: 20))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(faceName(wall.state.mode)).font(.ui(17, .semibold))
+                    Text(choosingFace ? "Choose what fills your room" : "Change face").font(.ui(12)).foregroundStyle(ink.dim)
+                }
+            }.foregroundStyle(ink.ink).frame(minHeight: 48)
+        }.tint(accent).padding(18).background(Slab(radius: 24, ink: ink))
     }
 
     private func faceGroup<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
@@ -471,6 +474,7 @@ struct ControlCenterPanel: View {
         let on = mode != nil && (wall.state.mode == mode || (mode == "clock" && wall.state.mode == "timer"))
         let draft = mode == "video" && videoFace && !on
         return Button {
+            choosingFace = false
             videoFace = mode == "video"
             if let action { action() }
             else if let mode { wall.send(["mode": mode == "off" && wall.state.mode == "off" ? "art" : mode]) }
@@ -591,16 +595,14 @@ struct ControlCenterPanel: View {
                 if wall.state.replayActive { returnToMusic }
                 artworkLink(spin: false); finishBoard
             }
-        case "nine": VStack(spacing: 16) { detailLink(.nine); finishBoard }
+        case "nine": VStack(spacing: 20) { display(.nine); finishBoard }
         default: EmptyView()
         }
     }
 
-    private func detailLink(_ detail: DisplayDetail) -> some View {
-        Button { displayDetail = detail } label: {
-            HStack { Text("Explore \(detail.title)").font(.ui(16, .semibold)); Spacer(); Image(systemName: "arrow.up.right") }
-                .foregroundStyle(accent).frame(minHeight: 48)
-        }.buttonStyle(PressStyle())
+    private func display(_ detail: DisplayDetail) -> some View {
+        DisplayPage(detail: detail, accent: accent, embedded: true)
+            .padding(20).background(Ink.ground.opacity(0.97), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var returnToMusic: some View {
@@ -618,45 +620,8 @@ struct ControlCenterPanel: View {
     /// The Words face used to have no board here, so the wall lettered
     /// HELLO for as long as it was chosen. Typing is the whole point.
     private var wordsBoard: some View {
-        let empty = wordsDraft.trimmingCharacters(in: .whitespaces).isEmpty
-        return board("Words") {
-            detailLink(.lyrics)
-            HStack(spacing: 10) {
-                TextField("say something", text: $wordsDraft)
-                    .font(.machine(14)).foregroundStyle(ink.ink)
-                    .autocorrectionDisabled()
-                    .submitLabel(.send)
-                    .padding(.horizontal, 14).frame(height: 44)
-                    .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
-                    .onSubmit(sendWords)
-                Button(action: sendWords) {
-                    Text("Send").font(.ui(14, .semibold))
-                        .foregroundStyle(empty ? ink.faint : Ink.ground)
-                        .padding(.horizontal, 18).frame(height: 44)
-                        .background(Capsule().fill(empty ? AnyShapeStyle(ink.fill) : AnyShapeStyle(accent)))
-                }
-                .buttonStyle(PressStyle(scale: 0.95))
-                .disabled(empty)
-            }
-            HStack(spacing: 8) {
-                choice("Across", "across", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
-                choice("Rising", "rising", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
-                choice("Tilt", "crawl", wall.state.tickerStyle, { wall.send(["ticker_style": $0]) })
-            }
-            HStack(spacing: 8) {
-                choice("Loop", true, wall.state.tickerLoop, { wall.send(["ticker_loop": $0]) })
-                choice("Once, then art", false, wall.state.tickerLoop, { wall.send(["ticker_loop": $0]) })
-            }
-            colours
-        }
-        .onAppear { if wordsDraft.isEmpty { wordsDraft = wall.state.tickerText } }
-    }
-
-    private func sendWords() {
-        let text = wordsDraft.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty else { return }
-        wall.send(["ticker_text": text])
-        Taps.commit()
+        TickerWorkbench(accent: accent).padding(20)
+            .background(Ink.ground.opacity(0.97), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private func board<C: View>(_ title: String, @ViewBuilder _ content: () -> C) -> some View {
@@ -690,8 +655,8 @@ struct ControlCenterPanel: View {
             HStack(spacing: 12) {
                 Image(systemName: spin ? "opticaldisc" : "photo.on.rectangle").font(.system(size: 22, weight: .medium))
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(spin ? "The spinning record" : "A closer look").font(.ui(16, .semibold))
-                    Text(spin ? "Live pixels, face & rotation" : "Original cover & live wall").font(.ui(12)).foregroundStyle(ink.dim)
+                    Text(spin ? "View the record" : "View the original cover").font(.ui(16, .semibold))
+                    Text(spin ? "Inspect the live pixels" : "Compare with the live wall").font(.ui(12)).foregroundStyle(ink.dim)
                 }
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
@@ -725,19 +690,7 @@ struct ControlCenterPanel: View {
         }
     }
 
-    private var lampBoard: some View {
-        board("Lamp") {
-            detailLink(.lamp)
-            let effects = [("plaid", "Plaid"), ("weave", "Weave"), ("deco", "Deco"), ("snake", "Snake"), ("solid", "Solid"),
-                           ("breathe", "Breathe"), ("pulse", "Pulse"), ("rainbow", "Rainbow"), ("gradient", "Fade")]
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
-                ForEach(effects, id: \.0) { e in
-                    choice(e.1, e.0, wall.state.effect, { wall.send(["effect": $0]) })
-                }
-            }
-            colours
-        }
-    }
+    private var lampBoard: some View { display(.lamp) }
 
     private var clockBoard: some View {
         board(wall.state.mode == "timer" ? "Timer" : "Clock") {
@@ -897,278 +850,14 @@ struct ControlCenterPanel: View {
         Taps.detent(intensity: 0.3)
     }
 
-    private var timingBoard: some View {
-        let ahead = rail(key: "lyric_offset") ?? wall.state.lyricOffset
-        return board("Words") {
-            detailLink(.lyrics)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: "%+.2f", ahead)).font(.display(28)).foregroundStyle(ink.ink)
-                    .contentTransition(.numericText())
-                Text("s").font(.ui(13)).foregroundStyle(ink.dim)
-            }
-            slider(key: "lyric_offset", value: ahead, from: -2, to: 2, step: 0.05) { v in
-                wall.send(["lyric_offset": v])
-                lyricsNudge = v          // the phone's own words follow the wall's
-            }
-            HStack(spacing: 8) {
-                choice("Later", -0.4, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
-                choice("On time", 0.2, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
-                choice("Sooner", 0.8, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
-            }
-            finishes
-        }
-    }
-
-    private var finishBoard: some View {
-        board("Finish") { finishes; detailLink(.finishes) }
-    }
-
-    /// A design or a clip: the studio itself, here, and the finish over it.
-    /// Drawing is the point of this face, so it is not behind a door.
-    // MARK: Video: a link, or something out of your own library
-
+    private var timingBoard: some View { display(.lyrics) }
+    private var finishBoard: some View { display(.finishes) }
     private var videoBoard: some View {
-        VStack(spacing: gutter) {
-            if videoFace && wall.state.mode != "video" {
-                HStack {
-                    Label("Preparing a video", systemImage: "pencil.circle").font(.ui(12)).foregroundStyle(ink.dim)
-                    Spacer()
-                    Button("Cancel") { videoFace = false }.font(.ui(13, .semibold)).foregroundStyle(accent)
-                        .frame(minHeight: 44)
-                }
-            }
-            board("Video") {
-                if let v = wall.state.video, v.live {
-                    videoNow(v)
-                } else {
-                    videoEntry
-                }
-                if let work = videoWork { videoWorking(work) }
-                if let why = videoProblem {
-                    Text(why).font(.ui(13)).foregroundStyle(Ink.signal)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            board("Finish") { finishes }
+        VStack(spacing: 20) {
+            VideoWorkbench(accent: accent).padding(20)
+                .background(Ink.ground.opacity(0.97), in: RoundedRectangle(cornerRadius: 24))
+            finishBoard
         }
-        .onChange(of: videoPick) { _, item in
-            guard let item else { return }
-            videoPick = nil
-            videoTask?.cancel()
-            videoTask = Task { await sendChosenVideo(item) }
-        }
-        .task { await takeHandedOverVideo() }
-    }
-
-    private var videoTyped: String {
-        let raw = videoLink.trimmingCharacters(in: .whitespacesAndNewlines)
-        if raw.lowercased().hasPrefix("http") { return raw }
-        return raw.split(whereSeparator: { $0.isWhitespace }).map(String.init)
-            .first { $0.lowercased().hasPrefix("http") } ?? ""
-    }
-
-    /// Nothing on: a link, how it should sound, and your own library.
-    private var videoEntry: some View {
-        let empty = videoTyped.isEmpty
-        let busy = videoWork != nil
-        return VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                TextField("youtube link", text: $videoLink)
-                    .font(.machine(14)).foregroundStyle(ink.ink)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-                    .keyboardType(.URL)
-                    .submitLabel(.go)
-                    .padding(.horizontal, 14).frame(height: 44)
-                    .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
-                    .onSubmit(playVideoLink)
-                Button(action: playVideoLink) {
-                    Text("Play").font(.ui(14, .semibold))
-                        .foregroundStyle(empty || busy ? ink.faint : Ink.ground)
-                        .padding(.horizontal, 18).frame(height: 44)
-                        .background(Capsule().fill(empty || busy ? AnyShapeStyle(ink.fill) : AnyShapeStyle(accent)))
-                }
-                .buttonStyle(PressStyle(scale: 0.95))
-                .disabled(empty || busy)
-            }
-            HStack(spacing: 8) {
-                choice("Sound here", true, videoSound, { videoSound = $0 })
-                choice("Silent", false, videoSound, { videoSound = $0 })
-            }
-            PhotosPicker(selection: $videoPick, matching: .videos) {
-                HStack(spacing: 8) {
-                    GlyphShape(glyph: .photo, lineWidth: 1.5).frame(width: 17, height: 17)
-                    Text("A video of your own").font(.ui(14, .medium))
-                }
-                .foregroundStyle(busy ? ink.faint : ink.ink)
-                .frame(maxWidth: .infinity).frame(height: 44)
-                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(ink.fill))
-            }
-            .buttonStyle(PressStyle(scale: 0.97))
-            .disabled(busy)
-        }
-    }
-
-    /// Something on: what it is, where it is, and the four things you can
-    /// do to it.
-    private func videoNow(_ v: WallVideo) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(v.title ?? "Video")
-                    .font(.ui(16, .medium)).foregroundStyle(ink.ink).lineLimit(2)
-                Text(v.error ?? v.words)
-                    .font(.ui(13)).foregroundStyle(v.error != nil ? Ink.signal : ink.dim)
-            }
-            if let of = v.duration, of > 1, ["playing", "paused"].contains(v.status) {
-                videoRail(v, of)
-            }
-            HStack(spacing: 8) {
-                if ["playing", "paused"].contains(v.status) {
-                    videoKey(v.status == "playing" ? "Pause" : "Play", filled: true) {
-                        if VideoSound.shared.started {
-                            v.status == "playing" ? VideoSound.shared.pause() : VideoSound.shared.resume()
-                        } else {
-                            let h = wall.host
-                            Task { await WallVideoLink.control(host: h, v.status == "playing" ? "pause" : "play") }
-                        }
-                        Taps.detent(intensity: 0.4)
-                    }
-                }
-                if v.sound, !v.phoneClock, !VideoSound.shared.started,
-                   ["playing", "paused"].contains(v.status) {
-                    videoKey("Sound here") { VideoSound.shared.join(v, host: wall.host) }
-                }
-                videoKey("Stop") {
-                    VideoSound.shared.stop()
-                    let h = wall.host
-                    Task { await WallVideoLink.stop(host: h) }
-                    videoLink = ""
-                    Taps.commit()
-                }
-            }
-        }
-    }
-
-    private func videoKey(_ label: String, filled: Bool = false,
-                          _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label).font(.ui(14, .medium))
-                .foregroundStyle(filled ? Ink.ground : ink.ink)
-                .lineLimit(1)
-                .padding(.horizontal, 16).frame(height: 40)
-                .background(Capsule().fill(filled ? AnyShapeStyle(accent) : AnyShapeStyle(ink.fill)))
-        }
-        .buttonStyle(PressStyle(scale: 0.95))
-    }
-
-    /// Where the video is, and a drag to put it somewhere else.
-    private func videoRail(_ v: WallVideo, _ of: Double) -> some View {
-        let at = rail(key: "video") ?? v.position
-        return VStack(alignment: .leading, spacing: 6) {
-            slider(key: "video", value: min(at, of), from: 0, to: of, step: 1) { t in
-                if VideoSound.shared.started { VideoSound.shared.seek(to: t) }
-                else {
-                    let h = wall.host
-                    Task { await WallVideoLink.control(host: h, "seek", t: t) }
-                }
-            }
-            HStack {
-                Text(WallVideo.clock(at)).font(.machine(11)).foregroundStyle(ink.dim)
-                Spacer()
-                Text(WallVideo.clock(of)).font(.machine(11)).foregroundStyle(ink.dim)
-            }
-        }
-    }
-
-    private func videoWorking(_ work: (String, Double)) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(work.0).font(.ui(13)).foregroundStyle(ink.dim)
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule().fill(ink.fill).frame(height: 6)
-                    Capsule().fill(accent)
-                        .frame(width: max(6, geo.size.width * max(0.06, work.1)), height: 6)
-                }
-            }
-            .frame(height: 6)
-        }
-    }
-
-    private func playVideoLink() {
-        let url = videoTyped
-        guard videoWork == nil, !url.isEmpty, wall.link.isLive else {
-            if !wall.link.isLive { videoProblem = "Connect your wall before sending a video." }
-            return
-        }
-        videoProblem = nil
-        VideoSound.shared.stop()
-        let h = wall.host, sound = videoSound
-        videoTask?.cancel()
-        let request = UUID(); videoRequest = request
-        videoTask = Task {
-            videoWork = ("Handing it to the wall", 0.15)
-            let why = await WallVideoLink.start(host: h, url: url, sound: sound)
-            guard !Task.isCancelled, videoRequest == request, wall.host == h else { return }
-            videoWork = nil
-            videoProblem = why
-            if why == nil { videoLink = ""; Taps.landed() } else { Taps.error() }
-        }
-    }
-
-    /// A video out of the library: the picture is made small here, sent up,
-    /// and its sound stays on this phone.
-    private func sendChosenVideo(_ item: PhotosPickerItem) async {
-        guard wall.link.isLive else {
-            videoProblem = "Connect your wall before sending a video."
-            return
-        }
-        videoProblem = nil
-        videoWork = ("Reading the video", 0)
-        guard let movie = try? await item.loadTransferable(type: Movie.self) else {
-            guard !Task.isCancelled else { return }
-            videoWork = nil
-            videoProblem = "That video could not be read."
-            Taps.error()
-            return
-        }
-        guard !Task.isCancelled else { return }
-        await sendVideoFile(movie.url, title: "From your library")
-    }
-
-    private func sendVideoFile(_ file: URL, title: String) async {
-        guard !Task.isCancelled, wall.link.isLive, !VideoHandoff.inProgress else {
-            videoWork = nil
-            videoProblem = VideoHandoff.inProgress ? "Another video is already being sent." : "Connect your wall before sending a video."
-            return
-        }
-        let request = UUID(); videoRequest = request
-        let host = wall.host
-        VideoSound.shared.stop()
-        VideoHandoff.inProgress = true
-        defer { VideoHandoff.inProgress = false }
-        do {
-            _ = try await VideoHandoff.send(file: file, title: title, host: host) { words, fraction in
-                Task { @MainActor in
-                    guard videoRequest == request, wall.host == host else { return }
-                    videoWork = (words, fraction)
-                }
-            }
-            guard !Task.isCancelled, videoRequest == request, wall.host == host else { return }
-            videoWork = nil
-            Taps.landed()
-        } catch {
-            guard !Task.isCancelled, videoRequest == request else { return }
-            videoWork = nil
-            videoProblem = error.localizedDescription
-            Taps.error()
-        }
-    }
-
-    /// A video opened in Tessera from somewhere else lands here.
-    private func takeHandedOverVideo() async {
-        guard let p = VideoHandoff.arrived, p.kind == "file", let path = p.path else { return }
-        VideoHandoff.arrived = nil
-        await sendVideoFile(URL(fileURLWithPath: path), title: p.title ?? "Shared with the wall")
     }
 
     private var designBoard: some View {

@@ -1,0 +1,90 @@
+{
+  "captured_at": "2026-09-23T10:36:17.888016+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "video",
+      "state_reads": 6,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": "/tmp/tessera-batch05-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-controls",
+        "-control-workspace"
+      ],
+      "captured_at": "2026-09-23T10:30:45.304118+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "room-large",
+      "image": "room-large.png",
+      "frame": "room-large-frame.png",
+      "mode": "video",
+      "state_reads": 6,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-controls",
+        "-control-workspace"
+      ],
+      "captured_at": "2026-09-23T10:36:17.768131+00:00",
+      "dynamic_type": "AX5"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

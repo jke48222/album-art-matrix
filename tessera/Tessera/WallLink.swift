@@ -780,6 +780,38 @@ final class WallSession {
         }
     }
 
+    /// A creation is confirmed only after the destination has accepted every frame.
+    func sendClip(_ frames: [[UInt8]], fps: Double) async -> Bool {
+        guard !frames.isEmpty, frames.count <= 240, fps.isFinite, (1...24).contains(fps),
+              let first = frames.first, Panel.square(first.count) != nil,
+              frames.allSatisfy({ $0.count == first.count }) else { return false }
+        if link.isStandIn {
+            standIn.push(clip: frames, fps: min(24, max(1, fps))); state = standIn.state
+            return true
+        }
+        guard link.isLive else { return false }
+        let destination = host
+        let accepted = await postJSON("/clip", ["fps": min(24, max(1, fps)), "frames": frames.map { Data($0).base64EncodedString() }])
+        guard destination == host, !Task.isCancelled else { return false }
+        if accepted { await poll() }
+        return accepted
+    }
+
+    func sendTicker(text: String, style: String, colors: [String], color: String, speed: Double, loop: Bool) async -> Bool {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              ["across", "up", "tilt"].contains(style), speed.isFinite else { return false }
+        let patch: [String: Any] = ["mode": "ticker", "ticker_text": text, "ticker_style": style,
+                                   "ticker_colors": colors, "color": color, "match_art": false,
+                                   "speed": min(3, max(0.1, speed)), "ticker_loop": loop]
+        if link.isStandIn { send(patch); return true }
+        guard link.isLive else { return false }
+        let destination = host
+        let accepted = await postJSON("/state", patch)
+        guard destination == host, !Task.isCancelled else { return false }
+        if accepted { await poll() }
+        return accepted
+    }
+
     /// Wear a journal entry again. The wall pins it for ten minutes so the
     /// currently playing track does not immediately steamroll it. Entries the
     /// PHONE recorded (stand-in days) carry timestamps the wall's journal has

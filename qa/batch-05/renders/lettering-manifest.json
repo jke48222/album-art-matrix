@@ -1,0 +1,47 @@
+{
+  "frames": [
+    {
+      "file": "lettering-64.png",
+      "side": 64,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "production LetteringLayout"
+    },
+    {
+      "file": "lettering-before-64.png",
+      "side": 64,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "09b0baa production WallCanvas"
+    },
+    {
+      "file": "lettering-192.png",
+      "side": 192,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "production LetteringLayout"
+    },
+    {
+      "file": "lettering-before-192.png",
+      "side": 192,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "09b0baa production WallCanvas"
+    },
+    {
+      "file": "lettering-512.png",
+      "side": 512,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "production LetteringLayout"
+    },
+    {
+      "file": "lettering-before-512.png",
+      "side": 512,
+      "text": "MAKE\nLIGHT",
+      "size": 2,
+      "source": "09b0baa production WallCanvas"
+    }
+  ],
+  "inspection": "Native RGB; no smoothing or physical LED colour claim."
+}

@@ -15,6 +15,7 @@ struct IPodWallScreen: View {
     var onStudio: () -> Void
     var onArchive: () -> Void = {}
 
+    @State private var creation: String?
     @State private var zoomed = false
     @State private var wheelHint = "Turn the wheel to change the light"
     @State private var headerHeight: CGFloat = 70
@@ -42,7 +43,7 @@ struct IPodWallScreen: View {
                     VStack(spacing: 16) {
                         ZStack {
                             IPodView(light: light, dragLight: $dragLight, touching: $onPanel,
-                                     onSetup: onSetup, onStudio: onStudio, onArchive: onArchive,
+                                     onSetup: onSetup, onStudio: onStudio, onCreation: { creation = $0 }, onArchive: onArchive,
                                      onZoom: { zoomed = true }, onHintChange: { wheelHint = $0 })
                                 .opacity(introDone || reducedMotion ? 1 : 0)
                                 .allowsHitTesting(introDone || reducedMotion)
@@ -66,7 +67,6 @@ struct IPodWallScreen: View {
                                 .background(Ink.ground.opacity(0.94), in: RoundedRectangle(cornerRadius: 22))
                                 .padding(.horizontal, 20)
                         }
-                        DisplayDetailLinks(accent: accent).padding(.horizontal, 24)
                         status
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { statusHeight = $0 }
                         if wall.state.mode == "timer", let remaining = wall.state.timerRemaining {
@@ -89,6 +89,17 @@ struct IPodWallScreen: View {
             }
         }
         .onDisappear { onPanel = false; dragLight = nil }
+        .sheet(isPresented: Binding(get: { creation != nil }, set: { if !$0 { creation = nil } })) {
+            NavigationStack {
+                ScrollView {
+                    Group {
+                        if creation == "ticker" { TickerWorkbench(accent: accent) }
+                        else { VideoWorkbench(accent: accent) }
+                    }.padding(24)
+                }.background(Ink.ground)
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { creation = nil } } }
+            }.preferredColorScheme(.dark).environment(wall)
+        }
         .fullScreenCover(isPresented: $zoomed) { expandedWall }
     }
 

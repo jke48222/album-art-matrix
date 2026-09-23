@@ -69,6 +69,7 @@ struct DisplayPage: View {
     @Environment(\.scenePhase) private var scenePhase
     let detail: DisplayDetail
     let accent: Color
+    var embedded = false
     @State private var images = WallImages()
     @State private var sheet: ReadingSheet?
     @State private var covers: [RotationCover] = []
@@ -86,14 +87,34 @@ struct DisplayPage: View {
     private var feedKey: String { "\(wall.host)|\(detail.rawValue)|\(retry)" }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        Group {
+            if embedded { content }
+            else {
+                NavigationStack {
+                    ScrollView { content.padding(24) }.background(Ink.ground)
+                        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.frame(minHeight: 44) } }
+                        .navigationBarTitleDisplayMode(.inline)
+                }
+            }
+        }.preferredColorScheme(.dark).tint(accent.toned(forDark: true))
+             .task(id: "\(feedKey)|\(wall.state.title ?? "")|\(wall.state.artist ?? "")|\(scenePhase)") {
+                if scenePhase == .active && (detail == .lyrics || detail == .nine) { await watchContent() }
+            }
+            .task(id: "\(feedKey)|\(wall.state.mode)|\(wall.state.color)|\(wall.state.color2)|\(wall.state.matchArt)|\(scenePhase)") {
+                if scenePhase == .active && (detail == .finishes || detail == .lamp) { await images.watch(host: wall.host, path: imagePath, interval: detail == .lamp ? 5 : 0.6) }
+            }
+            .onAppear { offset = wall.state.lyricOffset; speed = wall.state.speed }
+            .onChange(of: wall.state.lyricOffset) { _, value in if !editing { offset = value } }
+            .onChange(of: wall.state.speed) { _, value in if !editing { speed = value } }
+    }
+
+    private var content: some View {
                 VStack(alignment: .leading, spacing: 26) {
                     VStack(alignment: .leading, spacing: 9) {
                         Text(detail.eyebrow).font(.machine(8)).tracking(1.2).foregroundStyle(accent.toned(forDark: true))
-                        Text(detail.title).font(.display(typeSize.isAccessibilitySize ? 20 : 48)).foregroundStyle(Ink.ink)
+                        Text(detail.title).font(.display(embedded ? 28 : typeSize.isAccessibilitySize ? 20 : 48)).foregroundStyle(Ink.ink)
                     }
-                    if detail == .finishes { finishHero } else { liveHero }
+                    if !embedded { if detail == .finishes { finishHero } else { liveHero } }
                     switch detail {
                     case .lyrics: reading; timing
                     case .nine: rotation
@@ -107,20 +128,7 @@ struct DisplayPage: View {
                                 .foregroundStyle(Ink.ground).background(accent.toned(forDark: true), in: RoundedRectangle(cornerRadius: 16))
                         }.buttonStyle(PressStyle()).disabled(!ready)
                     }
-                }.padding(24)
-            }.background(Ink.ground)
-                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.frame(minHeight: 44) } }
-                .navigationBarTitleDisplayMode(.inline)
-        }.preferredColorScheme(.dark).tint(accent.toned(forDark: true))
-             .task(id: "\(feedKey)|\(wall.state.title ?? "")|\(wall.state.artist ?? "")|\(scenePhase)") {
-                if scenePhase == .active && (detail == .lyrics || detail == .nine) { await watchContent() }
-            }
-            .task(id: "\(feedKey)|\(wall.state.mode)|\(wall.state.color)|\(wall.state.color2)|\(wall.state.matchArt)|\(scenePhase)") {
-                if scenePhase == .active && (detail == .finishes || detail == .lamp) { await images.watch(host: wall.host, path: imagePath, interval: detail == .lamp ? 5 : 0.6) }
-            }
-            .onAppear { offset = wall.state.lyricOffset; speed = wall.state.speed }
-            .onChange(of: wall.state.lyricOffset) { _, value in if !editing { offset = value } }
-            .onChange(of: wall.state.speed) { _, value in if !editing { speed = value } }
+                }
     }
 
     private var liveHero: some View {
@@ -328,31 +336,5 @@ struct DisplayPage: View {
             }
             do { try await Task.sleep(for: .seconds(detail == .lyrics ? 1 : 5)) } catch { return }
         }
-    }
-}
-
-/// Native detail routes shared by Classic and iPod homes.
-struct DisplayDetailLinks: View {
-    @Environment(WallSession.self) private var wall
-    @State private var selected: DisplayDetail?
-    let accent: Color
-    private var current: DisplayDetail? {
-        switch wall.state.mode { case "lyrics": .lyrics; case "nine": .nine; case "ambient": .lamp; default: nil }
-    }
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 18) { links }
-            VStack(alignment: .leading, spacing: 4) { links }
-        }.sheet(item: $selected) { DisplayPage(detail: $0, accent: accent).environment(wall) }
-    }
-    @ViewBuilder private var links: some View {
-        if let current { link(current) }
-        if !["ambient", "off"].contains(wall.state.mode) { link(.finishes) }
-    }
-    private func link(_ detail: DisplayDetail) -> some View {
-        Button { selected = detail } label: {
-            Label("Explore \(detail.title)", systemImage: "arrow.up.right").font(.ui(14, .semibold))
-                .foregroundStyle(accent.toned(forDark: true)).frame(minHeight: 44)
-        }.buttonStyle(PressStyle())
     }
 }

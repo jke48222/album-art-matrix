@@ -1,0 +1,55 @@
+{
+  "units": [
+    "C09",
+    "C10"
+  ],
+  "studied": "2026-09-23",
+  "references": [
+    {
+      "unit": "C09",
+      "source": "Mobbin / LinkedIn crop",
+      "url": "https://mobbin.com/screens/a3efb6cf-aa85-46f0-a12f-9b362bed586b",
+      "observed": "One strong crop viewport; reset is near the composition; zoom value and rail remain outside the image.",
+      "applied": "Single crop step with precision zoom and reset; actual panel pixels stay uninterrupted."
+    },
+    {
+      "unit": "C09",
+      "source": "Mobbin / Apple Notes crop",
+      "url": "https://mobbin.com/screens/a21c041c-b031-4715-993e-cb77203a4369",
+      "observed": "Outside crop stays visible at reduced emphasis; image boundaries stay legible.",
+      "applied": "Dim outside-crop source uses the exact same normalized window and bounded pan as export."
+    },
+    {
+      "unit": "C09",
+      "source": "Apple Photos picker",
+      "url": "https://developer.apple.com/documentation/PhotoKit/selecting-photos-and-videos-in-ios",
+      "applied": "Use system PhotosPicker item-specific access and explicit loading errors; no broad library permission request."
+    },
+    {
+      "unit": "C10",
+      "source": "Mobbin / Google Photos video editor",
+      "url": "https://mobbin.com/screens/8c95bd39-cacc-46ba-9084-a5050a16eab8",
+      "observed": "Playback position sits next to the filmstrip and pause control, with image preview kept clear.",
+      "applied": "Paused/scrubbable filmstrip in framing; precise video playhead alongside elapsed and remaining times."
+    },
+    {
+      "unit": "C10",
+      "source": "Mobbin / Edits",
+      "url": "https://mobbin.com/screens/373c1c74-8d11-403b-a2ad-e7a18bbb84ef",
+      "observed": "Editor preserves a strong preview while timeline and export each have a distinct role.",
+      "applied": "One video workbench, crop as an import step, concrete conversion and upload progress, no duplicate customization sheet."
+    },
+    {
+      "unit": "C10",
+      "source": "Apple AVAssetImageGenerator",
+      "url": "https://developer.apple.com/documentation/avfoundation/creating-images-from-a-video-asset",
+      "applied": "Asynchronous frame generation with upright transform, cancellation and all-frame validation; failed frames never silently shorten timing."
+    },
+    {
+      "unit": "C10",
+      "source": "Apple AVAssetImageGenerator image(at:)",
+      "url": "https://developer.apple.com/documentation/avfoundation/avassetimagegenerator/image(at:)",
+      "applied": "Requested clip timing fixed at 12 fps, source extraction is asynchronous, actual frame failures become visible errors."
+    }
+  ]
+}

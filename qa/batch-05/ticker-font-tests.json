@@ -1,0 +1,144 @@
+{
+  "checks": 23,
+  "passed": 23,
+  "cases": [
+    {
+      "input": "",
+      "passed": true,
+      "swift": "",
+      "python": ""
+    },
+    {
+      "input": "MEET AT SIX",
+      "passed": true,
+      "swift": "MEET AT SIX",
+      "python": "MEET AT SIX"
+    },
+    {
+      "input": "I <3 YOU",
+      "passed": true,
+      "swift": "I ♥ YOU",
+      "python": "I ♥ YOU"
+    },
+    {
+      "input": "❤️A",
+      "passed": true,
+      "swift": "♥A",
+      "python": "♥A"
+    },
+    {
+      "input": "♥︎A",
+      "passed": true,
+      "swift": "♥A",
+      "python": "♥A"
+    },
+    {
+      "input": "❤❤ <3<3",
+      "passed": true,
+      "swift": "♥♥ ♥♥",
+      "python": "♥♥ ♥♥"
+    },
+    {
+      "input": "Café",
+      "passed": true,
+      "swift": "Café",
+      "python": "Café"
+    },
+    {
+      "input": "가나다",
+      "passed": true,
+      "swift": "가나다",
+      "python": "가나다"
+    },
+    {
+      "input": "가나",
+      "passed": true,
+      "swift": "가나",
+      "python": "가나"
+    },
+    {
+      "input": "Wé♥",
+      "passed": true,
+      "swift": "Wé♥",
+      "python": "Wé♥"
+    },
+    {
+      "input": "東京 カタカナ",
+      "passed": true,
+      "swift": "東京 カタカナ",
+      "python": "東京 カタカナ"
+    },
+    {
+      "input": "A\r\nB\rC\tD E",
+      "passed": true,
+      "swift": "A\nB\nC D E",
+      "python": "A\nB\nC D E"
+    },
+    {
+      "input": "ONE\n\nTWO",
+      "passed": true,
+      "swift": "ONE\n\nTWO",
+      "python": "ONE\n\nTWO"
+    },
+    {
+      "input": "A​‌‍﻿B󠄀",
+      "passed": true,
+      "swift": "AB",
+      "python": "AB"
+    },
+    {
+      "input": "A\u0000B",
+      "passed": true,
+      "swift": "AB",
+      "python": "AB"
+    },
+    {
+      "input": "A\u001cB",
+      "passed": true,
+      "swift": "A B",
+      "python": "A B"
+    },
+    {
+      "input": "A B C",
+      "passed": true,
+      "swift": "A B C",
+      "python": "A B C"
+    },
+    {
+      "input": "A⁠B",
+      "passed": true,
+      "swift": "AB",
+      "python": "AB"
+    },
+    {
+      "input": "AB",
+      "passed": true,
+      "swift": "AB",
+      "python": "AB"
+    },
+    {
+      "input": "A͸B",
+      "passed": true,
+      "swift": "AB",
+      "python": "AB"
+    },
+    {
+      "input": "👩‍🎨 art",
+      "passed": true,
+      "swift": "👩🎨 art",
+      "python": "👩🎨 art"
+    },
+    {
+      "input": "متن",
+      "passed": true,
+      "swift": "متن",
+      "python": "متن"
+    },
+    {
+      "input": "\t <3 \n",
+      "passed": true,
+      "swift": "  ♥ \n",
+      "python": "  ♥ \n"
+    }
+  ]
+}

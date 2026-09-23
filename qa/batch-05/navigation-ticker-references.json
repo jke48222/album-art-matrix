@@ -1,0 +1,45 @@
+{
+  "batch": 5,
+  "units": [
+    "C12",
+    "A01",
+    "A06"
+  ],
+  "references": [
+    {
+      "source": "Mobbin / Apple Mail",
+      "url": "https://mobbin.com/screens/54852089-5a93-4e64-bd7d-08720cad7d30",
+      "applied": "Colour editing stays attached to the message; retain a single primary send action."
+    },
+    {
+      "source": "Mobbin / Slack",
+      "url": "https://mobbin.com/screens/a822388c-5098-4cef-810d-cfe638152b8a",
+      "applied": "One document surface with formatting next to the content instead of a duplicate settings destination."
+    },
+    {
+      "source": "Mobbin / Pinterest",
+      "url": "https://mobbin.com/flows/36c8c20e-f07e-4978-82d5-23f6eea54cb4",
+      "applied": "Keep the object visible while choosing editing tools; a dedicated crop stage has a clear return path."
+    },
+    {
+      "source": "Apple HIG / Sheets",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/sheets",
+      "applied": "Remove duplicate customization modals; use inline feature workspaces, reserve full-screen media framing for its distinct task."
+    },
+    {
+      "source": "Apple HIG / Text views",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/text-views",
+      "applied": "Multiline message editing supports notes and preserves paragraph breaks in rising/crawl."
+    },
+    {
+      "source": "Apple HIG / Accessibility",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+      "applied": "44-point letter and colour controls, large-text layouts, descriptive labels and errors."
+    },
+    {
+      "source": "Apple HIG / Motion",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+      "applied": "Scrubbable draft preview keeps reading under user control; motion choices convey direction explicitly."
+    }
+  ]
+}

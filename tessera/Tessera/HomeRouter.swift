@@ -1,9 +1,9 @@
 import Foundation
 import Observation
 
-enum HomeDestination: Equatable { case settings, studio, onboarding }
+enum HomeDestination: Equatable { case settings, studio, video, onboarding }
 enum HomeSheet: String, Identifiable { case settings; var id: String { rawValue } }
-enum HomeCover: String, Identifiable { case studio, onboarding; var id: String { rawValue } }
+enum HomeCover: String, Identifiable { case studio, video, onboarding; var id: String { rawValue } }
 
 /// Appeared destinations finish dismissing before the next presentation.
 /// Requests SwiftUI has not presented yet can be replaced immediately.
@@ -61,6 +61,7 @@ final class HomeRouter {
         switch destination {
         case .settings: sheet = .settings
         case .studio: cover = .studio
+        case .video: cover = .video
         case .onboarding: cover = .onboarding
         }
     }

@@ -7,6 +7,7 @@
 
 import AVFoundation
 import Foundation
+import CoreGraphics
 
 enum VideoHandoff {
     struct Pending: Equatable {
@@ -55,20 +56,26 @@ enum VideoHandoff {
     /// original kept here for its sound. Progress is 0 to 1 for the
     /// picture-making, then the upload; the words say which.
     static func send(file: URL, title: String?, host: String,
+                     sound: Bool = true, crop: CGRect? = nil,
                      progress: @escaping @Sendable (String, Double) -> Void) async throws -> String {
         progress("Making the picture", 0)
-        let small = try await VideoPicture.make(from: file) { p in progress("Making the picture", p) }
+        let small = try await VideoPicture.make(from: file, crop: crop) { p in progress("Making the picture", p) }
         defer { try? FileManager.default.removeItem(at: small) }
+        try Task.checkCancellation()
         progress("Sending it to the wall", 0)
-        var c = URLComponents(string: "http://\(host)/video/upload")!
+        guard !host.isEmpty, var c = URLComponents(string: "http://\(host)/video/upload"),
+              c.host != nil else { throw Failure.wall("invalid wall address") }
         c.queryItems = [.init(name: "title", value: title ?? "From your library"),
-                        .init(name: "clock", value: "phone")]
+                        .init(name: "clock", value: sound ? "phone" : "wall")]
         guard let url = c.url else { throw Failure.wall("bad wall address") }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
         req.timeoutInterval = 180
         req.setValue("video/mp4", forHTTPHeaderField: "Content-Type")
-        let (data, resp) = try await URLSession.shared.upload(for: req, fromFile: small)
+        let delegate = VideoUploadProgress { fraction in progress("Sending it to the wall", fraction) }
+        let session = URLSession(configuration: .ephemeral, delegate: delegate, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        let (data, resp) = try await session.upload(for: req, fromFile: small)
         guard let http = resp as? HTTPURLResponse else { throw Failure.wall("no answer") }
         let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
         guard http.statusCode == 200 else {
@@ -76,9 +83,18 @@ enum VideoHandoff {
         }
         progress("On the wall", 1)
         // the wall names the video by the path it kept; the sound follows that name
-        let wallKey = ((json?["video"] as? [String: Any])?["url"] as? String) ?? ""
-        localSound = (wallKey, file)
+        guard let wallKey = (json?["video"] as? [String: Any])?["url"] as? String, !wallKey.isEmpty else {
+            throw Failure.wall("missing video confirmation")
+        }
+        if sound { localSound = (wallKey, file) }
         return wallKey
+    }
+
+    /// Only app-created temporary copies may be removed after playback.
+    static func ownsSource(_ url: URL) -> Bool {
+        let directory = FileManager.default.temporaryDirectory.resolvingSymlinksInPath().path + "/"
+        let file = url.resolvingSymlinksInPath()
+        return file.path.hasPrefix(directory) && file.lastPathComponent.hasPrefix("tessera-")
     }
 
     enum Failure: LocalizedError {
@@ -86,5 +102,15 @@ enum VideoHandoff {
         var errorDescription: String? {
             switch self { case .wall(let s): return "The wall did not take it: \(s)." }
         }
+    }
+}
+
+private final class VideoUploadProgress: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let progress: @Sendable (Double) -> Void
+    init(progress: @escaping @Sendable (Double) -> Void) { self.progress = progress }
+    func urlSession(_ session: URLSession, task: URLSessionTask, didSendBodyData bytesSent: Int64,
+                    totalBytesSent: Int64, totalBytesExpectedToSend: Int64) {
+        guard totalBytesExpectedToSend > 0 else { return }
+        progress(min(1, max(0, Double(totalBytesSent) / Double(totalBytesExpectedToSend))))
     }
 }
