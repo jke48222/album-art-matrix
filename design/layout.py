@@ -19,10 +19,11 @@ FLANGE_RUN = 230.0        # kept as the exclusion band: the side rails
                           # are thinner than this, so it is conservative
 FLANGE_IN = 254.2         # inside face of a flange
 PANEL_PITCH = 160.0
-OPEN_D = 12.0             # a wiring opening
-CHAIN_SLOT = (40.0, 12.0)
-HARNESS = (60.0, 14.0)
-HARNESS_AT = (0.0, -235.0)
+OPEN_D = 25.0             # a wiring opening; all nine are 2.5 cm, see diy.py
+HARNESS = (25.0, 25.0)    # the routing hole, round
+HARNESS_AT = (-110.0, -190.0)  # diy.py has it at (110, -190) seen from the
+                               # front; this file looks at the back, so x flips.
+                               # The old (0, -235) sat on the -233 steel strip.
 CLEAR = 4.0               # air left around everything
 
 # name, width, height, centre x, centre y, note
@@ -48,10 +49,7 @@ def openings():
     for gy in (-1, 0, 1):
         for gx in (-1, 0, 1):
             x, y = gx * k, gy * k
-            if gx == 1:                       # the chain starts get a slot
-                out.append((x, y, CHAIN_SLOT[0], CHAIN_SLOT[1]))
-            else:
-                out.append((x, y, OPEN_D, OPEN_D))
+            out.append((x, y, OPEN_D, OPEN_D))
     out.append((HARNESS_AT[0], HARNESS_AT[1], HARNESS[0], HARNESS[1]))
     return out
 

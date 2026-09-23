@@ -250,13 +250,13 @@ def holes():
     """Every hole in the face board, as (x, y, diameter, what)."""
     out = []
     k = 1
+    # All nine the same size. The chain starts need room for a ribbon plug, but
+    # which column they fall in depends on which way the chain runs, and the
+    # drill plan is drawn from the front while the layout is drawn from the
+    # back. Making all nine 2.5 cm means it cannot be drilled on the wrong side.
     for gy in (-1, 0, 1):
         for gx in (-1, 0, 1):
-            x, y = gx * PITCH, gy * PITCH
-            if gx == 1:
-                out.append((x, y, CHAIN_D, "chain start"))
-            else:
-                out.append((x, y, OPEN_D, "panel harness"))
+            out.append((gx * PITCH, gy * PITCH, CHAIN_D, "panel opening"))
     out.append((110.0, -190.0, HARNESS_D, "routing to the bay"))
     for sx in (-1, 1):
         for sy in (-1, 1):

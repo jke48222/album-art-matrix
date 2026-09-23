@@ -61,3 +61,16 @@ tessera/Tools/room/room-lightfilm/
 tessera/Tools/room/room-mark/
 tessera/Tools/room/room-marklight/
 tessera/Tools/room/room-needle/
+
+# Tessera launch site
+site/node_modules/
+site/dist/
+site/.vite/
+site/test-results/
+site/playwright-report/
+site/*.tsbuildinfo
+
+# Local music provider configuration
+site/.env
+site/.env.local
+site/.env.*.local
