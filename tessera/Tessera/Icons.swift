@@ -1,24 +1,47 @@
-// Hand-drawn icons. No SF Symbols anywhere in the control surface.
-//
-// Every glyph is the wall itself in a different state, so the icon set is one
-// object rather than four unrelated pictures:
-//   art    four tiles, the mosaic showing a picture
-//   spin   the sleeve as a disc, with its spindle hole
-//   lamp   one tile radiating, light with no picture in it
-//   dark   the panel with nothing lit, a hairline outline
-// They are drawn in a 24x24 space and scale with the button.
-
+// A single native symbol family for every control surface. Symbols preserve
+// optical alignment, foreground tint and readable weight at small sizes.
 import SwiftUI
 
 enum Glyph: String, CaseIterable, Hashable {
     case art, spin, lamp, dark
-    // Utility glyphs. Deliberately not part of the mode row: that set is four
-    // states of one object and it stays four.
     case make, erase, photo, letters, clock, snake, fill, pen, undo, redo
     case palette, crate, gear
     case play, pause, skip, back, nine, lyrics, rewind, forward
-    case video
-    case games
+    case video, games, weather, ticker
+
+    var symbol: String {
+        switch self {
+        case .art: "photo.on.rectangle"
+        case .spin: "opticaldisc"
+        case .lamp: "lightbulb"
+        case .dark: "power"
+        case .make: "square.and.pencil"
+        case .erase: "eraser"
+        case .photo: "photo"
+        case .letters: "textformat"
+        case .clock: "clock"
+        case .snake: "point.topleft.down.to.point.bottomright.curvepath"
+        case .fill: "drop.halffull"
+        case .pen: "pencil.tip"
+        case .undo: "arrow.uturn.backward"
+        case .redo: "arrow.uturn.forward"
+        case .palette: "paintpalette"
+        case .crate: "square.stack"
+        case .gear: "gearshape"
+        case .play: "play.fill"
+        case .pause: "pause.fill"
+        case .skip: "forward.end.fill"
+        case .back: "backward.end.fill"
+        case .nine: "square.grid.3x3"
+        case .lyrics: "quote.bubble"
+        case .rewind: "backward.fill"
+        case .forward: "forward.fill"
+        case .video: "play.rectangle"
+        case .games: "gamecontroller"
+        case .weather: "cloud.sun"
+        case .ticker: "text.alignleft"
+        }
+    }
 }
 
 struct GlyphShape: View {
@@ -26,537 +49,14 @@ struct GlyphShape: View {
     var lineWidth: CGFloat = 1.6
 
     var body: some View {
-        // The drawing is a mask, and whatever foreground style the caller
-        // sets shows through it. The Canvas draws in white so the mask is
-        // solid where the glyph is. Before this, every glyph in the app was
-        // white no matter what colour it was given: a Canvas paints its own
-        // colours and ignores foregroundStyle entirely.
-        Rectangle()
-            .fill(.foreground)
-            .mask { drawing }
-            .accessibilityHidden(true)
-    }
-
-    private var drawing: some View {
-        Canvas { ctx, size in
-            let s = min(size.width, size.height)
-            let u = s / 24.0                       // one unit of the 24pt grid
-            let inset = 3.0 * u
-            let box = CGRect(x: inset, y: inset, width: s - inset * 2, height: s - inset * 2)
-            let lw = lineWidth * max(1, u)
-
-            switch glyph {
-            case .undo, .redo:
-                // The undo arrow editors have drawn for thirty years: a solid
-                // head pointing back, and a tail that runs out of its base
-                // and hooks down and away. Redo is the same figure mirrored,
-                // so the pair read as one motion in two directions.
-                var g = ctx
-                if glyph == .redo {
-                    g.translateBy(x: size.width, y: 0)
-                    g.scaleBy(x: -1, y: 1)
-                }
-                let hy = box.minY + 6.0 * u                 // the head's centre line
-                var head = Path()
-                head.move(to: CGPoint(x: box.minX, y: hy))
-                head.addLine(to: CGPoint(x: box.minX + 7.0 * u, y: hy - 5.2 * u))
-                head.addLine(to: CGPoint(x: box.minX + 7.0 * u, y: hy + 5.2 * u))
-                head.closeSubpath()
-                g.fill(head, with: .color(.white))
-                // The tail: straight out of the head, then a quarter turn
-                // down and a touch more, so it finishes heading down rather
-                // than out. Points, not addArc, so the sweep is unambiguous.
-                let cx = box.minX + 9.5 * u, rr = 7.0 * u
-                var tail = Path()
-                tail.move(to: CGPoint(x: box.minX + 6.2 * u, y: hy))
-                tail.addLine(to: CGPoint(x: cx, y: hy))
-                var deg = -90.0
-                while deg < 15 {
-                    deg += 5
-                    let a = deg * .pi / 180
-                    tail.addLine(to: CGPoint(x: cx + rr * cos(a), y: hy + rr + rr * sin(a)))
-                }
-                g.stroke(tail, with: .color(.white),
-                         style: StrokeStyle(lineWidth: lw * 1.5, lineCap: .round, lineJoin: .round))
-
-            case .palette:
-                // The studio as the pencil you draw with. A palette's board,
-                // hole and three wells came to about forty pixels on a key
-                // this size and read as a smudge; a pencil is four strokes
-                // and unmistakable.
-                let tip = CGPoint(x: box.minX + 1.4 * u, y: box.maxY - 1.4 * u)
-                let d = CGPoint(x: 0.7071, y: -0.7071)          // along the pencil
-                let n = CGPoint(x: 0.7071, y: 0.7071)           // across it
-                let half = 2.35 * u
-                func at(_ along: CGFloat, _ across: CGFloat) -> CGPoint {
-                    CGPoint(x: tip.x + d.x * along + n.x * across,
-                            y: tip.y + d.y * along + n.y * across)
-                }
-                let collar: CGFloat = 4.0 * u, end: CGFloat = 14.4 * u
-                var body = Path()
-                body.move(to: at(collar, half))
-                body.addLine(to: at(end, half))
-                body.addLine(to: at(end, -half))
-                body.addLine(to: at(collar, -half))
-                body.closeSubpath()
-                ctx.stroke(body, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineJoin: .round))
-                var point = Path()                               // the sharpened end
-                point.move(to: at(collar, half))
-                point.addLine(to: tip)
-                point.addLine(to: at(collar, -half))
-                ctx.fill(point, with: .color(.white))
-                var band = Path()                                // the metal band
-                band.move(to: at(collar + 2.1 * u, half))
-                band.addLine(to: at(collar + 2.1 * u, -half))
-                ctx.stroke(band, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
-
-            case .crate:
-                // The archive as the box it lives in: a lid a shade wider
-                // than the body, and the slot you lift it by.
-                let lid = CGRect(x: box.minX, y: box.minY + 1.0 * u, width: box.width, height: 4.0 * u)
-                ctx.stroke(Path(roundedRect: lid, cornerRadius: 1.0 * u), with: .color(.white), lineWidth: lw)
-                let body = CGRect(x: box.minX + 1.4 * u, y: lid.maxY, width: box.width - 2.8 * u,
-                                  height: box.maxY - lid.maxY - 0.5 * u)
-                var walls = Path()
-                walls.move(to: CGPoint(x: body.minX, y: body.minY))
-                walls.addLine(to: CGPoint(x: body.minX, y: body.maxY - 1.5 * u))
-                walls.addQuadCurve(to: CGPoint(x: body.minX + 1.5 * u, y: body.maxY),
-                                   control: CGPoint(x: body.minX, y: body.maxY))
-                walls.addLine(to: CGPoint(x: body.maxX - 1.5 * u, y: body.maxY))
-                walls.addQuadCurve(to: CGPoint(x: body.maxX, y: body.maxY - 1.5 * u),
-                                   control: CGPoint(x: body.maxX, y: body.maxY))
-                walls.addLine(to: CGPoint(x: body.maxX, y: body.minY))
-                ctx.stroke(walls, with: .color(.white), style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                var slot = Path()
-                slot.move(to: CGPoint(x: body.midX - 2.4 * u, y: body.minY + 3.4 * u))
-                slot.addLine(to: CGPoint(x: body.midX + 2.4 * u, y: body.minY + 3.4 * u))
-                ctx.stroke(slot, with: .color(.white), style: StrokeStyle(lineWidth: lw * 1.2, lineCap: .round))
-
-            case .gear:
-                // Settings as the gear everyone knows: a ring, eight teeth
-                // out of it, the shaft hole in the middle.
-                let c = CGPoint(x: box.midX, y: box.midY)
-                let ring = 5.2 * u, tooth = 8.3 * u
-                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - ring, y: c.y - ring, width: ring * 2, height: ring * 2)),
-                           with: .color(.white), lineWidth: lw * 1.1)
-                var teeth = Path()
-                for i in 0..<8 {
-                    let a = Double(i) * .pi / 4
-                    teeth.move(to: CGPoint(x: c.x + (ring - 0.3 * u) * cos(a), y: c.y + (ring - 0.3 * u) * sin(a)))
-                    teeth.addLine(to: CGPoint(x: c.x + tooth * cos(a), y: c.y + tooth * sin(a)))
-                }
-                ctx.stroke(teeth, with: .color(.white), style: StrokeStyle(lineWidth: lw * 2.1, lineCap: .round))
-                let hole = 2.0 * u
-                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - hole, y: c.y - hole, width: hole * 2, height: hole * 2)),
-                           with: .color(.white), lineWidth: lw)
-
-            case .pen:
-                // a pencil, simply: body, collar, tip, lead
-                let tip = CGPoint(x: box.minX + 2.2 * u, y: box.maxY - 2.2 * u)
-                let ax = 0.7071, ay = -0.7071
-                func at(_ d: CGFloat, _ side: CGFloat) -> CGPoint {
-                    CGPoint(x: tip.x + d * ax - side * ay,
-                            y: tip.y + d * ay + side * ax)
-                }
-                var point = Path()
-                point.move(to: tip)
-                point.addLine(to: at(4.2 * u, 2.0 * u))
-                point.addLine(to: at(4.2 * u, -2.0 * u))
-                point.closeSubpath()
-                ctx.stroke(point, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.9, lineJoin: .round))
-                let lead = 1.3 * u
-                ctx.fill(Path(ellipseIn: CGRect(x: tip.x - lead * 0.35,
-                                                y: tip.y - lead * 0.65,
-                                                width: lead, height: lead)),
-                         with: .color(.white))
-                var body = Path()
-                body.move(to: at(5.2 * u, 0))
-                body.addLine(to: at(12.0 * u, 0))
-                ctx.stroke(body, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 2.4, lineCap: .round))
-                var collar = Path()
-                collar.move(to: at(5.2 * u, 1.8 * u))
-                collar.addLine(to: at(5.2 * u, -1.8 * u))
-                ctx.stroke(collar, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
-
-            case .fill:
-                // a tile half-taken by its ink: what filling IS, on a wall
-                // made of tiles. The diagonal is the pour line.
-                let r = 2.2 * u
-                let sq = box.insetBy(dx: 1.2 * u, dy: 1.2 * u)
-                let outline = Path(roundedRect: sq, cornerRadius: r)
-                var half = Path()
-                half.move(to: CGPoint(x: sq.minX, y: sq.maxY - r))
-                half.addLine(to: CGPoint(x: sq.maxX - r, y: sq.minY))
-                half.addQuadCurve(to: CGPoint(x: sq.maxX, y: sq.minY + r),
-                                  control: CGPoint(x: sq.maxX, y: sq.minY))
-                half.addLine(to: CGPoint(x: sq.maxX, y: sq.maxY - r))
-                half.addQuadCurve(to: CGPoint(x: sq.maxX - r, y: sq.maxY),
-                                  control: CGPoint(x: sq.maxX, y: sq.maxY))
-                half.addLine(to: CGPoint(x: sq.minX + r, y: sq.maxY))
-                half.addQuadCurve(to: CGPoint(x: sq.minX, y: sq.maxY - r),
-                                  control: CGPoint(x: sq.minX, y: sq.maxY))
-                half.closeSubpath()
-                ctx.fill(half, with: .color(.white))
-                ctx.stroke(outline, with: .color(.white), lineWidth: lw * 0.9)
-
-            case .nine:
-                // the wall's memory: three by three, the newest lit
-                let gap9 = 1.3 * u
-                let cell9 = (box.width - gap9 * 2) / 3
-                for i in 0..<9 {
-                    let r9 = CGRect(
-                        x: box.minX + CGFloat(i % 3) * (cell9 + gap9),
-                        y: box.minY + CGFloat(i / 3) * (cell9 + gap9),
-                        width: cell9, height: cell9)
-                    let path9 = Path(roundedRect: r9, cornerRadius: 0.8 * u)
-                    if i == 0 {
-                        ctx.fill(path9, with: .color(.white))
-                    } else {
-                        ctx.stroke(path9, with: .color(.white), lineWidth: lw * 0.7)
-                    }
-                }
-
-            case .lyrics:
-                // Words being sung: a quaver, and three lines of text that
-                // shorten as they go, the way a lyric sheet reads.
-                let headR = 2.1 * u
-                let headC = CGPoint(x: box.minX + 4.2 * u, y: box.maxY - 2.6 * u)
-                var head = Path()
-                head.addEllipse(in: CGRect(x: headC.x - headR * 1.15, y: headC.y - headR * 0.8,
-                                           width: headR * 2.3, height: headR * 1.6))
-                var h = ctx
-                h.translateBy(x: headC.x, y: headC.y)
-                h.rotate(by: .degrees(-22))
-                h.translateBy(x: -headC.x, y: -headC.y)
-                h.fill(head, with: .color(.white))
-                let stemX = headC.x + headR * 1.0
-                let stemTop = CGPoint(x: stemX, y: box.minY + 1.4 * u)
-                var stem = Path()
-                stem.move(to: CGPoint(x: stemX, y: headC.y - 0.4 * u))
-                stem.addLine(to: stemTop)
-                ctx.stroke(stem, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                var flag = Path()
-                flag.move(to: stemTop)
-                flag.addCurve(to: CGPoint(x: stemTop.x + 3.2 * u, y: stemTop.y + 5.2 * u),
-                              control1: CGPoint(x: stemTop.x + 3.6 * u, y: stemTop.y + 0.6 * u),
-                              control2: CGPoint(x: stemTop.x + 3.4 * u, y: stemTop.y + 3.0 * u))
-                ctx.stroke(flag, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                for (i, w) in [(0, 6.0), (1, 4.6), (2, 5.4)] as [(Int, CGFloat)] {
-                    var line = Path()
-                    let ly = box.minY + 7.6 * u + CGFloat(i) * 3.4 * u
-                    line.move(to: CGPoint(x: box.maxX - w * u, y: ly))
-                    line.addLine(to: CGPoint(x: box.maxX - 0.6 * u, y: ly))
-                    ctx.stroke(line, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * 0.95, lineCap: .round))
-                }
-
-            case .rewind, .forward:
-                // two solid triangles, nose to tail: the double arrow of a
-                // transport key. Forward is the same figure mirrored.
-                var g = ctx
-                if glyph == .rewind {
-                    g.translateBy(x: size.width, y: 0)
-                    g.scaleBy(x: -1, y: 1)
-                }
-                let h = box.height * 0.62
-                let w = box.width * 0.46
-                let y0 = box.midY - h / 2, y1 = box.midY + h / 2
-                for x in [box.minX + 0.4 * u, box.minX + w - 0.6 * u] {
-                    var tri = Path()
-                    tri.move(to: CGPoint(x: x, y: y0))
-                    tri.addLine(to: CGPoint(x: x + w, y: box.midY))
-                    tri.addLine(to: CGPoint(x: x, y: y1))
-                    tri.closeSubpath()
-                    g.fill(tri, with: .color(.white))
-                }
-
-            case .play:
-                var p = Path()
-                p.move(to: CGPoint(x: box.minX + 2.4 * u, y: box.minY + 1.6 * u))
-                p.addLine(to: CGPoint(x: box.maxX - 1.4 * u, y: box.midY))
-                p.addLine(to: CGPoint(x: box.minX + 2.4 * u, y: box.maxY - 1.6 * u))
-                p.closeSubpath()
-                ctx.fill(p, with: .color(.white))
-
-            case .video:
-                // a screen with a play mark in it
-                let screen = CGRect(x: box.minX + 0.6 * u, y: box.minY + 2.0 * u,
-                                    width: box.width - 1.2 * u, height: box.height - 4.0 * u)
-                ctx.stroke(Path(roundedRect: screen, cornerRadius: 2.2 * u),
-                           with: .color(.white), lineWidth: lw)
-                var p = Path()
-                p.move(to: CGPoint(x: screen.midX - 2.2 * u, y: screen.midY - 3.0 * u))
-                p.addLine(to: CGPoint(x: screen.midX + 3.2 * u, y: screen.midY))
-                p.addLine(to: CGPoint(x: screen.midX - 2.2 * u, y: screen.midY + 3.0 * u))
-                p.closeSubpath()
-                ctx.fill(p, with: .color(.white))
-
-            case .pause:
-                let bw2 = 2.6 * u
-                for x in [box.minX + 3.2 * u, box.maxX - 3.2 * u - bw2] {
-                    ctx.fill(Path(roundedRect: CGRect(x: x, y: box.minY + 1.6 * u,
-                                                      width: bw2,
-                                                      height: box.height - 3.2 * u),
-                                  cornerRadius: 1),
-                             with: .color(.white))
-                }
-
-            case .skip:
-                var p = Path()
-                p.move(to: CGPoint(x: box.minX + 1.6 * u, y: box.minY + 2.4 * u))
-                p.addLine(to: CGPoint(x: box.midX + 1.6 * u, y: box.midY))
-                p.addLine(to: CGPoint(x: box.minX + 1.6 * u, y: box.maxY - 2.4 * u))
-                p.closeSubpath()
-                ctx.fill(p, with: .color(.white))
-                ctx.fill(Path(roundedRect: CGRect(x: box.midX + 2.6 * u,
-                                                  y: box.minY + 2.4 * u,
-                                                  width: 1.7 * u,
-                                                  height: box.height - 4.8 * u),
-                              cornerRadius: 0.8),
-                         with: .color(.white))
-
-            case .back:
-                var p = Path()
-                p.move(to: CGPoint(x: box.maxX - 1.6 * u, y: box.minY + 2.4 * u))
-                p.addLine(to: CGPoint(x: box.midX - 1.6 * u, y: box.midY))
-                p.addLine(to: CGPoint(x: box.maxX - 1.6 * u, y: box.maxY - 2.4 * u))
-                p.closeSubpath()
-                ctx.fill(p, with: .color(.white))
-                ctx.fill(Path(roundedRect: CGRect(x: box.midX - 4.3 * u,
-                                                  y: box.minY + 2.4 * u,
-                                                  width: 1.7 * u,
-                                                  height: box.height - 4.8 * u),
-                              cornerRadius: 0.8),
-                         with: .color(.white))
-
-            case .snake:
-                // A serpentine chasing its meal: the body is three arcs of a
-                // wave, the head is the fat end, the food sits where it is
-                // headed. Round everywhere, because the game draws in round
-                // emitters and the glyph should come from the same animal.
-                let y0 = box.midY + box.height * 0.14
-                let r = box.width / 5.6
-                var path = Path()
-                path.move(to: CGPoint(x: box.minX + 0.2 * u, y: y0))
-                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + r, y: y0),
-                            radius: r, startAngle: .degrees(180), endAngle: .degrees(0),
-                            clockwise: false)
-                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + 3 * r, y: y0),
-                            radius: r, startAngle: .degrees(180), endAngle: .degrees(0),
-                            clockwise: true)
-                path.addArc(center: CGPoint(x: box.minX + 0.2 * u + 5 * r, y: y0),
-                            radius: r, startAngle: .degrees(180), endAngle: .degrees(305),
-                            clockwise: false)
-                ctx.stroke(path, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
-                // the head, a filled tile at the raised end of the last arc
-                let end = CGPoint(
-                    x: box.minX + 0.2 * u + 5 * r + r * cos(.pi * 305 / 180),
-                    y: y0 + r * sin(.pi * 305 / 180)
-                )
-                let hd = 3.0 * u
-                ctx.fill(Path(roundedRect: CGRect(x: end.x - hd / 2, y: end.y - hd / 2,
-                                                  width: hd, height: hd),
-                              cornerRadius: hd * 0.32),
-                         with: .color(.white))
-                // the meal, small and square like the game draws it
-                let fd = 1.7 * u
-                ctx.fill(Path(roundedRect: CGRect(x: box.maxX - fd, y: box.minY + 0.6 * u,
-                                                  width: fd, height: fd),
-                              cornerRadius: fd * 0.3),
-                         with: .color(.white))
-
-            case .art:
-                // four tiles, two lit
-                let gap = 1.6 * u
-                let cell = (box.width - gap) / 2
-                let cells = [
-                    CGRect(x: box.minX, y: box.minY, width: cell, height: cell),
-                    CGRect(x: box.minX + cell + gap, y: box.minY, width: cell, height: cell),
-                    CGRect(x: box.minX, y: box.minY + cell + gap, width: cell, height: cell),
-                    CGRect(x: box.minX + cell + gap, y: box.minY + cell + gap, width: cell, height: cell),
-                ]
-                for (i, r) in cells.enumerated() {
-                    let path = Path(roundedRect: r, cornerRadius: 1 * u)
-                    if i == 0 || i == 3 {
-                        ctx.fill(path, with: .color(.white))
-                    } else {
-                        ctx.stroke(path, with: .color(.white), lineWidth: lw)
-                    }
-                }
-
-            case .spin:
-                // a disc with a spindle hole, and one sheen wedge
-                let c = CGPoint(x: box.midX, y: box.midY)
-                let r = box.width / 2
-                ctx.stroke(
-                    Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: r * 2, height: r * 2)),
-                    with: .color(.white), lineWidth: lw
-                )
-                let hole = r * 0.26
-                ctx.fill(
-                    Path(ellipseIn: CGRect(x: c.x - hole, y: c.y - hole, width: hole * 2, height: hole * 2)),
-                    with: .color(.white)
-                )
-                var sheen = Path()
-                sheen.addArc(center: c, radius: r * 0.62,
-                             startAngle: .degrees(-118), endAngle: .degrees(-42), clockwise: false)
-                ctx.stroke(sheen, with: .color(.white), style: StrokeStyle(lineWidth: lw, lineCap: .round))
-
-            case .lamp:
-                // Light with no picture in it: one lit tile, and the glow it
-                // throws as a ring of short rays all round. Eight rays, not
-                // three: a lamp lights the whole room.
-                let side = box.width * 0.40
-                let r = CGRect(x: box.midX - side / 2, y: box.midY - side / 2, width: side, height: side)
-                ctx.fill(Path(roundedRect: r, cornerRadius: 1.2 * u), with: .color(.white))
-                for i in 0..<8 {
-                    let a = (Double(i) * 45.0 - 90.0) * .pi / 180
-                    let long = i % 2 == 0
-                    let r0 = side * (long ? 0.80 : 0.86)
-                    let r1 = box.width * (long ? 0.56 : 0.50)
-                    var ray = Path()
-                    ray.move(to: CGPoint(x: box.midX + cos(a) * r0, y: box.midY + sin(a) * r0))
-                    ray.addLine(to: CGPoint(x: box.midX + cos(a) * r1, y: box.midY + sin(a) * r1))
-                    ctx.stroke(ray, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * (long ? 1.0 : 0.8), lineCap: .round))
-                }
-
-            case .dark:
-                // the panel, unlit
-                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
-                           with: .color(.white), lineWidth: lw)
-
-            case .make:
-                // The studio: the panel with a stroke laid across it and the
-                // brush still on the tile, mid-mark. The tile it just filled
-                // is solid; the rest of the panel is the outline.
-                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
-                           with: .color(.white), lineWidth: lw)
-                let cell = box.width / 4
-                let lit = CGRect(x: box.minX + cell * 0.55, y: box.maxY - cell * 1.55,
-                                 width: cell, height: cell)
-                ctx.fill(Path(roundedRect: lit, cornerRadius: 0.5 * u), with: .color(.white))
-                var stroke = Path()
-                stroke.move(to: CGPoint(x: lit.midX + 0.6 * u, y: lit.midY - 0.6 * u))
-                stroke.addCurve(to: CGPoint(x: box.maxX - 2.6 * u, y: box.minY + 3.2 * u),
-                                control1: CGPoint(x: box.midX + 1.0 * u, y: box.midY + 2.4 * u),
-                                control2: CGPoint(x: box.midX + 2.0 * u, y: box.minY + 4.0 * u))
-                ctx.stroke(stroke, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.3, lineCap: .round))
-                // the brush tip, a small solid wedge at the far end
-                let tip = CGPoint(x: box.maxX - 2.6 * u, y: box.minY + 3.2 * u)
-                var wedge = Path()
-                wedge.move(to: CGPoint(x: tip.x + 1.4 * u, y: tip.y - 1.4 * u))
-                wedge.addLine(to: CGPoint(x: tip.x - 0.4 * u, y: tip.y - 1.6 * u))
-                wedge.addLine(to: CGPoint(x: tip.x + 1.6 * u, y: tip.y + 0.4 * u))
-                wedge.closeSubpath()
-                ctx.fill(wedge, with: .color(.white))
-
-            case .erase:
-                // the eraser itself, tilted mid-swipe, its two-tone seam,
-                // and the clean streak it just left
-                var e = ctx
-                e.translateBy(x: box.midX, y: box.midY - 0.8 * u)
-                e.rotate(by: .degrees(-38))
-                let bw = 9.6 * u, bh = 5.4 * u
-                let block = CGRect(x: -bw / 2, y: -bh / 2, width: bw, height: bh)
-                e.stroke(Path(roundedRect: block, cornerRadius: 1.5 * u),
-                         with: .color(.white),
-                         style: StrokeStyle(lineWidth: lw * 0.95, lineJoin: .round))
-                var seam = Path()
-                seam.move(to: CGPoint(x: -bw / 2 + 3.1 * u, y: -bh / 2))
-                seam.addLine(to: CGPoint(x: -bw / 2 + 3.1 * u, y: bh / 2))
-                e.stroke(seam, with: .color(.white), lineWidth: lw * 0.8)
-                var streak = Path()
-                streak.move(to: CGPoint(x: box.minX + 1.4 * u, y: box.maxY - 1.8 * u))
-                streak.addLine(to: CGPoint(x: box.minX + 8.0 * u, y: box.maxY - 1.8 * u))
-                ctx.stroke(streak, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
-
-            case .photo:
-                // a frame with a horizon in it
-                ctx.stroke(Path(roundedRect: box, cornerRadius: 1.5 * u),
-                           with: .color(.white), lineWidth: lw)
-                var hill = Path()
-                hill.move(to: CGPoint(x: box.minX + 1.5 * u, y: box.maxY - 4 * u))
-                hill.addLine(to: CGPoint(x: box.midX - 1 * u, y: box.midY))
-                hill.addLine(to: CGPoint(x: box.maxX - 1.5 * u, y: box.maxY - 4 * u))
-                ctx.stroke(hill, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineJoin: .round))
-                let sun = 1.6 * u
-                ctx.fill(Path(ellipseIn: CGRect(x: box.maxX - 5.5 * u, y: box.minY + 3 * u,
-                                                width: sun * 2, height: sun * 2)),
-                         with: .color(.white))
-
-            case .games:
-                // a die: a rounded square and three pips on the diagonal
-                let side = box.width * 0.86
-                let sq = CGRect(x: box.midX - side / 2, y: box.midY - side / 2, width: side, height: side)
-                ctx.stroke(Path(roundedRect: sq, cornerRadius: side * 0.22), with: .color(.white), lineWidth: lw)
-                let pr = side * 0.09
-                for (fx, fy) in [(0.3, 0.3), (0.5, 0.5), (0.7, 0.7)] {
-                    let p = CGPoint(x: sq.minX + sq.width * fx, y: sq.minY + sq.height * fy)
-                    ctx.fill(Path(ellipseIn: CGRect(x: p.x - pr, y: p.y - pr, width: pr * 2, height: pr * 2)),
-                             with: .color(.white))
-                }
-
-            case .clock:
-                // a face and two hands
-                let c = CGPoint(x: box.midX, y: box.midY)
-                let rr = box.width / 2
-                ctx.stroke(Path(ellipseIn: CGRect(x: c.x - rr, y: c.y - rr, width: rr * 2, height: rr * 2)),
-                           with: .color(.white), lineWidth: lw)
-                var hands = Path()
-                hands.move(to: c); hands.addLine(to: CGPoint(x: c.x, y: c.y - rr * 0.55))
-                hands.move(to: c); hands.addLine(to: CGPoint(x: c.x + rr * 0.42, y: c.y))
-                ctx.stroke(hands, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw, lineCap: .round))
-
-            case .letters:
-                // type, mid-thought: a set T and the cursor still blinking
-                let stemX = box.minX + 5.4 * u
-                var t = Path()
-                t.move(to: CGPoint(x: box.minX + 0.8 * u, y: box.minY + 2.0 * u))
-                t.addLine(to: CGPoint(x: box.minX + 10.0 * u, y: box.minY + 2.0 * u))
-                ctx.stroke(t, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.15, lineCap: .round))
-                var down = Path()
-                down.move(to: CGPoint(x: stemX, y: box.minY + 2.0 * u))
-                down.addLine(to: CGPoint(x: stemX, y: box.maxY - 2.2 * u))
-                ctx.stroke(down, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 1.15, lineCap: .round))
-                // serif feet: the tell that this is TYPE
-                for x in [box.minX + 0.8 * u, box.minX + 10.0 * u] {
-                    var serif = Path()
-                    serif.move(to: CGPoint(x: x, y: box.minY + 2.0 * u))
-                    serif.addLine(to: CGPoint(x: x, y: box.minY + 3.7 * u))
-                    ctx.stroke(serif, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * 0.85, lineCap: .round))
-                }
-                // the caret as it actually looks: an I-beam, caps and all
-                let cx2 = box.maxX - 1.8 * u
-                var beam = Path()
-                beam.move(to: CGPoint(x: cx2, y: box.midY - 0.2 * u))
-                beam.addLine(to: CGPoint(x: cx2, y: box.maxY - 1.2 * u))
-                ctx.stroke(beam, with: .color(.white),
-                           style: StrokeStyle(lineWidth: lw * 0.9, lineCap: .round))
-                for capY in [box.midY - 0.2 * u, box.maxY - 1.2 * u] {
-                    var cap = Path()
-                    cap.move(to: CGPoint(x: cx2 - 1.2 * u, y: capY))
-                    cap.addLine(to: CGPoint(x: cx2 + 1.2 * u, y: capY))
-                    ctx.stroke(cap, with: .color(.white),
-                               style: StrokeStyle(lineWidth: lw * 0.8, lineCap: .round))
-                }
-            }
+        GeometryReader { geometry in
+            Image(systemName: glyph.symbol)
+                .symbolRenderingMode(.monochrome)
+                .font(.system(size: min(geometry.size.width, geometry.size.height) * 0.86,
+                              weight: lineWidth >= 1.9 ? .semibold : .medium))
+                .frame(width: geometry.size.width, height: geometry.size.height)
         }
+        .accessibilityHidden(true)
     }
 }
 
@@ -647,7 +147,7 @@ struct MiniGlyphButton: View {
                     .frame(width: 16, height: 16)
                     .foregroundStyle(Ink.dim)
             }
-            .frame(width: 36, height: 36)
+            .frame(width: 44, height: 44)
         }
         .buttonStyle(PressStyle(scale: 0.9))
         .accessibilityLabel(label)

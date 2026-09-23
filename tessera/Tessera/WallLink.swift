@@ -789,6 +789,26 @@ final class WallSession {
         }
     }
 
+    /// Explicit entry provenance prevents a local timestamp collision from
+    /// replaying different artwork. The detail stays open until acknowledged.
+    func replay(entry: JournalEntry) async -> Bool {
+        let destination = host
+        if entry.local {
+            guard let pixels = LocalJournal.frame(entry.ts) else { return false }
+            if link.isStandIn { pushFrame(pixels); return true }
+            guard link.isLive else { return false }
+            let ok = await postJSON("/frame", ["px": Data(pixels).base64EncodedString()])
+            guard host == destination, !Task.isCancelled else { return false }
+            if ok { await poll() }
+            return ok
+        }
+        guard link.isLive else { return false }
+        let ok = await postJSON("/replay", ["ts": entry.ts])
+        guard host == destination, !Task.isCancelled else { return false }
+        if ok { await poll(); Taps.landed() }
+        return ok
+    }
+
     /// Put a flat field on the wall for a panel check, through the brain's
     /// own /frame endpoint (base64 of one wall of raw RGB, mode becomes "frame").
     func pushFlat(r: UInt8, g: UInt8, b: UInt8) {

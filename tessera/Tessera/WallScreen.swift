@@ -104,7 +104,7 @@ struct IPodWallScreen: View {
             .accessibilityElement(children: .combine)
             Spacer(minLength: 4)
             Button(action: onStudio) {
-                Image(systemName: "square.grid.2x2")
+                Image(systemName: "square.and.pencil")
                     .font(.system(size: 18, weight: .medium))
                     .frame(width: 44, height: 44)
             }

@@ -95,7 +95,8 @@ extension RecordLabel {
                 text("SIDE A", small, 254, gold.darker(0.55), kern: 1.5)
             case .holo:
                 // a holographic disc, the sleeve's colours swept round it
-                let cols = palette.prefix(3).map { ui($0.mix(.white, 0.45)).cgColor } + [ui(palette[0].mix(.white, 0.45)).cgColor]
+                let inks = palette.isEmpty ? [Pressing.RGB.clear, .white, .black] : Array(palette.prefix(3))
+                let cols = inks.map { ui($0.mix(.white, 0.45)).cgColor } + [ui(inks[0].mix(.white, 0.45)).cgColor]
                 ctx.saveGState(); ctx.addEllipse(in: full); ctx.clip()
                 if let g = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: cols as CFArray, locations: nil) {
                     ctx.drawLinearGradient(g, start: CGPoint(x: 0, y: 40), end: CGPoint(x: d, y: d - 40), options: [])

@@ -1,0 +1,14 @@
+{
+  "progress_seconds": 93,
+  "duration_seconds": 245,
+  "rpm": 7.5,
+  "sizes": [
+    64,
+    192,
+    512
+  ],
+  "art_source": "album-source-512.png",
+  "pressing_source": "record-512.png",
+  "composition": "Identical centered artwork source and playback position at each output size. The dedicated phone view consumes the actual wall RGB bytes.",
+  "display_note": "Software files cannot certify physical LED color."
+}

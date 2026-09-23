@@ -1,0 +1,302 @@
+{
+  "checks" : [
+    {
+      "name" : "Paper label renders with empty palette",
+      "passed" : true
+    },
+    {
+      "name" : "Paper label renders with full palette",
+      "passed" : true
+    },
+    {
+      "name" : "Neon label renders with empty palette",
+      "passed" : true
+    },
+    {
+      "name" : "Neon label renders with full palette",
+      "passed" : true
+    },
+    {
+      "name" : "Coin label renders with empty palette",
+      "passed" : true
+    },
+    {
+      "name" : "Coin label renders with full palette",
+      "passed" : true
+    },
+    {
+      "name" : "Holo label renders with empty palette",
+      "passed" : true
+    },
+    {
+      "name" : "Holo label renders with full palette",
+      "passed" : true
+    },
+    {
+      "name" : "Mono label renders with empty palette",
+      "passed" : true
+    },
+    {
+      "name" : "Mono label renders with full palette",
+      "passed" : true
+    },
+    {
+      "name" : "marble renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "marble renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "marble renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "marble renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "smoke renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "smoke renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "smoke renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "smoke renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "splatter renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "splatter renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "splatter renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "splatter renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "galaxy renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "galaxy renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "galaxy renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "galaxy renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "half renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "half renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "half renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "half renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "starburst renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "starburst renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "starburst renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "starburst renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "ring renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "ring renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "ring renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "ring renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "translucent renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "translucent renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "translucent renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "translucent renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "picture renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "picture renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "picture renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "picture renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "filled renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "filled renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "filled renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "filled renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "electric renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "electric renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "electric renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "electric renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "centre renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "centre renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "centre renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "centre renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "glitter renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "glitter renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "glitter renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "glitter renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "rings renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "rings renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "rings renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "rings renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "etched renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "etched renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "etched renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "etched renders at 512",
+      "passed" : true
+    },
+    {
+      "name" : "swatches renders at 64",
+      "passed" : true
+    },
+    {
+      "name" : "swatches renders at 160",
+      "passed" : true
+    },
+    {
+      "name" : "swatches renders at 192",
+      "passed" : true
+    },
+    {
+      "name" : "swatches renders at 512",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 74
+}

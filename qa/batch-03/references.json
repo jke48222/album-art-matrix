@@ -1,0 +1,19 @@
+{
+  "batch": 3,
+  "research_date": "2026-09-23",
+  "references": [
+    {"units": ["A08"], "source": "Apple Music · Albums", "url": "https://mobbin.com/screens/da6eeb5a-6515-405b-8472-7d6ab55afde0", "applied": "Two-column artwork, visible album identity, generous section spacing; Archive retains date groups and its wall-pixel material."},
+    {"units": ["A08"], "source": "Apple Music · Library", "url": "https://mobbin.com/screens/98264793-0d40-4f0f-93c9-c5ca32a2cb78", "applied": "Clear library heading and persistent labeled navigation."},
+    {"units": ["A09"], "source": "Brink · Listening statistics", "url": "https://mobbin.com/screens/3216546e-b881-4d40-a478-089ca5cc24c7", "applied": "Listening-time hero, period selection, ranked artists, and a clearly labeled activity chart."},
+    {"units": ["A09"], "source": "Speechify · Listening statistics", "url": "https://mobbin.com/screens/19396080-2975-4431-b237-c0eb1711d78c", "applied": "Separate summary measurements from the chart; disclose what each count measures."},
+    {"units": ["A10"], "source": "MD Vinyl · Record and sleeve", "url": "https://mobbin.com/screens/0568bd59-45bb-4bc0-b3f3-90fe578ff8a3", "applied": "Real rendered vinyl and label material previews, with controls grouped into Vinyl, Label and Saved."},
+    {"units": ["C02"], "source": "MD Vinyl · Now playing", "url": "https://mobbin.com/screens/18683173-9b09-413c-8933-0f5e8108b189", "applied": "Large physical record, metadata outside the artwork, and rotation controls with explicit values."},
+    {"units": ["C01", "icons"], "source": "Sonos · Now playing", "url": "https://mobbin.com/screens/6b88da59-b179-4a3d-9cc1-98fb76310a89", "applied": "Square cover emphasis, consistent playback symbols, and strong title/artist hierarchy."},
+    {"units": ["icons", "A10"], "source": "Apple · SF Symbols", "url": "https://developer.apple.com/design/human-interface-guidelines/sf-symbols", "applied": "One native symbol family with optical alignment, monochrome tint, readable weight and accessible button labels."},
+    {"units": ["icons"], "source": "Apple · Buttons", "url": "https://developer.apple.com/design/human-interface-guidelines/buttons", "applied": "44-point minimum utility touch targets and separate selected/disabled feedback."},
+    {"units": ["A09"], "source": "Apple · Charts", "url": "https://developer.apple.com/design/human-interface-guidelines/charts", "applied": "Labeled axes, honest zero state, accessible values per bar, and no inferred full-play counts."},
+    {"units": ["C01"], "source": "Apple · Image views", "url": "https://developer.apple.com/design/human-interface-guidelines/image-views", "applied": "Preserve aspect ratio and use an intentional center crop; keep original cover distinct from live wall pixels."},
+    {"units": ["C02"], "source": "Apple · Playing audio", "url": "https://developer.apple.com/design/human-interface-guidelines/playing-audio", "applied": "Stable playback identity and timing, recognizable playback actions and pause-aware motion."}
+  ],
+  "assets": "Native SwiftUI, SF Symbols, existing licensed app fonts, and production procedural record renderers. QA covers are deterministic fixtures and are not shipped product content."
+}

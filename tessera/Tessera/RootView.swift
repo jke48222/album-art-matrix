@@ -51,6 +51,8 @@ struct RootView: View {
     @State private var arrival: Double = 0
     @State private var lastTitle = ""
     @State private var router = HomeRouter()
+    @State private var listening = ListeningStore.shared
+    @State private var qaShelf = false
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
@@ -160,7 +162,11 @@ struct RootView: View {
         .environment(worn)
         .preferredColorScheme(.dark)
         .task { await worn.load(host: wall.host) }
+        .onChange(of: wall.lastSync) { _, _ in
+            if scenePhase == .active { listening.observe(state: wall.state, connected: wall.link.isLive || wall.link.isStandIn) }
+        }
         .onChange(of: scenePhase) { _, phase in
+            if phase != .active { listening.suspend() }
             switch phase {
             case .background: wall.live.appSleeps(canStayAwake: wall.push.keepAlive)
             case .active: wall.live.appWakes()
@@ -170,6 +176,9 @@ struct RootView: View {
         .sheet(item: $routes.sheet, onDismiss: router.didDismiss) { _ in
             SettingsSheet(accent: light.steadyAccent).environment(wall)
                 .onAppear { router.didPresent(.settings) }
+        }
+        .sheet(isPresented: $qaShelf) {
+            NavigationStack { ShelfPage(accent: light.steadyAccent).environment(wall) }
         }
         // The studio is a place you go into and come back from, not a third
         // page: drawing needs the whole surface, and a horizontal stroke must
@@ -218,6 +227,7 @@ struct RootView: View {
             if CommandLine.arguments.contains("-settings") { router.present(.settings) }
             if CommandLine.arguments.contains("-archive") { page = 1 }
             if CommandLine.arguments.contains("-studio") { router.present(.studio) }
+            if CommandLine.arguments.contains("-shelf") { qaShelf = true }
             #endif
         }
         // The lock screen's three keys land here. Only modes: anything that

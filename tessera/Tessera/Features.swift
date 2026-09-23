@@ -736,57 +736,6 @@ struct HomeKitStatus: Decodable {
     }
 }
 
-// MARK: - The shelf, as covers
-
-struct ShelfPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @State private var shelf: ShelfList?
-    private var columns: [GridItem] { Array(repeating: GridItem(.flexible(), spacing: 10), count: 3) }
-
-    private var releases: [ShelfList.Release] {
-        (shelf?.releases ?? []).sorted { a, b in
-            if a.plays != b.plays { return a.plays > b.plays }
-            return (a.added ?? "") > (b.added ?? "")
-        }
-    }
-
-    var body: some View {
-        SetupPage("The shelf",
-                  blurb: "Your records, as the wall knows them from Discogs. A streamed song from an album here gets a small record in the corner of its sleeve; when one of these plays, the pressing shows under the song. Set up under Services, Discogs.") {
-            if releases.isEmpty {
-                SetupGroup("Nothing here yet", note: "Add your Discogs username and token under Services, Discogs, and the wall reads your collection.") { EmptyView() }
-                    .padding(.top, -12)
-            } else {
-                LazyVGrid(columns: columns, spacing: 12) {
-                    ForEach(releases, id: \.release_id) { r in
-                        VStack(alignment: .leading, spacing: 6) {
-                            AsyncImage(url: URL(string: r.cover ?? "")) { phase in
-                                if let img = phase.image { img.resizable().interpolation(.medium).aspectRatio(1, contentMode: .fill) }
-                                else { RoundedRectangle(cornerRadius: Round.control).fill(Ink.plaster).aspectRatio(1, contentMode: .fit) }
-                            }
-                            .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
-                            Text(r.title).font(.ui(12, .semibold)).foregroundStyle(Ink.ink).lineLimit(1)
-                            Text([r.artists.first ?? "", r.year.map(String.init) ?? ""].filter { !$0.isEmpty }.joined(separator: " · "))
-                                .font(.ui(11)).foregroundStyle(Ink.dim).lineLimit(1)
-                            if r.plays > 0 {
-                                Text(r.plays == 1 ? "played once" : "played \(r.plays)x").font(.machine(10)).foregroundStyle(accent)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { if let u = URL(string: r.url) { openURL(u) } }
-                    }
-                }
-                .padding(.top, -6)
-            }
-        }
-        .task {
-            if let list = await ShelfList.read(host: wall.host) { shelf = list }
-        }
-    }
-}
-
 // MARK: - Teach the wall a song
 
 struct TeachPage: View {

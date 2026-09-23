@@ -1,0 +1,149 @@
+{
+  "batch": 3,
+  "completed_units": [
+    "A08",
+    "A09",
+    "A10",
+    "C01",
+    "C02"
+  ],
+  "followups": [
+    "A03 Room panel spacing",
+    "Shared icon family across the app"
+  ],
+  "previously_completed_units": [
+    "W01",
+    "A01",
+    "A02",
+    "A03",
+    "A04",
+    "A05",
+    "A06",
+    "A07"
+  ],
+  "validated_at": "2026-09-23T08:43:20.207393+00:00",
+  "baseline_commit": "c70b347a499bb611070dcead4df28054956e6b8a",
+  "builds": {
+    "simulator_debug": "passed",
+    "iphone_debug": "passed",
+    "ios_release": "passed"
+  },
+  "tests": {
+    "archive_listening_pressing": {
+      "passed": 46,
+      "failed": 0
+    },
+    "playback": {
+      "passed": 94,
+      "failed": 0
+    },
+    "native_rendering": {
+      "passed": 74,
+      "failed": 0
+    },
+    "python_art_and_controls": {
+      "passed": 65,
+      "failed": 0
+    }
+  },
+  "total_checks": 279,
+  "icons": {
+    "native_symbols_available": 121,
+    "missing": 0,
+    "shared_glyphs": 29,
+    "details": "icon-audit.json"
+  },
+  "phone": {
+    "device": "Connected iPhone 18 Pro Max",
+    "bundle": "com.jalenedusei.tessera",
+    "installed": true,
+    "launched": true
+  },
+  "wall": {
+    "deployed": true,
+    "brain_service": "active",
+    "renderer_service": "active",
+    "live_art_and_spin_frames": "verified",
+    "original_settings_restored": true,
+    "details": [
+      "wall-deployment.json",
+      "wall-validation.json"
+    ]
+  },
+  "fixed_bugs": [
+    "Malformed pressing color rows could index out of bounds",
+    "Holo label could crash before artwork arrived",
+    "Timestamp representation could pick older artwork",
+    "Cover cache did not distinguish album editions",
+    "Archive could collapse repeats across day boundaries or discard simultaneous songs by different artists",
+    "Statistics placed repeated songs in the wrong hour and counted artist casing separately",
+    "Failed journal loads hid saved history",
+    "Rectangular Spin artwork was stretched",
+    "Pressing thumbnails used a different seed from the selected record",
+    "Failed pressing writes previously gave no recovery feedback",
+    "Large display headings and horizontal statistics broke at accessibility text sizes"
+  ],
+  "visual_checks": {
+    "normal": [
+      "Room",
+      "Classic",
+      "iPod",
+      "Archive",
+      "Archive detail",
+      "Listening insights",
+      "Pressing gallery",
+      "Label gallery",
+      "Saved pressings",
+      "Album art",
+      "Spin",
+      "Collection",
+      "Control icons"
+    ],
+    "dynamic_type": "AX5 captures for archive, insights, pressing gallery, album art, Spin, collection, controls",
+    "states": [
+      "live",
+      "empty",
+      "offline"
+    ],
+    "before_after": "comparisons/index.html",
+    "matched_output": "render/parity.json"
+  },
+  "references": "references.json",
+  "limitations": [
+    "Native screenshots use an iPhone 17 Pro simulator. Physical iPhone installation and launch are verified; hand interaction and VoiceOver navigation remain user review.",
+    "Wall RGB frames were inspected, but optical LED color needs physical review.",
+    "Listening time starts with this build and counts continuous playback observed while Tessera is open and connected; the journal does not provide reliable historical listening duration.",
+    "The wall file retains its pre-existing unused ImageDraw and ImageFilter imports; functional changes match committed Spin code."
+  ],
+  "source_sha256": {
+    "brain/art/disc.py": "3dd4c29ff7c7d93756901fe3a9c9b350b2a1fe5c8a407e66aa34fa440a6b0384",
+    "scripts/qa/capture_home.py": "6c2cdca380d3ba2a15c3ac8533c5d70539e01ac16d5e5b1648b7992befee8f59",
+    "tessera/Tessera/Archive.swift": "91db551894afa16a57a117d51e8e512c5627fa01513139f2900248f624cb712a",
+    "tessera/Tessera/ClassicWallScreen.swift": "883d0355bdd07096fd506b754285fe698a75cebe599db3289e0be431df91e6bf",
+    "tessera/Tessera/ControlCenter.swift": "4855468777631753a5daeeab88358850b89befa72fde4b24500813b8afafa887",
+    "tessera/Tessera/Features.swift": "9a3abf228928da75533e49a8845e16ad2c77aeef49b892111d262add60f3c614",
+    "tessera/Tessera/Icons.swift": "256db9e9f680d1aa99c786654df1f0a0e7acaf389aea7765786e5475593f7a1f",
+    "tessera/Tessera/PressingPanel.swift": "1dc98fcf7e0b2e7084df6874d8d844ca2f655d810095171ca12d5956ca627ff3",
+    "tessera/Tessera/PressingStore.swift": "6a36ca213a1ab01b516e3acf555c60bbaca33f8c34a00335c23a38344fa89bd0",
+    "tessera/Tessera/Record.swift": "623798579436843edc54bf4db66c24c68424626c52d36ffafd43b3f22969cff8",
+    "tessera/Tessera/RecordLabelStyles.swift": "785f02254da13a5a0ce59fc7b7e924ded537255a9019fa1e38a3fa79030f8343",
+    "tessera/Tessera/RoomScreen.swift": "08c6c74f95841f673f627e250a5c8558635f7e21f108ffbae2c8e9111534055e",
+    "tessera/Tessera/RootView.swift": "3a050ed99493740f908f70063a67fd3a48354a01163a572d4f3d7bcdf403f325",
+    "tessera/Tessera/Sleeve.swift": "9386d8a745e023792f5d7c6dd0f384f41495ed285e49c88663111a5615d9bea8",
+    "tessera/Tessera/WallLink.swift": "8c0c08e66c3a97ac4cd7d3e290d5c8756ff09273f70ac73b41b14962076537e1",
+    "tessera/Tessera/WallScreen.swift": "b3ac3a42865b5f261f7acfbfa0afe2bc25bac1fc5a4e42bf24ccd3ea42a0d325",
+    "tessera/Tessera/WornStats.swift": "cb483f9ee91bddccffd2f00648f3adadf520ad4a8d1fcde349d6db612ce7ad90",
+    "brain/tests/test_disc.py": "7d794ad3cb2275f0a77165c181efa96cd3dc83e30819436fa9bcab8d2b538c29",
+    "scripts/qa/compare_archive.py": "9d7180657f0aafb4ce6b8f88ea58f74ac212d4d5ef4066dd241044d44e9084bc",
+    "scripts/test_archive.py": "94db077bd19e2f888f98adb2ca3bca87d1734ecb1d40d6580a73189d29ab23f5",
+    "scripts/test_archive.swift": "1945be45f1aad979deaca93bf52e26f2ffb4b96fa586779e12827712e8a0ff5b",
+    "scripts/test_record_render.py": "0f3cb67b62b559d6fd39da8ec247af979083b0f8c9571734b7a76e5412ec8e92",
+    "scripts/test_record_render.swift": "d994a8c60695de6fc2abb1d597d9bcec934c32463f6df2c3f0fb6e5c20b1f843",
+    "tessera/Tessera/ArchiveModels.swift": "587a8208c24c08bcd98fde99aed6a777999ce9c52a8d4902e896707f95c534fa",
+    "tessera/Tessera/ArtworkPage.swift": "e1e37585b9c80be39dfe828896aacccccc2cbd9fcef76fbd0d4cf43f8b8f6cc1",
+    "tessera/Tessera/ListeningClock.swift": "6e520c466507e50a98499d7e098189922578a896bee88b0f27ba29579e02aa40",
+    "tessera/Tessera/ListeningStatsPage.swift": "2fea5bf4cc05a16019df4f59e4b85b8b872f057a10dcd0f973025fdfa5102629",
+    "tessera/Tessera/ListeningStore.swift": "87b8dccc87697fcd21f87de39277fd5af829b846fdec393b601d3397d8347a5f",
+    "tessera/Tessera/ShelfPage.swift": "2b7cf3849527e9dec3e41a5dbfe903394a577a9ea1ab011468b50351ee8cc231"
+  }
+}

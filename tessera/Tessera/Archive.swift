@@ -14,31 +14,6 @@
 import SwiftUI
 import UIKit
 
-// MARK: - Model
-
-struct JournalEntry: Equatable {
-    let ts: Int
-    let title: String
-    let artist: String
-    let album: String
-    let artURL: String?
-    /// Recorded by the app rather than by a wall, which means the frame is
-    /// held here instead of being refetchable from an address. See
-    /// [[LocalJournal]] for why the two cannot be the same thing.
-    var local: Bool = false
-
-    var date: Date { Date(timeIntervalSince1970: TimeInterval(ts)) }
-}
-
-/// The wall wearing the same sleeve twice in a row is one thing you looked
-/// at, not two rows. Consecutive repeats collapse and carry their count.
-struct WornRun: Identifiable, Equatable {
-    let entry: JournalEntry
-    let count: Int
-    let lastTs: Int
-    var id: Int { entry.ts }
-}
-
 // MARK: - Store
 
 @MainActor
@@ -47,6 +22,12 @@ final class ArchiveStore {
     var runs: [WornRun] = []
     var loading = false
     var failed: String? = nil
+    private(set) var lastLoaded: Date?
+    private(set) var localOnly = false
+    @ObservationIgnored private var requestID = UUID()
+    @ObservationIgnored private var sourceHost = ""
+    @ObservationIgnored private var retryAfter: [String: Date] = [:]
+    private(set) var unavailableTiles: Set<String> = []
 
     /// Observed: filling this is what tells the grid to redraw.
     private(set) var tiles: [String: UIImage] = [:]
@@ -60,70 +41,39 @@ final class ArchiveStore {
     }()
 
     func load(host: String) async {
+        let id = UUID(); requestID = id
+        if sourceHost != host { runs = []; lastLoaded = nil; sourceHost = host }
         loading = true
-        defer { loading = false }
-        guard let u = URL(string: "http://\(host)/journal?limit=200") else {
-            adoptLocal()
-            return
-        }
+        defer { if requestID == id { loading = false } }
         do {
-            // fresh, and not for long: the shared session's minute-long
-            // timeout left the grid on "loading" for as long as a wall that
-            // is not there took to not answer
-            let req = URLRequest(url: u, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
-            let (data, _) = try await URLSession.shared.data(for: req)
+            guard let url = URL(string: "http://\(host)/journal?limit=200"), url.host != nil else {
+                throw URLError(.badURL)
+            }
+            let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 8)
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+                throw URLError(.badServerResponse)
+            }
             guard let root = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let raw = root["entries"] as? [[String: Any]] else {
-                throw URLError(.cannotParseResponse)
+                  let raw = root["entries"] as? [[String: Any]] else { throw URLError(.cannotParseResponse) }
+            let entries = raw.compactMap { item -> JournalEntry? in
+                guard let ts = item["ts"] as? Int, ts > 0 else { return nil }
+                return JournalEntry(ts: ts, title: item["title"] as? String ?? "Untitled",
+                                    artist: item["artist"] as? String ?? "",
+                                    album: item["album"] as? String ?? "", artURL: item["art_url"] as? String)
             }
-            let entries: [JournalEntry] = raw.compactMap { e in
-                guard let ts = e["ts"] as? Int else { return nil }
-                return JournalEntry(
-                    ts: ts,
-                    title: e["title"] as? String ?? "Unknown",
-                    artist: e["artist"] as? String ?? "",
-                    album: e["album"] as? String ?? "",
-                    artURL: e["art_url"] as? String
-                )
-            }
-            .sorted { $0.ts > $1.ts }
-
-            // A wall that answers with nothing has not worn anything yet,
-            // and the app may still have. Both are the same list.
-            runs = Self.collapse(Self.merge(entries, LocalJournal.entries()))
-            failed = runs.isEmpty ? "Nothing here yet." : nil
+            guard !Task.isCancelled, requestID == id, sourceHost == host else { return }
+            runs = ArchiveIndex.collapse(ArchiveIndex.merge(entries, LocalJournal.entries()))
+            failed = nil; localOnly = entries.isEmpty && !runs.isEmpty; lastLoaded = Date()
         } catch {
-            adoptLocal()
+            guard !Task.isCancelled, requestID == id else { return }
+            if runs.isEmpty { runs = ArchiveIndex.collapse(LocalJournal.entries()); localOnly = !runs.isEmpty }
+            failed = runs.isEmpty ? "The wall’s journal is unavailable." : "Showing saved history. The wall isn’t answering."
         }
     }
 
-    /// No wall, or no answer from it: what the app itself has seen.
-    private func adoptLocal() {
-        runs = Self.collapse(LocalJournal.entries())
-        failed = runs.isEmpty ? "Nothing here yet." : nil
-    }
-
-    /// Newest first, and never the same wearing twice. A sleeve can be in
-    /// both lists when the app watched a wall that was also writing its own
-    /// journal, and one of those is enough.
-    private static func merge(_ a: [JournalEntry], _ b: [JournalEntry]) -> [JournalEntry] {
-        var seen = Set<String>()
-        return (a + b)
-            .sorted { $0.ts > $1.ts }
-            .filter { seen.insert("\($0.ts)|\($0.title)").inserted }
-    }
-
-    private static func collapse(_ entries: [JournalEntry]) -> [WornRun] {
-        var out: [WornRun] = []
-        for e in entries {
-            if let last = out.last,
-               last.entry.title == e.title, last.entry.artist == e.artist {
-                out[out.count - 1] = WornRun(entry: last.entry, count: last.count + 1, lastTs: e.ts)
-            } else {
-                out.append(WornRun(entry: e, count: 1, lastTs: e.ts))
-            }
-        }
-        return out
+    func retryImages() {
+        retryAfter.removeAll(); unavailableTiles.removeAll()
     }
 
     /// The tile for an entry, rendered as emitters. Nil until it arrives;
@@ -148,24 +98,41 @@ final class ArchiveStore {
         }
         guard let key = entry.artURL else { return nil }
         if let hit = tiles[key] { return hit }   // observed read
-        guard !inFlight.contains(key), let url = URL(string: key) else { return nil }
+        guard !inFlight.contains(key), Date() >= retryAfter[key, default: .distantPast],
+              let url = URL(string: key) else { return nil }
         inFlight.insert(key)
         Task { [weak self] in
             guard let self else { return }
             let img = await Self.fetchAndRender(url, session: http)
             await MainActor.run {
                 self.inFlight.remove(key)
-                if let img { self.tiles[key] = img }
+                if let img {
+                    if self.tiles.count >= 240 { self.tiles.removeAll(keepingCapacity: true) }
+                    self.tiles[key] = img; self.unavailableTiles.remove(key)
+                } else {
+                    self.retryAfter[key] = Date().addingTimeInterval(30)
+                    self.unavailableTiles.insert(key)
+                }
             }
         }
         return nil
     }
 
-    private static func fetchAndRender(_ url: URL, session: URLSession) async -> UIImage? {
+    nonisolated private static func fetchAndRender(_ url: URL, session: URLSession) async -> UIImage? {
         // the session is configured to prefer its cache, so a sleeve seen
         // once is not fetched again
-        guard let (data, _) = try? await session.data(from: url),
-              let src = UIImage(data: data)?.cgImage else { return nil }
+        let data: Data
+        let text = url.absoluteString
+        if text.hasPrefix("data:image/"), let separator = text.range(of: ";base64,"), text.utf8.count <= 28_000_000 {
+            guard let decoded = Data(base64Encoded: String(text[separator.upperBound...])) else { return nil }
+            data = decoded
+        } else {
+            guard ["http", "https"].contains(url.scheme ?? ""),
+                  let (bytes, response) = try? await session.data(from: url),
+                  let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { return nil }
+            data = bytes
+        }
+        guard let src = UIImage(data: data)?.cgImage else { return nil }
         // Clip.squareFrame is the app's one image-to-panel path; the copy
         // this replaced STRETCHED non-square art where everything else crops.
         guard let px = Clip.squareFrame(src, side: 64) else { return nil }
@@ -297,236 +264,247 @@ enum EmitterTile {
 struct ArchiveScreen: View {
     @Environment(WallSession.self) private var wall
     @Environment(ArchiveStore.self) private var store
-    @State private var opened: WornRun? = nil
-    @Namespace private var zoom
-
+    @Environment(\.dynamicTypeSize) private var typeSize
+    @State private var opened: WornRun?
+    @State private var query = ""
+    @State private var showStats = false
     let accent: Color
 
-    private let columns = [GridItem(.adaptive(minimum: 96), spacing: 6)]
+    private var visible: [WornRun] { ArchiveIndex.matching(store.runs, query: query) }
+    private var days: [Date] {
+        Array(Set(visible.map { Calendar.current.startOfDay(for: $0.entry.date) })).sorted(by: >)
+    }
 
     var body: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 26, pinnedViews: []) {
-                head
-                if store.runs.isEmpty {
-                    emptyState
+            LazyVStack(alignment: .leading, spacing: 26) {
+                header
+                if !store.runs.isEmpty {
+                    search
+                    statistics
+                }
+                if let problem = store.failed { connectionNotice(problem) }
+                if store.runs.isEmpty { empty }
+                else if visible.isEmpty {
+                    ContentUnavailableView.search(text: query).foregroundStyle(Ink.ink)
                 } else {
-                    counts
-                    ForEach(days, id: \.0) { (day, runs) in
-                        band(day: day, runs: runs)
-                    }
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.top, 6)
-            .padding(.bottom, 60)
-        }
-        .scrollIndicators(.hidden)
-        .refreshable { await store.load(host: wall.host) }
-        .overlay { detail }
-    }
-
-    private var head: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("WORN")
-                .font(.display(18))
-                .kerning(3.0)
-                .foregroundStyle(Ink.ink)
-            Text(store.runs.isEmpty ? " " : "everything the wall has carried")
-                .font(.ui(13))
-                .foregroundStyle(Ink.dim)
-        }
-        .padding(.horizontal, 6)
-        .padding(.bottom, 2)
-    }
-
-    /// The shape of the listening, before the sleeves themselves. It goes
-    /// above the grid because it is the one thing here you cannot get by
-    /// scrolling: the grid is the record, this is what the record adds up to.
-    @ViewBuilder private var counts: some View {
-        let stats = WornStats.read(store.runs)
-        if !stats.isEmpty {
-            VStack(alignment: .leading, spacing: 18) {
-                WornClockBand(stats: stats, accent: accent)
-                WornCount(stats: stats, accent: accent)
-            }
-            .padding(.horizontal, 6)
-            .padding(.bottom, 4)
-        }
-    }
-
-    /// Newest day first; inside a day, newest first.
-    private var days: [(String, [WornRun])] {
-        var order: [String] = []
-        var map: [String: [WornRun]] = [:]
-        let fmt = DateFormatter()
-        fmt.dateFormat = "EEEE d MMMM"
-        for run in store.runs {
-            let key = fmt.string(from: run.entry.date)
-            if map[key] == nil { order.append(key); map[key] = [] }
-            map[key]?.append(run)
-        }
-        return order.map { ($0, map[$0] ?? []) }
-    }
-
-    private func band(day: String, runs: [WornRun]) -> some View {
-        VStack(alignment: .leading, spacing: 9) {
-            HStack(spacing: 8) {
-                Text(day.uppercased())
-                    .font(.machine(9))
-                    .kerning(0.8)
-                    .foregroundStyle(Ink.faint)
-                Rectangle().fill(Ink.hairline).frame(height: 1)
-            }
-            .padding(.horizontal, 6)
-
-            LazyVGrid(columns: columns, spacing: 6) {
-                ForEach(runs) { run in
-                    Tile(run: run, image: store.tile(run.entry), accent: accent)
-                        .matchedGeometryEffect(id: run.id, in: zoom)
-                        .onTapGesture {
-                            Taps.detent(intensity: 0.5)
-                            withAnimation(Motion.settle) { opened = run }
+                    ForEach(days, id: \.self) { day in
+                        VStack(alignment: .leading, spacing: 14) {
+                            HStack(alignment: .firstTextBaseline) {
+                                Text(dayTitle(day)).font(.displayMid(21)).foregroundStyle(Ink.ink)
+                                Spacer(minLength: 8)
+                                Text(day.formatted(.dateTime.month(.abbreviated).day())).font(.machine(9)).foregroundStyle(Ink.dim)
+                            }
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: typeSize.isAccessibilitySize ? 1 : 2), alignment: .leading, spacing: 22) {
+                                ForEach(visible.filter { Calendar.current.isDate($0.entry.date, inSameDayAs: day) }) { run in
+                                    Button { opened = run; Taps.detent() } label: {
+                                        ArchiveTile(run: run, image: store.tile(run.entry), accent: accent)
+                                    }
+                                    .buttonStyle(PressStyle(scale: 0.98))
+                                    .accessibilityLabel("\(run.entry.title), \(run.entry.artist), \(run.count) recorded appearance\(run.count == 1 ? "" : "s")")
+                                    .accessibilityHint("Show artwork and put it back on the wall")
+                                }
+                            }
                         }
+                    }
+                    Text("Cover previews are rebuilt from the original artwork. Local entries keep their actual panel pixels.")
+                        .font(.ui(11)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
             }
+            .padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 28)
+        }
+        .scrollIndicators(.hidden).clipped()
+        .background(Ink.ground.opacity(0.96).ignoresSafeArea())
+        .refreshable { store.retryImages(); await store.load(host: wall.host) }
+        .task(id: wall.host) { await store.load(host: wall.host) }
+        .sheet(item: $opened) { run in WornDetail(run: run, accent: accent).environment(wall).environment(store) }
+        .sheet(isPresented: $showStats) { ListeningStatsPage(runs: store.runs, accent: accent) }
+        .onChange(of: store.runs) { _, runs in
+            #if DEBUG
+            if CommandLine.arguments.contains("-archive-detail"), opened == nil { opened = runs.first }
+            #endif
+        }
+        .onAppear {
+            #if DEBUG
+            showStats = CommandLine.arguments.contains("-archive-stats")
+            #endif
         }
     }
 
-    private var emptyState: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let empty = EmitterTile.empty {
-                Image(uiImage: empty)
-                    .interpolation(.high)
-                    .resizable()
-                    .frame(width: 104, height: 104)
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("YOUR COLLECTION OF MOMENTS").font(.machine(8)).tracking(1.1).foregroundStyle(accent.toned(forDark: true))
+                Spacer()
+                if store.loading { ProgressView().tint(accent).accessibilityLabel("Refreshing history") }
             }
-            Text(store.failed ?? "Nothing here yet.")
-                .font(.displayMid(17))
-                .foregroundStyle(Ink.ink)
+            Text("Archive").font(.display(typeSize.isAccessibilitySize ? 20 : 38)).foregroundStyle(Ink.ink)
+            Text(store.localOnly ? "Saved on this phone." : "Every sleeve leaves a trace.")
+                .font(.ui(14)).foregroundStyle(Ink.dim)
         }
-        .padding(.horizontal, 6)
-        .padding(.top, 30)
     }
 
-    @ViewBuilder private var detail: some View {
-        if let run = opened {
-            WornDetail(run: run, image: store.tile(run.entry), accent: accent, zoom: zoom) {
-                withAnimation(Motion.settle) { opened = nil }
-            } wearAgain: {
-                wall.replay(ts: run.entry.ts)
-                withAnimation(Motion.settle) { opened = nil }
+    private var search: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").font(.system(size: 17, weight: .medium)).foregroundStyle(Ink.dim)
+            TextField("Song, artist or album", text: $query).font(.ui(15)).foregroundStyle(Ink.ink)
+                .autocorrectionDisabled().submitLabel(.search).accessibilityLabel("Search history")
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").frame(width: 44, height: 44) }
+                    .foregroundStyle(Ink.dim).accessibilityLabel("Clear search")
             }
         }
+        .padding(.leading, 16).padding(.trailing, query.isEmpty ? 16 : 0).frame(minHeight: 50)
+        .background(Ink.plaster, in: RoundedRectangle(cornerRadius: 15))
+    }
+
+    private var statistics: some View {
+        let stats = WornStats.read(store.runs)
+        return Button { showStats = true } label: {
+            Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Insights", systemImage: "chart.bar.xaxis").font(.ui(16, .semibold)).foregroundStyle(accent.toned(forDark: true))
+                    Text("\(stats.sleeves) sleeves · \(stats.artists) artists").font(.ui(12)).foregroundStyle(Ink.dim)
+                }
+            } else {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(stats.sleeves)").font(.display(32)).foregroundStyle(Ink.ink)
+                    Text(stats.sleeves == 1 ? "sleeve" : "sleeves").font(.ui(12)).foregroundStyle(Ink.dim)
+                }
+                Rectangle().fill(Ink.hairline).frame(width: 1, height: 40)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(stats.artists)").font(.display(32)).foregroundStyle(Ink.ink)
+                    Text(stats.artists == 1 ? "artist" : "artists").font(.ui(12)).foregroundStyle(Ink.dim)
+                }
+                Spacer(minLength: 8)
+                VStack(alignment: .trailing, spacing: 8) {
+                    Image(systemName: "chart.bar.xaxis").font(.system(size: 21, weight: .medium))
+                    Label("Insights", systemImage: "chevron.right").font(.ui(12, .medium))
+                }.foregroundStyle(accent.toned(forDark: true))
+            }
+            }
+            }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                .background(Ink.plaster, in: RoundedRectangle(cornerRadius: 20))
+        }.buttonStyle(PressStyle(scale: 0.98)).accessibilityLabel("Listening insights. \(stats.sleeves) sleeves, \(stats.artists) artists")
+    }
+
+    private func connectionNotice(_ text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label(text, systemImage: "wifi.slash").font(.ui(13)).foregroundStyle(Ink.dim)
+            Button("Try again") { Task { store.retryImages(); await store.load(host: wall.host) } }
+                .font(.ui(14, .semibold)).foregroundStyle(accent.toned(forDark: true)).frame(minHeight: 44)
+                .disabled(store.loading)
+        }
+    }
+
+    private var empty: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Image(systemName: store.loading ? "square.stack" : "square.stack.3d.up")
+                .font(.system(size: 52, weight: .ultraLight)).foregroundStyle(accent.toned(forDark: true)).padding(.vertical, 24)
+            Text(store.loading ? "Opening the archive" : store.failed == nil ? "Your first sleeve awaits." : "History is out of reach.")
+                .font(.displayMid(29)).foregroundStyle(Ink.ink)
+            Text(store.loading ? "Gathering the things your wall has worn." : store.failed == nil ? "Play something on the wall. Its artwork will find a home here." : "Reconnect to your wall, then pull down to refresh.")
+                .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        }.frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
+    }
+
+    private func dayTitle(_ date: Date) -> String {
+        if Calendar.current.isDateInToday(date) { return "Today" }
+        if Calendar.current.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day().year())
     }
 }
 
-// MARK: - Pieces
-
-private struct Tile: View {
+private struct ArchiveTile: View {
     let run: WornRun
     let image: UIImage?
     let accent: Color
-
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Group {
-                if let image {
-                    Image(uiImage: image).interpolation(.high).resizable()
-                } else if let empty = EmitterTile.empty {
-                    Image(uiImage: empty).interpolation(.high).resizable()
-                } else {
-                    Color.black
+        VStack(alignment: .leading, spacing: 9) {
+            ArchiveArtwork(image: image)
+                .overlay(alignment: .bottomTrailing) {
+                    if run.count > 1 {
+                        Text("×\(run.count)").font(.machine(10)).foregroundStyle(Ink.ink)
+                            .padding(7).background(Ink.ground.opacity(0.92), in: RoundedRectangle(cornerRadius: 7)).padding(8)
+                    }
                 }
-            }
-            .aspectRatio(1, contentMode: .fit)
+            Text(run.entry.title).font(.ui(15, .semibold)).foregroundStyle(Ink.ink).lineLimit(2)
+            Text(run.entry.artist.isEmpty ? "Unknown artist" : run.entry.artist).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(2)
+            Text(run.entry.date.formatted(.dateTime.hour().minute())).font(.machine(9)).foregroundStyle(Ink.dim)
+        }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
+    }
+}
 
-            if run.count > 1 {
-                Text("\(run.count)")
-                    .font(.machine(9))
-                    .foregroundStyle(Ink.ink)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 3)
-                    .background(Color.black.opacity(0.75))
-                    .padding(5)
-            }
+struct ArchiveArtwork: View {
+    let image: UIImage?
+    var body: some View {
+        ZStack {
+            Ink.plaster
+            if let image { Image(uiImage: image).resizable().interpolation(.none).scaledToFit() }
+            else { Image(systemName: "photo").font(.system(size: 32, weight: .light)).foregroundStyle(Ink.dim) }
         }
-        .accessibilityElement()
-        .accessibilityLabel("\(run.entry.title) by \(run.entry.artist)\(run.count > 1 ? ", worn \(run.count) times" : "")")
-        .accessibilityAddTraits(.isButton)
+        .aspectRatio(1, contentMode: .fit)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.ink.opacity(0.09), lineWidth: 1))
+        .accessibilityHidden(true)
     }
 }
 
 private struct WornDetail: View {
+    @Environment(WallSession.self) private var wall
+    @Environment(ArchiveStore.self) private var store
+    @Environment(\.dismiss) private var dismiss
     let run: WornRun
-    let image: UIImage?
     let accent: Color
-    let zoom: Namespace.ID
-    var close: () -> Void
-    var wearAgain: () -> Void
+    @State private var sending = false
+    @State private var sent = false
+    @State private var problem: String?
+    @State private var replayTask: Task<Void, Never>?
 
     var body: some View {
-        ZStack {
-            Ink.ground.opacity(0.93)
-                .ignoresSafeArea()
-                .onTapGesture(perform: close)
-
-            VStack(alignment: .leading, spacing: 20) {
-                Group {
-                    if let image {
-                        Image(uiImage: image).interpolation(.high).resizable()
-                    } else {
-                        Color.black
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 22) {
+                    ArchiveArtwork(image: store.tile(run.entry))
+                    VStack(alignment: .leading, spacing: 7) {
+                        Text(run.entry.title).font(.display(32)).foregroundStyle(Ink.ink)
+                        Text(run.entry.artist).font(.ui(18, .medium)).foregroundStyle(Ink.dim)
+                        if !run.entry.album.isEmpty { Text(run.entry.album).font(.ui(14)).foregroundStyle(Ink.dim) }
                     }
-                }
-                .aspectRatio(1, contentMode: .fit)
-                .matchedGeometryEffect(id: run.id, in: zoom)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(run.entry.title)
-                        .font(.display(25))
-                        .foregroundStyle(Ink.ink)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(run.entry.artist)
-                        .font(.ui(15, .medium))
-                        .foregroundStyle(Ink.dim)
-                    Text(when)
-                        .font(.machine(10))
-                        .foregroundStyle(Ink.faint)
-                        .padding(.top, 2)
-                }
-
-                HStack(spacing: 18) {
-                    Button(action: wearAgain) {
-                        Text("Wear it again")
-                            .font(.ui(15, .semibold))
-                            .foregroundStyle(Ink.ground)
-                            .padding(.vertical, 13)
-                            .frame(maxWidth: .infinity)
-                            .background(Capsule().fill(accent))
+                    HStack(alignment: .top) {
+                        Label(run.entry.date.formatted(date: .abbreviated, time: .shortened), systemImage: "clock")
+                        Spacer()
+                        Text("\(run.count) appearance\(run.count == 1 ? "" : "s")")
+                    }.font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text(run.entry.local ? "These are the panel pixels saved by this phone." : "A preview of the original cover. The wall applies its current finish when you show it again.")
+                        .font(.ui(13)).foregroundStyle(Ink.dim)
+                    Button {
+                        sending = true; problem = nil
+                        replayTask = Task {
+                            let ok = await wall.replay(entry: run.entry)
+                            guard !Task.isCancelled else { return }
+                            sending = false; sent = ok
+                            if !ok { problem = "Couldn’t put this sleeve on the wall. Reconnect and try again." }
+                        }
+                    } label: {
+                        HStack(spacing: 10) {
+                            if sending { ProgressView().tint(Ink.ground) }
+                            else { Image(systemName: sent ? "checkmark" : "arrow.up.right.square") }
+                            Text(sending ? "Sending to the wall" : sent ? "Requested on the wall" : "Put on the wall").font(.ui(16, .semibold))
+                        }.foregroundStyle(Ink.ground).frame(maxWidth: .infinity, minHeight: 54)
+                            .background(accent.toned(forDark: true), in: RoundedRectangle(cornerRadius: 16))
+                    }.buttonStyle(PressStyle()).disabled(sending || sent || (!wall.link.isLive && !(run.entry.local && wall.link.isStandIn)))
+                    if !wall.link.isLive && !wall.link.isStandIn {
+                        Label("Reconnect to show this sleeve.", systemImage: "wifi.slash").font(.ui(13)).foregroundStyle(Ink.dim)
                     }
-                    .buttonStyle(.plain)
-
-                    Button(action: close) {
-                        Text("Close")
-                            .font(.ui(15, .medium))
-                            .foregroundStyle(Ink.dim)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(26)
-        }
-        .transition(.opacity)
-    }
-
-    private var when: String {
-        let f = DateFormatter()
-        f.dateFormat = "h:mm a"
-        let first = f.string(from: Date(timeIntervalSince1970: TimeInterval(run.lastTs)))
-        let last = f.string(from: run.entry.date)
-        if run.count > 1 { return "\(run.count) times · \(first) to \(last)".lowercased() }
-        return last.lowercased()
+                    if let problem { Text(problem).font(.ui(13)).foregroundStyle(Ink.signal).accessibilityLabel(problem) }
+                }.padding(24)
+            }.background(Ink.ground)
+                .navigationTitle("From the archive").navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.frame(minHeight: 44) } }
+        }.preferredColorScheme(.dark).tint(accent.toned(forDark: true))
+            .onDisappear { replayTask?.cancel() }
     }
 }

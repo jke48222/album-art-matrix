@@ -32,6 +32,7 @@ struct WornStats {
         }
         var buckets = [Double](repeating: 0, count: 24)
         var byArtist: [String: Int] = [:]
+        var artistNames: [String: String] = [:]
         var sleeves = Set<String>()
         var dayKeys = Set<Int>()
         var plays = 0
@@ -39,20 +40,25 @@ struct WornStats {
 
         for run in runs {
             plays += run.count
-            sleeves.insert("\(run.entry.artist)|\(run.entry.title)")
-            if !run.entry.artist.isEmpty {
-                byArtist[run.entry.artist, default: 0] += run.count
+            sleeves.insert(run.entry.sleeveKey)
+            let artist = run.entry.artist.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !artist.isEmpty {
+                let key = ArchiveIndex.normalized(artist)
+                byArtist[key, default: 0] += run.count
+                if artistNames[key] == nil { artistNames[key] = artist }
             }
-            let h = cal.component(.hour, from: run.entry.date)
-            buckets[h] += Double(run.count)
-            dayKeys.insert(cal.ordinality(of: .day, in: .era, for: run.entry.date) ?? 0)
+            let entries = run.occurrences.isEmpty ? Array(repeating: run.entry, count: run.count) : run.occurrences
+            for entry in entries {
+                buckets[cal.component(.hour, from: entry.date)] += 1
+                dayKeys.insert(cal.ordinality(of: .day, in: .era, for: entry.date) ?? 0)
+            }
         }
 
         let peak = buckets.max() ?? 0
         let norm = peak > 0 ? buckets.map { $0 / peak } : buckets
         // A busiest hour only means something once there is a shape to be
         // busiest within: one evening of listening has no daily pattern.
-        let busiest = plays >= 12 ? buckets.firstIndex(of: peak) : nil
+        let busiest = plays >= 12 && dayKeys.count > 1 ? buckets.firstIndex(of: peak) : nil
         let top = byArtist.max { a, b in
             a.value == b.value ? a.key > b.key : a.value < b.value
         }
@@ -63,7 +69,7 @@ struct WornStats {
             artists: byArtist.count,
             hours: norm,
             busiest: busiest,
-            topArtist: top.flatMap { $0.value > 1 ? (name: $0.key, plays: $0.value) : nil },
+            topArtist: top.flatMap { $0.value > 1 ? (name: artistNames[$0.key] ?? $0.key, plays: $0.value) : nil },
             longest: runs.filter { $0.count > 1 }.max { $0.count < $1.count },
             days: dayKeys.count
         )
@@ -116,7 +122,7 @@ struct WornClockBand: View {
             .frame(height: 44)
             .drawingGroup()
             .accessibilityElement()
-            .accessibilityLabel("When the wall is lit")
+            .accessibilityLabel("Recorded appearances by hour")
             .accessibilityValue(stats.busiest.map { "Busiest around \(hour($0))" } ?? "")
 
             // Only four marks. A full axis would be more information than the
@@ -168,11 +174,11 @@ struct WornCount: View {
                                  tail: "\(top.plays) times"))
         }
         if let long = stats.longest {
-            out.append(CountLine(lead: long.entry.title, rest: " stayed up longest, ",
+            out.append(CountLine(lead: long.entry.title, rest: " appeared consecutively, ",
                                  tail: "\(long.count) in a row"))
         }
         if let b = stats.busiest {
-            out.append(CountLine(lead: window(b), rest: " is when the wall is on most",
+            out.append(CountLine(lead: window(b), rest: " has the most recorded appearances",
                                  tail: nil))
         }
         return out

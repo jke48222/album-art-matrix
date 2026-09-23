@@ -172,8 +172,8 @@ enum RecordDesign {
         let t = max(0, min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t)
     }
 
-    static func render(_ p: Pressing, sleeve: UIImage?, printed: UIImage? = nil) -> UIImage? {
-        let n = side
+    static func render(_ p: Pressing, sleeve: UIImage?, printed: UIImage? = nil, size: Int = 512) -> UIImage? {
+        let n = min(1024, max(64, size))
         var out = [UInt8](repeating: 0, count: n * n * 4)
         let c0 = p.colours[0], c1 = p.colours[1], c2 = p.colours[2]
         var rng = SplitMix(p.seed ^ 0x77)
@@ -528,7 +528,8 @@ enum RecordDesign {
                 }
                 ctx.restoreGState()
                 ctx.setFillColor(UIColor(white: 0.12, alpha: 1).cgColor)
-                ctx.fillEllipse(in: CGRect(x: cx - 6, y: cx - 6, width: 12, height: 12))
+                let hole = CGFloat(n) * 0.01171875
+                ctx.fillEllipse(in: CGRect(x: cx - hole, y: cx - hole, width: hole * 2, height: hole * 2))
             }
         } else if let printed, let lcg = printed.cgImage {
             out.withUnsafeMutableBytes { raw in

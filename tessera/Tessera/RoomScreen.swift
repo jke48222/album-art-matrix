@@ -394,7 +394,7 @@ struct RoomWallScreen: View {
         // same on every song of the album, so its design keys on the album
         let albumKey = demo ? "girlset|chat" : sleeve.albumKey
         let choice = previewChoice ?? pressings.choice(for: albumKey)
-        let seed = choice == nil ? key : (previewing ? key : albumKey)
+        let seed = choice == nil || choice?.isEmpty == true ? key : (previewing ? key : albumKey)
         let art = pressings.photo(choice?.photo) ?? (demo ? Self.testSleeve : sleeve.image)
         let stamp = key + "|" + String(sleeve.revision) + "|" + (choice.map { String(describing: $0) } ?? "")
         guard pressing?.key != stamp else { return }
@@ -407,7 +407,7 @@ struct RoomWallScreen: View {
         let title = demo ? "CHAT" : sleeve.title
         let artist = demo ? "GIRLSET" : sleeve.artist
         let forced = choice?.kind ?? Self.forcedPressing
-        let chosenColours = choice?.colours?.map { Pressing.RGB(r: $0[0], g: $0[1], b: $0[2]) }
+        let chosenColours = choice?.safeColours
         let chosenLabel = choice?.label.flatMap { LabelStyle(rawValue: $0) }
         pressingTask = Task.detached(priority: .userInitiated) {
             let palette = chosenColours ?? Pressing.palette(of: art)
@@ -619,7 +619,7 @@ struct RoomWallScreen: View {
     @ViewBuilder
     private func chrome(size: CGSize, fit: CGRect, g: RoomGeometry?) -> some View {
         let word = light.steadyAccent.toned(forDark: true)
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 12) {
                 RecordMark(accent: word, lit: max(0.6, light.room), side: 19)
                     .accessibilityHidden(true)
@@ -674,9 +674,9 @@ struct RoomWallScreen: View {
         // The scene deliberately extends beneath the home indicator. Its
         // interactive dock must stop above the labeled navigation, including
         // the taller, stacked navigation used with accessibility text sizes.
-        let bottom = size.height - (typeSize.isAccessibilitySize ? 154 : 106)
+        let bottom = size.height - (typeSize.isAccessibilitySize ? 148 : 96)
         let dockHeight: CGFloat = typeSize.isAccessibilitySize ? 300 : phoneHoldsTheSong ? 172 : 150
-        let bandTop = max(160, min(fit.origin.y + fit.height * (g?.placard ?? 0.78) + 3,
+        let bandTop = max(160, min(fit.origin.y + fit.height * (g?.placard ?? 0.78) + 13,
                                   bottom - dockHeight))
         let bandHeight = max(100, bottom - bandTop)
         ScrollView(.vertical) {
@@ -1009,7 +1009,8 @@ struct RoomWallScreen: View {
                 Spacer()
                 PressingPanel(choice: Binding(get: { previewChoice ?? pressings.choice(for: albumKey) ?? PressingChoice() },
                                               set: { previewChoice = $0 }),
-                              albumKey: albumKey, sleeve: demo ? Self.testSleeve : sleeve.image,
+                              albumKey: albumKey, songKey: sleeve.songKey, title: sleeve.title, artist: sleeve.artist,
+                              sleeve: demo ? Self.testSleeve : sleeve.image,
                               accent: light.steadyAccent, ink: panelInk)
                     // clear of the page marks at the foot of the screen
                     .padding(.bottom, 60)

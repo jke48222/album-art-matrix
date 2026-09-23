@@ -14,6 +14,22 @@ struct PressingChoice: Codable, Equatable {
     var colours: [[Float]]? = nil        // up to three, r g b; nil = the sleeve's
     var photo: String? = nil             // a file in the photos folder; nil = the sleeve
     var label: Int? = nil                // label style raw value; nil = chosen from the sleeve
+    var safeColours: [Pressing.RGB]? {
+        guard let colours else { return nil }
+        let valid = colours.prefix(3).compactMap { row -> Pressing.RGB? in
+            guard row.count == 3, row.allSatisfy(\.isFinite) else { return nil }
+            return Pressing.RGB(r: min(1, max(0, row[0])), g: min(1, max(0, row[1])), b: min(1, max(0, row[2])))
+        }
+        return valid.isEmpty ? nil : valid
+    }
+    var sanitized: PressingChoice {
+        var copy = self
+        copy.kind = kind.flatMap { Pressing.Kind(rawValue: $0)?.rawValue }
+        copy.label = label.flatMap { LabelStyle(rawValue: $0)?.rawValue }
+        copy.colours = safeColours?.map { [$0.r, $0.g, $0.b] }
+        if let photo, photo.isEmpty || (photo as NSString).lastPathComponent != photo { copy.photo = nil }
+        return copy
+    }
     var isEmpty: Bool { kind == nil && colours == nil && photo == nil && label == nil }
 }
 
@@ -32,6 +48,7 @@ final class PressingStore {
 
     private(set) var overrides: [String: PressingChoice] = [:]
     private(set) var library: [SavedPressing] = []
+    private(set) var saveError: String?
 
     private let folder: URL
     private let file: URL
@@ -47,19 +64,27 @@ final class PressingStore {
 
     func choice(for song: String) -> PressingChoice? { overrides[song] }
 
-    func set(_ choice: PressingChoice?, for song: String) {
-        if let choice, !choice.isEmpty { overrides[song] = choice } else { overrides.removeValue(forKey: song) }
-        save()
+    @discardableResult func set(_ choice: PressingChoice?, for song: String) -> Bool {
+        guard !song.isEmpty else { return false }
+        let old = overrides
+        if let choice = choice?.sanitized, !choice.isEmpty { overrides[song] = choice } else { overrides.removeValue(forKey: song) }
+        if save() { return true }
+        overrides = old; return false
     }
 
-    func keep(_ choice: PressingChoice, named name: String) {
-        library.insert(SavedPressing(name: name, choice: choice), at: 0)
-        save()
+    @discardableResult func keep(_ choice: PressingChoice, named name: String) -> Bool {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { return false }
+        let old = library
+        library.insert(SavedPressing(name: String(name.prefix(100)), choice: choice.sanitized), at: 0)
+        if save() { return true }
+        library = old; return false
     }
 
     func forget(_ saved: SavedPressing) {
+        let old = library
         library.removeAll { $0.id == saved.id }
-        save()
+        if !save() { library = old }
     }
 
     // MARK: Photos
@@ -68,12 +93,12 @@ final class PressingStore {
     func keepPhoto(_ image: UIImage) -> String? {
         let name = UUID().uuidString + ".jpg"
         guard let data = image.squared(1024).jpegData(compressionQuality: 0.88) else { return nil }
-        do { try data.write(to: folder.appendingPathComponent(name)); return name } catch { return nil }
+        do { try data.write(to: folder.appendingPathComponent(name), options: .atomic); saveError = nil; return name } catch { saveError = "The photo couldn’t be saved."; return nil }
     }
 
     private var photoCache: [String: UIImage] = [:]
     func photo(_ name: String?) -> UIImage? {
-        guard let name else { return nil }
+        guard let name, (name as NSString).lastPathComponent == name else { return nil }
         if let c = photoCache[name] { return c }
         guard let img = UIImage(contentsOfFile: folder.appendingPathComponent(name).path) else { return nil }
         photoCache[name] = img
@@ -86,10 +111,14 @@ final class PressingStore {
 
     private func load() {
         guard let data = try? Data(contentsOf: file), let d = try? JSONDecoder().decode(Disk.self, from: data) else { return }
-        overrides = d.overrides; library = d.library
+        overrides = d.overrides.mapValues { $0.sanitized }; library = d.library.map { var item = $0; item.choice = item.choice.sanitized; return item }
     }
 
-    private func save() {
-        if let data = try? JSONEncoder().encode(Disk(overrides: overrides, library: library)) { try? data.write(to: file) }
+    private func save() -> Bool {
+        do {
+            let data = try JSONEncoder().encode(Disk(overrides: overrides, library: library))
+            try data.write(to: file, options: .atomic)
+            saveError = nil; return true
+        } catch { saveError = "Your pressing couldn’t be saved. Try again."; return false }
     }
 }

@@ -34,27 +34,16 @@ struct ControlCenterButtons: View {
     var body: some View {
         HStack(spacing: 10) {
             FrostedKey(ink: ink, label: "Controls", action: onControls) {
-                // three bars of different lengths: a board of controls
-                VStack(alignment: .leading, spacing: 3.5) {
-                    bar(16); bar(10); bar(13)
-                }
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 18, weight: .medium)).foregroundStyle(ink.ink)
             }
             FrostedKey(ink: ink, label: "Settings", action: onSetup) {
-                VStack(spacing: 4) { rail(0.62); rail(0.30) }
+                Image(systemName: "gearshape").font(.system(size: 18, weight: .medium)).foregroundStyle(ink.ink)
             }
         }
     }
 
-    private func bar(_ w: CGFloat) -> some View {
-        Capsule().fill(ink.ink.opacity(0.9)).frame(width: w, height: 2.5)
-    }
 
-    private func rail(_ at: CGFloat) -> some View {
-        ZStack(alignment: .leading) {
-            Capsule().fill(ink.ink.opacity(0.35)).frame(width: 16, height: 2)
-            Circle().fill(ink.ink.opacity(0.95)).frame(width: 5, height: 5).offset(x: 16 * at - 2.5)
-        }
-    }
 }
 
 /// A round key on glass.
@@ -126,6 +115,8 @@ struct ControlCenterPanel: View {
     /// The games live in their own sheet: a board wants the whole screen.
     @State private var showGames = false
     @State private var showWeather = false
+    @State private var showArtwork = false
+    @State private var artworkIsSpin = false
     @State private var showColour = false
     @State private var localPlayback = false
     @State private var controlsLocalTrack = false
@@ -231,6 +222,7 @@ struct ControlCenterPanel: View {
         // the glass takes the room's own scheme: light over the white room,
         // dark over the dark designs, so it frosts instead of muddying
         .environment(\.colorScheme, ink.ink == Ink.ink ? .dark : .light)
+        .sheet(isPresented: $showArtwork) { ArtworkPage(spin: artworkIsSpin, accent: accent).environment(wall) }
         .sheet(isPresented: $showGames) { GamesSheet(accent: accent).environment(wall) }
         .sheet(isPresented: $showWeather) {
             NavigationStack {
@@ -246,6 +238,9 @@ struct ControlCenterPanel: View {
             refreshLocalPlayback()
             #if DEBUG
             if CommandLine.arguments.contains("-control-colour") { showColour = true }
+            if CommandLine.arguments.contains("-artwork-page") || CommandLine.arguments.contains("-spin-page") {
+                artworkIsSpin = CommandLine.arguments.contains("-spin-page"); showArtwork = true
+            }
             #endif
         }
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in refreshLocalPlayback() }
@@ -286,12 +281,9 @@ struct ControlCenterPanel: View {
             ZStack {
                 Circle().fill(.ultraThinMaterial)
                 Circle().strokeBorder(ink.ink.opacity(0.14), lineWidth: 1)
-                Path { p in
-                    p.move(to: CGPoint(x: 0, y: 0)); p.addLine(to: CGPoint(x: 11, y: 11))
-                    p.move(to: CGPoint(x: 11, y: 0)); p.addLine(to: CGPoint(x: 0, y: 11))
-                }
-                .stroke(ink.ink, style: StrokeStyle(lineWidth: 1.6, lineCap: .round))
-                .frame(width: 11, height: 11)
+                Image(systemName: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(ink.ink).accessibilityHidden(true)
             }
             .frame(width: 44, height: 44)
         }
@@ -454,9 +446,9 @@ struct ControlCenterPanel: View {
             faceGroup("IN YOUR ROOM") {
                 tile(.lamp, "Lamp", mode: "ambient")
                 tile(.clock, "Clock", mode: "clock")
-                tile(.art, "Weather", mode: "weather")
+                tile(.weather, "Weather", mode: "weather")
                 tile(.games, "Games", mode: "game") { showGames = true }
-                tile(.lyrics, "Ticker", mode: "ticker")
+                tile(.ticker, "Ticker", mode: "ticker")
                 tile(.dark, "Off", mode: "off")
             }
         }
@@ -492,7 +484,7 @@ struct ControlCenterPanel: View {
                                     if mode == "cd" { Circle().fill(ink.ink).frame(width: 5, height: 5) }
                                 }
                         } else if mode == "weather" {
-                            Image(systemName: "cloud.sun.fill").symbolRenderingMode(.hierarchical)
+                            Image(systemName: "cloud.sun").symbolRenderingMode(.monochrome)
                                 .font(.system(size: 25)).foregroundStyle(on ? accent : ink.ink)
                         } else {
                             GlyphShape(glyph: g, lineWidth: 1.6).frame(width: 24, height: 24)
@@ -590,7 +582,9 @@ struct ControlCenterPanel: View {
             board("Imagine") {
                 Text("Your generated artwork is on the wall.").font(.ui(14)).foregroundStyle(ink.dim)
             }
-        case "art", "nine": finishBoard
+        case "art":
+            VStack(spacing: 16) { artworkLink(spin: false); finishBoard }
+        case "nine": finishBoard
         default: EmptyView()
         }
     }
@@ -666,9 +660,25 @@ struct ControlCenterPanel: View {
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
     }
 
+    private func artworkLink(spin: Bool) -> some View {
+        Button { artworkIsSpin = spin; showArtwork = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: spin ? "opticaldisc" : "photo.on.rectangle").font(.system(size: 22, weight: .medium))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(spin ? "The spinning record" : "A closer look").font(.ui(16, .semibold))
+                    Text(spin ? "Live pixels, face & rotation" : "Original cover & live wall").font(.ui(12)).foregroundStyle(ink.dim)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
+            }.foregroundStyle(ink.ink).padding(16).frame(maxWidth: .infinity, minHeight: 64)
+                .background(ink.fill, in: RoundedRectangle(cornerRadius: 16))
+        }.buttonStyle(PressStyle(scale: 0.98))
+    }
+
     private var speedBoard: some View {
         let rpm = rail(key: "rpm") ?? wall.state.rpm
         return board("Spin") {
+            artworkLink(spin: true)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%.1f", rpm)).font(.display(28)).foregroundStyle(ink.ink).contentTransition(.numericText())
                 Text("rpm").font(.ui(13)).foregroundStyle(ink.dim)

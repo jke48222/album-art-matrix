@@ -1,0 +1,608 @@
+{
+  "runtime": "iOS 26.5 simulator UIKit UIImage(systemName:)",
+  "checked": 121,
+  "missing": [],
+  "glyphs_checked": 29,
+  "symbols": {
+    "checkmark": [
+      "tessera/TesseraShare/ShareViewController.swift:239",
+      "tessera/Tessera/Archive.swift:476",
+      "tessera/Tessera/IPod.swift:1057",
+      "tessera/Tessera/IPod.swift:1062",
+      "tessera/Tessera/SettingsSheet.swift:650",
+      "tessera/Tessera/Onboarding.swift:374",
+      "tessera/Tessera/ColourBar.swift:187",
+      "tessera/Tessera/Features.swift:537",
+      "tessera/Tessera/PressingPanel.swift:204"
+    ],
+    "delete.left": [
+      "tessera/Tessera/GamesBoards.swift:70",
+      "tessera/Tessera/GamesBoards.swift:70"
+    ],
+    "waveform": [
+      "tessera/Tessera/Services.swift:423",
+      "tessera/Tessera/Games.swift:386",
+      "tessera/Tessera/Games.swift:638",
+      "tessera/Tessera/ShelfPage.swift:57"
+    ],
+    "ear": [
+      "tessera/Tessera/Services.swift:433"
+    ],
+    "text.bubble": [
+      "tessera/Tessera/Services.swift:443",
+      "tessera/Tessera/Services.swift:443",
+      "tessera/Tessera/SettingsSheet.swift:55"
+    ],
+    "opticaldisc": [
+      "tessera/Tessera/Services.swift:454",
+      "tessera/Tessera/ArtworkPage.swift:53",
+      "tessera/Tessera/ArtworkPage.swift:81",
+      "tessera/Tessera/ArtworkPage.swift:105",
+      "tessera/Tessera/RoomScreen.swift:689",
+      "tessera/Tessera/RoomScreen.swift:702",
+      "tessera/Tessera/NowPlayingIdentity.swift:192",
+      "tessera/Tessera/ClassicWallScreen.swift:79",
+      "tessera/Tessera/ControlCenter.swift:336",
+      "tessera/Tessera/ControlCenter.swift:669",
+      "tessera/Tessera/ShelfPage.swift:24",
+      "tessera/Tessera/ShelfPage.swift:89",
+      "tessera/Tessera/PressingPanel.swift:195",
+      "Glyph"
+    ],
+    "tv": [
+      "tessera/Tessera/Services.swift:464"
+    ],
+    "photo": [
+      "tessera/Tessera/Services.swift:475",
+      "tessera/Tessera/ArtworkPage.swift:53",
+      "tessera/Tessera/ArtworkPage.swift:81",
+      "tessera/Tessera/ArtworkPage.swift:89",
+      "tessera/Tessera/ArtworkPage.swift:106",
+      "tessera/Tessera/Archive.swift:428",
+      "Glyph"
+    ],
+    "paintbrush": [
+      "tessera/Tessera/Services.swift:486"
+    ],
+    "airplayaudio": [
+      "tessera/Tessera/Services.swift:497"
+    ],
+    "desktopcomputer": [
+      "tessera/Tessera/Services.swift:526"
+    ],
+    "person": [
+      "tessera/Tessera/Services.swift:760",
+      "tessera/Tessera/Games.swift:293"
+    ],
+    "viewfinder": [
+      "tessera/Tessera/ArtworkPage.swift:45"
+    ],
+    "dot.radiowaves.left.and.right": [
+      "tessera/Tessera/ArtworkPage.swift:89",
+      "tessera/Tessera/ArtworkPage.swift:89",
+      "tessera/Tessera/RoomScreen.swift:750"
+    ],
+    "wifi.slash": [
+      "tessera/Tessera/ArtworkPage.swift:89",
+      "tessera/Tessera/Archive.swift:377",
+      "tessera/Tessera/Archive.swift:482",
+      "tessera/Tessera/IPod.swift:951",
+      "tessera/Tessera/WallScreen.swift:113",
+      "tessera/Tessera/ShelfPage.swift:31",
+      "tessera/Tessera/ArtworkPage.swift:89",
+      "tessera/Tessera/Archive.swift:386",
+      "tessera/Tessera/Archive.swift:491",
+      "tessera/Tessera/RoomScreen.swift:753",
+      "tessera/Tessera/IPod.swift:951",
+      "tessera/Tessera/NowPlayingIdentity.swift:81",
+      "tessera/Tessera/WallScreen.swift:113",
+      "tessera/Tessera/ShelfPage.swift:31"
+    ],
+    "pause.circle": [
+      "tessera/Tessera/ArtworkPage.swift:125",
+      "tessera/Tessera/ArtworkPage.swift:125",
+      "tessera/Tessera/SettingsSheet.swift:44"
+    ],
+    "checkmark.circle.fill": [
+      "tessera/Tessera/ArtworkPage.swift:136",
+      "tessera/Tessera/IPod.swift:1054",
+      "tessera/Tessera/ControlCenter.swift:499",
+      "tessera/Tessera/ColourBar.swift:103",
+      "tessera/Tessera/Features.swift:1123",
+      "tessera/Tessera/PressingPanel.swift:139",
+      "tessera/Tessera/PressingPanel.swift:187",
+      "tessera/Tessera/ArtworkPage.swift:136",
+      "tessera/Tessera/IPod.swift:1054",
+      "tessera/Tessera/ControlCenter.swift:499",
+      "tessera/Tessera/ColourBar.swift:103",
+      "tessera/Tessera/Features.swift:1123",
+      "tessera/Tessera/PressingPanel.swift:139",
+      "tessera/Tessera/PressingPanel.swift:187"
+    ],
+    "circle": [
+      "tessera/Tessera/ArtworkPage.swift:136",
+      "tessera/Tessera/IPod.swift:1054",
+      "tessera/Tessera/IPod.swift:1057",
+      "tessera/Tessera/PressingPanel.swift:187"
+    ],
+    "checkmark.seal": [
+      "tessera/Tessera/ArtworkPage.swift:152",
+      "tessera/Tessera/ShelfPage.swift:106",
+      "tessera/Tessera/ArtworkPage.swift:152",
+      "tessera/Tessera/ShelfPage.swift:109"
+    ],
+    "arrow.up.right": [
+      "tessera/Tessera/ArtworkPage.swift:156",
+      "tessera/Tessera/ControlCenter.swift:571",
+      "tessera/Tessera/ShelfPage.swift:118",
+      "tessera/Tessera/WeatherPage.swift:327",
+      "tessera/Tessera/WeatherPage.swift:455",
+      "tessera/Tessera/ArtworkPage.swift:156",
+      "tessera/Tessera/ControlCenter.swift:571",
+      "tessera/Tessera/ShelfPage.swift:121",
+      "tessera/Tessera/WeatherPage.swift:327",
+      "tessera/Tessera/WeatherPage.swift:455"
+    ],
+    "magnifyingglass": [
+      "tessera/Tessera/Archive.swift:340",
+      "tessera/Tessera/ShelfPage.swift:43",
+      "tessera/Tessera/WeatherPage.swift:492"
+    ],
+    "xmark.circle.fill": [
+      "tessera/Tessera/Archive.swift:344",
+      "tessera/Tessera/ShelfPage.swift:45",
+      "tessera/Tessera/Archive.swift:353",
+      "tessera/Tessera/ShelfPage.swift:48"
+    ],
+    "chart.bar.xaxis": [
+      "tessera/Tessera/Archive.swift:367",
+      "tessera/Tessera/Archive.swift:376"
+    ],
+    "chevron.right": [
+      "tessera/Tessera/Archive.swift:368",
+      "tessera/Tessera/RoomScreen.swift:650",
+      "tessera/Tessera/IPod.swift:1052",
+      "tessera/Tessera/IPod.swift:1064",
+      "tessera/Tessera/SettingsSheet.swift:627",
+      "tessera/Tessera/ControlCenter.swift:675",
+      "tessera/Tessera/Games.swift:367",
+      "tessera/Tessera/Archive.swift:377",
+      "tessera/Tessera/RoomScreen.swift:650",
+      "tessera/Tessera/IPod.swift:1052",
+      "tessera/Tessera/IPod.swift:1064",
+      "tessera/Tessera/SettingsSheet.swift:627",
+      "tessera/Tessera/GamesPlay.swift:394",
+      "tessera/Tessera/GamesPlay.swift:424",
+      "tessera/Tessera/ControlCenter.swift:675",
+      "tessera/Tessera/Games.swift:367"
+    ],
+    "square.stack": [
+      "tessera/Tessera/Archive.swift:386",
+      "tessera/Tessera/ShelfPage.swift:37",
+      "Glyph",
+      "tessera/Tessera/Archive.swift:395",
+      "tessera/Tessera/Icons.swift:29",
+      "tessera/Tessera/ShelfPage.swift:37"
+    ],
+    "square.stack.3d.up": [
+      "tessera/Tessera/Archive.swift:386",
+      "tessera/Tessera/Archive.swift:395"
+    ],
+    "clock": [
+      "tessera/Tessera/Archive.swift:459",
+      "tessera/Tessera/WeatherPage.swift:189",
+      "tessera/Tessera/WeatherPage.swift:296",
+      "Glyph"
+    ],
+    "arrow.up.right.square": [
+      "tessera/Tessera/Archive.swift:476",
+      "tessera/Tessera/Archive.swift:485"
+    ],
+    "slider.horizontal.3": [
+      "tessera/Tessera/RoomScreen.swift:690",
+      "tessera/Tessera/RoomScreen.swift:703",
+      "tessera/Tessera/ControlCenter.swift:37",
+      "tessera/Tessera/ColourBar.swift:107",
+      "tessera/Tessera/RoomScreen.swift:690",
+      "tessera/Tessera/RoomScreen.swift:703",
+      "tessera/Tessera/ControlCenter.swift:37",
+      "tessera/Tessera/ColourBar.swift:107"
+    ],
+    "playpause.fill": [
+      "tessera/Tessera/IPod.swift:558",
+      "tessera/Tessera/IPod.swift:558"
+    ],
+    "moon.zzz.fill": [
+      "tessera/Tessera/IPod.swift:867",
+      "tessera/Tessera/IPod.swift:867"
+    ],
+    "square.grid.3x3.fill": [
+      "tessera/Tessera/IPod.swift:867",
+      "tessera/Tessera/IPod.swift:997",
+      "tessera/Tessera/RootView.swift:343",
+      "tessera/Tessera/WeatherPage.swift:316",
+      "tessera/Tessera/IPod.swift:867",
+      "tessera/Tessera/IPod.swift:997",
+      "tessera/Tessera/NowPlayingIdentity.swift:78",
+      "tessera/Tessera/RootView.swift:348",
+      "tessera/Tessera/WeatherPage.swift:316"
+    ],
+    "wifi": [
+      "tessera/Tessera/IPod.swift:951",
+      "tessera/Tessera/WallScreen.swift:113"
+    ],
+    "iphone": [
+      "tessera/Tessera/IPod.swift:951",
+      "tessera/Tessera/WallScreen.swift:113",
+      "tessera/Tessera/WallScreen.swift:141"
+    ],
+    "chevron.left": [
+      "tessera/Tessera/IPod.swift:997",
+      "tessera/Tessera/WeatherPreview.swift:29",
+      "tessera/Tessera/IPod.swift:997",
+      "tessera/Tessera/GamesPlay.swift:394",
+      "tessera/Tessera/GamesPlay.swift:424",
+      "tessera/Tessera/WeatherPreview.swift:29"
+    ],
+    "moon.zzz": [
+      "tessera/Tessera/NowPlayingIdentity.swift:198",
+      "tessera/Tessera/WallScreen.swift:143",
+      "tessera/Tessera/NowPlayingIdentity.swift:198",
+      "tessera/Tessera/SettingsSheet.swift:42",
+      "tessera/Tessera/WallScreen.swift:143"
+    ],
+    "photo.on.rectangle": [
+      "tessera/Tessera/ClassicWallScreen.swift:79",
+      "tessera/Tessera/ControlCenter.swift:669",
+      "Glyph",
+      "tessera/Tessera/ClassicWallScreen.swift:79",
+      "tessera/Tessera/SettingsSheet.swift:57",
+      "tessera/Tessera/Icons.swift:14",
+      "tessera/Tessera/ControlCenter.swift:669"
+    ],
+    "square.and.pencil": [
+      "tessera/Tessera/ClassicWallScreen.swift:114",
+      "tessera/Tessera/WallScreen.swift:107",
+      "Glyph",
+      "tessera/Tessera/ClassicWallScreen.swift:114",
+      "tessera/Tessera/WallScreen.swift:107",
+      "tessera/Tessera/Icons.swift:18"
+    ],
+    "gearshape": [
+      "tessera/Tessera/ClassicWallScreen.swift:120",
+      "tessera/Tessera/ControlCenter.swift:41",
+      "Glyph"
+    ],
+    "moon": [
+      "tessera/Tessera/ClassicWallScreen.swift:156"
+    ],
+    "square.grid.3x3": [
+      "tessera/Tessera/ClassicWallScreen.swift:156",
+      "tessera/Tessera/WeatherPage.swift:351",
+      "Glyph",
+      "tessera/Tessera/ClassicWallScreen.swift:156",
+      "tessera/Tessera/Icons.swift:35",
+      "tessera/Tessera/WeatherPage.swift:351"
+    ],
+    "arrow.clockwise": [
+      "tessera/Tessera/ClassicWallScreen.swift:185",
+      "tessera/Tessera/WallScreen.swift:131",
+      "tessera/Tessera/WeatherPage.swift:476",
+      "tessera/Tessera/ClassicWallScreen.swift:185",
+      "tessera/Tessera/GamesPlay.swift:424",
+      "tessera/Tessera/WallScreen.swift:131",
+      "tessera/Tessera/WeatherPage.swift:476"
+    ],
+    "power": [
+      "tessera/Tessera/ClassicWallScreen.swift:206",
+      "tessera/Tessera/ControlCenter.swift:401",
+      "Glyph"
+    ],
+    "xmark": [
+      "tessera/Tessera/SettingsSheet.swift:102",
+      "tessera/Tessera/WallScreen.swift:204"
+    ],
+    "stop.fill": [
+      "tessera/Tessera/GamesPlay.swift:37",
+      "tessera/Tessera/GamesPlay.swift:37"
+    ],
+    "play.fill": [
+      "tessera/Tessera/GamesPlay.swift:37",
+      "tessera/Tessera/ControlCenter.swift:324",
+      "Glyph",
+      "tessera/Tessera/NowPlayingIdentity.swift:76",
+      "tessera/Tessera/ClassicWallScreen.swift:483",
+      "tessera/Tessera/GamesPlay.swift:37",
+      "tessera/Tessera/Icons.swift:31",
+      "tessera/Tessera/ControlCenter.swift:324"
+    ],
+    "antenna.radiowaves.left.and.right": [
+      "tessera/Tessera/WallScreen.swift:139",
+      "tessera/Tessera/RoomScreen.swift:752",
+      "tessera/Tessera/NowPlayingIdentity.swift:82",
+      "tessera/Tessera/WallScreen.swift:139"
+    ],
+    "sun.max": [
+      "tessera/Tessera/WallScreen.swift:143",
+      "tessera/Tessera/SettingsSheet.swift:40",
+      "tessera/Tessera/WallScreen.swift:143"
+    ],
+    "square.stack.3d.up.fill": [
+      "tessera/Tessera/RootView.swift:343",
+      "tessera/Tessera/RootView.swift:348"
+    ],
+    "music.note": [
+      "tessera/Tessera/ControlCenter.swift:309",
+      "tessera/Tessera/NowPlayingIdentity.swift:83",
+      "tessera/Tessera/SettingsSheet.swift:39",
+      "tessera/Tessera/ControlCenter.swift:309"
+    ],
+    "pause.fill": [
+      "tessera/Tessera/ControlCenter.swift:324",
+      "Glyph",
+      "tessera/Tessera/NowPlayingIdentity.swift:77",
+      "tessera/Tessera/ClassicWallScreen.swift:483",
+      "tessera/Tessera/Icons.swift:32",
+      "tessera/Tessera/ControlCenter.swift:324"
+    ],
+    "cloud.sun": [
+      "tessera/Tessera/ControlCenter.swift:490",
+      "Glyph",
+      "tessera/Tessera/SettingsSheet.swift:60",
+      "tessera/Tessera/SettingsSheet.swift:220",
+      "tessera/Tessera/Icons.swift:41",
+      "tessera/Tessera/ControlCenter.swift:490"
+    ],
+    "pencil.circle": [
+      "tessera/Tessera/ControlCenter.swift:502",
+      "tessera/Tessera/ControlCenter.swift:910",
+      "tessera/Tessera/ControlCenter.swift:502",
+      "tessera/Tessera/ControlCenter.swift:910"
+    ],
+    "location": [
+      "tessera/Tessera/ControlCenter.swift:568"
+    ],
+    "gamecontroller": [
+      "tessera/Tessera/ControlCenter.swift:580",
+      "Glyph"
+    ],
+    "paintbrush.pointed": [
+      "tessera/Tessera/ControlCenter.swift:1156",
+      "tessera/Tessera/SettingsSheet.swift:59",
+      "tessera/Tessera/ControlCenter.swift:1156"
+    ],
+    "minus": [
+      "tessera/Tessera/Onboarding.swift:374"
+    ],
+    "lock.fill": [
+      "tessera/Tessera/ColourBar.swift:107",
+      "tessera/Tessera/ColourBar.swift:107"
+    ],
+    "exclamationmark.circle": [
+      "tessera/Tessera/ColourBar.swift:218",
+      "tessera/Tessera/PressingPanel.swift:76",
+      "tessera/Tessera/ColourBar.swift:218",
+      "tessera/Tessera/PressingPanel.swift:76"
+    ],
+    "plus.circle": [
+      "tessera/Tessera/Features.swift:492",
+      "tessera/Tessera/Features.swift:492"
+    ],
+    "person.2": [
+      "tessera/Tessera/Games.swift:383",
+      "tessera/Tessera/Games.swift:383"
+    ],
+    "mic": [
+      "tessera/Tessera/Games.swift:638"
+    ],
+    "headphones": [
+      "tessera/Tessera/ListeningStatsPage.swift:96"
+    ],
+    "checkmark.circle": [
+      "tessera/Tessera/PressingPanel.swift:88",
+      "tessera/Tessera/PressingPanel.swift:88"
+    ],
+    "bookmark": [
+      "tessera/Tessera/PressingPanel.swift:88"
+    ],
+    "photo.badge.plus": [
+      "tessera/Tessera/PressingPanel.swift:169",
+      "tessera/Tessera/PressingPanel.swift:169"
+    ],
+    "trash": [
+      "tessera/Tessera/PressingPanel.swift:208"
+    ],
+    "plus": [
+      "tessera/Tessera/PressingPanel.swift:218"
+    ],
+    "location.fill": [
+      "tessera/Tessera/WeatherPage.swift:189",
+      "tessera/Tessera/WeatherPage.swift:189"
+    ],
+    "chevron.down": [
+      "tessera/Tessera/WeatherPage.swift:197",
+      "tessera/Tessera/GamesPlay.swift:394",
+      "tessera/Tessera/GamesPlay.swift:425",
+      "tessera/Tessera/WeatherPage.swift:197"
+    ],
+    "arrow.up": [
+      "tessera/Tessera/WeatherPage.swift:215",
+      "tessera/Tessera/WeatherPage.swift:215"
+    ],
+    "arrow.down": [
+      "tessera/Tessera/WeatherPage.swift:216",
+      "tessera/Tessera/WeatherPage.swift:216"
+    ],
+    "arrow.up.left.and.arrow.down.right": [
+      "tessera/Tessera/WeatherPage.swift:327",
+      "tessera/Tessera/WeatherPage.swift:327"
+    ],
+    "thermometer.medium": [
+      "tessera/Tessera/WeatherPage.swift:368",
+      "tessera/Tessera/WeatherPage.swift:368"
+    ],
+    "wind": [
+      "tessera/Tessera/WeatherPage.swift:369"
+    ],
+    "cloud": [
+      "tessera/Tessera/WeatherPage.swift:370"
+    ],
+    "drop": [
+      "tessera/Tessera/WeatherPage.swift:371"
+    ],
+    "sun.horizon": [
+      "tessera/Tessera/WeatherPage.swift:397",
+      "tessera/Tessera/WeatherPage.swift:397"
+    ],
+    "wifi.exclamationmark": [
+      "tessera/Tessera/WeatherPage.swift:437",
+      "tessera/Tessera/WeatherPage.swift:437"
+    ],
+    "arrow.right": [
+      "tessera/Tessera/WeatherPage.swift:506",
+      "tessera/Tessera/ShelfPage.swift:41",
+      "tessera/Tessera/WeatherPage.swift:506"
+    ],
+    "lightbulb": [
+      "Glyph"
+    ],
+    "eraser": [
+      "Glyph"
+    ],
+    "textformat": [
+      "Glyph"
+    ],
+    "point.topleft.down.to.point.bottomright.curvepath": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:23"
+    ],
+    "drop.halffull": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:24"
+    ],
+    "pencil.tip": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:25"
+    ],
+    "arrow.uturn.backward": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:26"
+    ],
+    "arrow.uturn.forward": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:27"
+    ],
+    "paintpalette": [
+      "Glyph"
+    ],
+    "forward.end.fill": [
+      "Glyph",
+      "tessera/Tessera/IPod.swift:557",
+      "tessera/Tessera/ClassicWallScreen.swift:487",
+      "tessera/Tessera/Icons.swift:33"
+    ],
+    "backward.end.fill": [
+      "Glyph",
+      "tessera/Tessera/IPod.swift:556",
+      "tessera/Tessera/ClassicWallScreen.swift:482",
+      "tessera/Tessera/Icons.swift:34"
+    ],
+    "quote.bubble": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:36"
+    ],
+    "backward.fill": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:37"
+    ],
+    "forward.fill": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:38"
+    ],
+    "play.rectangle": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:39"
+    ],
+    "text.alignleft": [
+      "Glyph",
+      "tessera/Tessera/Icons.swift:42"
+    ],
+    "square.grid.2x2": [
+      "tessera/Tessera/Intents.swift:14"
+    ],
+    "clock.arrow.circlepath": [
+      "tessera/Tessera/NowPlayingIdentity.swift:79"
+    ],
+    "lock.iphone": [
+      "tessera/Tessera/SettingsSheet.swift:45"
+    ],
+    "note.text": [
+      "tessera/Tessera/SettingsSheet.swift:56"
+    ],
+    "ear.badge.waveform": [
+      "tessera/Tessera/SettingsSheet.swift:58"
+    ],
+    "music.mic": [
+      "tessera/Tessera/SettingsSheet.swift:65"
+    ],
+    "camera.aperture": [
+      "tessera/Tessera/SettingsSheet.swift:75"
+    ],
+    "checkerboard.rectangle": [
+      "tessera/Tessera/SettingsSheet.swift:76"
+    ],
+    "waveform.path.ecg": [
+      "tessera/Tessera/SettingsSheet.swift:79"
+    ],
+    "info.circle": [
+      "tessera/Tessera/SettingsSheet.swift:82"
+    ],
+    "sun.min": [
+      "tessera/Tessera/SettingsSheet.swift:218"
+    ],
+    "chevron.up": [
+      "tessera/Tessera/GamesPlay.swift:393"
+    ],
+    "arrow.down.to.line": [
+      "tessera/Tessera/GamesPlay.swift:425"
+    ],
+    "sun.max.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:36"
+    ],
+    "moon.stars.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:36"
+    ],
+    "cloud.sun.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:37"
+    ],
+    "cloud.moon.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:37"
+    ],
+    "cloud.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:38",
+      "tessera/Tessera/WeatherAtmosphere.swift:46"
+    ],
+    "cloud.fog.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:39"
+    ],
+    "cloud.drizzle.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:40"
+    ],
+    "cloud.sleet.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:41"
+    ],
+    "cloud.rain.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:42"
+    ],
+    "cloud.snow.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:43"
+    ],
+    "cloud.heavyrain.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:44"
+    ],
+    "cloud.bolt.rain.fill": [
+      "tessera/Tessera/WeatherAtmosphere.swift:45"
+    ]
+  },
+  "scope": "All literal systemName/systemImage/symbol/icon arguments, shared Glyph mapping, and dotted symbol names in dynamic source maps; brand logo assets kept intact."
+}

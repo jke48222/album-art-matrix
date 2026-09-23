@@ -18,7 +18,7 @@ track, so how far in you are is readable from across the room with no text.
 import math
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 SUPER = 4  # supersample factor for rotation quality
 
@@ -44,11 +44,16 @@ class DiscAnimator:
         pressing the phone drew for this song, label and all. Then the
         grooves and the paper label stay out of its way and only the light,
         the hole and the rim are added."""
+        if not isinstance(size, int) or not 16 <= size <= 512:
+            raise ValueError("Disc size must be an integer from 16 to 512 pixels")
         self.size = size
-        self.rpm = rpm
+        self.rpm = rpm if math.isfinite(rpm) else 7.5
         big = size * SUPER
         r = big / 2.0
-        art = art.convert("RGB").resize((big, big), Image.LANCZOS)
+        # Use the same middle-square composition as the phone's sleeve and
+        # pressing. Resizing a rectangular source squeezed faces and lettering.
+        art = ImageOps.fit(ImageOps.exif_transpose(art).convert("RGB"),
+                           (big, big), method=Image.Resampling.LANCZOS)
         arr = np.asarray(art, dtype=np.float32)
 
         yy, xx = np.mgrid[0:big, 0:big].astype(np.float32)
@@ -146,6 +151,8 @@ class DiscAnimator:
         there is no needle, because a guessed one would be a lie.
         """
         spin = t if progress_s is None else progress_s
+        if not math.isfinite(spin):
+            spin = 0.0
         angle = (spin * self.rpm / 60.0 * 360.0) % 360.0
         turned = self._art.rotate(-angle, resample=Image.BICUBIC,
                                   center=(self._art.width / 2, self._art.height / 2))
@@ -153,7 +160,7 @@ class DiscAnimator:
         arr = np.asarray(frame, dtype=np.uint16)
         arr = np.clip(arr + self._sheen[:, :, None], 0, 255).astype(np.uint8)
         out = Image.fromarray(arr).resize((self.size, self.size), Image.LANCZOS)
-        if fraction is None:
+        if fraction is None or not math.isfinite(fraction):
             return out
         return Image.fromarray(
             np.clip(np.asarray(out, dtype=np.int16)

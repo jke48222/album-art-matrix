@@ -1,0 +1,279 @@
+{
+  "processing": "Same proportional downscale for each full screenshot; no retouching or content overlays.",
+  "new_screen_context": "A09 compares the old embedded Archive stats with the new insights page; C01 compares the old home artwork with its new dedicated view; C02 compares old controls with the new Spin detail.",
+  "comparisons": [
+    {
+      "unit": "A03",
+      "title": "Room spacing",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/room-live.png",
+      "before_sha256": "fe9c85a122a309648b065d0754461038eae5b61ab1af376a5b9be1c23d9417ea",
+      "after_sha256": "4e044b91caa66d6241625c506080654d8892b55d38b7b8625ff8fbb6d95efae8",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/a03-room.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "e323f24bdad9f44ecf3c87744654f8eac535944d515f1a358862e57725050688"
+    },
+    {
+      "unit": "X01",
+      "title": "Shared control icons",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/icons/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/icons/room-live.png",
+      "before_sha256": "4a12f0073a690de915def4b9168ab0c87212b1ac959f7de88513ab048a8e7167",
+      "after_sha256": "7ba443bfb9e2514ff82e0548184462aece306ffdd060633a72e8f4ca7852917a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/icons.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "7eeace486e117cc65b46b387eb222ef0eb7903d681aa3534903122962f37045b"
+    },
+    {
+      "unit": "A08",
+      "title": "Archive",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/archive/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/archive/classic-live.png",
+      "before_sha256": "59382b226519817e5e9c331e474da51322a7ed553e03439f4f2c1c5bf162dbb0",
+      "after_sha256": "6c96ea1d41624838126e5513f1732c3c613aa52b014a8d70a36fd9e7e5f6d8cd",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/a08-archive.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0f98d891915cce88c4f8f896854e9e712189ea3c60144f59bbfa85b778d911ac"
+    },
+    {
+      "unit": "A09",
+      "title": "Listening insights",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/archive/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/insights/classic-live.png",
+      "before_sha256": "59382b226519817e5e9c331e474da51322a7ed553e03439f4f2c1c5bf162dbb0",
+      "after_sha256": "83bef9f79dfd0e032d058d6068a1bb3bf70c9094d28bf8cb0829f9caa3b22cfd",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/a09-insights.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5f5c5148bb34143e13623708720bdab5b2ae580ab6834e314b4ac6d5f6d98a43"
+    },
+    {
+      "unit": "A10",
+      "title": "Pressings & labels",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/pressing/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/pressing/room-live.png",
+      "before_sha256": "7d9cba2058ba1b3ef4eea5f5dfd28f5ff1dfa00c11d907e2b997c7cf3a8bf281",
+      "after_sha256": "8006c5cccdf626b98bf68628e75dad2b6725807b533075486aec678bc616dce0",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/a10-pressings.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "3ba966efc2b93df265ee109b3394880b6a1c734666ccd3066507ae4ee3226035"
+    },
+    {
+      "unit": "C01",
+      "title": "Album art \u00b7 new detail view",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/album/room-live.png",
+      "before_sha256": "fe9c85a122a309648b065d0754461038eae5b61ab1af376a5b9be1c23d9417ea",
+      "after_sha256": "17a39aa1c208c336bb2adae922ebb4ca191b4f5033a85b28e683e8dc215d3503",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/c01-artwork.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "1fca747c415ad7b2eda012fc84996fdcde0291457d4ab8905e30a82aa37b3d6a"
+    },
+    {
+      "unit": "C02",
+      "title": "Spin \u00b7 new detail view",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-03/before/spin/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-03/after/spin/room-live.png",
+      "before_sha256": "4d84bb1391e7a3e46890b3b29fd56eabff0b33f55c7e300c954a6b242aaff9e8",
+      "after_sha256": "a27d6536956d2de5fd3d44649b4f6adc07d9460c72152dfb02a0c707bd6e9f2a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-03/comparisons/c02-spin.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "c7fe2ee09aa19bf3125cb2055377adfa469df2c52847c4926c58b8d97847c8d0"
+    }
+  ]
+}

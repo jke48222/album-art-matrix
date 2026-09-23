@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import argparse
 import copy
+import io
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import math
 from pathlib import Path
 import subprocess
+import sys
 import threading
 import time
 from urllib.parse import urlsplit
@@ -86,6 +88,9 @@ class FixtureWall:
         self.available = True
         self.requests: list[dict] = []
         self.lock = threading.Lock()
+        self.journal = []
+        self.covers = {}
+        self.shelf = []
 
     def load(self, state: dict, frame: bytes) -> None:
         with self.lock:
@@ -122,7 +127,11 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
             if path == "/frame.raw":
                 self.response(200, frame, "application/octet-stream")
                 return
-            payload = state if path == "/state" else {"entries": []} if path == "/journal" else {}
+            if path in wall.covers:
+                self.response(200, wall.covers[path], "image/png")
+                return
+            payload = (state if path == "/state" else {"entries": wall.journal} if path == "/journal"
+                       else {"releases": wall.shelf} if path == "/shelf" else {})
             self.response(200, json.dumps(payload).encode(), "application/json")
 
         def do_POST(self) -> None:
@@ -174,6 +183,7 @@ def main() -> int:
                         help="Extra app argument, for example --launch-argument=-controls")
     parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker"))
     parser.add_argument("--brightness", type=float)
+    parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
     args = parser.parse_args()
     valid = set(DEFAULT_STATES) | {"classic-wall", "room-paused", "ipod-paused", "room-offline", "ipod-offline",
                                  "room-long", "ipod-long", "room-large", "ipod-large"}
@@ -204,6 +214,30 @@ def main() -> int:
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
     fixture_host = f"127.0.0.1:{server.server_port}"
+    if args.journal == "recent":
+        titles = ["Into the Quiet", "Amber Hours", "Blue Distance", "Slow Sun", "After the Rain", "Paper Moon"]
+        artists = ["The Tessera Sessions", "Mira Vale", "North Coast", "Mira Vale", "The Tessera Sessions", "Lena June"]
+        now = int(time.time())
+        for i in range(18):
+            title, artist = titles[i % 6], artists[i % 6]
+            route = f"/qa-cover-{i % 6}.png"
+            if route not in wall.covers:
+                art = Image.frombytes("RGB", (64, 64), artwork())
+                if i % 6:
+                    channels = art.split()
+                    art = Image.merge("RGB", channels[i % 3:] + channels[:i % 3])
+                    if i % 2: art = art.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                stream = io.BytesIO(); art.resize((512, 512), Image.Resampling.NEAREST).save(stream, "PNG")
+                wall.covers[route] = stream.getvalue()
+            wall.journal.append({"ts": now - (i // 6) * 86400 - (i % 6) * 1600,
+                                 "title": title, "artist": artist, "album": "After the Rain" if i % 6 == 0 else title,
+                                 "art_url": f"http://{fixture_host}{route}"})
+            if i < 6:
+                wall.shelf.append({"release_id": i + 1, "title": "After the Rain" if i == 0 else title,
+                                   "artists": [artist], "year": 2026 - i, "label": "Tessera Sessions",
+                                   "catno": f"TS-{i + 1:03}", "formats": ["Vinyl", "LP"],
+                                   "cover": f"http://{fixture_host}{route}", "country": "US",
+                                   "url": "https://www.discogs.com", "plays": 12 - i})
     captures = []
     try:
         for name in states:
@@ -219,6 +253,11 @@ def main() -> int:
                     state["mode"] = args.mode
                 if args.brightness is not None:
                     state["brightness"] = args.brightness
+                if state["mode"] == "cd":
+                    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+                    from brain.art.disc import DiscAnimator
+                    disc = DiscAnimator(Image.frombytes("RGB", (64, 64), artwork()), 64)
+                    frame = disc.frame_at(0, progress_s=93, fraction=93 / 245).tobytes()
             wall.load(state, frame)
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")

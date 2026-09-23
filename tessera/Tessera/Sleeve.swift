@@ -19,8 +19,9 @@ final class SleeveArt {
     @ObservationIgnored private var pending = false
     @ObservationIgnored private var retryAfter = Date.distantPast
     @ObservationIgnored private var sourceHost = ""
+    @ObservationIgnored private var artworkKey = ""
     @ObservationIgnored private var cache: [String: UIImage] = [:]
-    @ObservationIgnored private let load: (String, String, String) async -> UIImage?
+    @ObservationIgnored private let load: (String, String, String, String) async -> UIImage?
 
     /// What a pressing is kept under: the album, so every song on it gets
     /// the same record; the song itself when the album is not known.
@@ -28,8 +29,8 @@ final class SleeveArt {
         album.isEmpty ? songKey : SleeveMatch.normalized(artist) + "|" + SleeveMatch.normalized(album)
     }
 
-    init(load: ((String, String, String) async -> UIImage?)? = nil) {
-        self.load = load ?? { await Self.fetch(title: $0, artist: $1, host: $2) }
+    init(load: ((String, String, String, String) async -> UIImage?)? = nil) {
+        self.load = load ?? { await Self.fetch(title: $0, artist: $1, album: $2, host: $3) }
     }
 
     func refresh(title: String?, artist: String?, album: String? = nil, host: String) {
@@ -54,11 +55,13 @@ final class SleeveArt {
     func update(title: String, artist: String, album: String = "", host: String,
                 localImage: @autoclosure () -> UIImage? = nil) {
         let k = title.isEmpty ? "" : SleeveMatch.key(title: title, artist: artist)
-        if k != songKey || host != sourceHost {
+        let assetKey = host + "|" + k + "|" + SleeveMatch.normalized(album)
+        if assetKey != artworkKey {
+            artworkKey = assetKey
             task?.cancel(); requestID = UUID(); pending = false; retryAfter = .distantPast
             songKey = k; sourceHost = host
             self.title = title; self.artist = artist; self.album = album
-            image = cache[k]
+            image = cache[assetKey]
             phase = k.isEmpty ? .empty : image == nil ? .loading : .ready
             revision += 1
         }
@@ -68,7 +71,7 @@ final class SleeveArt {
         guard !k.isEmpty else { return }
         if image == nil, let localImage = localImage() {
             task?.cancel(); requestID = UUID(); pending = false
-            image = localImage.squared(512); cache[k] = image; phase = .ready; revision += 1
+            image = localImage.squared(512); cache[assetKey] = image; phase = .ready; revision += 1
         }
         guard image == nil, !pending, Date() >= retryAfter else { return }
         pending = true
@@ -76,12 +79,12 @@ final class SleeveArt {
         let id = UUID(); requestID = id
         let loader = load
         task = Task { [weak self] in
-            let result = await loader(title, artist, host)
-            guard !Task.isCancelled, let self, self.requestID == id, self.songKey == k else { return }
+            let result = await loader(title, artist, album, host)
+            guard !Task.isCancelled, let self, self.requestID == id, self.songKey == k, self.artworkKey == assetKey else { return }
             self.pending = false
             if let result {
                 if self.cache.count >= 48 { self.cache.removeAll(keepingCapacity: true) }
-                self.image = result; self.cache[k] = result; self.phase = .ready; self.revision += 1
+                self.image = result; self.cache[assetKey] = result; self.phase = .ready; self.revision += 1
             } else {
                 self.phase = .unavailable
                 self.retryAfter = Date().addingTimeInterval(5)
@@ -89,19 +92,25 @@ final class SleeveArt {
         }
     }
 
-    private static func fetch(title: String, artist: String, host: String) async -> UIImage? {
+    private static func fetch(title: String, artist: String, album: String, host: String) async -> UIImage? {
         guard let url = URL(string: "http://\(host)/journal?limit=40") else { return nil }
         func data(_ url: URL) async -> Data? {
             guard let (data, response) = try? await URLSession.shared.data(for: URLRequest(url: url, timeoutInterval: 8)),
                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else { return nil }
             return data
         }
-        guard let bytes = await data(url), !Task.isCancelled,
-              let root = try? JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+        guard let journalBytes = await data(url), !Task.isCancelled,
+              let root = try? JSONSerialization.jsonObject(with: journalBytes) as? [String: Any],
               let entries = root["entries"] as? [[String: Any]],
-              let match = SleeveMatch.entry(in: entries, title: title, artist: artist),
-              let art = match["art_url"] as? String, let artURL = URL(string: art),
-              let bytes = await data(artURL), !Task.isCancelled, let image = UIImage(data: bytes) else { return nil }
+              let match = SleeveMatch.entry(in: entries, title: title, artist: artist, album: album),
+              let art = match["art_url"] as? String else { return nil }
+        let bytes: Data?
+        if art.hasPrefix("data:image/"), let separator = art.range(of: ";base64,"), art.utf8.count <= 28_000_000 {
+            bytes = Data(base64Encoded: String(art[separator.upperBound...]))
+        } else if let artURL = URL(string: art), ["http", "https"].contains(artURL.scheme ?? "") {
+            bytes = await data(artURL)
+        } else { bytes = nil }
+        guard let bytes, !Task.isCancelled, let image = UIImage(data: bytes) else { return nil }
         return image.squared(512)
     }
 }
@@ -113,10 +122,11 @@ enum SleeveMatch {
     }
     static func same(_ a: String, _ b: String) -> Bool { normalized(a) == normalized(b) }
     static func key(title: String, artist: String) -> String { normalized(artist) + "|" + normalized(title) }
-    static func entry(in entries: [[String: Any]], title: String, artist: String) -> [String: Any]? {
+    static func entry(in entries: [[String: Any]], title: String, artist: String, album: String = "") -> [String: Any]? {
         entries.filter {
             same($0["title"] as? String ?? "", title) && same($0["artist"] as? String ?? "", artist)
-        }.max { ($0["ts"] as? Double ?? 0) < ($1["ts"] as? Double ?? 0) }
+            && (album.isEmpty || same($0["album"] as? String ?? "", album))
+        }.max { (($0["ts"] as? NSNumber)?.doubleValue ?? 0) < (($1["ts"] as? NSNumber)?.doubleValue ?? 0) }
     }
 }
 

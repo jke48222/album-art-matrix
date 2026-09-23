@@ -22,6 +22,7 @@ struct ClassicWallScreen: View {
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     @AppStorage("spin.beat") private var beatOn = false
     @State private var beats = BeatBook()
+    @State private var showArtwork = false
     @Environment(\.scenePhase) private var scenePhase
     var onSetup: () -> Void
     var onStudio: () -> Void
@@ -73,6 +74,13 @@ struct ClassicWallScreen: View {
                     }
                 }
                 .padding(.horizontal, 24).padding(.top, 24).padding(.bottom, 16)
+                if wall.state.mode == "art" || wall.state.mode == "cd" {
+                    Button { showArtwork = true } label: {
+                        Label(wall.state.mode == "cd" ? "Record & rotation" : "Artwork & live wall", systemImage: wall.state.mode == "cd" ? "opticaldisc" : "photo.on.rectangle")
+                            .font(.ui(15, .semibold)).foregroundStyle(accent.toned(forDark: true))
+                            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                    }.buttonStyle(PressStyle()).padding(.horizontal, 24).padding(.bottom, 12)
+                }
                 modeRow.padding(.horizontal, 14).padding(.bottom, 24)
                 if !isOff {
                     contextRow.padding(.horizontal, 24).transition(.opacity)
@@ -82,6 +90,7 @@ struct ClassicWallScreen: View {
             .padding(.top, 4)
             .animation(Motion.settle, value: isOff)
         }
+        .sheet(isPresented: $showArtwork) { ArtworkPage(spin: wall.state.mode == "cd", accent: accent).environment(wall) }
         .scrollIndicators(.hidden)
         .clipped()
         .padding(.bottom, 8)
@@ -108,7 +117,7 @@ struct ClassicWallScreen: View {
             .buttonStyle(PressStyle(scale: 0.94))
             .accessibilityLabel("Open Studio")
             Button(action: onSetup) {
-                Image(systemName: "slider.horizontal.3").font(.system(size: 19, weight: .regular))
+                Image(systemName: "gearshape").font(.system(size: 19, weight: .medium))
                     .frame(width: 44, height: 44)
                     .background(Ink.plaster, in: Circle())
             }

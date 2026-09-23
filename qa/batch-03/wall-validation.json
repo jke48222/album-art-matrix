@@ -1,0 +1,26 @@
+{
+  "checks": [
+    {
+      "mode": "art",
+      "frame_bytes": 12288,
+      "confirmed": true
+    },
+    {
+      "mode": "cd",
+      "frame_bytes": 12288,
+      "confirmed": true
+    }
+  ],
+  "restored": {
+    "mode": "ambient",
+    "spin_face": "pressing",
+    "rpm": 7.5
+  },
+  "restore_verified": true,
+  "runtime": "Updated Python brain running under album-art-matrix.service.",
+  "panel_review": "Live frame read from hardware service. Optical LED color and physical appearance remain user review.",
+  "managed_service": "active",
+  "brain_pid": 1433750,
+  "renderer_pid": 1077899,
+  "administrator_restart": "Completed by user and verified with systemctl plus HTTP 200."
+}

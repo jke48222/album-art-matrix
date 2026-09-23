@@ -1,0 +1,190 @@
+{
+  "checks": [
+    {
+      "name": "Same-second songs by different artists survive merge",
+      "passed": true
+    },
+    {
+      "name": "Remote duplicate wins and preserves artwork",
+      "passed": true
+    },
+    {
+      "name": "Entry identities do not collide at one timestamp",
+      "passed": true
+    },
+    {
+      "name": "Runs are sorted newest first",
+      "passed": true
+    },
+    {
+      "name": "Consecutive repeats combine within one day",
+      "passed": true
+    },
+    {
+      "name": "Day boundaries remain visible",
+      "passed": true
+    },
+    {
+      "name": "All original timestamps survive collapse",
+      "passed": true
+    },
+    {
+      "name": "Search matches every term across metadata",
+      "passed": true
+    },
+    {
+      "name": "Search rejects an absent term",
+      "passed": true
+    },
+    {
+      "name": "Empty search preserves results",
+      "passed": true
+    },
+    {
+      "name": "Appearances include repeats",
+      "passed": true
+    },
+    {
+      "name": "Album identity ignores song casing",
+      "passed": true
+    },
+    {
+      "name": "Artist counts normalize casing",
+      "passed": true
+    },
+    {
+      "name": "Hours retain earlier repeat timestamps",
+      "passed": true
+    },
+    {
+      "name": "Small samples do not invent a daily pattern",
+      "passed": true
+    },
+    {
+      "name": "Empty history has no fake metrics",
+      "passed": true
+    },
+    {
+      "name": "First observation counts no unobserved time",
+      "passed": true
+    },
+    {
+      "name": "Ninety continuous seconds count exactly once",
+      "passed": true
+    },
+    {
+      "name": "Repeated timestamp counts nothing",
+      "passed": true
+    },
+    {
+      "name": "Forward seek counts no time",
+      "passed": true
+    },
+    {
+      "name": "Normal playback resumes after seek",
+      "passed": true
+    },
+    {
+      "name": "Backward seek counts no time",
+      "passed": true
+    },
+    {
+      "name": "Pause boundary counts no time",
+      "passed": true
+    },
+    {
+      "name": "Paused interval counts no time",
+      "passed": true
+    },
+    {
+      "name": "Resume does not include pause duration",
+      "passed": true
+    },
+    {
+      "name": "Next resumed second counts",
+      "passed": true
+    },
+    {
+      "name": "Missing position resets measurement",
+      "passed": true
+    },
+    {
+      "name": "Unknown gap is not credited",
+      "passed": true
+    },
+    {
+      "name": "Background gap is not credited",
+      "passed": true
+    },
+    {
+      "name": "New track has a fresh anchor",
+      "passed": true
+    },
+    {
+      "name": "Invalid time never enters ledger",
+      "passed": true
+    },
+    {
+      "name": "Infinite uptime never enters ledger",
+      "passed": true
+    },
+    {
+      "name": "Disconnect clears the clock anchor",
+      "passed": true
+    },
+    {
+      "name": "Negative positions are rejected",
+      "passed": true
+    },
+    {
+      "name": "Empty identity is rejected",
+      "passed": true
+    },
+    {
+      "name": "Cover lookup preserves album edition",
+      "passed": true
+    },
+    {
+      "name": "Unknown album uses latest matching song",
+      "passed": true
+    },
+    {
+      "name": "Unmatched album never borrows another edition",
+      "passed": true
+    },
+    {
+      "name": "Unicode canonical equivalents share identity",
+      "passed": true
+    },
+    {
+      "name": "Corrupt palette rows are skipped safely",
+      "passed": true
+    },
+    {
+      "name": "Unknown pressing types reset automatically",
+      "passed": true
+    },
+    {
+      "name": "Photo traversal is rejected",
+      "passed": true
+    },
+    {
+      "name": "Empty palette uses sleeve colours",
+      "passed": true
+    },
+    {
+      "name": "Valid photo basename survives",
+      "passed": true
+    },
+    {
+      "name": "Valid pressing and label survive",
+      "passed": true
+    },
+    {
+      "name": "Palette is bounded to three inks",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 46
+}
