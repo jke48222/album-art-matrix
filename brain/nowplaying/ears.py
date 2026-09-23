@@ -658,13 +658,18 @@ class EarsSource(NowPlayingSource):
     def get_current(self):
         with self._lock:
             hit, offset, start = self._hit, self._offset, self._clip_start
+            heard_at = self._heard_at
         if hit is None:
             return None
+        # An outsider's answer: the clock is a guess, and heard_at says how
+        # fresh the evidence is, so the chain can tell a song still playing
+        # from a hit kept through silence after the pause button.
         if offset is None:
-            return hit
+            return NowPlaying(**{**hit.__dict__, "clock": "approx", "heard_at": heard_at})
         # Shazam says where in the song the clip began; the clock has run
         # since, so the wall knows where the record is, not just what it is.
         at = int((offset + time.monotonic() - start) * 1000)
         if hit.duration_ms:
             at = min(at, hit.duration_ms)
-        return NowPlaying(**{**hit.__dict__, "progress_ms": at})
+        return NowPlaying(**{**hit.__dict__, "progress_ms": at,
+                             "clock": "approx", "heard_at": heard_at})

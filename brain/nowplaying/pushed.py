@@ -78,4 +78,7 @@ class PushedSource(NowPlayingSource):
             track_id="applemusic:" + (str(d.get("id")) if d.get("id") else f"{artist}|{title}"),
             title=title, artist=artist, album=album, art_url=art,
             progress_ms=prog, duration_ms=d.get("duration_ms"), is_playing=playing,
+            # the phone said this when it pushed, not now: a held "paused"
+            # can be outranked by music heard since
+            heard_at=at,
         )
