@@ -47,6 +47,7 @@ def fixture(now: int):
 def test_parse_keeps_what_the_face_needs():
     now = 1_760_000_000
     d = parse_forecast(fixture(now), fetched=now)
+    assert d["utc_offset_s"] == -14400
     assert d["temp"] == 21.4 and d["code"] == 2 and d["is_day"] is True
     assert d["high"] == 27.0 and d["low"] == 17.0
     assert d["sunrise"] == now - 20000 and d["sunset"] == now + 20000
@@ -86,6 +87,7 @@ def test_the_service_fetches_when_due_and_says_when_stale():
     clock[0] += STALE_S + 10
     assert w.stale()
     st = w.status()
+    assert st["utc_offset_s"] == -14400
     assert st["place"] == "Marietta, Georgia" and st["scene"] == "partly_cloudy" and st["units"] == "f"
 
 
@@ -156,3 +158,35 @@ def test_units():
     fahrenheit = face.frame_at(0.0, d, units="f")
     celsius = face.frame_at(0.0, d, units="c")
     assert (fahrenheit != celsius).any()
+
+
+def test_changing_place_never_relabels_the_previous_forecast():
+    now = 1_760_000_000.0
+    ctrl = FakeCtrl()
+    w = Weather(ctrl, fetch=lambda *args: fixture(int(now)), clock=lambda: now)
+    w.tick()
+    assert w.current() is not None
+    ctrl.apply({"lat": 51.5, "lon": -0.1, "place": "London"})
+    assert w.current() is None
+    assert w.status()["now"] is None
+    assert w.status()["utc_offset_s"] is None
+    w.tick()
+    assert w.current() is not None
+
+
+def test_all_conditions_render_extreme_temperatures_and_cache_clouds():
+    now = 1_760_000_000
+    for size in (64, 192):
+        face = WeatherFace(size)
+        for code in WMO_STANDARD:
+            data = parse_forecast(fixture(now), fetched=now)
+            data.update(code=code, temp=-40.0, high=-30.0, low=-50.0)
+            for day in (True, False):
+                data["is_day"] = day
+                frame = face.frame_at(0, data, units="c", now=now)
+                assert frame.shape == (size, size, 3)
+                assert frame.dtype == np.uint8
+                assert np.isfinite(frame).all()
+        cached = {key: id(value) for key, value in face._cloud_sprites.items()}
+        face.frame_at(0.1, data, units="c", now=now)
+        assert cached == {key: id(value) for key, value in face._cloud_sprites.items()}

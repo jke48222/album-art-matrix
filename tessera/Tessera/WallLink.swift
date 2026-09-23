@@ -833,6 +833,7 @@ final class WallSession {
             }
         }
         if let v = merged["clock_24h"] as? Bool { state.clock24h = v }
+        if let v = merged["weather_units"] as? String { state.weatherUnits = v }
         if let v = merged["idle"] as? String { state.idle = v }
         if let v = merged["away"] as? String { state.away = v }
         if let v = merged["wake_enabled"] as? Bool { state.wakeEnabled = v }

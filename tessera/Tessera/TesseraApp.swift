@@ -13,8 +13,15 @@ struct TesseraApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(wall)
+            #if DEBUG
+            if CommandLine.arguments.contains("-weather-preview") {
+                WeatherPreview()
+            } else {
+                RootView().environment(wall)
+            }
+            #else
+            RootView().environment(wall)
+            #endif
         }
     }
 }

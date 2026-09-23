@@ -206,7 +206,8 @@ class Weather:
     def current(self) -> dict | None:
         with self._lock:
             d = self.data
-        if d is None:
+            fetched_for = self._for
+        if d is None or fetched_for != self.where():
             return None
         if self._clock() - d["fetched"] > DEAD_S:
             return None
@@ -221,6 +222,7 @@ class Weather:
         s = self.ctrl.get()
         return {"place": s.get("place", "") or self.place, "where": self.where(),
                 "units": s.get("weather_units", "f"),
+                "utc_offset_s": (None if d is None else d.get("utc_offset_s")),
                 "age_s": (None if d is None else int(self._clock() - d["fetched"])),
                 "stale": self.stale(), "problem": self.problem,
                 "now": (None if d is None else {k: d.get(k) for k in (

@@ -16,8 +16,8 @@ one of eleven scenes (weather.SCENES).
 
 At 64: the temperature in 2x digits bottom left, outlined so it reads over
 the hills, the scene above and around it. At 192: 4x digits, today's high
-and low under them, the next six hours as a row of small scenes along the
-bottom, and sunrise and sunset ticks where the sun's arc meets the
+and low beside them, the next six hours with local times on a separate shelf
+along the bottom, and sunrise and sunset ticks where the sun's arc meets the
 horizon. Fahrenheit or Celsius as the wall is told. A small hollow square
 bottom right means the weather is over an hour old; no place set says so
 in words.
@@ -163,6 +163,7 @@ class WeatherFace:
         self._drops = None
         self._flakes = None
         self._clouds = None
+        self._cloud_sprites = {}
         self._settled = 0.0
         self._snow_since = None
         self._next_flash = None
@@ -238,10 +239,10 @@ class WeatherFace:
         """(top, horizon) for this hour: noon blue, warm at the edges of the
         day, night deep; greyed by cloud."""
         let, grey = SKY_MOOD.get(scene, SKY_MOOD["overcast"])
-        night_top, night_hor = (2, 3, 10), (8, 10, 30)
+        night_top, night_hor = (3, 7, 16), (28, 43, 58)
         if k is None:
             if is_day:
-                top, hor = (16, 40, 96), (46, 96, 156)
+                top, hor = (23, 48, 66), (151, 180, 170)
             else:
                 top, hor = night_top, night_hor
         else:
@@ -250,8 +251,8 @@ class WeatherFace:
                 top, hor = night_top, night_hor
             else:
                 edge = 1.0 - min(1.0, abs(k - 0.5) * 2)          # 1 at noon, 0 at the horizon
-                day_top, day_hor = (14, 38, 96), (50, 100, 160)
-                dusk_top, dusk_hor = (30, 18, 52), (200, 96, 40)
+                day_top, day_hor = (23, 48, 66), (151, 180, 170)
+                dusk_top, dusk_hor = (41, 57, 64), (230, 161, 100)
                 w = min(1.0, edge * 3.0)                          # dusk within the last sixth of the day
                 top = _lerp(dusk_top, day_top, w)
                 hor = _lerp(dusk_hor, day_hor, w)
@@ -274,17 +275,31 @@ class WeatherFace:
         sky = np.empty((size, size, 3), dtype=np.float32)
         band = np.array(top, np.float32)[None, :] * (1 - rows[:, None]) + np.array(hor, np.float32)[None, :] * rows[:, None]
         sky[:hz] = band[:, None, :]
-        # the ground: the hills in silhouette, the sky's colour gone dark
-        ground = np.array(_lerp(hor, (0, 0, 0), 0.82), np.float32)
-        sky[hz:] = ground
-        ys = np.arange(size)[:, None]
-        mask = ys >= self._hills[None, :]
-        sky[mask] = ground * 0.9
-        # a lighter line where the hills meet the sky
-        for x in range(size):
-            y = int(self._hills[x])
-            if 0 <= y < size:
-                sky[y, x] = np.array(_lerp(hor, (0, 0, 0), 0.6), np.float32)
+        # A quiet horizon glow and four overlapping ridges, cached with the sky.
+        ys = np.arange(size, dtype=np.float32)[:, None]
+        xs = np.arange(size, dtype=np.float32)[None, :] / size
+        glow = np.exp(-((xs - 0.72) / 0.42) ** 2 - ((ys / size - 0.56) / 0.28) ** 2)
+        sky[hz:] = np.array(hor, np.float32) * 0.35
+        sky += glow[..., None] * np.array((16, 12, 5) if is_day else (3, 5, 8), np.float32)
+        for layer in range(4):
+            phase = layer * 1.7
+            ridge = size * (0.60 + layer * 0.067 + 0.04 * np.sin(xs * 5.2 + phase)
+                            + 0.018 * np.sin(xs * 11.3 + phase * 2)
+                            + 0.004 * np.sin(xs * 23 + phase))
+            if layer == 3:
+                ridge = self._hills[None, :]
+            mask = ys >= ridge
+            col = np.array(_lerp(hor, (6, 16, 18), 0.55 + layer * 0.13), np.float32)
+            shade = np.clip((ys - ridge) / (size * 0.22), 0, 1)
+            terrain = col[None, None, :] * (1 - shade[..., None] * 0.36)
+            sky[mask] = terrain[mask]
+            if self.big:
+                # Fine contours echo the phone's engraved terrain.
+                contours = (np.mod(ys - ridge, 4) < 0.65) & (ys - ridge < size * 0.1) & mask
+                sky[contours] += np.array(hor, np.float32) * 0.025
+        # Subpixel grain breaks gradient banding on an LED panel.
+        grain = np.random.default_rng(19).uniform(-0.65, 0.65, (size, size, 1))
+        sky += grain
         return sky
 
     def _ensure(self, scene: str, intensity: float, wind: float):
@@ -318,20 +333,49 @@ class WeatherFace:
 
     # ---- the pieces ------------------------------------------------------------------------------
     def _draw_cloud(self, f, cx, y, w, colour_top, colour_base, phase):
-        """A cloud: puffs in a row, the tallest in the middle, a lit crown
-        and a flat shaded base."""
-        n = 5
-        for i in range(n):
-            u = (i - (n - 1) / 2) / ((n - 1) / 2)                   # -1..1
-            r = w * (0.34 - 0.13 * abs(u)) * (1 + 0.06 * math.sin(phase + i))
-            x = cx + u * w * 0.42
-            yy = y + w * 0.08 * abs(u)
-            _disc(f, x, yy, r, colour_top, soft=1.2 if not self.big else 2.0)
-        # the base: a flat shaded band along the bottom of the puffs
-        r0 = w * 0.34
-        _disc(f, cx, y + r0 * 0.55, r0 * 1.15, colour_base, soft=1.0 if not self.big else 2.0, alpha=0.75)
-        _disc(f, cx - w * 0.3, y + r0 * 0.5, r0 * 0.8, colour_base, soft=1.0, alpha=0.6)
-        _disc(f, cx + w * 0.3, y + r0 * 0.5, r0 * 0.8, colour_base, soft=1.0, alpha=0.6)
+        """Cached volumetric cloud: merged density, soft edge, illuminated crown.
+
+        A single alpha composite per cloud per frame. The expensive density and
+        lighting fields only change when the scene's cloud palette changes.
+        """
+        key = (round(w, 2), colour_top, colour_base, phase)
+        sprite = self._cloud_sprites.get(key)
+        if sprite is None:
+            width = max(8, int(w * 1.75))
+            height = max(6, int(w * 0.95))
+            yy, xx = np.mgrid[0:height, 0:width].astype(np.float32)
+            u, v = xx / width, yy / height
+            density = np.zeros_like(xx)
+            for i in range(7):
+                px = 0.18 + i * 0.105
+                py = 0.46 - 0.10 * math.sin(i * 1.7 + phase)
+                rx = 0.13 + 0.035 * math.sin(i * 2.1 + phase)
+                ry = 0.20 + 0.045 * math.cos(i + phase)
+                density += np.exp(-((u - px) / rx) ** 2 - ((v - py) / ry) ** 2)
+            turbulence = (np.sin(u * 33 + phase) * np.cos(v * 24 + phase) * 0.08
+                          + np.sin(u * 71 - v * 39 + phase) * 0.025)
+            alpha = np.clip((density + turbulence - 0.38) * 1.8, 0, 1)
+            # Smoothstep gives solid cloud bodies rather than overlapping discs.
+            alpha = alpha * alpha * (3 - 2 * alpha)
+            light = np.clip(0.96 - v * 0.82 + turbulence, 0, 1)
+            top, base = np.array(colour_top, np.float32), np.array(colour_base, np.float32)
+            colour = base + (top - base) * light[..., None]
+            rim = np.clip(alpha - np.roll(alpha, 2, axis=0), 0, 1)
+            colour += rim[..., None] * 18
+            sprite = (colour, alpha[..., None] * 0.94)
+            if len(self._cloud_sprites) >= 32:
+                self._cloud_sprites.clear()
+            self._cloud_sprites[key] = sprite
+        colour, alpha = sprite
+        height, width = alpha.shape[:2]
+        x0, y0 = int(cx - width / 2), int(y - height * 0.45)
+        left, top = max(0, x0), max(0, y0)
+        right, bottom = min(self.size, x0 + width), min(self.size, y0 + height)
+        if left >= right or top >= bottom:
+            return
+        sy, sx = slice(top - y0, bottom - y0), slice(left - x0, right - x0)
+        a = alpha[sy, sx]
+        f[top:bottom, left:right] = f[top:bottom, left:right] * (1 - a) + colour[sy, sx] * a
 
     def _draw_sun(self, f, x, y, t, r, through: float = 1.0):
         s = self.s
@@ -535,39 +579,42 @@ class WeatherFace:
             txt = str(temp)
             w = text_width(txt, sc)
             x = 3 if not self.big else 9
-            y = size - 7 * sc - (3 if not self.big else 12)
+            y = size - 7 * sc - (3 if not self.big else 43)
             _outlined(f, txt, x, y, INK, sc)
             _degree(f, x + w + 2, y, max(1, sc // 2), INK)
         if self.big:
             hi, lo = self._temp(data.get("high"), units), self._temp(data.get("low"), units)
             if hi is not None and lo is not None:
-                _outlined(f, f"{hi}  {lo}", 9, size - 7 * 2 - 7 * sc - 12 - 8, (160, 156, 146), 2)
-            # the next six hours: small scenes along the bottom right
-            hours = data.get("hours") or []
-            cell = 22
-            x0 = size - 8 - cell * min(6, len(hours))
-            for i, h in enumerate(hours[:6]):
+                _outlined(f, f"H {hi}", size - 49, size - 68, (209, 193, 164), 1)
+                _outlined(f, f"L {lo}", size - 49, size - 56, (160, 181, 184), 1)
+            hours = (data.get("hours") or [])[:6]
+            # A dark forecast shelf leaves the landscape free to breathe.
+            shelf = size - 36
+            f[shelf:] *= 0.42
+            f[shelf, 8:size - 8] = (46, 55, 56)
+            cell = (size - 16) // max(1, len(hours))
+            for i, h in enumerate(hours):
                 hs, hint = scene_for(h.get("code"))
-                cx = x0 + i * cell + cell // 2
+                cx = 8 + i * cell + cell // 2
                 cy = size - 16
                 hday = h.get("is_day", True)
+                if h.get("t") is not None:
+                    hour = time.gmtime(h["t"] + (data.get("utc_offset_s") or 0)).tm_hour
+                    label = f"{hour % 12 or 12}{'A' if hour < 12 else 'P'}"
+                    draw_text(f, label, cx - text_width(label, 1) // 2, shelf + 4, (158, 166, 161), 1)
                 if hs in ("clear", "mostly_clear"):
-                    _glow(f, cx, cy - 8, 7, SUN if hday else MOON, 0.3)
-                    _disc(f, cx, cy - 8, 3.2, SUN if hday else MOON, soft=0.8)
-                elif hs in ("rain", "showers", "drizzle", "freezing", "thunder"):
-                    _disc(f, cx, cy - 12, 4, (120, 126, 146), soft=1.0)
-                    for kk in range(3):
-                        f[cy - 8 + kk * 2:cy - 6 + kk * 2, cx - 3 + kk * 3] = (150, 180, 240)
-                elif hs == "snow":
-                    _disc(f, cx, cy - 12, 4, (140, 146, 166), soft=1.0)
-                    for kk in range(3):
-                        f[cy - 7 + (kk % 2) * 3, cx - 3 + kk * 3] = (240, 244, 255)
+                    _glow(f, cx, cy - 1, 6, SUN if hday else MOON, 0.3)
+                    _disc(f, cx, cy - 1, 2.5, SUN if hday else MOON, soft=0.6)
                 else:
-                    _disc(f, cx, cy - 8, 4.5, (128, 132, 148), soft=1.2)
+                    _disc(f, cx - 2, cy - 2, 2.3, (153, 170, 178), soft=0.5)
+                    _disc(f, cx + 1, cy - 3, 2.8, (179, 190, 192), soft=0.5)
+                    if hs in ("rain", "showers", "drizzle", "freezing", "thunder", "snow"):
+                        for kk in range(3):
+                            f[cy + 1:cy + 3, cx - 3 + kk * 3] = (155, 196, 211)
                 ht = self._temp(h.get("temp"), units)
                 if ht is not None:
-                    s_ = str(ht)
-                    _outlined(f, s_, cx - text_width(s_, 1) // 2, cy - 2, (170, 166, 156), 1)
+                    label = str(ht)
+                    draw_text(f, label, cx - text_width(label, 1) // 2, size - 8, (218, 216, 201), 1)
             # sunrise and sunset ticks where the arc meets the hills
             if k is not None:
                 for kk in (0.0, 1.0):
