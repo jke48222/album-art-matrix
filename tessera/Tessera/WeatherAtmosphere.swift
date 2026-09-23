@@ -78,7 +78,7 @@ struct WeatherAtmosphere: View {
         // A luminous horizon, with the brightest point away from the typography.
         let light = CGPoint(x: w * 0.77, y: h * 0.46)
         ctx.fill(bounds, with: .radialGradient(Gradient(colors: [mood.accent.opacity(mood.day ? 0.32 : 0.1), .clear]), center: light, startRadius: 0, endRadius: w * 0.85))
-        if !mood.day && !mood.wet && !mood.fog && !mood.snow {
+        if !mood.day && [0, 1, 2].contains(mood.code ?? -1) {
             for i in 0..<65 {
                 let x = noise(i * 7) * w, y = noise(i * 11 + 4) * h * 0.6
                 let r = i % 7 == 0 ? 1.2 : 0.65

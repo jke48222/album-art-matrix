@@ -190,3 +190,33 @@ def test_all_conditions_render_extreme_temperatures_and_cache_clouds():
         cached = {key: id(value) for key, value in face._cloud_sprites.items()}
         face.frame_at(0.1, data, units="c", now=now)
         assert cached == {key: id(value) for key, value in face._cloud_sprites.items()}
+
+
+def test_hero_temperature_stays_above_conditions_and_fits_signed_three_digits():
+    """The wall uses the phone's hierarchy, including extreme-temperature fit."""
+    for size in (64, 192):
+        for celsius in (-100, -40, 22.8, 100):
+            data = dict(temp=celsius, code=3, is_day=False, high=celsius+5, low=celsius-5)
+            f = WeatherFace(size).frame_at(0, data, units="c", place="Douglasville, Georgia")
+            bright = (f.min(axis=2) > 150)
+            # The dominant text is above the condition and range, not at the bottom.
+            hero = bright[int(size*.30):int(size*.64)]
+            footer = bright[int(size*.86):]
+            assert hero.sum() > size
+            assert footer.sum() < hero.sum() * .1
+            assert not bright[:, -1].any(), "temperature or labels clipped at right edge"
+
+
+def test_place_range_staleness_and_missing_values_are_visible():
+    data = dict(temp=22.8, code=3, is_day=False, high=24.4, low=17.2)
+    for size in (64, 192):
+        face = WeatherFace(size)
+        a = face.frame_at(0, data, place="Douglasville, Georgia")
+        b = face.frame_at(0, data, place="London")
+        assert (a[:int(size*.25)] != b[:int(size*.25)]).any()
+        stale = face.frame_at(0, data, place="London", stale=True)
+        assert (stale != b).any()
+        missing = face.frame_at(0, dict(code=None), place="London")
+        assert (missing != b).any()
+        changed = face.frame_at(0, dict(data, high=30, low=-5), place="London")
+        assert (changed[int(size*.75):] != b[int(size*.75):]).any()
