@@ -66,6 +66,7 @@ struct IPodWallScreen: View {
                                 .background(Ink.ground.opacity(0.94), in: RoundedRectangle(cornerRadius: 22))
                                 .padding(.horizontal, 20)
                         }
+                        DisplayDetailLinks(accent: accent).padding(.horizontal, 24)
                         status
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { statusHeight = $0 }
                         if wall.state.mode == "timer", let remaining = wall.state.timerRemaining {

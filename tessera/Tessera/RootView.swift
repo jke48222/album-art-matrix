@@ -52,6 +52,7 @@ struct RootView: View {
     @State private var lastTitle = ""
     @State private var router = HomeRouter()
     @State private var listening = ListeningStore.shared
+    @State private var qaDisplay: DisplayDetail?
     @State private var qaShelf = false
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @AppStorage("onboarded") private var onboarded = false
@@ -177,6 +178,7 @@ struct RootView: View {
             SettingsSheet(accent: light.steadyAccent).environment(wall)
                 .onAppear { router.didPresent(.settings) }
         }
+        .sheet(item: $qaDisplay) { DisplayPage(detail: $0, accent: light.steadyAccent).environment(wall) }
         .sheet(isPresented: $qaShelf) {
             NavigationStack { ShelfPage(accent: light.steadyAccent).environment(wall) }
         }
@@ -227,6 +229,9 @@ struct RootView: View {
             if CommandLine.arguments.contains("-settings") { router.present(.settings) }
             if CommandLine.arguments.contains("-archive") { page = 1 }
             if CommandLine.arguments.contains("-studio") { router.present(.studio) }
+            if let index = CommandLine.arguments.firstIndex(of: "-display-page"), index + 1 < CommandLine.arguments.count {
+                qaDisplay = DisplayDetail(rawValue: CommandLine.arguments[index + 1])
+            }
             if CommandLine.arguments.contains("-shelf") { qaShelf = true }
             #endif
         }

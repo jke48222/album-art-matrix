@@ -1,0 +1,36 @@
+{
+  "studied_at": "2026-09-23",
+  "references": [
+    {
+      "unit": "C03",
+      "mobbin": "https://mobbin.com/screens/d36c3dea-5c6e-4088-aaed-40d79b6407e3",
+      "web": "https://support.apple.com/en-ca/105076",
+      "applied": "Large active lyric with quieter upcoming line, shared timed sheet, explicit unavailable state; wall pixels remain the primary composition."
+    },
+    {
+      "unit": "C04",
+      "mobbin": "https://mobbin.com/screens/c6f9663b-e399-48d8-b700-0389cacad861",
+      "web": "https://developer.apple.com/design/human-interface-guidelines/branding",
+      "applied": "Cover-first collection and ordered release identity. Native wall grid uses centered crops and equal gutters at 64 and 192."
+    },
+    {
+      "unit": "C05",
+      "mobbin": "https://mobbin.com/screens/55562bc8-e336-49cb-9a38-c67cf15ead7d",
+      "web": "https://developer.apple.com/design/human-interface-guidelines/color",
+      "applied": "Large selected image, real renderer thumbnails, clear selected marks, restrained contextual descriptions."
+    },
+    {
+      "unit": "C06",
+      "mobbin": "https://mobbin.com/screens/94757698-6b58-4ee8-8235-19eec91c9075",
+      "web": "https://developer.apple.com/design/human-interface-guidelines/sliders",
+      "applied": "Named scene studies, direct color wells, separate pace control, album color toggle, live wall above scene choices."
+    },
+    {
+      "unit": "C07",
+      "mobbin": "https://mobbin.com/screens/9ce9f7d3-589d-4f90-a3b4-7d723e57c677",
+      "web": "https://developer.apple.com/design/human-interface-guidelines/color-wells",
+      "applied": "Canvas dominates, exclusive pen/erase/fill controls, persistent inks and width, reversible edits and acknowledged send."
+    }
+  ],
+  "source_notes": "Mobbin screen images inspected. Apple Support lyrics, and primary HIG search content for color wells, color, branding and sliders studied; applied native color wells, clear value feedback, typographic hierarchy and selection indicators beyond color."
+}

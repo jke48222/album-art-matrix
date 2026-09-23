@@ -32,6 +32,13 @@ final class NowPlayingPush {
         didSet { Self.share(host: host) }
     }
 
+    @ObservationIgnored var onSample: (() -> Void)?
+    @ObservationIgnored private let pushSession = UUID().uuidString
+    @ObservationIgnored private var sequence = 0
+    private var sample: LocalPlaybackSample?
+
+    func refine(_ state: inout WallState) { sample?.apply(to: &state) }
+
     private var targets: [String] {
         [wallHost, host].filter { !$0.isEmpty }
     }
@@ -104,6 +111,11 @@ final class NowPlayingPush {
         guard running, !targets.isEmpty else { return }
         guard let item = music.nowPlayingItem else { return }
         let playing = music.playbackState == .playing
+        let position = music.currentPlaybackTime
+        sample = LocalPlaybackSample(title: item.title ?? "", artist: item.artist ?? "",
+                                     position: position, duration: item.playbackDuration,
+                                     playing: playing, observed: Date())
+        onSample?()
         // A pause is news. It used to be swallowed here, so the wall kept the
         // last "playing" for its whole forty seconds and the room's arm went
         // on tracking a song that had stopped.
@@ -111,7 +123,9 @@ final class NowPlayingPush {
         guard force || key != lastKey || Date().timeIntervalSince(lastSent ?? .distantPast) > 4 else { return }
         lastKey = key
 
+        sequence &+= 1
         var body: [String: Any] = [
+            "session": pushSession, "sequence": sequence,
             "track": item.title ?? "",
             "artist": item.artist ?? "",
             "album": item.albumTitle ?? "",
@@ -120,7 +134,6 @@ final class NowPlayingPush {
         // The system player can briefly return an unknown position while its
         // queue changes. Do not convert NaN/infinity to Int or send a made-up
         // zero that would look like a seek on the wall.
-        let position = music.currentPlaybackTime
         if position.isFinite, position >= 0, position < Double(Int.max / 1000) {
             body["progress_ms"] = Int(position * 1000)
         }
@@ -143,7 +156,8 @@ final class NowPlayingPush {
             req.httpBody = data
             req.timeoutInterval = 4
             Task {
-                if (try? await URLSession.shared.data(for: req)) != nil {
+                if let (_, response) = try? await URLSession.shared.data(for: req),
+                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
                     await MainActor.run {
                         self.lastSent = Date()
                         self.lastTitle = title

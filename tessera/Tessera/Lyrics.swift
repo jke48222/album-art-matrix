@@ -122,6 +122,7 @@ final class LyricsBook {
         guard id != track else { return }
         track = id
         sheet = nil
+        adlibs = []
         generation += 1
         let gen = generation
         Task { [weak self] in

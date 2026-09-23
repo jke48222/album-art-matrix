@@ -127,6 +127,32 @@ struct PlaybackIdentity: Equatable {
 /// MD Vinyl's object-first hierarchy, with readable type beyond the record.
 /// Reference: https://mobbin.com/screens/b766b650-9cf6-4de7-a2bb-202db47e086c
 /// Clock scheduling: https://developer.apple.com/documentation/swiftui/timelineview
+/// A local pause is immediately authoritative for the same song, even while
+/// the wall is still answering with its previous playing sample.
+struct LocalPlaybackSample {
+    let title: String
+    let artist: String
+    let position: Double?
+    let duration: Double?
+    let playing: Bool
+    let observed: Date
+
+    func apply(to state: inout WallState, at date: Date = Date()) {
+        func key(_ text: String) -> String {
+            text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_US_POSIX"))
+                .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        }
+        guard date.timeIntervalSince(observed) >= 0, date.timeIntervalSince(observed) < 12,
+              !title.isEmpty, key(title) == key(state.title ?? ""), key(artist) == key(state.artist ?? "") else { return }
+        if !playing || !state.songPlaying {
+            state.songAt = position.flatMap { $0.isFinite && $0 >= 0 ? $0 : nil } ?? state.songPosition(at: observed)
+            state.songOf = duration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } ?? state.songOf
+            state.songStamped = observed
+            state.songPlaying = playing
+        }
+    }
+}
+
 struct NowPlayingIdentity: View {
     let state: WallState
     let link: LinkState
@@ -183,6 +209,7 @@ struct NowPlayingIdentity: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(song.accessibilitySummary)
 
+            if state.replayActive { ReturnToMusicButton(accent: accent) }
             if showsProgress, song.hasSong {
                 PlaybackProgress(state: state, link: link, accent: accent,
                                  secondary: secondary, compact: compact)
@@ -259,5 +286,21 @@ struct PlaybackProgress: View {
         let position = "\(PlaybackIdentity.clock(elapsed)) elapsed"
         let total = song.duration.map { " of \(PlaybackIdentity.clock($0))" } ?? ""
         return position + total + ". " + song.statusLabel
+    }
+}
+
+struct ReturnToMusicButton: View {
+    @Environment(WallSession.self) private var wall
+    let accent: Color
+    @State private var busy = false
+    @State private var failed = false
+    var body: some View {
+        Button {
+            busy = true; failed = false
+            Task { failed = !(await wall.returnToMusic()); busy = false }
+        } label: {
+            Label(busy ? "Returning to music…" : failed ? "Try returning to music again" : "Archive on wall · Return to music", systemImage: "arrow.uturn.backward")
+                .font(.ui(13, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
+        }.buttonStyle(PressStyle()).disabled(busy || !wall.link.isLive)
     }
 }

@@ -1,0 +1,257 @@
+{
+  "source": "Production Python renderers, authored QA fixtures; no physical LED color claims. RGB images use nearest-neighbor enlargement in comparison sheets.",
+  "frames": [
+    {
+      "feature": "nine",
+      "size": 64,
+      "image": "nine-64.png",
+      "time": null
+    },
+    {
+      "feature": "lyrics",
+      "size": 64,
+      "image": "lyrics-64.png",
+      "time": 4.4
+    },
+    {
+      "feature": "lamp-solid",
+      "size": 64,
+      "image": "lamp-solid-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-breathe",
+      "size": 64,
+      "image": "lamp-breathe-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-pulse",
+      "size": 64,
+      "image": "lamp-pulse-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-rainbow",
+      "size": 64,
+      "image": "lamp-rainbow-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-gradient",
+      "size": 64,
+      "image": "lamp-gradient-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-plaid",
+      "size": 64,
+      "image": "lamp-plaid-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-weave",
+      "size": 64,
+      "image": "lamp-weave-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-deco",
+      "size": 64,
+      "image": "lamp-deco-64.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-snake",
+      "size": 64,
+      "image": "lamp-snake-64.png",
+      "time": 8
+    },
+    {
+      "feature": "finish-clean",
+      "size": 64,
+      "image": "finish-clean-64.png",
+      "time": null
+    },
+    {
+      "feature": "finish-dither",
+      "size": 64,
+      "image": "finish-dither-64.png",
+      "time": null
+    },
+    {
+      "feature": "finish-poster",
+      "size": 64,
+      "image": "finish-poster-64.png",
+      "time": null
+    },
+    {
+      "feature": "nine",
+      "size": 192,
+      "image": "nine-192.png",
+      "time": null
+    },
+    {
+      "feature": "lyrics",
+      "size": 192,
+      "image": "lyrics-192.png",
+      "time": 4.4
+    },
+    {
+      "feature": "lamp-solid",
+      "size": 192,
+      "image": "lamp-solid-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-breathe",
+      "size": 192,
+      "image": "lamp-breathe-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-pulse",
+      "size": 192,
+      "image": "lamp-pulse-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-rainbow",
+      "size": 192,
+      "image": "lamp-rainbow-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-gradient",
+      "size": 192,
+      "image": "lamp-gradient-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-plaid",
+      "size": 192,
+      "image": "lamp-plaid-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-weave",
+      "size": 192,
+      "image": "lamp-weave-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-deco",
+      "size": 192,
+      "image": "lamp-deco-192.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-snake",
+      "size": 192,
+      "image": "lamp-snake-192.png",
+      "time": 8
+    },
+    {
+      "feature": "finish-clean",
+      "size": 192,
+      "image": "finish-clean-192.png",
+      "time": null
+    },
+    {
+      "feature": "finish-dither",
+      "size": 192,
+      "image": "finish-dither-192.png",
+      "time": null
+    },
+    {
+      "feature": "finish-poster",
+      "size": 192,
+      "image": "finish-poster-192.png",
+      "time": null
+    },
+    {
+      "feature": "nine",
+      "size": 512,
+      "image": "nine-512.png",
+      "time": null
+    },
+    {
+      "feature": "lyrics",
+      "size": 512,
+      "image": "lyrics-512.png",
+      "time": 4.4
+    },
+    {
+      "feature": "lamp-solid",
+      "size": 512,
+      "image": "lamp-solid-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-breathe",
+      "size": 512,
+      "image": "lamp-breathe-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-pulse",
+      "size": 512,
+      "image": "lamp-pulse-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-rainbow",
+      "size": 512,
+      "image": "lamp-rainbow-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-gradient",
+      "size": 512,
+      "image": "lamp-gradient-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-plaid",
+      "size": 512,
+      "image": "lamp-plaid-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-weave",
+      "size": 512,
+      "image": "lamp-weave-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-deco",
+      "size": 512,
+      "image": "lamp-deco-512.png",
+      "time": 8
+    },
+    {
+      "feature": "lamp-snake",
+      "size": 512,
+      "image": "lamp-snake-512.png",
+      "time": 8
+    },
+    {
+      "feature": "finish-clean",
+      "size": 512,
+      "image": "finish-clean-512.png",
+      "time": null
+    },
+    {
+      "feature": "finish-dither",
+      "size": 512,
+      "image": "finish-dither-512.png",
+      "time": null
+    },
+    {
+      "feature": "finish-poster",
+      "size": 512,
+      "image": "finish-poster-512.png",
+      "time": null
+    }
+  ]
+}

@@ -181,6 +181,7 @@ class ControlState:
         # main loop leaves its render stint and asks the chain now.
         self.repoll = threading.Event()
         self.news = threading.Event()        # the poller has a fresh answer
+        self.playing_identity = {}
         self.now_showing = {}        # main loop writes {title, artist, album}
         # Where the song is, so a client can run the same clock we do rather
         # than being told a number that is already stale by the time it lands.
@@ -214,6 +215,10 @@ class ControlState:
         self.finish_seq = 0                 # bumped whenever the base changes
         self._finish_shots = (-1, None)     # (finish_seq, {name: b64})
         self.replay = None           # journal entry the main loop should re-show
+        self.replay_active = False
+        self.resume_music = False
+        self.lyric_book = None
+        self._ambient_previews = (None, None)
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
         self.timer = None            # {"end": monotonic, "total": s, "ret": mode}
         self.fps_last = 0.0          # main loop's sustained rate, for /health
@@ -437,6 +442,10 @@ class ControlState:
 
     def apply(self, patch: dict) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
+        if patch.pop("resume_music", False) or patch.get("mode") in ("art", "cd", "lyrics"):
+            self.resume_music = True
+            self.replay = None
+            self.news.set()
         # sleep fade is a command, not a persisted setting
         if "sleep_fade_min" in patch:
             minutes = _clamp(patch.pop("sleep_fade_min"), 0, 180)
@@ -491,6 +500,7 @@ class ControlState:
         """What GET /state returns — settings plus live extras."""
         out = {**self.get(), "now_showing": self.now_showing,
                "progress": self.progress, "shown_seq": self.shown_seq,
+               "replay_active": self.replay_active, "now_playing": self.playing_identity,
                # The shape of the thing on the wall. /frame.raw still answers
                # in phone_side pixels unless asked for the full frame, so an
                # app that ignores these keys keeps working.
@@ -967,6 +977,27 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self.end_headers()
                 self.wfile.write(px)
                 return
+            if u.path == "/lyrics":
+                book = ctrl.lyric_book
+                self._json(200, book.snapshot() if book else {"state": "idle", "lines": []})
+                return
+            if u.path == "/ambient/previews":
+                from .art.effects import Ambient
+                state = ctrl.get()
+                colors = ctrl.art_colors if state["match_art"] and ctrl.art_colors else [state["color"], state["color2"]]
+                c1, c2 = colors[0], colors[-1]
+                # One fixed moment, produced by exactly the renderer on the wall.
+                key = (c1, c2, state["speed"])
+                cached_key, cached = ctrl._ambient_previews
+                if key == cached_key:
+                    self._json(200, cached)
+                    return
+                shots = {name: base64.b64encode(Ambient(64, name, c1, c2, state["speed"])
+                         .frame_at(8).tobytes()).decode() for name in
+                         ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")}
+                ctrl._ambient_previews = (key, shots)
+                self._json(200, shots)
+                return
             if u.path.startswith("/finishes"):
                 # What each finish would look like, on the sleeve that is on,
                 # rendered by the wall itself. The phone used to draw these
@@ -1421,18 +1452,28 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 self._json(404, {"error": "not found"})
                 return
+            if self.path == "/lyrics/retry":
+                if ctrl.lyric_book is not None and ctrl.lyric_book.state in ("none", "error"):
+                    ctrl.lyric_book.track = None
+                    ctrl.nudge()
+                self._json(200, {"requested": True})
+                return
             if self.path.startswith("/replay"):
                 patch = self._body()
                 if patch is None:
                     return
                 ts = patch.get("ts")
                 entry = next((e for e in ctrl.journal_read(200)
-                              if e.get("ts") == ts), None)
+                              if e.get("ts") == ts and all(patch.get(k) is None or e.get(k) == patch[k]
+                              for k in ("title", "artist", "art_url"))), None)
                 if entry is None:
                     self._json(404, {"error": "no such journal entry"})
                     return
-                ctrl.replay = entry
                 ctrl.apply({"mode": "art"})
+                ctrl.resume_music = False
+                ctrl.replay = entry
+                ctrl.replay_active = True
+                ctrl.news.set()
                 self._json(200, ctrl.public_state())
                 return
 

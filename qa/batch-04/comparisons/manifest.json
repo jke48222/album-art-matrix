@@ -1,0 +1,201 @@
+{
+  "processing": "Complete native screenshots, proportionally downscaled identically; no crops or retouching.",
+  "context": "C03\u2013C06 pair the old Room controls with their new dedicated detail screens. C07 compares the full Studio. Authored fixtures exercise the actual production renderers.",
+  "comparisons": [
+    {
+      "unit": "C03",
+      "title": "Lyrics",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-04/before/lyrics/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-04/after/lyrics/classic-live.png",
+      "before_sha256": "d8b7eb657f02e8710e56422ef53eb1796188023e57f7d45dbc91b6d391cb02d7",
+      "after_sha256": "3975bbc786a936ad043b5281e97f7bcb6f97d40fa3ace781a312ca5dc89485be",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-04/comparisons/lyrics.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "582e291dac9ac5e38e431484fb5d16fda95bb6013cc3dd7673f6a4daa8f922be"
+    },
+    {
+      "unit": "C04",
+      "title": "Nine",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-04/before/nine/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-04/after/nine/classic-live.png",
+      "before_sha256": "6a614d5ae59d5d50d5a8c60d5f1504107bf63e52ea413e9a57350c5ff328eaaf",
+      "after_sha256": "6dc1d7becb4158a3031bd42313d2e985ccfdfda1bd47a0fedde34291ac99cb77",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-04/comparisons/nine.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "cf8d5f4a6d58fe5834851364476dab76c72988e9c8ce0ad7e4d462da43819586"
+    },
+    {
+      "unit": "C05",
+      "title": "Finishes",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-04/before/finishes/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-04/after/finishes/classic-live.png",
+      "before_sha256": "963c897ee456ff60da4382bf16d28f0aca20545daec4c4ba071f3eac28fa9044",
+      "after_sha256": "84e09ebe2610aae8b6b2a0b6017ccbca7017388dc0b06eeb8595b91fadcaee96",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-04/comparisons/finishes.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "7fe48310796442665297a0c66cae043ac0ca1ed3ae7b436c1ae35ea2df0eab22"
+    },
+    {
+      "unit": "C06",
+      "title": "Lamp",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-04/before/lamp/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-04/after/lamp/classic-live.png",
+      "before_sha256": "8bcad71f522c613c87986f66d1417b8022fd15cb205eb3cfbaa59841043e94f5",
+      "after_sha256": "9f461846d3dc4f38220e73b29070db9426f3fb9ee22b779b18ad9ed8842f592a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-04/comparisons/lamp.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "b4818093ad91fbe849580d7b7fa594e160fe538ad516981aecb361bc9ab02d69"
+    },
+    {
+      "unit": "C07",
+      "title": "Studio drawing",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-04/before/studio/classic-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-04/after/studio/classic-live.png",
+      "before_sha256": "58f145f333477c683cdcadf12e0340f618a46dc1d50a711927a02f6ad84de477",
+      "after_sha256": "b36f78e4add3ce9cf7518e33a27a508f4a8d60e9694d85e4f69faf445ac4c1f9",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-04/comparisons/studio.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "ffd4949e02e750eb2d7f81c8a5e69ad36d53bfdec22a57debcc72fb3ca654949"
+    }
+  ]
+}

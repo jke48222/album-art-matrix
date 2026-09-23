@@ -293,3 +293,31 @@ def test_the_same_pressing_sent_again_does_not_count_as_a_new_picture(api):
     px2 = bytes((90, 20, 30)) * (64 * 64)
     api.post("/pressing", {"px": base64.b64encode(px2).decode(), "track": "jo1|whatcha doin"})
     assert api.ctrl.pressing_seq == 2
+
+
+def test_archive_replay_can_be_explicitly_released(api):
+    api.ctrl.replay_active = True
+    code, body = api.post('/state', {'resume_music': True, 'mode': 'art'})
+    assert code == 200 and api.ctrl.resume_music
+    assert 'resume_music' not in api.ctrl.get()
+
+
+def test_same_second_archive_entries_match_identity(api):
+    api.ctrl.journal_read = lambda limit: [
+        {'ts':1,'title':'First','artist':'A','art_url':'one'},
+        {'ts':1,'title':'Second','artist':'B','art_url':'two'}]
+    code, body = api.post('/replay', {'ts':1,'title':'Second','artist':'B'})
+    assert code == 200 and api.ctrl.replay['art_url'] == 'two'
+    assert api.ctrl.replay_active and not api.ctrl.resume_music
+
+
+def test_display_preview_endpoints(api):
+    code, body = api.get('/lyrics')
+    assert code == 200 and body['state'] == 'idle'
+    api.ctrl.apply({'speed':2, 'match_art': True})
+    api.ctrl.art_colors = ['#e5a343','#ffffff','#215059']
+    code, shots = api.get('/ambient/previews')
+    assert code == 200 and len(shots) == 9
+    assert all(len(base64.b64decode(value)) == 64*64*3 for value in shots.values())
+    from brain.art.effects import Ambient
+    assert base64.b64decode(shots['gradient']) == Ambient(64, 'gradient','#e5a343','#215059',2).frame_at(8).tobytes()

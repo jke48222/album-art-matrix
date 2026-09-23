@@ -26,10 +26,18 @@ class PushedSource(NowPlayingSource):
         self._data = None
         self._art_key = None
         self._art_url = None
+        self._sequences = {}
 
     # ---- what the control API calls --------------------------------------
     def push(self, data: dict):
         with self._lock:
+            session, seq = data.get("session"), data.get("sequence")
+            if isinstance(session, str) and isinstance(seq, int):
+                if seq <= self._sequences.get(session, -1):
+                    return
+                self._sequences[session] = seq
+                if len(self._sequences) > 64:
+                    self._sequences.pop(next(iter(self._sequences)))
             self._at = time.monotonic()
             self._data = dict(data)
 

@@ -155,3 +155,24 @@ def test_a_players_stale_snapshot_does_not_move_the_clock_back():
     mac.answer = song("applemusic:1", progress_ms=20_000, is_playing=False)   # pause: as reported
     out = chain.get_current()
     assert not out.is_playing and out.progress_ms == 20_000
+
+
+def test_phone_pause_beats_a_second_players_exact_stale_position():
+    clk = Clock()
+    phone = Src('phone', song('phone:1', progress_ms=45000))
+    mac = Src('mac', song('mac:1', progress_ms=45000))
+    chain = SourceChain([phone, mac], now=clk)
+    chain.get_current()
+    phone.answer = song('phone:1', progress_ms=45000, is_playing=False)
+    for _ in range(4):
+        clk.t += 1
+        result = chain.get_current()
+        assert not result.is_playing and result.progress_ms == 45000
+    phone.answer = song('phone:1', progress_ms=45000)
+    assert chain.get_current().progress_ms == 45000
+
+
+def test_pause_without_a_position_still_beats_stale_exact_playing():
+    phone = Src('phone', song('phone:1', progress_ms=None, is_playing=False))
+    mac = Src('mac', song('mac:1', progress_ms=45000))
+    assert not SourceChain([phone, mac]).get_current().is_playing

@@ -15,6 +15,7 @@ import WidgetKit
 struct WallState: Equatable {
     var mode: String = "art"          // art | cd | ambient | off | frame | ticker | clock | clip
     var brightness: Double = 1.0      // 0.05...1.0
+    var speed: Double = 1
     var rpm: Double = 7.5
     var effect: String = "rainbow"
     var finish: String = "clean"
@@ -65,6 +66,7 @@ struct WallState: Equatable {
     /// Bumped by the brain whenever new CONTENT lands (track change, replay,
     /// pushed frame or clip), never on a settings change. The one honest key
     /// for arrival animations; 0 means an older brain that does not send it.
+    var replayActive = false
     var shownSeq: Int = 0
     /// A video the wall is fetching or playing, when there is one.
     var video: WallVideo? = nil
@@ -104,6 +106,7 @@ struct WallState: Equatable {
     init(json: [String: Any], receivedAt: Date = Date()) {
         mode = json["mode"] as? String ?? "art"
         brightness = json["brightness"] as? Double ?? 1.0
+        speed = json["speed"] as? Double ?? 1
         rpm = json["rpm"] as? Double ?? 7.5
         effect = json["effect"] as? String ?? "rainbow"
         finish = json["finish"] as? String ?? "clean"
@@ -137,7 +140,8 @@ struct WallState: Equatable {
         weatherUnits = json["weather_units"] as? String ?? "f"
         timerRemaining = json["timer_remaining_s"] as? Int
         timerTotal = json["timer_total_s"] as? Int
-        if let now = json["now_showing"] as? [String: Any] {
+        let music = json["now_playing"] as? [String: Any]
+        if let now = (music?.isEmpty == false ? music : json["now_showing"] as? [String: Any]) {
             title = now["title"] as? String
             artist = now["artist"] as? String
             album = now["album"] as? String
@@ -161,6 +165,7 @@ struct WallState: Equatable {
         }
         artColors = json["art_colors"] as? [String] ?? []
         sleepRemaining = json["sleep_remaining_s"] as? Int
+        replayActive = json["replay_active"] as? Bool ?? false
         shownSeq = json["shown_seq"] as? Int ?? 0
         if let v = json["video"] as? [String: Any] { video = WallVideo(json: v) }
         // How many LEDs the wall has. Everything the app draws is built at
@@ -338,6 +343,10 @@ final class WallSession {
     /// session instead of a bare socket, so "Lamp" works on the stand-in
     /// and an away wall gets the intent queued rather than an error.
     init() {
+        push.onSample = { [weak self] in
+            guard let self else { return }
+            self.push.refine(&self.state)
+        }
         WallAddress.localRoute = { [weak self] patch in
             guard let self, !self.link.isLive else { return false }
             self.send(patch)
@@ -546,9 +555,12 @@ final class WallSession {
             keepNear("lon", &fresh.lon, mine.lon, 0.001)
             keep("place", &fresh.place, mine.place)
             keep("weather_units", &fresh.weatherUnits, mine.weatherUnits)
+            keepNear("speed", &fresh.speed, mine.speed, 0.01)
+            keepNear("lyric_offset", &fresh.lyricOffset, mine.lyricOffset, 0.01)
             keepNear("rpm", &fresh.rpm, mine.rpm, 0.01)
             keepNear("brightness", &fresh.brightness, mine.brightness, 0.001)
 
+            push.refine(&fresh)
             state = fresh
             lastSync = Date()
             // the sound for a video starts and stops on the wall's word,
@@ -803,8 +815,28 @@ final class WallSession {
             return ok
         }
         guard link.isLive else { return false }
-        let ok = await postJSON("/replay", ["ts": entry.ts])
+        let ok = await postJSON("/replay", ["ts": entry.ts, "title": entry.title, "artist": entry.artist])
         guard host == destination, !Task.isCancelled else { return false }
+        if ok { await poll(); Taps.landed() }
+        return ok
+    }
+
+    func returnToMusic() async -> Bool {
+        guard link.isLive else { return false }
+        let destination = host
+        let ok = await postJSON("/state", ["resume_music": true, "mode": "art"])
+        guard destination == host, !Task.isCancelled else { return false }
+        if ok { await poll() }
+        return ok
+    }
+
+    func sendDrawing(_ pixels: [UInt8]) async -> Bool {
+        guard Panel.square(pixels.count) != nil else { return false }
+        if link.isStandIn { pushFrame(pixels); return true }
+        guard link.isLive else { return false }
+        let destination = host
+        let ok = await postJSON("/frame", ["px": Data(pixels).base64EncodedString()])
+        guard destination == host, !Task.isCancelled else { return false }
         if ok { await poll(); Taps.landed() }
         return ok
     }
@@ -924,6 +956,8 @@ final class WallSession {
         var merged = patch
         if let m = merged["mode"] as? String { state.mode = m }
         if let b = merged["brightness"] as? Double { state.brightness = b }
+        if let v = merged["lyric_offset"] as? Double { state.lyricOffset = v }
+        if let v = merged["speed"] as? Double { state.speed = v }
         if let r = merged["rpm"] as? Double { state.rpm = r }
         if let e = merged["effect"] as? String { state.effect = e }
         if let f = merged["finish"] as? String { state.finish = f }

@@ -1,0 +1,150 @@
+{
+  "captured_at": "2026-09-23T09:32:55.469727+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": "/tmp/tessera-batch03-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "classic-live",
+      "image": "classic-live.png",
+      "frame": "classic-live-frame.png",
+      "mode": "lyrics",
+      "state_reads": 9,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": "/tmp/tessera-batch03-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-controls",
+        "-control-detail"
+      ],
+      "captured_at": "2026-09-23T09:06:50.473212+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "classic-wall",
+      "image": "classic-wall.png",
+      "frame": "classic-wall-frame.png",
+      "mode": "frame",
+      "state_reads": 7,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": "/tmp/tessera-batch03-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-controls",
+        "-control-detail"
+      ],
+      "captured_at": "2026-09-23T09:06:56.372518+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "lyrics",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/pressing"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/pressing"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": "/tmp/tessera-batch03-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-controls",
+        "-control-detail"
+      ],
+      "captured_at": "2026-09-23T09:32:55.241241+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

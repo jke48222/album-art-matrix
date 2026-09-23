@@ -81,7 +81,8 @@ struct ClassicWallScreen: View {
                             .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                     }.buttonStyle(PressStyle()).padding(.horizontal, 24).padding(.bottom, 12)
                 }
-                modeRow.padding(.horizontal, 14).padding(.bottom, 24)
+                modeRow.padding(.horizontal, 14).padding(.bottom, 16)
+                DisplayDetailLinks(accent: accent).padding(.horizontal, 24).padding(.bottom, 20)
                 if !isOff {
                     contextRow.padding(.horizontal, 24).transition(.opacity)
                 }
@@ -362,8 +363,8 @@ struct ClassicWallScreen: View {
                 // singing along can hear by how much.
                 PillRow(
                     label: "timing",
-                    options: [("sooner", -0.4), ("on time", 0.0), ("later", 0.4)],
-                    selected: lyricsNudge,
+                    options: [("later", -0.4), ("on time", 0.2), ("sooner", 0.8)],
+                    selected: wall.state.lyricOffset,
                     accent: accent
                 ) { lyricsNudge = $0; wall.send(["lyric_offset": $0]) }
                 Text("Words come from LRCLIB; a track it has never heard shows the sleeve alone.")
@@ -376,12 +377,7 @@ struct ClassicWallScreen: View {
             Text("Current conditions from your saved location. Open Weather in Settings to explore the forecast.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         case "art", "frame", "clip", "video":
-            FinishRow(
-                frame: wall.frame,
-                duty: duty,
-                selected: wall.state.finish,
-                accent: accent
-            ) { wall.send(["finish": $0]) }
+            LiveFinishRow(host: wall.host, mode: wall.state.mode, current: wall.state.finish, accent: accent, ink: .dark) { wall.send(["finish": $0]) }
         default:
             EmptyView()
         }

@@ -70,6 +70,7 @@ final class StandIn {
         }
         if let v = patch["mode"] as? String { state.mode = v }
         if let v = patch["brightness"] as? Double { state.brightness = v }
+        if let v = patch["speed"] as? Double { state.speed = v }
         if let v = patch["rpm"] as? Double { state.rpm = v }
         if let v = patch["effect"] as? String { state.effect = v }
         if let v = patch["finish"] as? String { state.finish = v }
@@ -517,6 +518,7 @@ final class StandIn {
     }
 
     private func ambient(_ t: Double) -> [UInt8] {
+        let t = t * state.speed
         let (c1, c2) = colours()
         switch state.effect {
         case "plaid", "weave", "deco": return Patterns.frame(state.effect, t: t, c1: c1, c2: c2)

@@ -1,0 +1,75 @@
+{
+  "batch": 4,
+  "implementation_completed": [
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "C07"
+  ],
+  "followups": [
+    "A08 Archive artwork return",
+    "A05 Pause and playback clock"
+  ],
+  "baseline_commit": "36510797860ce746c91570b6b7acdddc4d9dac49",
+  "validated_at": "2026-09-23T09:52:18.010537+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "iphone_debug": "passed",
+    "ios_release": "passed"
+  },
+  "tests": {
+    "playback": {
+      "passed": 99,
+      "failed": 0
+    },
+    "studio": {
+      "passed": 22,
+      "failed": 0
+    },
+    "archive": {
+      "passed": 46,
+      "failed": 0
+    }
+  },
+  "python_tests": {
+    "passed": 103,
+    "failed": 0
+  },
+  "total_checks": 270,
+  "phone": {
+    "device": "Connected iPhone 18 Pro Max",
+    "installed": true,
+    "latest_launch": "awaiting_device_unlock",
+    "earlier_batch04_launch": "verified_success_before_final_accessibility_adjustments",
+    "bundle": "com.jalenedusei.tessera"
+  },
+  "wall": {
+    "managed_service": "active",
+    "renderer_service": "active",
+    "module_hashes_verified": true,
+    "live_checks": "hardware/checks.json",
+    "previous_display_settings_restored": true
+  },
+  "render_studies": {
+    "resolutions": [
+      64,
+      192,
+      512
+    ],
+    "native_pixels": true,
+    "source": "renders/manifest.json"
+  },
+  "icons": {
+    "checked": 57,
+    "missing": []
+  },
+  "references": "references.json",
+  "comparisons": "comparisons/index.html",
+  "limitations": [
+    "Physical LED color and brightness require visual confirmation at the panel; RGB captures do not certify emitted light.",
+    "Final phone build installed. Latest foreground launch was denied by iOS because the device is locked. An earlier batch04 build launched successfully.",
+    "Pause/resume and replay sequencing verified with production Swift models and the full Python render loop using controlled music fixtures; a physical Apple Music listening check remains.",
+    "Native captures cover normal, large-text, empty and offline states. Touch drawing is covered at model level; hand feel remains a physical device check."
+  ]
+}

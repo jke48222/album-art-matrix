@@ -87,7 +87,7 @@ def split_voices(lines):
             if len(g) > 2:
                 raw.append((t, g))
         main = " ".join(re.sub(r"\([^()]*\)", " ", text).split())
-        if main:
+        if main or not text:
             mains.append((t, main, words if main == text else None))
     starts = sorted(e[0] for e in lines)
     adlibs = []
@@ -133,6 +133,7 @@ def fetch_sheet(artist: str, title: str, album: str,
 
     import requests
     base = "https://lrclib.net/api"
+    failure = None
     for attempt in range(3):
         if attempt:
             _time.sleep(2 * attempt)
@@ -143,6 +144,8 @@ def fetch_sheet(artist: str, title: str, album: str,
             if duration_s:
                 params["duration"] = int(duration_s)
             resp = requests.get(base + "/get", params=params, timeout=10)
+            if resp.status_code not in (200, 404):
+                resp.raise_for_status()
             data = resp.json() if resp.status_code == 200 else None
             if data and data.get("syncedLyrics") and duration_s \
                     and abs((data.get("duration") or duration_s)
@@ -153,6 +156,7 @@ def fetch_sheet(artist: str, title: str, album: str,
                                     params={"artist_name": artist,
                                             "track_name": title},
                                     timeout=10)
+                resp.raise_for_status()
                 hits = resp.json() if resp.status_code == 200 else []
                 synced = [h for h in hits if h.get("syncedLyrics")]
                 if duration_s and synced:
@@ -164,9 +168,9 @@ def fetch_sheet(artist: str, title: str, album: str,
                 return None
             lines = parse_lrc(data["syncedLyrics"])
             return LyricSheet(lines) if lines else None
-        except Exception:
-            continue
-    return None
+        except Exception as exc:
+            failure = exc
+    raise RuntimeError("Lyrics service unavailable") from failure
 
 
 class LyricBook:
@@ -176,20 +180,35 @@ class LyricBook:
     def __init__(self):
         self.track = None
         self.sheet = None
-        self.state = "idle"          # idle | loading | done | none
+        self.state = "idle"          # idle | loading | done | none | error
+        self._generation = 0
+
+    def snapshot(self):
+        sheet, track, state = self.sheet, self.track, self.state
+        return {"track": track, "state": state,
+                "lines": [{"at": row[0], "text": row[1],
+                           "words": [{"at": w[0], "text": w[1]} for w in (row[2] or [])]}
+                          for row in (sheet.lines if sheet else [])]}
 
     def ask(self, track_id, artist, title, album, duration_s):
         if track_id == self.track:
             return
+        self._generation += 1
+        generation = self._generation
         self.track = track_id
         self.sheet = None
         self.state = "loading"
 
         def work():
-            sheet = fetch_sheet(artist or "", title or "", album or "",
-                                duration_s)
+            try:
+                sheet = fetch_sheet(artist or "", title or "", album or "", duration_s)
+            except Exception:
+                if self.track == track_id and self._generation == generation:
+                    self.sheet = None
+                    self.state = "error"
+                return
             # a slow answer for a track we already left is nobody's news
-            if self.track == track_id:
+            if self.track == track_id and self._generation == generation:
                 self.sheet = sheet
                 self.state = "done" if sheet else "none"
                 print(f"[lyrics] {artist} — {title}: "
@@ -211,6 +230,7 @@ class LyricCanvas:
     def __init__(self, size: int, art, sheet: LyricSheet,
                  color: str = "#f4f1ea"):
         self.size = size
+        self.unit = max(1, round(size / 64))
         self.sheet = sheet
         if art is not None:
             self.base = np.asarray(
@@ -232,7 +252,7 @@ class LyricCanvas:
                 kept = "".join(ch for ch in normalize(wtxt.lower())
                                if cell(ch) is not None or ch == " ").strip()
                 if kept:
-                    filtered.append(wt)
+                    filtered.extend([wt] * len(kept.split()))
             if len(filtered) == len(tokens):
                 return filtered
         span = min(2.4, max(0.6, (t1 - t0) * 0.55))
@@ -256,20 +276,20 @@ class LyricCanvas:
             return hit
         joined = " ".join(tokens)
         rows, scale = None, 1
-        for s_ in (4, 3, 2, 1):
-            if text_width(joined, s_) <= self.size - 4 and 7 * s_ <= region_h:
+        for s_ in range(4 * self.unit, self.unit - 1, -self.unit):
+            if text_width(joined, s_) <= self.size - 4 * self.unit and 7 * s_ <= region_h:
                 rows, scale = [joined], s_
                 break
         if rows is None:
-            for s_ in (3, 2, 1):
-                cand = wrap_text(joined, self.size - 4, s_)
-                if (len(cand) * (7 * s_ + 2) - 2 <= region_h - 2
+            for s_ in range(3 * self.unit, self.unit - 1, -self.unit):
+                cand = wrap_text(joined, self.size - 4 * self.unit, s_)
+                if (len(cand) * (7 * s_ + 2 * self.unit) - 2 * self.unit <= region_h - 2
                         and " ".join(cand) == joined):
                     rows, scale = cand, s_
                     break
         if rows is None:
-            max_rows = max(1, (region_h - 2) // 9)
-            rows, scale = wrap_text(joined, self.size - 4, 1)[-max_rows:], 1
+            max_rows = max(1, (region_h - 2 * self.unit) // (9 * self.unit))
+            rows, scale = wrap_text(joined, self.size - 4 * self.unit, self.unit)[-max_rows:], self.unit
         if len(self._laid) > 256:
             self._laid.clear()
         self._laid[key] = (rows, scale)
@@ -279,7 +299,7 @@ class LyricCanvas:
         tokens = self._tokens(text)
         if not tokens:
             return []
-        return wrap_text(" ".join(tokens), self.size - 4, 1)[:3]
+        return wrap_text(" ".join(tokens), self.size - 4 * self.unit, self.unit)[:3]
 
     def _foot(self, canvas, rows: list[str], top: int):
         """The second singer's rows at the panel's foot: whole, never
@@ -287,17 +307,17 @@ class LyricCanvas:
         voice writes."""
         y = top
         for row in rows:
-            x = (self.size - min(self.size - 4, text_width(row, 1))) // 2
+            x = (self.size - min(self.size - 4 * self.unit, text_width(row, self.unit))) // 2
             u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-            draw_text(u8, row, x + 1, y + 1, (255, 255, 255), 1)
+            draw_text(u8, row, x + self.unit, y + self.unit, (255, 255, 255), self.unit)
             mask = u8.sum(axis=2) > 0
             canvas[mask] *= 0.35
             foot_ink = tuple(int(c * 0.66) for c in self.ink)
             u8[:] = 0
-            draw_text(u8, row, x, y, foot_ink, 1)
+            draw_text(u8, row, x, y, foot_ink, self.unit)
             mask = u8.sum(axis=2) > 0
             canvas[mask] = u8[mask]
-            y += 9
+            y += 9 * self.unit
 
     def frame_at(self, t: float) -> Image.Image:
         canvas = self.base.copy()
@@ -307,8 +327,8 @@ class LyricCanvas:
                       if a[0] <= t < a[1]), None)
         foot_rows = self._foot_rows(adlib) if adlib else []
         foot_top = self.size if not foot_rows \
-            else self.size - (len(foot_rows) * 9 - 2) - 1
-        region_h = 60 if not foot_rows else foot_top - 3
+            else self.size - (len(foot_rows) * 9 - 2) * self.unit - self.unit
+        region_h = self.size - 4 * self.unit if not foot_rows else foot_top - 3 * self.unit
         tokens = self._tokens(text) if text else []
         if tokens:
             n = len(tokens)
@@ -321,14 +341,14 @@ class LyricCanvas:
             if visible:
                 rows, scale = self._layout((t0, visible, region_h),
                                            tokens[:visible], region_h)
-                line_h = 7 * scale + 2
+                line_h = 7 * scale + 2 * self.unit
                 y = max(1, (region_h - (len(rows) * line_h - 2)) // 2)
                 drawn = 0
                 for row in rows:
                     words = row.split()
                     # the row's shadow, then its ink
                     u8 = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-                    draw_text(u8, row, 3, y + 1, (255, 255, 255), scale)
+                    draw_text(u8, row, 3 * self.unit, y + self.unit, (255, 255, 255), scale)
                     mask = u8.sum(axis=2) > 0
                     canvas[mask] *= 0.3
                     drawn += len(words)
@@ -336,11 +356,11 @@ class LyricCanvas:
                     settled = " ".join(words[:-1]) if last_row else row
                     if settled:
                         u8[:] = 0
-                        draw_text(u8, settled, 2, y, self.ink, scale)
+                        draw_text(u8, settled, 2 * self.unit, y, self.ink, scale)
                         mask = u8.sum(axis=2) > 0
                         canvas[mask] = u8[mask]
                     if last_row and words:
-                        lx = 2 + (text_width(settled, scale) + 6 * scale
+                        lx = 2 * self.unit + (text_width(settled, scale) + 6 * scale
                                   if settled else 0)
                         k = max(0.3, newest_k)
                         ink = tuple(int(c * k) for c in self.ink)

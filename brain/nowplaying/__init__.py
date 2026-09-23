@@ -131,6 +131,7 @@ class SourceChain(NowPlayingSource):
                         # chain saw it: a paused push is held for a while
                         said = now.heard_at if now.heard_at is not None else t
                         self._paused = (_key(now), now, said)
+                        self._held = (_key(now), now, said)
                 continue
             if not now.art_url:
                 if now.track_id != self._passed:
@@ -138,6 +139,10 @@ class SourceChain(NowPlayingSource):
                     print(f"[nowplaying] {src.name}: {now.title!r} has no sleeve; passed over")
                 continue
             key = _key(now)
+            if paused is not None and _key(paused) == key and now.clock == "exact":
+                # An earlier, authoritative player has explicitly paused this
+                # song. A second player's stale exact position cannot resume it.
+                continue
             if now.progress_ms is not None and now.clock == "exact":
                 # a player that knows where it is: its clock is the song's.
                 # Its reports are still snapshots, each anywhere from fresh
@@ -169,6 +174,12 @@ class SourceChain(NowPlayingSource):
             held = self._held
             if held is not None and held[0] == key and t - held[2] < CLOCK_HOLD_S:
                 hkey, hnow, hat = held
+                if not hnow.is_playing and now.heard_at is not None and now.heard_at > hat:
+                    out = replace(hnow, progress_ms=now.progress_ms if now.progress_ms is not None else hnow.progress_ms,
+                                  is_playing=True, clock=now.clock, heard_at=now.heard_at)
+                    self._held = (key, out, t)
+                    self._say(src)
+                    return out
                 carried = hnow.progress_ms + int((t - hat) * 1000)
                 if hnow.duration_ms:
                     carried = min(carried, hnow.duration_ms)

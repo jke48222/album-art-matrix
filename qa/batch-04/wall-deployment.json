@@ -1,0 +1,59 @@
+{
+  "files": [
+    {
+      "path": "brain/main.py",
+      "source_sha256": "500bc64e9c4b8baadd801c1d04ac7368d452b2d34738fe317a17530e545c0659",
+      "previous_sha256": "87e003389f8755a6feeadd28f58475f78ddaeaabf7db185aa772678856ce41eb",
+      "deployed_sha256": "500bc64e9c4b8baadd801c1d04ac7368d452b2d34738fe317a17530e545c0659",
+      "preserved_wall_import": false
+    },
+    {
+      "path": "brain/control.py",
+      "source_sha256": "e208d955a881e0f4f3e9873f434fcff5009c3de70f1709efc8fde061694afa43",
+      "previous_sha256": "6f97512cfc5154f0aa2cb35069b811792ab27bae9d766ed8a3bb1e99fa4d7351",
+      "deployed_sha256": "e208d955a881e0f4f3e9873f434fcff5009c3de70f1709efc8fde061694afa43",
+      "preserved_wall_import": false
+    },
+    {
+      "path": "brain/art/lyrics.py",
+      "source_sha256": "9b201fd27268991ff0556005c916e3faf2b64b51df28d04cff505332e36f3a7b",
+      "previous_sha256": "431b6b752755454029d6d19b1466b311497af4bc859dc7c50db7b0d4cf5340ff",
+      "deployed_sha256": "bcd7b5f508ea8797d6b290584367c0b5ec3f971a56245a1236c01ea931b8baeb",
+      "preserved_wall_import": true
+    },
+    {
+      "path": "brain/art/nine.py",
+      "source_sha256": "9efd3a848a48738882ccba7db344eedc378c73d2db887b59c485124053f9cc42",
+      "previous_sha256": "15960b1cbb5977551dfba5c9b92fd5a1cd2f436360c5730aa8129a8e5cad3ec2",
+      "deployed_sha256": "9efd3a848a48738882ccba7db344eedc378c73d2db887b59c485124053f9cc42",
+      "preserved_wall_import": false
+    },
+    {
+      "path": "brain/nowplaying/__init__.py",
+      "source_sha256": "4a741e9ad65debbdbd2a76a82a1c3669f190248c0e4b9a5ecf824a58df02e99c",
+      "previous_sha256": "1d4d0b0aa7ecccc5e970d9417fee8b0875b54797822ca0b16163f8ad604c5ec0",
+      "deployed_sha256": "4a741e9ad65debbdbd2a76a82a1c3669f190248c0e4b9a5ecf824a58df02e99c",
+      "preserved_wall_import": false
+    },
+    {
+      "path": "brain/nowplaying/pushed.py",
+      "source_sha256": "74f33da98d0898fbb99c9374e233afc1d410b09105643ed1ecc29d7b20d5d951",
+      "previous_sha256": "0dd01eff09dc59854945d644658e29d5e86b8be55c546f5924108cb3bdb0b801",
+      "deployed_sha256": "74f33da98d0898fbb99c9374e233afc1d410b09105643ed1ecc29d7b20d5d951",
+      "preserved_wall_import": false
+    },
+    {
+      "path": "brain/playback.py",
+      "source_sha256": "bdbc179c42c27273fffdc80e57442128d5dfb83c932fb37a1c00217796bb4774",
+      "previous_sha256": null,
+      "deployed_sha256": "bdbc179c42c27273fffdc80e57442128d5dfb83c932fb37a1c00217796bb4774",
+      "preserved_wall_import": false
+    }
+  ],
+  "status": "managed_service_restarted",
+  "restoring_mode": "frame",
+  "previous_pid": 1433750,
+  "current_pid": 2861905,
+  "restored_display": "art",
+  "hashes_verified": true
+}

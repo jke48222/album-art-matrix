@@ -33,6 +33,7 @@ struct ArtworkPage: View {
                         }.pickerStyle(.segmented)
                     }
                     artwork
+                    if wall.state.replayActive { ReturnToMusicButton(accent: accent) }
                     VStack(alignment: .leading, spacing: 8) {
                         Text(wall.state.title.flatMap { $0.isEmpty ? nil : $0 } ?? "Waiting for a song").font(.displayMid(typeSize.isAccessibilitySize ? 18 : 27)).foregroundStyle(Ink.ink)
                         if let artist = wall.state.artist, !artist.isEmpty { Text(artist).font(.ui(17, .medium)).foregroundStyle(Ink.dim) }

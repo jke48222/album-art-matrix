@@ -1,0 +1,94 @@
+{
+  "checks" : [
+    {
+      "name" : "64 stroke reaches bottom right",
+      "passed" : true
+    },
+    {
+      "name" : "64 fast diagonal has no gaps",
+      "passed" : true
+    },
+    {
+      "name" : "64 undo restores blank and invalidates render",
+      "passed" : true
+    },
+    {
+      "name" : "64 redo restores exact pixels",
+      "passed" : true
+    },
+    {
+      "name" : "64 clear is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "64 out of bounds fill is safe",
+      "passed" : true
+    },
+    {
+      "name" : "64 invalid touch is ignored",
+      "passed" : true
+    },
+    {
+      "name" : "64 fill reaches all pixels",
+      "passed" : true
+    },
+    {
+      "name" : "64 fill is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "64 open document keeps its size after reconnect",
+      "passed" : true
+    },
+    {
+      "name" : "64 import resamples into document size",
+      "passed" : true
+    },
+    {
+      "name" : "192 stroke reaches bottom right",
+      "passed" : true
+    },
+    {
+      "name" : "192 fast diagonal has no gaps",
+      "passed" : true
+    },
+    {
+      "name" : "192 undo restores blank and invalidates render",
+      "passed" : true
+    },
+    {
+      "name" : "192 redo restores exact pixels",
+      "passed" : true
+    },
+    {
+      "name" : "192 clear is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "192 out of bounds fill is safe",
+      "passed" : true
+    },
+    {
+      "name" : "192 invalid touch is ignored",
+      "passed" : true
+    },
+    {
+      "name" : "192 fill reaches all pixels",
+      "passed" : true
+    },
+    {
+      "name" : "192 fill is reversible",
+      "passed" : true
+    },
+    {
+      "name" : "192 open document keeps its size after reconnect",
+      "passed" : true
+    },
+    {
+      "name" : "192 import resamples into document size",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 22
+}

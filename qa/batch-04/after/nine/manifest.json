@@ -1,0 +1,150 @@
+{
+  "captured_at": "2026-09-23T09:46:54.574435+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "classic-live",
+      "image": "classic-live.png",
+      "frame": "classic-live-frame.png",
+      "mode": "nine",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "nine"
+      ],
+      "captured_at": "2026-09-23T09:27:40.171430+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "classic-large",
+      "image": "classic-large.png",
+      "frame": "classic-large-frame.png",
+      "mode": "nine",
+      "state_reads": 4,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "nine"
+      ],
+      "captured_at": "2026-09-23T09:46:54.372919+00:00",
+      "dynamic_type": "AX5"
+    },
+    {
+      "state": "classic-offline",
+      "image": "classic-offline.png",
+      "frame": "classic-offline-frame.png",
+      "mode": "nine",
+      "state_reads": 9,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "nine"
+      ],
+      "captured_at": "2026-09-23T09:27:53.733950+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "classic-empty",
+      "image": "classic-empty.png",
+      "frame": "classic-empty-frame.png",
+      "mode": "nine",
+      "state_reads": 6,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "nine"
+      ],
+      "captured_at": "2026-09-23T09:27:58.587799+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

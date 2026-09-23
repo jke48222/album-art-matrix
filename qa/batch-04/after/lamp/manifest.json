@@ -1,0 +1,210 @@
+{
+  "captured_at": "2026-09-23T09:47:02.984686+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "classic-live",
+      "image": "classic-live.png",
+      "frame": "classic-live-frame.png",
+      "mode": "ambient",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "lamp"
+      ],
+      "captured_at": "2026-09-23T09:28:27.454962+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "classic-large",
+      "image": "classic-large.png",
+      "frame": "classic-large-frame.png",
+      "mode": "ambient",
+      "state_reads": 4,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "lamp"
+      ],
+      "captured_at": "2026-09-23T09:47:02.870598+00:00",
+      "dynamic_type": "AX5"
+    },
+    {
+      "state": "classic-offline",
+      "image": "classic-offline.png",
+      "frame": "classic-offline-frame.png",
+      "mode": "ambient",
+      "state_reads": 9,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "lamp"
+      ],
+      "captured_at": "2026-09-23T09:28:41.206552+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "classic-empty",
+      "image": "classic-empty.png",
+      "frame": "classic-empty-frame.png",
+      "mode": "ambient",
+      "state_reads": 6,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/state"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-display-page",
+        "lamp"
+      ],
+      "captured_at": "2026-09-23T09:28:45.961636+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

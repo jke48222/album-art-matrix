@@ -32,6 +32,8 @@ final class WallCanvas {
     var isEmpty: Bool { !px.contains { $0 > 6 } }
 
     func light(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8), radius: Int) {
+        guard x >= -side, x < side * 2, y >= -side, y < side * 2 else { return }
+        let radius = min(side / 4, max(0, radius))
         for dy in -radius...radius {
             for dx in -radius...radius {
                 let nx = x + dx, ny = y + dy
@@ -71,6 +73,7 @@ final class WallCanvas {
         guard let prev = undoStack.popLast() else { return }
         redoStack.append(px)
         px = prev
+        revision &+= 1
         canUndo = !undoStack.isEmpty
         canRedo = true
     }
@@ -79,6 +82,7 @@ final class WallCanvas {
         guard let next = redoStack.popLast() else { return }
         undoStack.append(px)
         px = next
+        revision &+= 1
         canUndo = true
         canRedo = !redoStack.isEmpty
     }
@@ -88,6 +92,7 @@ final class WallCanvas {
     /// colour. The tolerance exists for imported photos, whose regions are
     /// never exactly one value; drawings fill exactly.
     func fill(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8)) {
+        guard x >= 0, x < side, y >= 0, y < side else { return }
         let o = (y * side + x) * 3
         let t = (Int(px[o]), Int(px[o + 1]), Int(px[o + 2]))
         // pouring a colour onto itself is a no-op, not a 4,096-tile walk
@@ -111,6 +116,7 @@ final class WallCanvas {
                 stack.append((nx, ny))
             }
         }
+        revision &+= 1
     }
 
     /// A stroke segment between two FLOAT cell positions, stamped every 0.4
@@ -119,6 +125,10 @@ final class WallCanvas {
     /// follows the finger's actual line and quantises per stamp.
     func sweep(from a: (Double, Double), to b: (Double, Double),
                rgb: (UInt8, UInt8, UInt8), radius: Int) {
+        guard [a.0, a.1, b.0, b.1].allSatisfy(\.isFinite) else { return }
+        let limit = Double(side - 1)
+        let a = (min(limit, max(0, a.0)), min(limit, max(0, a.1)))
+        let b = (min(limit, max(0, b.0)), min(limit, max(0, b.1)))
         let d = (b.0 - a.0, b.1 - a.1)
         let len = (d.0 * d.0 + d.1 * d.1).squareRoot()
         let steps = max(1, Int(len / 0.4))
@@ -131,23 +141,11 @@ final class WallCanvas {
     }
 
     func stroke(from a: (Int, Int), to b: (Int, Int), rgb: (UInt8, UInt8, UInt8), radius: Int) {
-        let steps = max(abs(b.0 - a.0), abs(b.1 - a.1))
-        guard steps > 0 else {
-            light(x: b.0, y: b.1, rgb: rgb, radius: radius)
-            return
-        }
-        for i in 0...steps {
-            let t = Double(i) / Double(steps)
-            light(
-                x: Int((Double(a.0) + (Double(b.0) - Double(a.0)) * t).rounded()),
-                y: Int((Double(a.1) + (Double(b.1) - Double(a.1)) * t).rounded()),
-                rgb: rgb, radius: radius
-            )
-        }
+        sweep(from: (Double(a.0), Double(a.1)), to: (Double(b.0), Double(b.1)), rgb: rgb, radius: radius)
     }
 
     func clear() {
-        px = Panel.blank()
+        px = [UInt8](repeating: 0, count: side * side * 3)
         revision &+= 1
     }
 
@@ -161,7 +159,7 @@ final class WallCanvas {
         if from == side {
             px = buffer
         } else {
-            var out = Panel.blank()
+            var out = [UInt8](repeating: 0, count: side * side * 3)
             for y in 0..<side {
                 let sy = y * from / side
                 for x in 0..<side {
@@ -299,7 +297,7 @@ final class MadeStore {
     func keep(_ px: [UInt8]) {
         guard let dir else { return }
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let name = String(Int(Date().timeIntervalSince1970))
+        let name = String(Int(Date().timeIntervalSince1970)) + "-" + UUID().uuidString
         try? Data(px).write(to: dir.appendingPathComponent(name))
         load()
     }
@@ -314,6 +312,7 @@ final class MadeStore {
 // MARK: - Screen
 
 struct StudioScreen: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
     @Environment(WallSession.self) private var wall
     @Environment(\.dismiss) private var dismiss
 
@@ -356,6 +355,9 @@ struct StudioScreen: View {
     /// Picked media, waiting to be aimed. Nil when there is nothing to aim.
     @State private var framing: FramingJob? = nil
     @State private var sent = false
+    @State private var sending = false
+    @State private var sendError: String?
+    @State private var emitterPreview = false
     @State private var words = ""
     @State private var writing = false
     /// Wished glyph size for words, 1 to 4. The stamp treats it as a wish,
@@ -377,13 +379,13 @@ struct StudioScreen: View {
     private var surface: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(spacing: 22) {
-                Button { canvas.undo() } label: {
+                Button { leaveWords(); clip = []; canvas.undo() } label: {
                     GlyphShape(glyph: .undo, lineWidth: 1.7).frame(width: 18, height: 18)
                         .foregroundStyle(canvas.canUndo ? Ink.ink : Ink.faint)
                 }
                 .buttonStyle(PressStyle(scale: 0.88)).disabled(!canvas.canUndo)
                 .accessibilityLabel("Undo")
-                Button { canvas.redo() } label: {
+                Button { leaveWords(); clip = []; canvas.redo() } label: {
                     GlyphShape(glyph: .redo, lineWidth: 1.7).frame(width: 18, height: 18)
                         .foregroundStyle(canvas.canRedo ? Ink.ink : Ink.faint)
                 }
@@ -391,7 +393,7 @@ struct StudioScreen: View {
                 .accessibilityLabel("Redo")
                 Spacer()
                 Button {
-                    canvas.checkpoint(); clip = []; canvas.clear()
+                    leaveWords(); canvas.checkpoint(); clip = []; canvas.clear()
                 } label: {
                     Text("Clear").font(.ui(14, .medium))
                         .foregroundStyle(canvas.isEmpty ? Ink.faint : accent)
@@ -470,18 +472,22 @@ struct StudioScreen: View {
     private var screen: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 18) {
+                    studioHeading
                     board
                     if writing { compose }
+                    penOptions
                     inks
                     tools
-                    penOptions
-                    send
                     if !kept.made.isEmpty { keptStrip }
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 50)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 32)
             }
+            .safeAreaInset(edge: .bottom) {
+                send.padding(.horizontal, 24).padding(.top, 12).padding(.bottom, 8).background(Ink.ground)
+            }
+            .navigationBarTitleDisplayMode(.inline)
             .scrollIndicators(.hidden)
             .background(Ink.ground.ignoresSafeArea())
             .toolbar {
@@ -493,7 +499,7 @@ struct StudioScreen: View {
                 ToolbarItemGroup(placement: .principal) {
                     HStack(spacing: 26) {
                         Button {
-                            canvas.undo()
+                            leaveWords(); clip = []; canvas.undo()
                         } label: {
                             GlyphShape(glyph: .undo, lineWidth: 1.7)
                                 .frame(width: 19, height: 19)
@@ -504,7 +510,7 @@ struct StudioScreen: View {
                         .accessibilityLabel("Undo")
 
                         Button {
-                            canvas.redo()
+                            leaveWords(); clip = []; canvas.redo()
                         } label: {
                             GlyphShape(glyph: .redo, lineWidth: 1.7)
                                 .frame(width: 19, height: 19)
@@ -517,7 +523,7 @@ struct StudioScreen: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Clear") {
-                        canvas.checkpoint()
+                        leaveWords(); canvas.checkpoint()
                         clip = []
                         canvas.clear()
                     }
@@ -606,6 +612,11 @@ struct StudioScreen: View {
                     let cx = CGFloat(i % n) * cell + cell / 2
                     let cy = CGFloat(i / n) * cell + cell / 2
                     let dot = Path(ellipseIn: CGRect(x: cx - r, y: cy - r, width: r * 2, height: r * 2))
+                    if !emitterPreview {
+                        let pixel = Path(CGRect(x: CGFloat(i % n) * cell, y: CGFloat(i / n) * cell, width: cell + 0.1, height: cell + 0.1))
+                        ctx.fill(pixel, with: .color(Color(red: Double(canvas.px[o]) / 255, green: Double(canvas.px[o + 1]) / 255, blue: Double(canvas.px[o + 2]) / 255)))
+                        continue
+                    }
                     // drawn as the wall will light it: below 16 is off, 16 up
                     // to 64 is lifted to 64, the panel's lowest steady level,
                     // the colour kept; from 64 up, as it is
@@ -624,7 +635,7 @@ struct StudioScreen: View {
             }
             .drawingGroup()
             .contentShape(Rectangle())
-            .gesture(
+            .highPriorityGesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { g in
                         if lastF == nil {
@@ -632,10 +643,11 @@ struct StudioScreen: View {
                             if tool != .fill { canvas.checkpoint() }
                         }
                         if writing { leaveWords() }
+                        if !clip.isEmpty { clip = [] }
                         guard tool != .fill else { return }   // the bucket pours on release
                         let cell = geo.size.width / CGFloat(canvas.side)
-                        let fx = min(63.49, max(0.0, g.location.x / cell - 0.5))
-                        let fy = min(63.49, max(0.0, g.location.y / cell - 0.5))
+                        let fx = min(Double(canvas.side) - 0.51, max(0.0, g.location.x / cell - 0.5))
+                        let fy = min(Double(canvas.side) - 0.51, max(0.0, g.location.y / cell - 0.5))
                         let rgb: (UInt8, UInt8, UInt8) = tool == .erase ? (0, 0, 0) : ink
                         let radius = thick ? 1 : 0
                         if let l = lastF {
@@ -653,8 +665,8 @@ struct StudioScreen: View {
                         lastF = nil
                         if tool == .fill {
                             let cell = geo.size.width / CGFloat(canvas.side)
-                            let x = min(63, max(0, Int(g.location.x / cell)))
-                            let y = min(63, max(0, Int(g.location.y / cell)))
+                            let x = min(canvas.side - 1, max(0, Int(g.location.x / cell)))
+                            let y = min(canvas.side - 1, max(0, Int(g.location.y / cell)))
                             canvas.checkpoint()
                             canvas.fill(x: x, y: y, rgb: ink)
                             Taps.commit()
@@ -666,20 +678,45 @@ struct StudioScreen: View {
             .accessibilityLabel("Canvas, \(canvas.side) by \(canvas.side) tiles. Draw with one finger.")
         }
         .aspectRatio(1, contentMode: .fit)
-        // The canvas IS the wall, so it is framed and lit like the wall: a
-        // pale surround, a dark bezel, and the drawing's own colour thrown
-        // onto the room behind it.
-        .padding(7)
-        .background(
-            RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
-                .fill(LinearGradient(colors: [Color(hex: 0x8C877E), Color(hex: 0x5E5A54)],
-                                     startPoint: .top, endPoint: .bottom))
-        )
-        .overlay(RoundedRectangle(cornerRadius: Round.chip, style: .continuous)
-            .strokeBorder(.white.opacity(0.12), lineWidth: 1))
-        .shadow(color: inkColor.opacity(0.34), radius: 26)
-        .shadow(color: .black.opacity(0.45), radius: 12, y: 6)
-        .padding(.vertical, 4)
+        .overlay {
+            if canvas.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "plus").font(.system(size: 28, weight: .ultraLight))
+                    Text("Start with a mark").font(.ui(15, .medium))
+                }.foregroundStyle(Ink.dim.opacity(0.6)).allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
+        .padding(1)
+        .background(Ink.ink.opacity(0.2), in: RoundedRectangle(cornerRadius: 5))
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .onChange(of: canvas.revision) { _, _ in sent = false; sendError = nil }
+    }
+
+    private var studioHeading: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) { studioTitle; Spacer(); canvasSize }
+                VStack(alignment: .leading, spacing: 8) { studioTitle; canvasSize }
+            }
+            HStack {
+                Text(canvas.isEmpty ? "A little room for your imagination." : "Every pixel is yours.").font(.ui(13)).foregroundStyle(Ink.dim)
+                Spacer()
+                Button { emitterPreview.toggle() } label: {
+                    Image(systemName: emitterPreview ? "square.grid.3x3.fill" : "square.fill")
+                        .foregroundStyle(accent).frame(width: 44, height: 44)
+                }.accessibilityLabel(emitterPreview ? "Show exact pixels" : "Show LED simulation")
+            }
+            if emitterPreview { Text("LED simulation · colours are approximate").font(.ui(11)).foregroundStyle(Ink.dim) }
+        }
+    }
+
+    private var studioTitle: some View {
+        Text("Studio").font(.display(typeSize.isAccessibilitySize ? 20 : 38)).foregroundStyle(Ink.ink)
+            .fixedSize(horizontal: true, vertical: false)
+    }
+    private var canvasSize: some View {
+        Text("\(canvas.side) × \(canvas.side)").font(.machine(9)).foregroundStyle(Ink.dim)
+            .fixedSize(horizontal: true, vertical: false)
     }
 
     // MARK: Inks
@@ -703,28 +740,29 @@ struct StudioScreen: View {
     }
 
     private var inks: some View {
-        // One bar, split into the inks. Touching one picks it; touching the
-        // one already picked opens the mixer, so a colour is chosen and
-        // changed in the same place.
-        let cols = swatches
-        return ColourBar(
-            colours: cols.indices.map { i in
-                Binding(
-                    get: { Color(red: Double(cols[i].0) / 255,
-                                 green: Double(cols[i].1) / 255,
-                                 blue: Double(cols[i].2) / 255) },
-                    set: { c in
-                        ink = Self.rgb(of: c)
-                        custom = c
-                        if tool == .erase { tool = .pen }
-                    })
-            },
-            height: 42, radius: 14, stroke: Ink.hairline,
-            selected: cols.firstIndex(where: { $0 == ink }),
-            onPick: { i in
-                ink = cols[i]
+        HStack(spacing: 10) {
+            Text("Ink").font(.ui(13, .medium)).foregroundStyle(Ink.dim)
+            ScrollView(.horizontal) { HStack(spacing: 4) {
+            ForEach(Array(swatches.enumerated()), id: \.offset) { _, rgb in
+                Button {
+                    ink = rgb
+                    if tool == .erase { tool = .pen }
+                    Taps.detent()
+                } label: {
+                    Circle().fill(Color(red: Double(rgb.0) / 255, green: Double(rgb.1) / 255, blue: Double(rgb.2) / 255))
+                        .frame(width: 28, height: 28)
+                        .padding(5)
+                        .overlay(Circle().strokeBorder(ink == rgb ? Ink.ink : .clear, lineWidth: 1.5))
+                        .frame(minWidth: 44, minHeight: 44)
+                }.buttonStyle(PressStyle()).accessibilityLabel(String(format: "Ink %02X%02X%02X", rgb.0, rgb.1, rgb.2))
+                    .accessibilityAddTraits(ink == rgb ? .isSelected : [])
+            }
+            } }.scrollIndicators(.hidden).frame(height: 44)
+            ColorPicker("Custom ink", selection: Binding(get: { inkColor }, set: { value in
+                ink = Self.rgb(of: value); custom = value
                 if tool == .erase { tool = .pen }
-            })
+            }), supportsOpacity: false).labelsHidden().frame(width: 44, height: 44)
+        }
     }
 
     private func swatch(_ rgb: (UInt8, UInt8, UInt8)) -> some View {
@@ -766,48 +804,22 @@ struct StudioScreen: View {
     // MARK: Tools
 
     private var tools: some View {
-        HStack(spacing: 0) {
-            GlyphButton(glyph: .pen, label: "pen",
-                        active: !writing,
-                        accent: accent, lit: 0.6, diameter: 54) {
-                leaveWords()
-                tool = .pen
-            }
-            .frame(maxWidth: .infinity)
-
-            GlyphButton(glyph: .letters, label: "words", active: writing,
-                        accent: accent, lit: 0.6, diameter: 54) {
-                tool = .pen
-                if writing {
-                    writing = false
-                    typing = false
-                } else {
-                    canvas.checkpoint()
-                    beneath = canvas.px
-                    writing = true
-                    typing = true
+        HStack(spacing: 12) {
+            Button {
+                if writing { leaveWords() }
+                else {
+                    tool = .pen; canvas.checkpoint(); beneath = canvas.px
+                    writing = true; typing = true
                 }
-            }
-            .frame(maxWidth: .infinity)
-
+            } label: {
+                Label(writing ? "Finish lettering" : "Add lettering", systemImage: "textformat")
+                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 44)
+            }.buttonStyle(PressStyle()).foregroundStyle(writing ? accent : Ink.dim)
             PhotosPicker(selection: $media, matching: .any(of: [.images, .videos])) {
-                VStack(spacing: 8) {
-                    ZStack {
-                        Circle().fill(Ink.sunk)
-                        Circle().strokeBorder(clip.isEmpty ? Ink.hairline : accent,
-                                              lineWidth: clip.isEmpty ? 1 : 1.5)
-                        GlyphShape(glyph: .photo, lineWidth: 1.6)
-                            .frame(width: 54 * 0.42, height: 54 * 0.42)
-                            .foregroundStyle(clip.isEmpty ? Ink.dim : accent)
-                    }
-                    .frame(width: 54, height: 54)
-                    Text(loadingMedia ? "reading" : (clip.isEmpty ? "media" : "\(clip.count)f"))
-                        .font(.machine(9))
-                        .textCase(.uppercase)
-                        .foregroundStyle(clip.isEmpty ? Ink.faint : Ink.ink)
-                }
+                Label(loadingMedia ? "Reading media…" : "Import media", systemImage: "photo.on.rectangle")
+                    .font(.ui(13, .medium)).frame(maxWidth: .infinity, minHeight: 44)
+                    .foregroundStyle(Ink.dim)
             }
-            .frame(maxWidth: .infinity)
         }
     }
 
@@ -878,38 +890,33 @@ struct StudioScreen: View {
     /// under the row so the top level stays three ideas: pen, words, media.
     @ViewBuilder private var penOptions: some View {
         if !writing {
-            // One capsule, three seats, the full width put to work: how the
-            // pen marks, and its two alter egos.
-            HStack(spacing: 0) {
-                pocketSeat(label: thick ? "wide" : "fine", on: false) {
-                    thick.toggle()
-                } icon: {
-                    Circle().fill(tool == .erase ? Ink.dim : inkColor)
-                        .frame(width: thick ? 13 : 6, height: thick ? 13 : 6)
-                        .animation(Motion.settle, value: thick)
+            VStack(spacing: 12) {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 1 : 3), spacing: 8) {
+                    drawingTool("Pen", "pencil.tip", .pen)
+                    drawingTool("Erase", "eraser", .erase)
+                    drawingTool("Fill", "drop.fill", .fill)
                 }
-                seatRule
-                pocketSeat(label: "erase", on: tool == .erase) {
-                    tool = tool == .erase ? .pen : .erase
-                } icon: {
-                    GlyphShape(glyph: .erase, lineWidth: 1.5)
-                        .frame(width: 17, height: 17)
-                        .foregroundStyle(tool == .erase ? accent : Ink.dim)
-                }
-                seatRule
-                pocketSeat(label: "fill", on: tool == .fill) {
-                    tool = tool == .fill ? .pen : .fill
-                } icon: {
-                    GlyphShape(glyph: .fill, lineWidth: 1.5)
-                        .frame(width: 17, height: 17)
-                        .foregroundStyle(tool == .fill ? accent : Ink.dim)
+                if tool != .fill {
+                    if typeSize.isAccessibilitySize {
+                        Toggle("Wide brush · 3 pixels", isOn: $thick).font(.ui(14)).foregroundStyle(Ink.ink).tint(accent)
+                    } else {
+                        Picker("Brush width", selection: $thick) {
+                            Text("Fine · 1 pixel").tag(false)
+                            Text("Wide · 3 pixels").tag(true)
+                        }.pickerStyle(.segmented)
+                    }
                 }
             }
-            .frame(height: 46)
-            .background(Ink.sunk, in: Capsule())
-            .overlay { Capsule().strokeBorder(Ink.hairline, lineWidth: 1) }
-            .transition(.opacity)
         }
+    }
+
+    private func drawingTool(_ title: String, _ symbol: String, _ value: Tool) -> some View {
+        Button { leaveWords(); tool = value; Taps.detent() } label: {
+            Label(title, systemImage: symbol).font(.ui(14, .semibold))
+                .frame(maxWidth: .infinity, minHeight: 48)
+                .foregroundStyle(tool == value ? Ink.ground : Ink.dim)
+                .background(tool == value ? accent : Ink.sunk, in: RoundedRectangle(cornerRadius: 14))
+        }.buttonStyle(PressStyle()).accessibilityAddTraits(tool == value ? .isSelected : [])
     }
 
     private var seatRule: some View {
@@ -948,29 +955,39 @@ struct StudioScreen: View {
     // MARK: Send
 
     private var send: some View {
-        Button {
-            guard !canvas.isEmpty else { return }
-            if clip.count > 1 {
-                wall.pushClip(clip, fps: Clip.fps)
-            } else {
-                wall.pushFrame(canvas.px)
-            }
-            kept.keep(canvas.px)
-            sent = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { sent = false }
-        } label: {
-            Text(sent ? "On the wall"
-                      : (clip.count > 1 ? "Play it on the wall" : "Put it on the wall"))
-                .font(.ui(16, .semibold))
-                .foregroundStyle(canvas.isEmpty ? Ink.faint : Ink.ground)
-                .padding(.vertical, 15)
-                .frame(maxWidth: .infinity)
-                .background(Capsule().fill(canvas.isEmpty ? Ink.sunk : (sent ? Ink.moss : accent)))
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                guard !canvas.isEmpty, !sending else { return }
+                let pixels = canvas.px
+                let revision = canvas.revision
+                if clip.count > 1 {
+                    wall.pushClip(clip, fps: Clip.fps)
+                    kept.keep(pixels)
+                    return
+                }
+                sending = true; sendError = nil
+                Task {
+                    let ok = await wall.sendDrawing(pixels)
+                    sending = false
+                    if ok {
+                        kept.keep(pixels)
+                        sent = revision == canvas.revision
+                    } else {
+                        sendError = "Couldn’t reach the wall. Your drawing is safe here; tap to try again."
+                        Taps.error()
+                    }
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    if sending { ProgressView().tint(Ink.ground) }
+                    else { Image(systemName: sent ? "checkmark" : "arrow.up.right") }
+                    Text(sending ? "Sending…" : sent ? (wall.link.isStandIn ? "Phone preview" : "Sent to wall") : sendError != nil ? "Try again" : clip.count > 1 ? "Play clip" : "Send drawing")
+                }.font(.ui(typeSize.isAccessibilitySize ? 14 : 16, .semibold)).foregroundStyle(canvas.isEmpty ? Ink.faint : Ink.ground)
+                    .frame(maxWidth: .infinity, minHeight: 56)
+                    .background(canvas.isEmpty ? Ink.sunk : accent, in: RoundedRectangle(cornerRadius: 16))
+            }.buttonStyle(PressStyle()).disabled(canvas.isEmpty || sending)
+            if let sendError { Text(sendError).font(.ui(13)).foregroundStyle(Ink.dim) }
         }
-        .buttonStyle(.plain)
-        .disabled(canvas.isEmpty)
-        .animation(Motion.settle, value: sent)
-        .animation(Motion.settle, value: canvas.isEmpty)
     }
 
     // MARK: Kept

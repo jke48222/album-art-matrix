@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import copy
 import io
 from datetime import datetime, timezone
@@ -91,6 +92,11 @@ class FixtureWall:
         self.journal = []
         self.covers = {}
         self.shelf = []
+        self.lyrics = {"state": "done", "lines": [
+            {"at": 0, "text": "the room is full of light", "words": []},
+            {"at": 90, "text": "a little colour in the quiet", "words": [{"at":90,"text":"a little"},{"at":92,"text":"colour"},{"at":96,"text":"in the quiet"}]},
+            {"at": 110, "text": "we leave the window open", "words": []}]}
+        self.studies = {}
 
     def load(self, state: dict, frame: bytes) -> None:
         with self.lock:
@@ -129,6 +135,14 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 return
             if path in wall.covers:
                 self.response(200, wall.covers[path], "image/png")
+                return
+            if path in {"/finishes", "/ambient/previews"}:
+                payload = wall.studies.get(path, {})
+                self.response(200, json.dumps(payload).encode(), "application/json")
+                return
+            if path == "/lyrics":
+                payload = wall.lyrics if state.get("now_showing") else {"state":"idle","lines":[]}
+                self.response(200, json.dumps(payload).encode(), "application/json")
                 return
             payload = (state if path == "/state" else {"entries": wall.journal} if path == "/journal"
                        else {"releases": wall.shelf} if path == "/shelf" else {})
@@ -258,6 +272,25 @@ def main() -> int:
                     from brain.art.disc import DiscAnimator
                     disc = DiscAnimator(Image.frombytes("RGB", (64, 64), artwork()), 64)
                     frame = disc.frame_at(0, progress_s=93, fraction=93 / 245).tobytes()
+            if variant != "wall":
+                sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+                from brain.art.pipeline import apply_finish
+                from brain.art.effects import Ambient
+                from brain.art.nine import compose as compose_nine
+                from brain.art.lyrics import LyricSheet, LyricCanvas
+                if state["mode"] == "lyrics" and state.get("now_showing"):
+                    sheet = LyricSheet([(row["at"],row["text"],[(w["at"],w["text"]) for w in row["words"]]) for row in wall.lyrics["lines"]])
+                    frame = LyricCanvas(64, Image.frombytes("RGB", (64,64), artwork()), sheet).frame_at(93).tobytes()
+                    state["progress"]["playing"] = False
+                elif state["mode"] == "nine":
+                    covers = [Image.open(io.BytesIO(data)) for data in wall.covers.values()]
+                    frame = compose_nine(covers,64).tobytes()
+                elif state["mode"] == "ambient":
+                    state["effect"] = "gradient"
+                    frame = Ambient(64,"gradient",state["color"],state["color2"],1).frame_at(8).tobytes()
+                base = Image.frombytes("RGB", (64,64), frame)
+                wall.studies["/finishes"] = {name:base64.b64encode(apply_finish(base,name).tobytes()).decode() for name in ("clean","dither","poster")}
+                wall.studies["/ambient/previews"] = {name:base64.b64encode(Ambient(64,name,state["color"],state["color2"],1).frame_at(8).tobytes()).decode() for name in ("solid","breathe","pulse","rainbow","gradient","plaid","weave","deco","snake")}
             wall.load(state, frame)
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")

@@ -94,6 +94,22 @@ struct PlaybackIdentityTests {
         check("clock rejects negative time", PlaybackIdentity.clock(-1) == "—:—")
         check("clock rejects overflow", PlaybackIdentity.clock(Double.greatestFiniteMagnitude) == "—:—")
 
+        var local = WallState(json: ["now_showing": ["title":"Song", "artist":"ADÉLA"], "progress":["at":45000.0,"of":240000.0,"playing":true,"stamped":stamp.timeIntervalSince1970]])
+        let pause = LocalPlaybackSample(title:"Song", artist:"ADÉLA", position:46, duration:240, playing:false, observed:stamp)
+        pause.apply(to:&local, at:stamp)
+        check("local pause freezes the playbar immediately", !local.songPlaying && near(local.songPosition(at:stamp.addingTimeInterval(9)),46))
+        let resume = LocalPlaybackSample(title:"Song", artist:"ADÉLA", position:46, duration:240, playing:true, observed:stamp.addingTimeInterval(10))
+        resume.apply(to:&local, at:stamp.addingTimeInterval(10))
+        check("resume advances only from resumed position", local.songPlaying && near(local.songPosition(at:stamp.addingTimeInterval(12)),48))
+        var stranger = local; stranger.title = "Other song"
+        pause.apply(to:&stranger,at:stamp)
+        check("paused local song cannot freeze a different wall song", stranger.songPlaying)
+        var stale = local
+        pause.apply(to:&stale,at:stamp.addingTimeInterval(20))
+        check("expired local sample cannot override fresh wall", stale.songPlaying)
+        let archive = WallState(json:["replay_active":true,"now_showing":["title":"Archived","artist":"Archive"],"now_playing":["title":"Current","artist":"Player"]])
+        check("archive artwork cannot replace playback identity", archive.replayActive && archive.title == "Current")
+
         // Reproduce the real /state contract: the brain polls music more
         // slowly than the phone polls /state. Between source polls it repeats
         // both the raw position and the original source observation stamp.

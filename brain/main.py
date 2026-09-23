@@ -28,6 +28,7 @@ from .art.disc import DiscAnimator
 from .art.effects import Ambient
 from .art.fetch import fetch_art
 from .art.lyrics import LyricBook, LyricCanvas
+from .playback import ReplayHold
 from .art.nine import NineBuilder
 from . import halo as halo_mod
 from . import homekit as homekit_mod
@@ -499,7 +500,7 @@ def main():
     ambient, amb_key, amb_t0 = None, None, time.monotonic()
     blacked, need_show = False, False
     fin_key, fin_img, frame_shown = None, None, None
-    hold_until = 0.0                 # replays pin the wall for a while
+    replay_hold = ReplayHold()
     quiet_since = None               # when the music stopped, for idle
     # Where the song is, and when we last heard that. The record turns from
     # this rather than from the wall clock, so a seek seeks the record.
@@ -510,6 +511,7 @@ def main():
     nine = NineBuilder(size)
     nine_shown = None
     lyric_book = LyricBook()
+    ctrl.lyric_book = lyric_book
     lyric_canvas, lyric_key = None, None
     woke_on = None                   # date the wake fade last fired
     rang_on = None                   # date the alarm last rang
@@ -603,10 +605,12 @@ def main():
                                     "artist": entry.get("artist", "?"),
                                     "album": entry.get("album", "")}
                 ctrl.shown_seq += 1
-                hold_until = time.monotonic() + 600   # current track waits
+                replay_hold.arm(now, time.monotonic())
+                ctrl.replay_active = True
                 print(f"[main] replay: {entry.get('artist')} — "
                       f"{entry.get('title')}")
             except Exception as exc:
+                ctrl.replay_active = replay_hold.active
                 print(f"[main] replay failed: {exc}")
 
         # ---- poll now-playing; rebuild art state on track change --------
@@ -628,6 +632,15 @@ def main():
             if now is not None and not now.is_playing and last_track is not None \
                     and not _is_shown(now, last_track, ctrl.now_showing):
                 now = None
+
+        ctrl.playing_identity = ({"title": now.title, "artist": now.artist, "album": now.album}
+                                 if now is not None else {})
+        resume, ctrl.resume_music = ctrl.resume_music, False
+        if replay_hold.release(now, time.monotonic(), resume) or resume:
+            # Replay replaced the pixels, even if the music never changed ID.
+            # Invalidate the artwork cache so that same song is restored too.
+            last_track = None
+            ctrl.replay_active = False
 
         # Silence is a state worth having an opinion about. A wall left on a
         # frozen sleeve all night is a different object from one that quietly
@@ -696,6 +709,13 @@ def main():
                     now.is_playing, (now.duration_ms or 0) / 1000.0)
             ctrl.progress = {"at": now.progress_ms, "of": now.duration_ms,
                              "playing": now.is_playing, "stamped": now_wall}
+        elif now is not None and not now.is_playing:
+            # A pause with an unavailable position still stops the last clock.
+            if prog is not None:
+                at = prog[0] + (now_at - prog[1] if prog[2] else 0)
+                prog = (max(0, at), now_at, False, prog[3])
+                ctrl.progress = {"at": max(0, at) * 1000, "of": prog[3] * 1000,
+                                 "playing": False, "stamped": now_wall}
         elif now is None:
             prog = None
             ctrl.progress = {}
@@ -708,7 +728,7 @@ def main():
                            (now.duration_ms or 0) / 1000.0 or None)
 
         if now and now.track_id != last_track \
-                and time.monotonic() >= hold_until:
+                and not replay_hold.active:
             # the old track's clock must not survive onto the new one when
             # the reporting tier has no progress to replace it with
             if now.progress_ms is None:
@@ -982,6 +1002,12 @@ def main():
                         if ctrl.dirty.wait(0.08):
                             ctrl.dirty.clear()
                         continue
+                    # With no cover, clear the previous face instead of leaving
+                    # an unrelated lamp or drawing under the Lyrics label.
+                    if last_pre is None:
+                        empty = Image.new("RGB", (size, size))
+                        ctrl.finish_base = empty
+                        sink.show(black, pre_wb_img=empty)
                     # nothing to sing yet: the sleeve stands in, undimmed
                     if need_show and last_pre is not None:
                         f = apply_finish(last_pre, s["finish"])

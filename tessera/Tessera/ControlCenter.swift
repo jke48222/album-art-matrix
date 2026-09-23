@@ -115,6 +115,9 @@ struct ControlCenterPanel: View {
     /// The games live in their own sheet: a board wants the whole screen.
     @State private var showGames = false
     @State private var showWeather = false
+    @State private var displayDetail: DisplayDetail?
+    @State private var returningToMusic = false
+    @State private var returnFailed = false
     @State private var showArtwork = false
     @State private var artworkIsSpin = false
     @State private var showColour = false
@@ -222,6 +225,7 @@ struct ControlCenterPanel: View {
         // the glass takes the room's own scheme: light over the white room,
         // dark over the dark designs, so it frosts instead of muddying
         .environment(\.colorScheme, ink.ink == Ink.ink ? .dark : .light)
+        .sheet(item: $displayDetail) { DisplayPage(detail: $0, accent: accent).environment(wall) }
         .sheet(isPresented: $showArtwork) { ArtworkPage(spin: artworkIsSpin, accent: accent).environment(wall) }
         .sheet(isPresented: $showGames) { GamesSheet(accent: accent).environment(wall) }
         .sheet(isPresented: $showWeather) {
@@ -583,10 +587,30 @@ struct ControlCenterPanel: View {
                 Text("Your generated artwork is on the wall.").font(.ui(14)).foregroundStyle(ink.dim)
             }
         case "art":
-            VStack(spacing: 16) { artworkLink(spin: false); finishBoard }
-        case "nine": finishBoard
+            VStack(spacing: 16) {
+                if wall.state.replayActive { returnToMusic }
+                artworkLink(spin: false); finishBoard
+            }
+        case "nine": VStack(spacing: 16) { detailLink(.nine); finishBoard }
         default: EmptyView()
         }
+    }
+
+    private func detailLink(_ detail: DisplayDetail) -> some View {
+        Button { displayDetail = detail } label: {
+            HStack { Text("Explore \(detail.title)").font(.ui(16, .semibold)); Spacer(); Image(systemName: "arrow.up.right") }
+                .foregroundStyle(accent).frame(minHeight: 48)
+        }.buttonStyle(PressStyle())
+    }
+
+    private var returnToMusic: some View {
+        Button {
+            returningToMusic = true; returnFailed = false
+            Task { returnFailed = !(await wall.returnToMusic()); returningToMusic = false }
+        } label: {
+            Label(returningToMusic ? "Returning…" : returnFailed ? "Try returning to music again" : "Return to current music", systemImage: "arrow.uturn.backward")
+                .font(.ui(15, .semibold)).foregroundStyle(accent).frame(maxWidth: .infinity, minHeight: 50)
+        }.buttonStyle(PressStyle()).disabled(returningToMusic || !wall.link.isLive)
     }
 
     // MARK: Words: what the wall letters, and how it moves
@@ -596,6 +620,7 @@ struct ControlCenterPanel: View {
     private var wordsBoard: some View {
         let empty = wordsDraft.trimmingCharacters(in: .whitespaces).isEmpty
         return board("Words") {
+            detailLink(.lyrics)
             HStack(spacing: 10) {
                 TextField("say something", text: $wordsDraft)
                     .font(.machine(14)).foregroundStyle(ink.ink)
@@ -702,6 +727,7 @@ struct ControlCenterPanel: View {
 
     private var lampBoard: some View {
         board("Lamp") {
+            detailLink(.lamp)
             let effects = [("plaid", "Plaid"), ("weave", "Weave"), ("deco", "Deco"), ("snake", "Snake"), ("solid", "Solid"),
                            ("breathe", "Breathe"), ("pulse", "Pulse"), ("rainbow", "Rainbow"), ("gradient", "Fade")]
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: typeSize.isAccessibilitySize ? 2 : 3), spacing: 8) {
@@ -874,6 +900,7 @@ struct ControlCenterPanel: View {
     private var timingBoard: some View {
         let ahead = rail(key: "lyric_offset") ?? wall.state.lyricOffset
         return board("Words") {
+            detailLink(.lyrics)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%+.2f", ahead)).font(.display(28)).foregroundStyle(ink.ink)
                     .contentTransition(.numericText())
@@ -884,16 +911,16 @@ struct ControlCenterPanel: View {
                 lyricsNudge = v          // the phone's own words follow the wall's
             }
             HStack(spacing: 8) {
-                choice("Sooner", -0.4, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
+                choice("Later", -0.4, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
                 choice("On time", 0.2, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
-                choice("Later", 0.8, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
+                choice("Sooner", 0.8, ahead, { wall.send(["lyric_offset": $0]); lyricsNudge = $0 })
             }
             finishes
         }
     }
 
     private var finishBoard: some View {
-        board("Finish") { finishes }
+        board("Finish") { finishes; detailLink(.finishes) }
     }
 
     /// A design or a clip: the studio itself, here, and the finish over it.

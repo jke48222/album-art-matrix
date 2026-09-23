@@ -1,77 +1,76 @@
-"""The last nine sleeves, as one frame.
-
-A 3x3 of everything the wall has worn lately: newest first, reading order,
-each sleeve reduced to a 20-pixel tile with a one-pixel breath between them.
-Slots the journal cannot fill yet stay as faintly-marked empty tiles, so a
-young wall reads as a grid filling up, not as a bug.
-
-Art comes through the same fetch cache the main pipeline uses, and the
-composition happens in a worker thread: nine fetches can be nine round
-trips, and the render loop does not wait on anyone's CDN.
-"""
+"""Nine most recent distinct sleeves. One composition at every panel size."""
 import threading
+import time
 
-import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageOps
 
 from .fetch import fetch_art
 
-MARGIN, TILE, GUTTER = 1, 20, 1
-
 
 def compose(images: list[Image.Image | None], size: int = 64) -> Image.Image:
-    canvas = np.zeros((size, size, 3), dtype=np.uint8)
+    if size < 16:
+        raise ValueError("Nine needs at least 16 pixels per side")
+    canvas = Image.new("RGB", (size, size), (8, 10, 10))
+    draw = ImageDraw.Draw(canvas)
+    gutter = max(1, round(size / 64))
+    # Rounded boundaries distribute spare pixels without leaving a short edge.
+    edges = [round(i * (size - gutter) / 3) + gutter for i in range(4)]
     for slot in range(9):
         row, col = divmod(slot, 3)
-        x = MARGIN + col * (TILE + GUTTER)
-        y = MARGIN + row * (TILE + GUTTER)
+        x, y = edges[col], edges[row]
+        w, h = edges[col + 1] - x - gutter, edges[row + 1] - y - gutter
         img = images[slot] if slot < len(images) else None
-        if img is None:
-            # an empty slot is a place waiting, not a hole: corner ticks
-            canvas[y, x] = canvas[y, x + TILE - 1] = (26, 24, 22)
-            canvas[y + TILE - 1, x] = (26, 24, 22)
-            canvas[y + TILE - 1, x + TILE - 1] = (26, 24, 22)
-            continue
-        tile = img.convert("RGB").resize((TILE, TILE), Image.LANCZOS)
-        canvas[y:y + TILE, x:x + TILE] = np.asarray(tile, dtype=np.uint8)
-    return Image.fromarray(canvas, "RGB")
+        if img is not None:
+            canvas.paste(ImageOps.fit(img.convert("RGB"), (w, h), Image.Resampling.LANCZOS), (x, y))
+        else:
+            draw.rectangle((x, y, x + w - 1, y + h - 1), fill=(18, 21, 21))
+            arm = max(1, round(size / 32))
+            for cx, cy, dx, dy in [(x,y,1,1),(x+w-1,y,-1,1),(x,y+h-1,1,-1),(x+w-1,y+h-1,-1,-1)]:
+                draw.line((cx,cy,cx+dx*arm,cy), fill=(47,51,49), width=gutter)
+                draw.line((cx,cy,cx,cy+dy*arm), fill=(47,51,49), width=gutter)
+    return canvas
 
 
 class NineBuilder:
-    """Rebuilds the grid when the journal's head moves, off-thread."""
-
+    """Coalesces changes while fetching; never publishes a superseded grid."""
     def __init__(self, size: int = 64):
         self.size = size
-        self.frame: Image.Image | None = None
-        self.built_for = None        # newest ts the current frame reflects
+        self.frame = None
+        self.built_for = None
+        self._wanted = None
         self._building = False
+        self._retry_at = 0
+        self._lock = threading.Lock()
 
     def ask(self, entries: list[dict]):
-        """entries: journal rows, newest first."""
-        newest = entries[0]["ts"] if entries else None
-        if newest == self.built_for or self._building:
-            return
-        self._building = True
+        urls = tuple(dict.fromkeys(e["art_url"] for e in entries if e.get("art_url")))[:9]
+        with self._lock:
+            self._wanted = urls
+            if self._building or (urls == self.built_for and time.monotonic() < self._retry_at):
+                return
+            self._building = True
+        threading.Thread(target=self._work, name="nine", daemon=True).start()
 
-        def work():
-            try:
-                seen, urls = set(), []
-                for e in entries:
-                    u = e.get("art_url")
-                    if u and u not in seen:
-                        seen.add(u)
-                        urls.append(u)
-                    if len(urls) == 9:
-                        break
+    def _work(self):
+        try:
+            while True:
+                with self._lock:
+                    urls = self._wanted
                 images = []
-                for u in urls:
+                for url in urls:
                     try:
-                        images.append(fetch_art(u))
+                        images.append(fetch_art(url))
                     except Exception:
                         images.append(None)
-                self.frame = compose(images, self.size)
-                self.built_for = newest
-            finally:
+                frame = compose(images, self.size)
+                with self._lock:
+                    if urls != self._wanted:
+                        continue
+                    self.frame, self.built_for = frame, urls
+                    self._retry_at = time.monotonic() + 30 if any(image is None for image in images) else float("inf")
+                    self._building = False
+                    return
+        except Exception:
+            with self._lock:
                 self._building = False
-
-        threading.Thread(target=work, daemon=True).start()
+            raise
