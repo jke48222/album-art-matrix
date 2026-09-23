@@ -1,0 +1,83 @@
+{
+  "batch": 6,
+  "ids": [
+    "R03",
+    "R04",
+    "R05"
+  ],
+  "inspected_on": "2026-09-23",
+  "references": [
+    {
+      "id": "R03",
+      "provider": "Mobbin",
+      "app": "Lumy",
+      "url": "https://mobbin.com/screens/537d64d2-35af-4887-90ba-25d56e9b212b",
+      "applied": "A single expressive daylight arc, marked endpoints and a visible local time context; values come from the wall's solar model."
+    },
+    {
+      "id": "R03",
+      "provider": "Mobbin",
+      "app": "Lumy",
+      "url": "https://mobbin.com/screens/7ada2fd9-f191-4ee7-a165-e70b3e6e2aef",
+      "applied": "Pair the visual day story with readable sunrise and sunset values; show polar exceptions honestly."
+    },
+    {
+      "id": "R03",
+      "provider": "Apple",
+      "url": "https://developer.apple.com/documentation/corelocation/requesting-authorization-to-use-location-services",
+      "applied": "Location permission is requested only from a tapped action; denied permission, timeout, retry and a Settings route are explicit. One-shot kilometre accuracy."
+    },
+    {
+      "id": "R03",
+      "provider": "Apple",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/charts",
+      "applied": "The decorative curve is accompanied by accessible textual values and the chart is clearly labelled a sunlight plan."
+    },
+    {
+      "id": "R04",
+      "provider": "Mobbin",
+      "app": "Endel",
+      "url": "https://mobbin.com/screens/a459b0d3-e242-4687-9ae2-76a1c383667c",
+      "applied": "Keep duration and the one primary start action legible; separate the sleep plan from active countdown state."
+    },
+    {
+      "id": "R04",
+      "provider": "Mobbin",
+      "app": "Endel",
+      "url": "https://mobbin.com/screens/72bc565e-57f9-477d-9963-0e1b0d014ae6",
+      "applied": "Short familiar duration choices with one contextual cancel control once the timer is running."
+    },
+    {
+      "id": "R04",
+      "provider": "Apple",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+      "applied": "The wall's known total and remaining time drive a determinate fade marker; disconnect freezes extrapolation and labels the last state."
+    },
+    {
+      "id": "R05",
+      "provider": "Mobbin",
+      "app": "Apple Health",
+      "url": "https://mobbin.com/screens/0f4214da-1d5a-4ff8-bc81-f1d15e247c89",
+      "applied": "Make daily schedule and the effect of enabling it explicit, with time and duration in the canonical page."
+    },
+    {
+      "id": "R05",
+      "provider": "Mobbin",
+      "app": "Apple Health",
+      "url": "https://mobbin.com/screens/28866374-9954-47c7-a81f-a74a07628978",
+      "applied": "Use a strong readable schedule summary and an in-place native time control, with start and full-light endpoints."
+    },
+    {
+      "id": "R05",
+      "provider": "Apple",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/pickers",
+      "applied": "Native time wheel stays in context; timezone is explicitly the wall's instead of silently using the phone's."
+    },
+    {
+      "id": "R05",
+      "provider": "Apple",
+      "url": "https://support.apple.com/en-sa/guide/iphone/iph304a683a0/ios",
+      "applied": "Separate schedule enabled state from saved time and transition duration; describe what the schedule changes."
+    }
+  ]
+}

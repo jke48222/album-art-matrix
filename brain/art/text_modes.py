@@ -116,341 +116,107 @@ class Ticker:
         return Image.fromarray(canvas, "RGB")
 
 
-class Clock:
-    """HH:MM in 2x glyphs, colon blinking once a second."""
-
-    SCALE = 2
-
-    # Glyphs are drawn at SCALE times the 5x7 font. Two was the whole story
-    # when the wall was one 64 pixel panel; a nine panel wall is three times
-    # as wide and the same two would put a postage stamp in the middle of it,
-    # so the scale follows the panel count and the layout, which is all
-    # centred arithmetic, follows the scale.
-    @staticmethod
-    def _scale_for(size: int) -> int:
-        return max(2, 2 * size // 64)
-
-    def __init__(self, size: int, color: str = "#f4f1ea",
-                 twenty_four: bool = True):
+class _TimeFace:
+    """One proportioned composition at panel and phone resolutions."""
+    def __init__(self, size: int, color: str):
         self.size = size
-        self.SCALE = self._scale_for(size)
-        self.color = _hex_rgb(color)
+        self.unit = max(1, size // 64)
+        self.scale = max(1, int(size * 3 / 64))
+        ink = _hex_rgb(color)
+        peak = max(ink)
+        self.color = ((190, 201, 214) if peak == 0 else
+                      tuple(int(c * 230 / peak) for c in ink) if peak < 230 else ink)
+        self.paper = (244, 237, 220)
+
+    def canvas(self):
+        return np.zeros((self.size, self.size, 3), dtype=np.uint8)
+
+    def text(self, canvas, text, y, color=None, scale=None, x=None):
+        scale = self.unit if scale is None else scale
+        if x is None:
+            # Snap centered labels to the native 64-pixel design grid so a
+            # 192/512 wall has exactly the same balance as its phone preview.
+            x = ((self.size // self.unit - text_width(text, scale) // self.unit) // 2) * self.unit
+        draw_text(canvas, text, x, round(y * self.size / 64), color or self.paper, scale)
+
+    def pair(self, canvas, top, bottom, labels=None):
+        if labels:
+            x = round(9 * self.size / 64)
+            self.text(canvas, top, 15, self.paper, self.scale, x)
+            self.text(canvas, bottom, 38, self.color, self.scale, x)
+            self.text(canvas, labels[0], 23, self.paper, self.unit, round(self.size * 51 / 64))
+            self.text(canvas, labels[1], 46, self.color, self.unit, round(self.size * 51 / 64))
+        else:
+            self.text(canvas, top, 15, self.paper, self.scale)
+            self.text(canvas, bottom, 38, self.color, self.scale)
+
+
+class Clock(_TimeFace):
+    """An editorial clock: calendar, stacked time and a quiet seconds rail."""
+    def __init__(self, size: int, color: str = "#f4f1ea", twenty_four: bool = True):
+        super().__init__(size, color)
         self.twenty_four = twenty_four
 
-    def frame_at(self, t: float) -> Image.Image:
-        canvas = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-        now = time.localtime()
-        hour = now.tm_hour
-        suffix = None
-        if not self.twenty_four:
-            suffix = "AM" if hour < 12 else "PM"
-            hour = hour % 12 or 12
-        hh, mm = f"{hour:02d}", f"{now.tm_min:02d}"
-
-        digits_w = text_width(hh, self.SCALE)
-        # The colon carries the whole gap: hours, a breath, two dots, a
-        # breath, minutes. The old spread put 16px between the groups and
-        # the face read as two separate numbers; 10px reads as one time.
-        gap = 5 * self.SCALE
-        total = digits_w * 2 + gap
-        x = (self.size - total) // 2
-        y = (self.size - 7 * self.SCALE) // 2 - (4 if suffix else 0)
-
-        draw_text(canvas, hh, x, y, self.color, self.SCALE)
-        if now.tm_sec % 2 == 0:                      # blink
-            cx = x + digits_w + gap // 2 - 1
-            cy = y + 2 * self.SCALE
-            canvas[cy:cy + 2, cx:cx + 2] = self.color
-            canvas[cy + 6:cy + 8, cx:cx + 2] = self.color
-        draw_text(canvas, mm, x + digits_w + gap, y,
-                  self.color, self.SCALE)
-        if suffix:
-            sub = max(1, self.SCALE // 2)
-            sw = text_width(suffix, sub)
-            draw_text(canvas, suffix, (self.size - sw) // 2,
-                      y + 7 * self.SCALE + 2 + self.SCALE, self.color, sub)
+    def frame_at(self, t: float, when: float | None = None) -> Image.Image:
+        now = time.localtime(time.time() if when is None else when)
+        hour = now.tm_hour if self.twenty_four else (now.tm_hour % 12 or 12)
+        canvas = self.canvas()
+        day = ("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN")[now.tm_wday]
+        header = f"{day} {now.tm_mday:02d}"
+        if self.twenty_four:
+            self.text(canvas, header, 3)
+        else:
+            self.text(canvas, header, 3, x=4 * self.unit)
+            self.text(canvas, "AM" if now.tm_hour < 12 else "PM", 3,
+                      self.color, x=self.size - 15 * self.unit)
+        self.pair(canvas, f"{hour:02d}", f"{now.tm_min:02d}")
+        left, right = 4 * self.unit, self.size - 4 * self.unit
+        y = self.size - 2 * self.unit
+        canvas[y:y + self.unit, left:right] = (30, 33, 38)
+        head = left + round((right - left - self.unit) * now.tm_sec / 59)
+        canvas[y:y + self.unit, head:head + self.unit] = self.color
         return Image.fromarray(canvas, "RGB")
 
 
-class Countdown:
-    """A kitchen timer you can read from the far side of the room.
+class Countdown(_TimeFace):
+    """A readable pair of time units surrounded by a draining perimeter.
 
-    MM:SS in 2x glyphs, and the panel's border is the vessel: it starts full
-    and drains clockwise from the top as the time runs, so the shape of what
-    is left is visible long before the digits are legible; what has run out
-    is dark, since this panel shows a dim accent as red. The drain is
-    continuous: the border's leading LED is lit by exactly the fraction of
-    its share of the time that is left, and a soft bright head rides that
-    edge, so the eye sees a point sliding round the panel rather than a
-    light going out every so often.
-
-    When it reaches zero the wall has no bell, and light is the loudest thing
-    it can do: a white strike, then fireworks. Shells rise from the foot of
-    the panel and burst in the accent and the ink, sparks fall and fade, the
-    border flashes with every burst, and the digits stay up at 00:00 so a
-    glance still says which timer this was. It runs for three minutes unless
-    the phone stops it.
+    At zero the words change to TIME UP and a slow breathing perimeter
+    replaces the drain. The result remains legible, without full-screen
+    strobing or randomly hiding the digits behind an animation.
     """
-
-    SCALE = 2
-    GRAVITY = 26.0          # px/s^2 on sparks
-    SHELL_GRAVITY = 30.0    # px/s^2 on a rising shell
-
-    # Glyphs are drawn at SCALE times the 5x7 font. Two was the whole story
-    # when the wall was one 64 pixel panel; a nine panel wall is three times
-    # as wide and the same two would put a postage stamp in the middle of it,
-    # so the scale follows the panel count and the layout, which is all
-    # centred arithmetic, follows the scale.
-    @staticmethod
-    def _scale_for(size: int) -> int:
-        return max(2, 2 * size // 64)
-
-    def __init__(self, size: int, color: str = "#f4f1ea",
-                 accent: str = "#e8b04b"):
-        self.size = size
-        self.SCALE = self._scale_for(size)
-        self.color = _hex_rgb(color)
+    def __init__(self, size: int, color: str = "#f4f1ea", accent: str = "#e8b04b"):
+        super().__init__(size, color)
         self.accent = _hex_rgb(accent)
-        # The border, as an ordered walk: top edge from the middle out, then
-        # down the right, across the bottom, up the left, back to the top
-        # middle. Draining clockwise from 12 o'clock is how every dial a
-        # person has ever cooked with does it.
-        n = size
-        path = []
-        for x in range(n // 2, n):
-            path.append((x, 0))
-        for y in range(1, n):
-            path.append((n - 1, y))
-        for x in range(n - 2, -1, -1):
-            path.append((x, n - 1))
-        for y in range(n - 2, -1, -1):        # up the left, corner included
-            path.append((0, y))
-        for x in range(1, n // 2):
-            path.append((x, 0))
-        self._ring = path
-        self._ring_x = np.array([x for x, _ in path], dtype=np.intp)
-        self._ring_y = np.array([y for _, y in path], dtype=np.intp)
-        self._ring_i = np.arange(len(path), dtype=np.float32)
-        # the alarm's state: sparks in flight, shells on the way up
-        self._rng = np.random.default_rng()
-        self._last = None
-        self._shells: list[dict] = []
-        self._sparks = np.zeros((0, 4), dtype=np.float32)    # x y vx vy
-        self._spark_rgb = np.zeros((0, 3), dtype=np.float32)
-        self._spark_age = np.zeros(0, dtype=np.float32)
-        self._spark_life = np.zeros(0, dtype=np.float32)
-        self._next_launch = 0.0
-        self._flash_at = -1e9
-        self._flash_rgb = np.zeros(3, dtype=np.float32)
-        self._flash_xy = (size // 2, size // 2)
-        self._zero_at = None
-
-    # -- counting down ------------------------------------------------------
+        inset = self.unit
+        end = size - inset - 1
+        mid = size // 2
+        self.path = ([(x, inset) for x in range(mid, end + 1)] +
+                     [(end, y) for y in range(inset + 1, end + 1)] +
+                     [(x, end) for x in range(end - 1, inset - 1, -1)] +
+                     [(inset, y) for y in range(end - 1, inset - 1, -1)] +
+                     [(x, inset) for x in range(inset + 1, mid)])
 
     def frame_at(self, remaining: float, total: float) -> Image.Image:
-        if remaining <= 0:
-            return self._alarm(remaining)
-        self._zero_at = None
-        canvas = np.zeros((self.size, self.size, 3), dtype=np.uint8)
-        frac = max(0.0, min(1.0, remaining / max(1.0, total)))
-        self._draw_ring(canvas, len(self._ring) * frac)
-        self._digits(canvas, int(np.ceil(remaining)))
+        canvas = self.canvas()
+        ringing = remaining <= 0
+        frac = max(0, min(1, remaining / max(1, total)))
+        pulse = 0.55 + 0.45 * (0.5 + 0.5 * np.cos(min(0, remaining) * np.pi))
+        fill = len(self.path) if ringing else round(len(self.path) * frac)
+        color = tuple(round(c * pulse) for c in self.accent) if ringing else self.accent
+        for index, (x, y) in enumerate(self.path):
+            if index < fill:
+                canvas[y:y + self.unit, x:x + self.unit] = color
+        # Header sits just inside the perimeter and never shares its pixels.
+        self.text(canvas, "TIME UP" if ringing else "REMAIN", 5, self.paper)
+        seconds = int(np.ceil(max(0, remaining)))
+        minutes, seconds = divmod(seconds, 60)
+        top, bottom, labels = f"{minutes:02d}", f"{seconds:02d}", ("M", "S")
+        if minutes > 99:
+            hour, minutes = divmod(minutes, 60)
+            top, bottom, labels = f"{hour:02d}", f"{minutes:02d}", ("H", "M")
+        self.pair(canvas, top, bottom, labels)
         return Image.fromarray(canvas, "RGB")
-
-    def _draw_ring(self, canvas, pos: float, flash: float = 0.0):
-        """The border with `pos` LEDs' worth of time left (a float: the
-        LED at the edge is lit by its fraction), a bright head riding the
-        edge, and an optional flash over the whole ring."""
-        # The drained part is off, not dim. A quarter-strength accent was
-        # the first try and the panel showed it red: at that level its red
-        # LEDs light long before the green and blue do, so a dim yellow, or
-        # a dim anything, comes out red. The edge LED fades to about a
-        # quarter and then goes out for the same reason.
-        accent = np.array(self.accent, dtype=np.float32)
-        cover = np.clip(pos - self._ring_i, 0.0, 1.0)
-        head = np.clip(1.0 - np.abs(self._ring_i + 0.5 - pos) / 3.0, 0.0, 1.0)
-        rgb = accent * cover[:, None]
-        rgb += accent * 0.5 * (head * cover)[:, None]
-        rgb[rgb.max(axis=1) < 72.0] = 0.0
-        if flash > 0:
-            rgb += (np.array((255, 255, 255), np.float32) - rgb) * flash
-        canvas[self._ring_y, self._ring_x] = np.clip(rgb, 0, 255).astype(np.uint8)
-
-    def _digits(self, canvas, seconds: int, bright: bool = False,
-                white: float = 0.0):
-        m, s = divmod(max(0, seconds), 60)
-        if m > 99:
-            text = f"{m // 60}H{m % 60:02d}"
-        else:
-            text = f"{m:02d}:{s:02d}"
-        w = text_width(text, self.SCALE)
-        x = (self.size - w) // 2
-        y = (self.size - 7 * self.SCALE) // 2
-        color = tuple(min(255, int(c * 1.15)) for c in self.color) if bright \
-            else self.color
-        if white > 0:
-            color = tuple(int(c + (255 - c) * white) for c in color)
-        draw_text(canvas, text, x, y, color, self.SCALE)
-
-    # -- the alarm ----------------------------------------------------------
-
-    def _alarm(self, remaining: float) -> Image.Image:
-        now = time.monotonic()
-        if self._zero_at is None:
-            # the moment of zero: everything reset, the first shell already up
-            self._zero_at = now - max(0.0, -remaining)
-            self._last = now
-            self._shells = []
-            self._sparks = np.zeros((0, 4), dtype=np.float32)
-            self._spark_rgb = np.zeros((0, 3), dtype=np.float32)
-            self._spark_age = np.zeros(0, dtype=np.float32)
-            self._spark_life = np.zeros(0, dtype=np.float32)
-            self._next_launch = now + 0.05
-            self._flash_at = -1e9
-        dt = min(0.1, max(0.0, now - self._last))
-        self._last = now
-        since_zero = now - self._zero_at
-
-        self._step(now, dt)
-
-        acc = np.zeros((self.size, self.size, 3), dtype=np.float32)
-        self._paint_sparks(acc, dt)
-        self._paint_shells(acc)
-        # the burst's own flash: a soft disc that is gone in a third of a second
-        f_age = now - self._flash_at
-        if f_age < 0.33:
-            k = (1.0 - f_age / 0.33) ** 2
-            self._paint_glow(acc, self._flash_xy, 11.0, self._flash_rgb * (1.1 * k))
-        canvas = np.clip(acc, 0, 255).astype(np.uint8)
-
-        # the strike: the whole panel white at zero, gone in a quarter second
-        strike = max(0.0, 1.0 - since_zero / 0.25) ** 2 if since_zero < 0.25 else 0.0
-        ring_flash = max(strike, 0.85 * max(0.0, 1.0 - f_age / 0.5) ** 2)
-        self._draw_ring(canvas, float(len(self._ring)) * 0.0, flash=ring_flash)
-        if strike > 0:
-            canvas[:] = np.clip(canvas.astype(np.float32)
-                                + (255 - canvas.astype(np.float32)) * strike,
-                                0, 255).astype(np.uint8)
-        # a dark plate under the digits keeps 00:00 legible through a burst
-        w = text_width("00:00", self.SCALE)
-        x0 = (self.size - w) // 2 - 1
-        y0 = (self.size - 7 * self.SCALE) // 2 - 1
-        plate = canvas[y0:y0 + 7 * self.SCALE + 2, x0:x0 + w + 2].astype(np.float32)
-        canvas[y0:y0 + 7 * self.SCALE + 2, x0:x0 + w + 2] = (plate * 0.3).astype(np.uint8)
-        self._digits(canvas, 0, bright=True,
-                     white=max(strike, 0.6 * max(0.0, 1.0 - f_age / 0.4)))
-        return Image.fromarray(canvas, "RGB")
-
-    def _step(self, now: float, dt: float):
-        rng = self._rng
-        n = self.size
-        # shells: launched from the foot, every so often, never two alike
-        if now >= self._next_launch:
-            x = float(rng.uniform(n * 0.2, n * 0.8))
-            vy = -float(rng.uniform(46.0, 56.0))
-            # accent and ink take turns, with a white-gold one now and then;
-            # every third shell bursts as a ring instead of a ball
-            self._launched = getattr(self, "_launched", 0) + 1
-            rgb = [self.accent, (255, 236, 200), self.color][self._launched % 3]
-            self._shells.append({"x": x, "y": float(n - 1), "vx": float(rng.uniform(-3, 3)),
-                                 "vy": vy, "rgb": np.array(rgb, np.float32),
-                                 "ring": self._launched % 3 == 1,
-                                 "fuse": now + float(rng.uniform(1.0, 1.3))})
-            self._next_launch = now + float(rng.uniform(0.45, 0.8))
-        keep = []
-        for sh in self._shells:
-            sh["vy"] += self.SHELL_GRAVITY * dt
-            sh["x"] += sh["vx"] * dt
-            sh["y"] += sh["vy"] * dt
-            if now >= sh["fuse"] or sh["vy"] >= -6.0:
-                self._burst(sh["x"], sh["y"], sh["rgb"], now, ring=sh["ring"])
-            else:
-                keep.append(sh)
-        self._shells = keep
-        # sparks: gravity, a little drag, age
-        if len(self._sparks):
-            sp = self._sparks
-            sp[:, 3] += self.GRAVITY * dt
-            drag = float(np.exp(-1.3 * dt))
-            sp[:, 2] *= drag
-            sp[:, 3] *= drag
-            sp[:, 0] += sp[:, 2] * dt
-            sp[:, 1] += sp[:, 3] * dt
-            self._spark_age += dt
-            alive = (self._spark_age < self._spark_life) & (sp[:, 1] < n + 2)
-            self._sparks = sp[alive]
-            self._spark_rgb = self._spark_rgb[alive]
-            self._spark_age = self._spark_age[alive]
-            self._spark_life = self._spark_life[alive]
-
-    def _burst(self, x: float, y: float, rgb: np.ndarray, now: float,
-               ring: bool = False):
-        rng = self._rng
-        count = int(rng.integers(90, 130))
-        ang = rng.uniform(0, 2 * np.pi, count)
-        top = float(rng.uniform(30.0, 40.0))
-        if ring:
-            # one speed: the sparks stay a circle as it grows
-            speed = np.full(count, top * 0.8, dtype=np.float32) \
-                * rng.uniform(0.94, 1.06, count)
-        else:
-            speed = np.sqrt(rng.uniform(0.0, 1.0, count)) * top
-        new = np.zeros((count, 4), dtype=np.float32)
-        new[:, 0] = x
-        new[:, 1] = y
-        new[:, 2] = np.cos(ang) * speed
-        new[:, 3] = np.sin(ang) * speed - 5.0
-        # sparks start white-hot and settle to the shell's colour as they fall
-        tint = np.tile(rgb, (count, 1)).astype(np.float32)
-        white = rng.uniform(0.0, 0.7, count)[:, None]
-        tint = tint + (255.0 - tint) * white
-        self._sparks = np.vstack([self._sparks, new])
-        self._spark_rgb = np.vstack([self._spark_rgb, tint])
-        self._spark_age = np.concatenate([self._spark_age, np.zeros(count, np.float32)])
-        self._spark_life = np.concatenate(
-            [self._spark_life, rng.uniform(1.2, 2.2, count).astype(np.float32)])
-        self._flash_at = now
-        self._flash_rgb = rgb.astype(np.float32)
-        self._flash_xy = (x, y)
-
-    def _paint_sparks(self, acc: np.ndarray, dt: float):
-        if not len(self._sparks):
-            return
-        n = self.size
-        sp = self._sparks
-        life = np.clip(1.0 - self._spark_age / self._spark_life, 0.0, 1.0)
-        # bright for most of a life, out quickly at the end, and a twinkle
-        glow = np.clip(life * 2.2, 0.0, 1.0) * (0.55 + 0.45 * life) \
-            * self._rng.uniform(0.6, 1.0, len(life)).astype(np.float32)
-        rgb = self._spark_rgb * glow[:, None]
-        # the spark, and a fainter one where it was a frame ago: a short trail
-        for back, k in ((0.0, 1.0), (1.0, 0.5), (2.0, 0.2)):
-            xs = np.rint(sp[:, 0] - sp[:, 2] * dt * back).astype(np.intp)
-            ys = np.rint(sp[:, 1] - sp[:, 3] * dt * back).astype(np.intp)
-            ok = (xs >= 0) & (xs < n) & (ys >= 0) & (ys < n)
-            np.add.at(acc, (ys[ok], xs[ok]), rgb[ok] * k)
-
-    def _paint_shells(self, acc: np.ndarray):
-        n = self.size
-        for sh in self._shells:
-            x, y = sh["x"], sh["y"]
-            for back, k in ((0.0, 1.0), (1.2, 0.45), (2.4, 0.18)):
-                yy = int(round(y + back))
-                xx = int(round(x))
-                if 0 <= xx < n and 0 <= yy < n:
-                    acc[yy, xx] += np.array((255, 240, 210), np.float32) * k
-
-    def _paint_glow(self, acc: np.ndarray, xy, radius: float, rgb: np.ndarray):
-        n = self.size
-        cx, cy = xy
-        x0, x1 = max(0, int(cx - radius) - 1), min(n, int(cx + radius) + 2)
-        y0, y1 = max(0, int(cy - radius) - 1), min(n, int(cy + radius) + 2)
-        if x1 <= x0 or y1 <= y0:
-            return
-        ys, xs = np.mgrid[y0:y1, x0:x1]
-        d = np.sqrt((xs - cx) ** 2 + (ys - cy) ** 2) / radius
-        k = np.clip(1.0 - d, 0.0, 1.0) ** 2
-        acc[y0:y1, x0:x1] += k[:, :, None] * rgb[None, None, :]
 
 
 class Crawl:

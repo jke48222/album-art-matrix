@@ -50,21 +50,6 @@ struct ClassicWallScreen: View {
                 MusicBar(accent: accent, litInk: Ink.ink)
                     .padding(.horizontal, 24).padding(.top, 8).padding(.bottom, 28)
 
-                if wall.state.mode == "timer", let left = wall.state.timerRemaining {
-                    HStack(spacing: 12) {
-                        Text(String(format: "%02d:%02d", left / 60, left % 60))
-                            .font(.machine(22)).monospacedDigit().foregroundStyle(Ink.ink)
-                            .contentTransition(.numericText(countsDown: true))
-                        Text("Remaining").font(.ui(14)).foregroundStyle(Ink.dim)
-                        Spacer()
-                        Button("Stop") { wall.send(["timer_min": 0.0]) }
-                            .buttonStyle(PressStyle(scale: 0.95))
-                            .font(.ui(15, .semibold)).foregroundStyle(Ink.signal)
-                            .frame(minWidth: 44, minHeight: 44)
-                    }
-                    .padding(.horizontal, 24).padding(.bottom, 20)
-                }
-
                 Rectangle().fill(Ink.hairline).frame(height: 0.5)
                     .padding(.horizontal, 24)
                 HStack {
@@ -309,22 +294,7 @@ struct ClassicWallScreen: View {
         case "ambient": DisplayPage(detail: .lamp, accent: accent, embedded: true)
         case "ticker": TickerWorkbench(accent: accent)
         case "video": VideoWorkbench(accent: accent)
-        case "clock", "timer":
-            VStack(alignment: .leading, spacing: 18) {
-                WallTimerRow(
-                    remaining: wall.state.mode == "timer" ? (wall.state.timerRemaining ?? 0) : nil,
-                    total: wall.state.timerTotal,
-                    accent: accent
-                ) { wall.send(["timer_min": $0]) }
-                if wall.state.mode != "timer" {
-                    PillRow(
-                        label: "clock",
-                        options: [("24 hour", true), ("12 hour", false)],
-                        selected: wall.state.clock24h,
-                        accent: accent
-                    ) { wall.send(["clock_24h": $0]) }
-                }
-            }
+        case "clock", "timer": TimeWorkbench(accent: accent, showsPreview: false)
 
         case "nine":
             VStack(spacing: 24) { DisplayPage(detail: .nine, accent: accent, embedded: true); DisplayPage(detail: .finishes, accent: accent, embedded: true) }

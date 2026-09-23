@@ -1,0 +1,51 @@
+{
+  "captured_at": "2026-09-23T11:15:45.871643+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "off",
+      "state_reads": 5,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-routine-page",
+        "sleep"
+      ],
+      "captured_at": "2026-09-23T11:15:45.701420+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

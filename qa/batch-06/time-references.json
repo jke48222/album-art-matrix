@@ -1,0 +1,73 @@
+{
+  "units": [
+    "R01",
+    "R02"
+  ],
+  "researched_at": "2026-09-23",
+  "task_intent": "Refine Tessera clock and everyday light routines with clear native controls and faithful wall previews.",
+  "references": [
+    {
+      "unit": "R01",
+      "source": "Mobbin \u00b7 TIDE",
+      "url": "https://mobbin.com/screens/6da072f3-2c5d-493e-96b4-05869d8f5e9d",
+      "image_inspected": true,
+      "applied": "Give time a calm, uncluttered visual field. Keep controls outside the actual wall artwork and preserve its oversized hour/minute hierarchy."
+    },
+    {
+      "unit": "R01",
+      "source": "Mobbin \u00b7 Apple Watch",
+      "url": "https://mobbin.com/screens/4f291f5c-28fd-4e1d-b116-9933b5e6615d",
+      "image_inspected": true,
+      "applied": "A watch-face sized composition can stay distinctive through oversized stacked numerals, with readable format examples below the artwork."
+    },
+    {
+      "unit": "R02",
+      "source": "Mobbin \u00b7 Tonal",
+      "url": "https://mobbin.com/screens/50541d0f-6dd5-4652-946c-0d3b655e616f",
+      "image_inspected": true,
+      "applied": "Keep an active countdown prominent and its single stop/cancel action visually separate from duration setup."
+    },
+    {
+      "unit": "R02",
+      "source": "Mobbin \u00b7 pushr",
+      "url": "https://mobbin.com/screens/1e4dd6e2-2e83-4fda-8069-51c74faf0cd9",
+      "image_inspected": true,
+      "applied": "Use a focused active state with generous numeric scale and an unmistakable end action; do not leave competing start controls visible during a timer."
+    },
+    {
+      "unit": "R02",
+      "source": "Mobbin \u00b7 Amazon Alexa",
+      "url": "https://mobbin.com/screens/18ebe725-18cf-4075-8e81-4534a95e12af",
+      "image_inspected": true,
+      "applied": "Use a native time wheel and an explicit save step for a device-side daily alarm. Keep the wall's timezone visible and retain draft changes until acknowledgement."
+    },
+    {
+      "unit": "R02",
+      "source": "Mobbin \u00b7 Life Reset",
+      "url": "https://mobbin.com/screens/1c4db405-f9f5-4f93-af23-0f81877c66ce",
+      "image_inspected": true,
+      "applied": "Make the alarm's enabled state readable beside its time. Keep the daily cadence explicit rather than adding unsupported weekday controls."
+    },
+    {
+      "units": [
+        "R01",
+        "R02"
+      ],
+      "source": "Apple HIG \u00b7 Pickers",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/pickers",
+      "applied": "Use direct format choices for the short 12/24-hour list and the native multipart time picker for alarm hour/minute editing."
+    },
+    {
+      "unit": "R02",
+      "source": "Apple HIG \u00b7 Feedback",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/feedback",
+      "applied": "Display send acknowledgement and retry errors inline in the current workspace; no second customization modal or disruptive success alert."
+    },
+    {
+      "unit": "R02",
+      "source": "Apple Support \u00b7 Set an alarm in Clock on iPhone",
+      "url": "https://support.apple.com/guide/iphone/set-an-alarm-iph2909d3a74/ios",
+      "applied": "Keep the alarm time and enabled state distinct from the wake-light routine. Clearly label Tessera's wall-based visual alarm."
+    }
+  ]
+}

@@ -46,7 +46,7 @@ struct IPodItem: Identifiable {
 }
 
 enum IPodPage: Equatable {
-    case root, speed, effect, colours, finish, timer, timing, clock
+    case root, speed, effect, colours, finish, timing
     var title: String {
         switch self {
         case .root: "Tessera"
@@ -54,9 +54,7 @@ enum IPodPage: Equatable {
         case .effect: "Lamp"
         case .colours: "Colours"
         case .finish: "Finish"
-        case .timer: "Timer"
         case .timing: "Timing"
-        case .clock: "Clock"
         }
     }
 }
@@ -84,6 +82,7 @@ struct IPodView: View {
     @State private var scrubVisible = false
     @State private var scrubHideTask: Task<Void, Never>?
     @State private var editingColour: ColourTarget?
+    @State private var showingTime = false
     @State private var beats = BeatBook()
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, and a system player read is an XPC call.
@@ -168,6 +167,7 @@ struct IPodView: View {
             guard beatOn, wall.state.mode == "cd", scenePhase == .active else { return }
             if case .locked(let reading) = beats.phase { wall.send(["rpm": reading.rpm]) }
         }
+        .sheet(isPresented: $showingTime) { TimePage(accent: accent).environment(wall) }
         .sheet(item: $editingColour) { target in
             ColourSheet(colour: colourBinding(target), title: target.title)
         }
@@ -397,7 +397,9 @@ struct IPodView: View {
             var out: [IPodItem] = [
                 IPodItem(id: "now", title: "Now Playing", kind: .action { pages = [] }),
                 mode("art", "Art"), mode("cd", "Spin"), mode("lyrics", "Lyrics"), mode("nine", "Nine"),
-                mode("ambient", "Lamp"), mode("clock", "Clock"), mode("off", "Off"),
+                mode("ambient", "Lamp"),
+                IPodItem(id: "time", title: "Time & alarms", value: s.mode == "clock" || s.mode == "timer" ? "on" : nil, kind: .action { showingTime = true }),
+                mode("off", "Off"),
             ]
             switch s.mode {
             case "cd":
@@ -409,9 +411,6 @@ struct IPodView: View {
                                     kind: .toggle(s.matchArt) { wall.send(["match_art": $0]) }))
             case "art":
                 out.append(IPodItem(id: "finish", title: "Finish", value: s.finish, kind: .submenu(.finish)))
-            case "clock", "timer":
-                out.append(IPodItem(id: "timer", title: "Timer", value: s.mode == "timer" ? "running" : nil, kind: .submenu(.timer)))
-                out.append(IPodItem(id: "clock24", title: "Clock", value: s.clock24h ? "24 hour" : "12 hour", kind: .submenu(.clock)))
             case "lyrics":
                 out.append(IPodItem(id: "timing", title: "Timing", value: wall.state.lyricOffset == 0.2 ? "on time" : wall.state.lyricOffset < 0.2 ? "later" : "sooner", kind: .submenu(.timing)))
             default: break
@@ -452,20 +451,10 @@ struct IPodView: View {
                 IPodItem(id: f.0, title: f.1, value: s.finish == f.0 ? "on" : nil,
                          kind: .pick(s.finish == f.0) { wall.send(["finish": f.0]) })
             }
-        case .timer:
-            let mins: [Double] = [5, 10, 15, 30, 60]
-            return mins.map { m in
-                IPodItem(id: "t\(Int(m))", title: "\(Int(m)) minutes", kind: .pick(false) { wall.send(["timer_min": m]) })
-            } + [IPodItem(id: "tstop", title: "Stop", kind: .pick(false) { wall.send(["timer_min": 0.0]) })]
         case .timing:
             return [("Later", -0.4), ("On time", 0.2), ("Sooner", 0.8)].map { o in
                 IPodItem(id: o.0, title: o.0, value: wall.state.lyricOffset == o.1 ? "on" : nil,
                          kind: .pick(wall.state.lyricOffset == o.1) { lyricsNudge = o.1; wall.send(["lyric_offset": o.1]) })
-            }
-        case .clock:
-            return [("24 hour", true), ("12 hour", false)].map { o in
-                IPodItem(id: o.0, title: o.0, value: s.clock24h == o.1 ? "on" : nil,
-                         kind: .pick(s.clock24h == o.1) { wall.send(["clock_24h": o.1]) })
             }
         }
     }

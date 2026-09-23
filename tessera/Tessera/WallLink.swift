@@ -56,6 +56,56 @@ struct WallState: Equatable {
     var weatherUnits: String = "f"
     var timerRemaining: Int? = nil
     var timerTotal: Int? = nil
+    /// Routine clocks are anchored to a receipt, never to the phone's time zone.
+    var wallTime: Date? = nil
+    var wallTimeZone: String? = nil
+    var wallUTCOffset: Int? = nil
+    var routineReceivedAt: Date = .distantPast
+    var timerEndsAt: Date? = nil
+    var timerKind: String? = nil
+    var timerStatus: String = "idle"
+    var timerRinging = false
+    var alarmNext: Date? = nil
+    var sunPhase: String? = nil
+    var sunFactor: Double? = nil
+    var sunrise: Date? = nil
+    var sunset: Date? = nil
+    var effectiveBrightness: Double? = nil
+    var sleepStatus: String = "idle"
+    var sleepTotal: Int? = nil
+    var sleepEndsAt: Date? = nil
+    var wakeActive = false
+    var wakeProgress: Double? = nil
+    var wakeNextStart: Date? = nil
+    var wakeNextEnd: Date? = nil
+
+    var routineTimeZone: TimeZone? {
+        if let name = wallTimeZone, let zone = TimeZone(identifier: name) { return zone }
+        return wallUTCOffset.flatMap(TimeZone.init(secondsFromGMT:))
+    }
+
+    func wallClock(at date: Date = Date()) -> Date? {
+        wallTime.map { $0.addingTimeInterval(max(0, date.timeIntervalSince(routineReceivedAt))) }
+    }
+
+    func timerSeconds(at date: Date = Date()) -> Int? {
+        if timerStatus == "ringing" || timerRinging { return 0 }
+        return routineSeconds(remaining: timerRemaining, end: timerEndsAt, at: date)
+    }
+
+    func sleepSeconds(at date: Date = Date()) -> Int? {
+        guard sleepStatus == "fading" || sleepRemaining != nil else { return nil }
+        return routineSeconds(remaining: sleepRemaining, end: sleepEndsAt, at: date)
+    }
+
+    private func routineSeconds(remaining: Int?, end: Date?, at date: Date) -> Int? {
+        if let end, let now = wallClock(at: date) {
+            return Int(min(86400, max(0, ceil(end.timeIntervalSince(now)))))
+        }
+        guard let remaining else { return nil }
+        let elapsed = routineReceivedAt == .distantPast ? 0 : max(0, date.timeIntervalSince(routineReceivedAt))
+        return Int(min(86400, max(0, ceil(Double(remaining) - elapsed))))
+    }
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
@@ -140,6 +190,38 @@ struct WallState: Equatable {
         weatherUnits = json["weather_units"] as? String ?? "f"
         timerRemaining = json["timer_remaining_s"] as? Int
         timerTotal = json["timer_total_s"] as? Int
+        routineReceivedAt = receivedAt
+        func number(_ key: String) -> Double? {
+            guard let value = json[key] as? Double, value.isFinite else { return nil }
+            return value
+        }
+        func stamp(_ key: String) -> Date? {
+            guard let value = number(key), value > 0, value < 32_503_680_000 else { return nil }
+            return Date(timeIntervalSince1970: value)
+        }
+        func fraction(_ key: String) -> Double? {
+            number(key).map { min(1, max(0, $0)) }
+        }
+        wallTime = stamp("wall_time")
+        wallTimeZone = json["wall_timezone"] as? String
+        if let offset = json["wall_utc_offset_s"] as? Int, (-18 * 3600...18 * 3600).contains(offset) { wallUTCOffset = offset }
+        timerEndsAt = stamp("timer_ends_at")
+        timerKind = json["timer_kind"] as? String
+        timerStatus = json["timer_state"] as? String ?? (timerRemaining == nil ? "idle" : (timerRemaining == 0 ? "ringing" : "counting"))
+        timerRinging = json["timer_ringing"] as? Bool ?? (timerStatus == "ringing")
+        alarmNext = stamp("alarm_next_at")
+        sunPhase = json["sun_phase"] as? String
+        sunFactor = fraction("sun_factor")
+        sunrise = stamp("sunrise_at")
+        sunset = stamp("sunset_at")
+        effectiveBrightness = fraction("effective_brightness")
+        sleepStatus = json["sleep_state"] as? String ?? (json["sleep_remaining_s"] == nil ? "idle" : "fading")
+        sleepTotal = json["sleep_total_s"] as? Int
+        sleepEndsAt = stamp("sleep_ends_at")
+        wakeActive = json["wake_active"] as? Bool ?? false
+        wakeProgress = fraction("wake_progress")
+        wakeNextStart = stamp("wake_next_at")
+        wakeNextEnd = stamp("wake_next_end_at")
         let music = json["now_playing"] as? [String: Any]
         if let now = (music?.isEmpty == false ? music : json["now_showing"] as? [String: Any]) {
             title = now["title"] as? String
@@ -174,6 +256,17 @@ struct WallState: Equatable {
         if let w = json["wall"] as? [String: Any], let px = w["width"] as? Int {
             Panel.learn(px)
         }
+    }
+}
+
+/// An HTTP success can still carry rejected fields from an older wall.
+enum WallAcknowledgement {
+    static func accepted(_ data: Data) -> Bool {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return data.isEmpty }
+        if json["error"] != nil { return false }
+        if let rejected = json["rejected"] as? [String: Any], !rejected.isEmpty { return false }
+        if let rejected = json["rejected"] as? [Any], !rejected.isEmpty { return false }
+        return json["rejected"] == nil || (json["rejected"] as? [String: Any])?.isEmpty == true || (json["rejected"] as? [Any])?.isEmpty == true
     }
 }
 
@@ -504,6 +597,46 @@ final class WallSession {
 
     func poll() async { await pollState() }
 
+    /// Time-sensitive commands must be acknowledged now. They never enter the
+    /// offline outbox, where a bedtime action could otherwise run the next day.
+    @ObservationIgnored private var routineWriteInFlight = false
+
+    func updateRoutine(_ patch: [String: Any]) async -> Bool {
+        guard link.isLive, !routineWriteInFlight, !patch.isEmpty else { return false }
+        let requestedHost = host
+        routineWriteInFlight = true
+        defer { routineWriteInFlight = false }
+        let accepted = await postJSON("/state", patch)
+        guard requestedHost == host else { return false }
+        guard accepted else { await pollState(); return false }
+        for key in patch.keys { pending.removeValue(forKey: key) }
+        await pollState()
+        guard requestedHost == host else { return false }
+        await pullFrame()
+        return true
+    }
+
+    func routinePreview(face: String, twentyFour: Bool? = nil,
+                        remaining: Double? = nil, total: Double? = nil) async -> Data? {
+        guard link.isLive, let endpoint = url("/routines/preview") else { return nil }
+        let requestedHost = host
+        var payload: [String: Any] = ["face": face]
+        if let twentyFour { payload["twenty_four"] = twentyFour }
+        if let remaining { payload["remaining_s"] = remaining }
+        if let total { payload["total_s"] = total }
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return nil }
+        var request = URLRequest(url: endpoint)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body
+        guard let (data, response) = try? await http.data(for: request), requestedHost == host,
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let encoded = json["px"] as? String, let pixels = Data(base64Encoded: encoded),
+              let side = json["side"] as? Int, Panel.square(pixels.count) == side else { return nil }
+        return pixels
+    }
+
     func pollState() async {
         guard let stateURL = url("/state") else { return }
         let requestedHost = host
@@ -724,14 +857,15 @@ final class WallSession {
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
-        guard let (_, resp) = try? await http.data(for: req),
+        guard let (data, resp) = try? await http.data(for: req),
               (resp as? HTTPURLResponse)?.statusCode == 200 else { return false }
-        return true
+        return WallAcknowledgement.accepted(data)
     }
 
     private func pullFrame() async {
         guard let frameURL = url("/frame.raw") else { return }
-        if let (data, resp) = try? await http.data(from: frameURL),
+        let requestedHost = host
+        if let (data, resp) = try? await http.data(from: frameURL), requestedHost == host,
            (resp as? HTTPURLResponse)?.statusCode == 200,
            Panel.square(data.count) != nil {
             // Only publish when the bytes actually changed. Two identical

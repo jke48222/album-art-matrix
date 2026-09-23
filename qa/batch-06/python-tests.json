@@ -1,0 +1,9 @@
+{
+  "broad_suite_passed": 234,
+  "final_routine_suite_passed": 78,
+  "additional_final_regressions": 12,
+  "unique_checks_passed": 246,
+  "failed": 0,
+  "broad_summary": "234 passed in 48.42s",
+  "routine_summary": "78 passed in 5.25s"
+}

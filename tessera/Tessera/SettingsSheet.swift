@@ -24,6 +24,14 @@ struct SettingsSheet: View {
     @State private var showCalibrate = false
     @State private var vitals: Vitals? = nil
     @State private var cardDismissed = false
+    #if DEBUG
+    @State private var qaRoutineOpen = false
+    private var qaRoutine: String? {
+        let args = CommandLine.arguments
+        guard let i = args.firstIndex(of: "-routine-page"), args.indices.contains(i + 1) else { return nil }
+        return args[i + 1]
+    }
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -87,6 +95,17 @@ struct SettingsSheet: View {
                 .padding(.bottom, 48)
             }
             .scrollIndicators(.hidden)
+            #if DEBUG
+            .navigationDestination(isPresented: $qaRoutineOpen) {
+                switch qaRoutine {
+                case "sun": SunPage(accent: accent)
+                case "sleep": SleepPage(accent: accent)
+                case "wake": WakePage(accent: accent)
+                default: EmptyView()
+                }
+            }
+            .onAppear { qaRoutineOpen = qaRoutine != nil }
+            #endif
             .background {
                 ZStack {
                     Ink.ground
@@ -832,139 +851,6 @@ struct ChoicePage<T: Hashable>: View {
 
 // MARK: - The pages
 
-struct SunPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @State private var where0 = OneShotSpot()
-
-    var body: some View {
-        SetupPage("Follow the sun",
-                  blurb: "The wall dims after sunset and comes back at sunrise, over forty minutes. It works out sunset from your location, read once and kept on the wall.") {
-            SetupGroup("", note: nil) {
-                ToggleRow(title: "Follow the sun", subtitle: nil,
-                          isOn: Binding(get: { wall.state.sun == "on" },
-                                        set: { wall.send(["sun": $0 ? "on" : "off"]); Taps.detent(intensity: 0.4) }),
-                          accent: accent)
-            }
-            .padding(.top, -12)
-            if wall.state.sun == "on" {
-                SetupGroup("After dark", note: "How much light stays on after dark.") {
-                    ChoiceRow(title: "A glow", subtitle: "One tenth.", value: 0.10,
-                              selected: wall.state.sunNight, accent: accent) { wall.send(["sun_night": $0]) }
-                    Rule()
-                    ChoiceRow(title: "Low", subtitle: "A quarter.", value: 0.25,
-                              selected: wall.state.sunNight, accent: accent) { wall.send(["sun_night": $0]) }
-                    Rule()
-                    ChoiceRow(title: "Half", subtitle: nil, value: 0.50,
-                              selected: wall.state.sunNight, accent: accent) { wall.send(["sun_night": $0]) }
-                }
-                SetupGroup("Where you are", note: nil) {
-                    SetupRow(title: abs(wall.state.lat) <= 90 ? "Location set" : "No location yet",
-                             subtitle: "Read once, for sunset.") {
-                        if abs(wall.state.lat) <= 90 && !where0.busy {
-                            Done(text: "Set")
-                        } else {
-                            ActionPill(title: where0.busy ? "Finding" : "Use this spot") {
-                                where0.fetch { lat, lon in wall.send(["lat": lat, "lon": lon]) }
-                            }
-                            .disabled(where0.busy)
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct SleepPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @State private var minutes: Double = 30
-
-    var body: some View {
-        SetupPage("Sleep",
-                  blurb: "Fade the wall down over a set time, then turn it off.") {
-            VStack(alignment: .leading, spacing: 18) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("\(Int(minutes))")
-                        .font(.display(56))
-                        .foregroundStyle(accent)
-                        .contentTransition(.numericText())
-                    Text("minutes").font(.ui(16)).foregroundStyle(Ink.dim)
-                }
-                Slider(value: $minutes, in: 5...120, step: 5).tint(accent)
-                PrimaryButton(title: "Start the fade", accent: accent) {
-                    wall.send(["sleep_fade_min": minutes])
-                    Taps.commit()
-                }
-                if let left = wall.state.sleepRemaining, left > 0 {
-                    HStack {
-                        Text("Fading, \(left / 60) min \(left % 60) s left")
-                            .font(.ui(13)).foregroundStyle(Ink.moss)
-                        Spacer()
-                        Button("Cancel") { wall.send(["sleep_fade_min": 0.0]) }
-                            .buttonStyle(PressStyle(scale: 0.97))
-                            .font(.ui(13, .medium))
-                            .foregroundStyle(Ink.dim)
-                    }
-                }
-            }
-            .padding(.top, 6)
-        }
-    }
-}
-
-struct WakePage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @State private var at: Date = Date()
-
-    var body: some View {
-        SetupPage("Wake up",
-                  blurb: "The wall fades up from black at the set time. It only lifts a wall that is off.") {
-            SetupGroup("", note: nil) {
-                ToggleRow(title: "Fade up in the morning", subtitle: nil,
-                          isOn: Binding(get: { wall.state.wakeEnabled },
-                                        set: { wall.send(["wake_enabled": $0]); Taps.detent(intensity: 0.4) }),
-                          accent: accent)
-                if wall.state.wakeEnabled {
-                    Rule()
-                    HStack {
-                        Text("At").font(.ui(16)).foregroundStyle(Ink.ink)
-                        Spacer()
-                        DatePicker("", selection: $at, displayedComponents: .hourAndMinute)
-                            .labelsHidden()
-                            .tint(accent)
-                            .onChange(of: at) { _, d in
-                                let c = Calendar.current.dateComponents([.hour, .minute], from: d)
-                                wall.send(["wake_time": String(format: "%02d:%02d", c.hour ?? 7, c.minute ?? 0)])
-                            }
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                    .frame(minHeight: 56)
-                }
-            }
-            .padding(.top, -12)
-            if wall.state.wakeEnabled {
-                SetupGroup("Over", note: "How long the fade takes.") {
-                    ForEach([10.0, 20.0, 30.0, 45.0], id: \.self) { m in
-                        if m != 10 { Rule() }
-                        ChoiceRow(title: "\(Int(m)) minutes", subtitle: nil, value: m,
-                                  selected: wall.state.wakeFade, accent: accent) { wall.send(["wake_fade_min": $0]) }
-                    }
-                }
-            }
-        }
-        .onAppear {
-            let bits = wall.state.wakeTime.split(separator: ":")
-            if bits.count == 2, let h = Int(bits[0]), let m = Int(bits[1]) {
-                at = Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? at
-            }
-        }
-    }
-}
-
 struct ColourPage: View {
     @Environment(WallSession.self) private var wall
     let accent: Color
@@ -1329,30 +1215,56 @@ import CoreLocation
 @Observable
 final class OneShotSpot: NSObject, CLLocationManagerDelegate {
     private(set) var busy = false
-    @ObservationIgnored private var manager: CLLocationManager? = nil
-    @ObservationIgnored private var handler: ((Double, Double) -> Void)? = nil
+    private(set) var problem: String?
+    private(set) var permissionDenied = false
+    @ObservationIgnored private var manager: CLLocationManager?
+    @ObservationIgnored private var handler: ((Double, Double) -> Void)?
+    @ObservationIgnored private var timeout: Task<Void, Never>?
+    @ObservationIgnored private var requested = false
 
     func fetch(_ done: @escaping (Double, Double) -> Void) {
-        handler = done
-        busy = true
-        let m = CLLocationManager()
-        m.delegate = self
-        m.desiredAccuracy = kCLLocationAccuracyKilometer   // a sundial, not a courier
-        manager = m
-        if m.authorizationStatus == .notDetermined {
-            m.requestWhenInUseAuthorization()
-        } else {
-            m.requestLocation()
+        guard !busy else { return }
+        problem = nil; permissionDenied = false; requested = false
+        handler = done; busy = true
+        let location = CLLocationManager()
+        location.delegate = self
+        location.desiredAccuracy = kCLLocationAccuracyKilometer
+        manager = location
+        switch location.authorizationStatus {
+        case .notDetermined: location.requestWhenInUseAuthorization()
+        case .authorizedAlways, .authorizedWhenInUse: requestLocation()
+        case .denied, .restricted:
+            permissionDenied = true
+            finish(nil, error: "Location access is off. Allow Tessera to use your location in Settings, then try again.")
+        @unknown default: finish(nil, error: "Location is unavailable on this phone.")
+        }
+    }
+
+    func cancel() {
+        timeout?.cancel(); timeout = nil
+        manager?.stopUpdatingLocation(); manager?.delegate = nil
+        manager = nil; handler = nil; busy = false; requested = false
+    }
+
+    private func requestLocation() {
+        guard busy, !requested else { return }
+        requested = true
+        manager?.requestLocation()
+        timeout = Task { @MainActor [weak self] in
+            do { try await Task.sleep(for: .seconds(20)) } catch { return }
+            self?.finish(nil, error: "Your location took too long to arrive. Move near a window and try again.")
         }
     }
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         let status = manager.authorizationStatus
         Task { @MainActor in
-            guard self.busy else { return }
+            guard self.busy, self.manager === manager else { return }
             switch status {
-            case .authorizedWhenInUse, .authorizedAlways: self.manager?.requestLocation()
-            case .denied, .restricted: self.finish(nil)
+            case .authorizedWhenInUse, .authorizedAlways: self.requestLocation()
+            case .denied, .restricted:
+                self.permissionDenied = true
+                self.finish(nil, error: "Location access is off. Allow Tessera to use your location in Settings, then try again.")
             default: break
             }
         }
@@ -1360,20 +1272,29 @@ final class OneShotSpot: NSObject, CLLocationManagerDelegate {
 
     nonisolated func locationManager(_ manager: CLLocationManager,
                                      didUpdateLocations locations: [CLLocation]) {
-        let c = locations.first?.coordinate
-        Task { @MainActor in self.finish(c.map { ($0.latitude, $0.longitude) }) }
+        let spot = locations.last { location in
+            location.horizontalAccuracy >= 0 && abs(location.timestamp.timeIntervalSinceNow) < 120
+                && CLLocationCoordinate2DIsValid(location.coordinate)
+        }?.coordinate
+        Task { @MainActor in
+            guard self.busy, self.manager === manager else { return }
+            self.finish(spot.map { ($0.latitude, $0.longitude) }, error: spot == nil ? "The phone couldn’t find a recent location. Try again." : nil)
+        }
     }
 
     nonisolated func locationManager(_ manager: CLLocationManager,
                                      didFailWithError error: Error) {
-        Task { @MainActor in self.finish(nil) }
+        Task { @MainActor in
+            guard self.busy, self.manager === manager else { return }
+            self.finish(nil, error: "The phone couldn’t find your location. Check Location Services and try again.")
+        }
     }
 
-    private func finish(_ spot: (Double, Double)?) {
-        busy = false
-        if let spot { handler?(spot.0, spot.1); Taps.commit() }
-        handler = nil
-        manager = nil
+    private func finish(_ spot: (Double, Double)?, error: String? = nil) {
+        let callback = handler
+        cancel()
+        problem = error
+        if let spot { callback?(spot.0, spot.1) }
     }
 }
 

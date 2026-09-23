@@ -1,0 +1,190 @@
+{
+  "data": {
+    "local_time": "2026-09-23 07:30:24",
+    "remaining_s": 462,
+    "total_s": 600,
+    "ringing_remaining_s": -1.0,
+    "color": "#e8b04b",
+    "accent": "#668fc1",
+    "sizes": [
+      64,
+      192,
+      512
+    ]
+  },
+  "native_frames": [
+    {
+      "face": "clock-24",
+      "side": 64,
+      "version": "before",
+      "file": "clock-24-64-before.png",
+      "rgb_sha256": "48ae5289d2270b6956349a2ea8dc7e2d4496427ddd3c638e9c562dc088ad4e0b"
+    },
+    {
+      "face": "clock-24",
+      "side": 64,
+      "version": "after",
+      "file": "clock-24-64-after.png",
+      "rgb_sha256": "5878ac0af0232292d522d9a8a1d21c16eca8497fb9c5d02e46ea7e0a9918df1c"
+    },
+    {
+      "face": "clock-24",
+      "side": 192,
+      "version": "before",
+      "file": "clock-24-192-before.png",
+      "rgb_sha256": "19312dbcc820285b50c5a8642a905d9f8afa0e19247109bdebf7044f2e1446c6"
+    },
+    {
+      "face": "clock-24",
+      "side": 192,
+      "version": "after",
+      "file": "clock-24-192-after.png",
+      "rgb_sha256": "109b8f9e83567a5bc8c5e2f6a2b55c852bc3966f8f25d22965fbe8ffe8e74181"
+    },
+    {
+      "face": "clock-24",
+      "side": 512,
+      "version": "before",
+      "file": "clock-24-512-before.png",
+      "rgb_sha256": "a0be101b4af585bc0b95318bd26365561fa0ad1fe32db83454fdce3144fd58fa"
+    },
+    {
+      "face": "clock-24",
+      "side": 512,
+      "version": "after",
+      "file": "clock-24-512-after.png",
+      "rgb_sha256": "152c7b415c4fd05103b547abf82b9fd2429f8219d94412957f5403b579615f1f"
+    },
+    {
+      "face": "clock-12",
+      "side": 64,
+      "version": "before",
+      "file": "clock-12-64-before.png",
+      "rgb_sha256": "3cd4c867f94de07d62ca960a484119c73f3fd4777c3941509a25b3a989797c2e"
+    },
+    {
+      "face": "clock-12",
+      "side": 64,
+      "version": "after",
+      "file": "clock-12-64-after.png",
+      "rgb_sha256": "5cb8b5d0097de47402f012ecf3ae6e0ae5bcb8fa7879177154fe4b27f9701601"
+    },
+    {
+      "face": "clock-12",
+      "side": 192,
+      "version": "before",
+      "file": "clock-12-192-before.png",
+      "rgb_sha256": "bdec1e11c007fcb191b0237ee600ee6b68913437ab39d9e662518e0c8828e49e"
+    },
+    {
+      "face": "clock-12",
+      "side": 192,
+      "version": "after",
+      "file": "clock-12-192-after.png",
+      "rgb_sha256": "894d40c012940922ba302fbf9e4d4f121caa0c7edd4e9d0cf3c71c3511ac2bd7"
+    },
+    {
+      "face": "clock-12",
+      "side": 512,
+      "version": "before",
+      "file": "clock-12-512-before.png",
+      "rgb_sha256": "3bcdea2b99bcfadaf5c45722a84b79f4eb730794c3a122ee75386ae5dcb99758"
+    },
+    {
+      "face": "clock-12",
+      "side": 512,
+      "version": "after",
+      "file": "clock-12-512-after.png",
+      "rgb_sha256": "10d9a21e90f42e2740460cdc543af23a748cac06eee140976992e4d300dcc8da"
+    },
+    {
+      "face": "timer",
+      "side": 64,
+      "version": "before",
+      "file": "timer-64-before.png",
+      "rgb_sha256": "b2b7b041ee3e21d3a23c9bd9b6ecd6fb479e95f8c39cc91a453afe9a7a8b3286"
+    },
+    {
+      "face": "timer",
+      "side": 64,
+      "version": "after",
+      "file": "timer-64-after.png",
+      "rgb_sha256": "24f70c0c53d1aefdf48ac538776ced3819f786223d8e17133a189ba1cb1ee58a"
+    },
+    {
+      "face": "timer",
+      "side": 192,
+      "version": "before",
+      "file": "timer-192-before.png",
+      "rgb_sha256": "31e13bdfd2f05489847acb866c317d6191512fc3f23356b4c964bad3f076067e"
+    },
+    {
+      "face": "timer",
+      "side": 192,
+      "version": "after",
+      "file": "timer-192-after.png",
+      "rgb_sha256": "c804aa96475c69b4bdf0b8b7b1c550d09e019e78b4b24f85d0f99a7795a28f56"
+    },
+    {
+      "face": "timer",
+      "side": 512,
+      "version": "before",
+      "file": "timer-512-before.png",
+      "rgb_sha256": "8515746f0237813dfc43cab37fab58c7cedba1d4f7da59d4da89aff6ba93b16a"
+    },
+    {
+      "face": "timer",
+      "side": 512,
+      "version": "after",
+      "file": "timer-512-after.png",
+      "rgb_sha256": "3515f21e21602f59ac7a1625b65b25a4ad5e3660c8a72afd5c7be8397cf0454b"
+    },
+    {
+      "face": "ringing",
+      "side": 64,
+      "version": "before",
+      "file": "ringing-64-before.png",
+      "rgb_sha256": "9e8944e79a5144d6dfc45548fc42db29f8fc697068375afd88f28aa9fa532853"
+    },
+    {
+      "face": "ringing",
+      "side": 64,
+      "version": "after",
+      "file": "ringing-64-after.png",
+      "rgb_sha256": "894f3b7ad179aef57ca5fabe734087f975dd6128ec89ea5b9f8f022ac32f10e8"
+    },
+    {
+      "face": "ringing",
+      "side": 192,
+      "version": "before",
+      "file": "ringing-192-before.png",
+      "rgb_sha256": "45a0d916d410ca34953145b88cc6ec75dee8809b12f547a21223134c76c383b7"
+    },
+    {
+      "face": "ringing",
+      "side": 192,
+      "version": "after",
+      "file": "ringing-192-after.png",
+      "rgb_sha256": "71c7116238ad380ffe3b8b1d640c46ab30c4c8dd04c0346c8d930dcea3bc9845"
+    },
+    {
+      "face": "ringing",
+      "side": 512,
+      "version": "before",
+      "file": "ringing-512-before.png",
+      "rgb_sha256": "43f5cbd883fcc3e3a52a5e96d71e13c59c4ecaad0952d6186a9b297fd03c669c"
+    },
+    {
+      "face": "ringing",
+      "side": 512,
+      "version": "after",
+      "file": "ringing-512-after.png",
+      "rgb_sha256": "7a3b74b2b9705bd1535acc2d3f92c3858b2dc5f66386754a0b6759054b22e619"
+    }
+  ],
+  "source_sha256": {
+    "before": "918e2e29ff2185361fb446fcf857a812392e46b555d63bf2177e5313e8964f3e",
+    "after": "dd7c9d975fb91e05f9e4aa80265d55345b1df5a95cd8dfbc9875996ce7bd2b0c"
+  },
+  "note": "Native PNGs are actual production RGB. Comparison PNGs enlarge using nearest-neighbour only; physical LED color requires the panel."
+}

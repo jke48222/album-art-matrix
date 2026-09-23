@@ -1,0 +1,38 @@
+{
+  "files": [
+    {
+      "path": "brain/art/text_modes.py",
+      "before_sha256": "918e2e29ff2185361fb446fcf857a812392e46b555d63bf2177e5313e8964f3e",
+      "after_sha256": "dd7c9d975fb91e05f9e4aa80265d55345b1df5a95cd8dfbc9875996ce7bd2b0c"
+    },
+    {
+      "path": "brain/control.py",
+      "before_sha256": "2fd23317a9e445e872af888c28893283d715d4eb4da2434aa671a8a527fe7efd",
+      "after_sha256": "bc82868bc35b15fc4817f645fca3dc633ca2bdac615f069f472c21fe5c9bd0b5"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "2f67d8ea597cbbd2c5439253d1fd423bc1d61fc09ab0c5558c11a3de8c11ce1e",
+      "after_sha256": "047fb3611e3371fb2162ddb05dc8684b9a0adc0cc376b2cb7ec83cd338c7a24e"
+    },
+    {
+      "path": "brain/sun.py",
+      "before_sha256": "4797c6d344ede71d39437e892255da75a112f31c870ddfe59714866a3569f5f4",
+      "after_sha256": "f93b55e7748dc198a7ab6a0e922e60b685facbcf9a2d307aa5a03b26f19bf7cf"
+    },
+    {
+      "path": "brain/routines.py",
+      "before_sha256": null,
+      "after_sha256": "87d856cd9a0ab9214f5ddd4c12cc5ca7d42c8a582e9871455aa7c21d15b7d70c"
+    }
+  ],
+  "managed_services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": 3877100,
+  "current_pid": 533304,
+  "mode_before": "lyrics",
+  "mode_after": "lyrics",
+  "wall_timezone": "America/New_York"
+}

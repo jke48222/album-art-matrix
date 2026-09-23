@@ -49,7 +49,6 @@ from .art.pipeline import apply_finish, dominant_colors, prepare, white_balance
 from .art.text_modes import Clock, Countdown, Crawl, Ticker
 from .control import ControlState, serve as serve_control
 from .nowplaying import SourceChain
-from .sun import sun_factor
 from .nowplaying.ears import EarsSource
 from .nowplaying.knock import KnockEar
 from .nowplaying.teach import Library, Teacher
@@ -513,9 +512,7 @@ def main():
     lyric_book = LyricBook()
     ctrl.lyric_book = lyric_book
     lyric_canvas, lyric_key = None, None
-    woke_on = None                   # date the wake fade last fired
-    rang_on = None                   # date the alarm last rang
-    sun_f, sun_at = 1.0, 0.0         # evening factor, refreshed each poll
+    routine_eff = None
     away_forced = None               # mode we left when the wall went away
     clock, clock_key = None, None
     clip_i, clip_next, clip_id = 0, 0.0, None
@@ -691,17 +688,6 @@ def main():
         else:
             away_forced = None
 
-        # ---- evenings ---------------------------------------------------
-        # Recomputed once a minute at most: the sun does not hurry.
-        s_out = ctrl.get()
-        if s_out["sun"] == "on" and abs(s_out["lat"]) <= 90:
-            if time.monotonic() - sun_at > 60:
-                sun_at = time.monotonic()
-                sun_f = sun_factor(s_out["lat"], s_out["lon"], s_out["sun_night"])
-                ctrl.dirty.set()     # a static sleeve must re-show dimmer
-        else:
-            sun_f = 1.0
-
         if now is not None and now.progress_ms is not None:
             # stamped with the poll's own moment, not this pass's: the loop
             # comes round more often than the poller answers
@@ -782,18 +768,17 @@ def main():
             # a pending replay bails out of the render loop immediately
             while time.monotonic() < poll_end and ctrl.replay is None \
                     and not ctrl.news.is_set():
+                routine = ctrl.tick_routines()
                 s = ctrl.get()
-                sl = ctrl.sleep      # snapshot: the API thread can null this
-                fade = 1.0                       # sleep fade scales brightness
-                if sl is not None:
-                    el_min = (time.monotonic() - sl["t0"]) / 60.0
-                    if el_min >= sl["minutes"]:
-                        ctrl.sleep = None
-                        sl = None
-                        ctrl.apply({"mode": "off"})
-                        s = ctrl.get()
-                    else:
-                        fade = max(0.0, min(1.0, 1.0 - el_min / sl["minutes"]))
+                sl = ctrl.sleep
+                fade = routine["sleep_factor"]
+                sun_f = routine["sun_factor"]
+                waking = routine["wake_active"]
+                current_eff = (round(fade * sun_f, 5), round(routine["wake_factor"], 5))
+                if current_eff != routine_eff:
+                    need_show = True
+                    frame_shown = None
+                    routine_eff = current_eff
                 # Calibration multipliers ride on top of the config gains;
                 # identity until a camera has measured the wall. The colour
                 # part is settled first and kept under 1.0 by scaling all
@@ -813,6 +798,10 @@ def main():
                 if over > 1.0:
                     colour = tuple(c / over for c in colour)
                 eff = tuple(c * s["brightness"] * fade * sun_f for c in colour)
+                if waking:
+                    k = routine["wake_factor"]
+                    eff = (eff[0] * k, eff[1] * k * (0.55 + 0.45 * k),
+                           eff[2] * k * (0.30 + 0.70 * k))
                 mode = s["mode"]
                 if mode != "ticker":
                     # A completed once-only message must start again when the
@@ -833,59 +822,12 @@ def main():
                         continue
                     need_show = True
 
-                # ---- waking up ---------------------------------------------
-                # The mirror of the sleep fade: at the set time the wall comes
-                # up from black over the fade, warm first, the way a sky does.
-                # It only lifts a wall that is off; a wall already showing
-                # something needs no sunrise.
-                if s["wake_enabled"]:
-                    lt = time.localtime()
-                    try:
-                        wh, wm = int(s["wake_time"][:2]), int(s["wake_time"][3:])
-                    except ValueError:
-                        wh, wm = 7, 0
-                    into = (lt.tm_hour * 60 + lt.tm_min) - (wh * 60 + wm) \
-                        + lt.tm_sec / 60.0
-                    span = max(1.0, s["wake_fade_min"])
-                    today = (lt.tm_year, lt.tm_yday)
-                    if 0 <= into < span:
-                        if woke_on != today and mode == "off":
-                            print(f"[main] waking the wall over {span:.0f} min")
-                            ctrl.apply({"mode": "art"})
-                            s = ctrl.get()
-                            mode = "art"
-                            woke_on = today
-                        if woke_on == today:
-                            k = max(0.02, min(1.0, into / span))
-                            # red leads, blue arrives last: warm to neutral
-                            eff = (eff[0] * k,
-                                   eff[1] * k * (0.55 + 0.45 * k),
-                                   eff[2] * k * (0.30 + 0.70 * k))
-                            need_show = True
-
-                # ---- the alarm ---------------------------------------------
-                # At the set minute, once a day, the wall rings: the timer's
-                # own ending, 00:00 and the fireworks, then back to what it
-                # was doing. Stop on the phone ends it like any timer.
-                if s["alarm_enabled"] and ctrl.timer is None:
-                    lt = time.localtime()
-                    try:
-                        ah, am = int(s["alarm_time"][:2]), int(s["alarm_time"][3:])
-                    except ValueError:
-                        ah, am = 7, 0
-                    today = (lt.tm_year, lt.tm_yday)
-                    if lt.tm_hour == ah and lt.tm_min == am and rang_on != today:
-                        rang_on = today
-                        print(f"[main] alarm: {s['alarm_time']}")
-                        ctrl.ring()
-                        continue
-
                 # A minute of silence, and only for the modes that are about a
                 # track. Choosing a lamp or a clock is a decision the music
                 # stopping does not get to overrule.
                 idle_now = None
                 if quiet_since is not None and mode in ("art", "cd") \
-                        and time.monotonic() - quiet_since > 60:
+                        and time.monotonic() - quiet_since > 60 and not waking:
                     idle = s.get("idle", "black")
                     if idle == "black":
                         mode, idle_now = "off", "black"
@@ -915,7 +857,7 @@ def main():
 
                 if mode == "frame" and ctrl.frame_override is not None:
                     if frame_shown != (id(ctrl.frame_override), s["finish"]) \
-                            or sl is not None:
+                            or sl is not None or waking:
                         f = Image.frombytes("RGB", (size, size),
                                             ctrl.frame_override)
                         # (the panel's floor is applied to everything, in
@@ -928,7 +870,7 @@ def main():
                                   pre_wb_img=f)
                         frame_shown = (id(ctrl.frame_override), s["finish"])
                     wait_s = poll_end - time.monotonic()
-                    if sl is not None:           # keep fading a held frame
+                    if sl is not None or waking: # keep fading a held frame
                         wait_s = min(wait_s, 1.0)
                     if ctrl.dirty.wait(max(0.0, wait_s)):
                         ctrl.dirty.clear()
@@ -978,10 +920,10 @@ def main():
                     img = nine.frame
                     if img is not None:
                         ctrl.finish_base = img
-                    if img is not None and (nine.built_for, s["brightness"], s["finish"]) != nine_shown:
+                    if img is not None and (nine.built_for, s["brightness"], s["finish"], current_eff) != nine_shown:
                         shown = apply_finish(img, s["finish"])
                         sink.show(white_balance(shown, eff).tobytes(), pre_wb_img=shown)
-                        nine_shown = (nine.built_for, s["brightness"], s["finish"])
+                        nine_shown = (nine.built_for, s["brightness"], s["finish"], current_eff)
                     elif img is None and not blacked:
                         sink.show(black)
                     if ctrl.dirty.wait(0.5):
@@ -1037,13 +979,6 @@ def main():
                                               accent=s["color2"])
                         countdown_key = key
                     left = tm["end"] - time.monotonic()
-                    if left <= -180:
-                        # three minutes of fireworks is the whole alarm (Stop
-                        # on the phone ends it sooner); then put back whatever
-                        # the wall was doing before the timer took it
-                        ctrl.timer = None
-                        ctrl.apply({"mode": tm["ret"]})
-                        continue
                     f = countdown.frame_at(left, tm["total"])
                     sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
                     # the ring drains continuously and the alarm is motion:
@@ -1075,7 +1010,7 @@ def main():
                         print("[video] " + (f"failed: {why}" if why else "over; back to "
                                             + ctrl.get()["mode"]))
                         continue
-                    if img is not video_shown or sl is not None:
+                    if img is not video_shown or sl is not None or waking:
                         ctrl.finish_base = img
                         f = apply_finish(img, s["finish"])
                         # the floor lift is a still sleeve's; a video keeps
@@ -1190,6 +1125,16 @@ def main():
                     pace(tick)
                     continue
 
+                if waking and last_pre is None:
+                    # A morning must still produce light before the first
+                    # album has ever arrived. This is only the active fade;
+                    # normal artwork and the chosen idle policy resume after.
+                    f = Image.new("RGB", (size, size), (255, 244, 222))
+                    sink.show(white_balance(f, eff).tobytes(), pre_wb_img=f)
+                    if ctrl.dirty.wait(0.5):
+                        ctrl.dirty.clear()
+                    continue
+
                 # static sleeve ("art", or "cd" before any art has arrived)
                 # The preview the phone asks for is of the face that is up, so
                 # it is named here, on every pass. Naming it only when a sleeve
@@ -1205,7 +1150,7 @@ def main():
                               pre_wb_img=fin_img)
                     need_show = False
                 wait_s = poll_end - time.monotonic()
-                if sl is not None:               # keep fading while static
+                if sl is not None or waking:   # keep fading while static
                     wait_s = min(wait_s, 1.0)
                     need_show = True
                 if ctrl.dirty.wait(max(0.0, wait_s)):

@@ -1,0 +1,99 @@
+{
+  "checks": [
+    {
+      "name": "Wall reports its configured IANA timezone",
+      "passed": true
+    },
+    {
+      "name": "Wall routine metadata contains finite time and effective brightness",
+      "passed": true
+    },
+    {
+      "name": "24 hour preview matches production bytes",
+      "passed": true
+    },
+    {
+      "name": "12 hour preview matches production bytes",
+      "passed": true
+    },
+    {
+      "name": "12-hour format is acknowledged",
+      "passed": true
+    },
+    {
+      "name": "Clock renders illuminated native wall pixels",
+      "passed": true
+    },
+    {
+      "name": "Timer preview matches production bytes",
+      "passed": true
+    },
+    {
+      "name": "Preview never starts a timer",
+      "passed": true
+    },
+    {
+      "name": "Timer starts with correct total",
+      "passed": true
+    },
+    {
+      "name": "Timer decreases over real elapsed time",
+      "passed": true
+    },
+    {
+      "name": "Timer completion rings visibly",
+      "passed": true
+    },
+    {
+      "name": "Stopping returns to previous clock face",
+      "passed": true
+    },
+    {
+      "name": "Explicit clock destination wins cancellation",
+      "passed": true
+    },
+    {
+      "name": "Sleep reports active total and reduced brightness",
+      "passed": true
+    },
+    {
+      "name": "Cancel sleep restores selected brightness",
+      "passed": true
+    },
+    {
+      "name": "Sleep completion turns the wall off",
+      "passed": true
+    },
+    {
+      "name": "Sleeping wall is black",
+      "passed": true
+    },
+    {
+      "name": "Sun updates immediately after enabling",
+      "passed": true
+    },
+    {
+      "name": "Solar output includes bounded factor",
+      "passed": true
+    },
+    {
+      "name": "Wake save returns future start and full-light endpoint",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm time is rejected without crashing",
+      "passed": true
+    },
+    {
+      "name": "Every touched user setting restored",
+      "passed": true
+    }
+  ],
+  "passed": 22,
+  "failed": 0,
+  "restored_mode": "lyrics",
+  "limitations": [
+    "RGB and reported brightness verified; physical LED color needs in-person review.",
+    "Daily wake/alarm firing and DST transitions exercised with controlled backend clocks, not by changing physical wall time."
+  ]
+}

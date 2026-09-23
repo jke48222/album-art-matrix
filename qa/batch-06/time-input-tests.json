@@ -1,0 +1,214 @@
+{
+  "checks": [
+    {
+      "name": "Custom duration 0:06",
+      "passed": true
+    },
+    {
+      "name": "Custom duration 0:59",
+      "passed": true
+    },
+    {
+      "name": "Custom duration 1:00",
+      "passed": true
+    },
+    {
+      "name": "Custom duration 25:00",
+      "passed": true
+    },
+    {
+      "name": "Custom duration 179:59",
+      "passed": true
+    },
+    {
+      "name": "Custom duration 180:00",
+      "passed": true
+    },
+    {
+      "name": "Custom duration  05 : 03 ",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 0:00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 0:05",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 180:01",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 181:00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration -1:10",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1:-1",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1:60",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration :00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1:",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration x:00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1:3x",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1.5:00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 1e2:00",
+      "passed": true
+    },
+    {
+      "name": "Reject invalid duration 999999999999999999999999999999:00",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats -1",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 0",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 59",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 60",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 3599",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 3600",
+      "passed": true
+    },
+    {
+      "name": "Countdown formats 10800",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 00:00",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 00:59",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 06:01",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 12:00",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 18:45",
+      "passed": true
+    },
+    {
+      "name": "Wall civil time round trip 23:59",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults ",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults x",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults 24:00",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults 12:60",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults 12:00:00",
+      "passed": true
+    },
+    {
+      "name": "Malformed alarm safely defaults -1:00",
+      "passed": true
+    },
+    {
+      "name": "Midnight 12 hour",
+      "passed": true
+    },
+    {
+      "name": "Noon 12 hour",
+      "passed": true
+    },
+    {
+      "name": "Evening 12 hour",
+      "passed": true
+    },
+    {
+      "name": "24 hour keeps leading zero",
+      "passed": true
+    },
+    {
+      "name": "Named wall timezone wins offset",
+      "passed": true
+    },
+    {
+      "name": "Older wall falls back to UTC offset",
+      "passed": true
+    },
+    {
+      "name": "Unknown timezone stays unknown",
+      "passed": true
+    },
+    {
+      "name": "Impossible timezone offset rejected",
+      "passed": true
+    },
+    {
+      "name": "Editor uses fixed UTC zone",
+      "passed": true
+    },
+    {
+      "name": "Civil 7 AM remains seven despite phone travel",
+      "passed": true
+    },
+    {
+      "name": "Spoken duration units are complete",
+      "passed": true
+    },
+    {
+      "name": "Spoken duration plurals",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 52
+}

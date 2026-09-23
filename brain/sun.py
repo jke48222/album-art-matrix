@@ -13,7 +13,10 @@ import time
 def sun_times(lat: float, lon: float, when: float | None = None):
     """(sunrise_epoch, sunset_epoch) for the given day, or the strings
     "polar_day" / "polar_night" when the sun does not cross the horizon."""
-    t = time.gmtime(when or time.time())
+    now = time.time() if when is None else when
+    # Choose the solar date at this longitude, not UTC midnight. In the
+    # Americas, UTC has already rolled over while the local sun is still up.
+    t = time.gmtime(now + lon * 240)
     frac_year = 2 * math.pi / 365.0 * (
         t.tm_yday - 1 + (t.tm_hour - 12) / 24.0
     )
@@ -59,7 +62,7 @@ def sun_factor(lat: float, lon: float, night_level: float,
     if st == "polar_day":
         return 1.0
     sunrise, sunset = st
-    now = when or time.time()
+    now = time.time() if when is None else when
     ramp = 40 * 60.0
 
     def smooth(x: float) -> float:

@@ -77,6 +77,7 @@ wall cancels it), the frame override, a pending replay.
 import base64
 import hashlib
 import json
+import math
 import os
 import threading
 import time
@@ -170,7 +171,7 @@ class ControlState:
         wall: the panel arrangement. The app speaks 64x64 and the wall may be
         192x192, so every frame crossing this API is translated: what the
         phone sends is scaled up, what it reads back is scaled down."""
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
         self.loop_beat = None        # main loop: last pass, for /health
@@ -222,6 +223,8 @@ class ControlState:
         self._ambient_previews = (None, None)
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
         self.timer = None            # {"end": monotonic, "total": s, "ret": mode}
+        from .routines import RoutineEngine
+        self.routines = RoutineEngine()
         self.fps_last = 0.0          # main loop's sustained rate, for /health
         self.last_client = None      # monotonic of the app's last request
         # The adapters, set by build_sources. Every one exists whether or
@@ -326,6 +329,16 @@ class ControlState:
         rejected = {}
         with self._lock:
             for k, v in patch.items():
+                numeric = {"wake_fade_min", "wb_r", "wb_g", "wb_b", "sun_night", "lat", "lon",
+                           "brightness", "rpm", "speed", "lyric_offset", "panel_brightness", "panel_type"}
+                if k in numeric:
+                    try:
+                        if isinstance(v, bool) or not math.isfinite(float(v)):
+                            raise ValueError()
+                        v = float(v)
+                    except (ValueError, TypeError, OverflowError):
+                        rejected[k] = "Expected a finite number"
+                        continue
                 if k == "mode" and v in MODES:
                     self._s[k] = v
                 elif k == "effect" and v in EFFECTS:
@@ -336,14 +349,14 @@ class ControlState:
                     self._s[k] = v
                 elif k == "away" and v in AWAYS:
                     self._s[k] = v
-                elif k in ("wake_enabled", "alarm_enabled"):
-                    self._s[k] = bool(v)
+                elif k in ("wake_enabled", "alarm_enabled") and isinstance(v, bool):
+                    self._s[k] = v
                 elif k == "alarm_time" and isinstance(v, str) and len(v) == 5 \
-                        and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
+                        and v.isascii() and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
                         and int(v[:2]) < 24 and int(v[3:]) < 60:
                     self._s[k] = v
                 elif k == "wake_time" and isinstance(v, str) and len(v) == 5 \
-                        and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
+                        and v.isascii() and v[2] == ":" and v[:2].isdigit() and v[3:].isdigit() \
                         and int(v[:2]) < 24 and int(v[3:]) < 60:
                     self._s[k] = v
                 elif k == "wake_fade_min":
@@ -361,10 +374,12 @@ class ControlState:
                     self._s[k] = v
                 elif k == "sun_night":
                     self._s[k] = _clamp(v, 0.05, 1.0)
-                elif k == "lat":
-                    self._s[k] = _clamp(v, -90.0, 90.0)
-                elif k == "lon":
-                    self._s[k] = _clamp(v, -180.0, 180.0)
+                elif k in ("lat", "lon"):
+                    bound = 90 if k == "lat" else 180
+                    if abs(v) <= bound or (not persist and v == 999):
+                        self._s[k] = v
+                    else:
+                        rejected[k] = "Coordinate outside its valid range"
                 elif k == "place" and isinstance(v, str):
                     self._s[k] = "".join(c for c in v if c.isprintable())[:64]
                 elif k == "airplay_receiver" and isinstance(v, bool):
@@ -373,8 +388,8 @@ class ControlState:
                     self._s[k] = "".join(ch for ch in v if ch.isprintable()).strip()[:40] or "Wall"
                 elif k == "weather_units" and v in ("f", "c"):
                     self._s[k] = v
-                elif k in ("match_art", "ticker_loop", "clock_24h"):
-                    self._s[k] = bool(v)
+                elif k in ("match_art", "ticker_loop", "clock_24h") and isinstance(v, bool):
+                    self._s[k] = v
                 elif k == "ticker_style" and v in ("across", "up", "tilt"):
                     self._s[k] = v
                 elif k == "ticker_colors" and isinstance(v, list) \
@@ -440,12 +455,27 @@ class ControlState:
         back to whatever the wall was doing when it is done."""
         here = self.get()["mode"]
         ret = self.timer["ret"] if self.timer else \
-            (here if here not in ("timer", "frame", "clip") else "clock")
-        self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret}
+            (here if here not in ("timer", "video") else "clock")
+        self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret, "kind": "alarm"}
         self.apply({"mode": "timer"})
 
     def apply(self, patch: dict) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys."""
+        with self._lock:
+            return self._apply_locked(dict(patch))
+
+    def _apply_locked(self, patch: dict) -> dict:
+        rejected_commands = {}
+        for key in ("timer_min", "sleep_fade_min"):
+            if key in patch:
+                try:
+                    value = patch[key]
+                    if isinstance(value, bool) or not math.isfinite(float(value)) or not 0 <= float(value) <= 180:
+                        raise ValueError()
+                    patch[key] = float(value)
+                except (TypeError, ValueError, OverflowError):
+                    rejected_commands[key] = "Use a duration from 0 to 180 minutes"
+                    patch.pop(key)
         if patch.pop("resume_music", False) or patch.get("mode") in ("art", "cd", "lyrics"):
             self.resume_music = True
             self.replay = None
@@ -457,6 +487,10 @@ class ControlState:
             # snap the fade to the end (or stall it) mid-way
             self.sleep = ({"t0": time.monotonic(), "minutes": minutes}
                           if minutes > 0 else None)
+            self.routines.sleep_state = "fading" if minutes > 0 else "cancelled"
+            self.routines.sleep_total = minutes * 60
+            if minutes > 0:
+                self.routines.wake = None
         # A countdown is a command too: it starts now, remembers what the
         # wall was doing, and puts that back when it is done.
         if "timer_min" in patch:
@@ -464,19 +498,25 @@ class ControlState:
             if minutes > 0:
                 here = self.get()["mode"]
                 ret = self.timer["ret"] if self.timer else \
-                    (here if here not in ("timer", "frame", "clip", "video") else "clock")
+                    (here if here not in ("timer", "video") else "clock")
                 self.timer = {"end": time.monotonic() + minutes * 60,
-                              "total": minutes * 60, "ret": ret}
+                              "total": minutes * 60, "ret": ret, "kind": "countdown"}
                 patch["mode"] = "timer"
             else:
                 ret = self.timer["ret"] if self.timer else "clock"
                 self.timer = None
                 if self.get()["mode"] == "timer":
-                    patch["mode"] = ret
+                    patch.setdefault("mode", ret)
+        # Leaving the timer is an explicit dismissal; a hidden expired timer
+        # must not block the next daily alarm forever.
+        if patch.get("mode") in MODES and patch["mode"] != "timer":
+            self.timer = None
+        if patch.get("mode") == "off":
+            self.routines.wake = None
         want = patch.get("panel_brightness")
         if patch.get("panel_type") is not None:
             want = True
-        rejected = self._merge(patch)
+        rejected = {**rejected_commands, **self._merge(patch)}
         # Choosing any other face ends a video: nothing keeps decoding for a
         # picture nobody is looking at.
         if "mode" in patch and self._s["mode"] != "video" \
@@ -521,17 +561,18 @@ class ControlState:
             out["owned"] = sh.playing
         if self.art_colors:
             out["art_colors"] = list(self.art_colors)
-        sl = self.sleep              # snapshot: the render thread can null it
-        if sl:
-            left = sl["minutes"] * 60 - (time.monotonic() - sl["t0"])
-            out["sleep_remaining_s"] = max(0, int(left))
-        tm = self.timer
-        if tm:
-            out["timer_remaining_s"] = max(0, int(tm["end"] - time.monotonic()))
-            out["timer_total_s"] = int(tm["total"])
+        with self._lock:
+            out.update(self.routines.snapshot(self, time.time(), time.monotonic()))
         if self.video is not None and (self.video.status != "idle" or self.video.error):
             out["video"] = self.video.public()
         return out
+
+    def tick_routines(self, now=None, mono=None) -> dict:
+        now = time.time() if now is None else now
+        mono = time.monotonic() if mono is None else mono
+        with self._lock:
+            self.routines.tick(self, now, mono)
+            return self.routines.snapshot(self, now, mono)
 
     # ---- services -------------------------------------------------------
     def services(self) -> dict:
@@ -1175,6 +1216,33 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            if self.path == "/routines/preview":
+                patch = self._body()
+                if patch is None:
+                    return
+                try:
+                    from .art.text_modes import Clock, Countdown
+                    face = patch.get("face", "clock")
+                    at = float(patch.get("at", time.time()))
+                    remaining = float(patch.get("remaining_s", 300))
+                    total = float(patch.get("total_s", max(1, remaining)))
+                    twenty_four = patch.get("twenty_four", ctrl.get()["clock_24h"])
+                    if face not in ("clock", "timer") or not isinstance(twenty_four, bool):
+                        raise ValueError()
+                    if not all(math.isfinite(v) for v in (at, remaining, total)) or not -180 <= remaining <= 10800 or not 0 < total <= 10800:
+                        raise ValueError()
+                    side = ctrl.wall.width
+                    state = ctrl.get()
+                    ink = ctrl.art_colors[0] if state["match_art"] and ctrl.art_colors else state["color"]
+                    frame = (Clock(side, ink, twenty_four).frame_at(0, when=at) if face == "clock"
+                             else Countdown(side, ink, state["color2"]).frame_at(remaining, total))
+                    if face == "clock":
+                        from .art.pipeline import apply_finish
+                        frame = apply_finish(frame, state["finish"])
+                    self._json(200, {"px": base64.b64encode(frame.tobytes()).decode(), "side": side, "at": at})
+                except (TypeError, ValueError, OverflowError, OSError):
+                    self._json(400, {"error": "Check the face, time and duration."})
+                return
             if self.path == "/ticker/preview":
                 patch = self._body()
                 if patch is None:
@@ -1188,7 +1256,6 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     color = patch.get("color", "#f4f1ea")
                     speed = float(patch.get("speed", 1))
                     phase = float(patch.get("phase", 0.35))
-                    import math
                     valid_color = lambda c: isinstance(c, str) and len(c) == 7 and c[0] == "#" and all(ch in "0123456789abcdefABCDEF" for ch in c[1:])
                     if not isinstance(text, str) or len(text) > 600 or style not in ("across", "up", "tilt"):
                         raise ValueError("Invalid message or motion")
@@ -1661,7 +1728,6 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(409, {"error": "video changed"})
                     return
                 try:
-                    import math
                     position = float(data.get("t", 0.0))
                     if not math.isfinite(position):
                         raise ValueError("nonfinite position")

@@ -125,18 +125,6 @@ struct ControlCenterPanel: View {
     /// A rail being dragged: its key and where the thumb is now, so the
     /// number under a finger is the finger's, not the wall's last word.
     @State private var railDrag: (String, Double)? = nil
-    /// What the wall will letter, as it is typed; sent on return or Send.
-    /// The countdown being dialled up, before Start sends it.
-    @State private var timerDraft: Double = 10
-    // The minutes, typed: tap the number and it becomes a field. "12" is
-    // twelve minutes, "1:30" a minute and a half, "45s" forty-five seconds.
-    @State private var timerTyping = false
-    @State private var timerTyped = ""
-    @FocusState private var timerFocus: Bool
-    // The alarm's time, typed the same way: "7:30", "19:45", "7:30 pm".
-    @State private var alarmTyping = false
-    @State private var alarmTyped = ""
-    @FocusState private var alarmFocus: Bool
     private var accent: Color { light.steadyAccent }
     /// Ink that can be read on the record's own colour, whatever it is.
     private var onAccent: Color {
@@ -693,161 +681,8 @@ struct ControlCenterPanel: View {
     private var lampBoard: some View { display(.lamp) }
 
     private var clockBoard: some View {
-        board(wall.state.mode == "timer" ? "Timer" : "Clock") {
-            if wall.state.mode == "timer", let left = wall.state.timerRemaining {
-                HStack {
-                    Text(String(format: "%02d:%02d", left / 60, left % 60)).font(.display(28)).foregroundStyle(ink.ink)
-                        .contentTransition(.numericText(countsDown: true))
-                    Spacer()
-                    choice("Stop", true, false, { _ in wall.send(["timer_min": 0.0]) })
-                }
-            } else {
-                let mins = rail(key: "timer_min") ?? timerDraft
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    if timerTyping {
-                        TextField("", text: $timerTyped)
-                            .font(.display(28)).foregroundStyle(ink.ink)
-                            .keyboardType(.numbersAndPunctuation)
-                            .submitLabel(.done)
-                            .focused($timerFocus)
-                            .onSubmit { commitTypedTimer() }
-                            .onChange(of: timerFocus) { _, on in if !on { commitTypedTimer() } }
-                            .frame(maxWidth: 120)
-                        Text("min").font(.ui(13)).foregroundStyle(ink.dim)
-                    } else {
-                        Text(timerLabel(mins)).font(.display(28)).foregroundStyle(ink.ink)
-                            .contentTransition(.numericText())
-                            .onTapGesture {
-                                timerTyped = timerLabel(mins)
-                                timerTyping = true
-                                timerFocus = true
-                                Taps.detent(intensity: 0.3)
-                            }
-                            .accessibilityHint("Tap to type a time")
-                        Text(mins == mins.rounded(.down) ? "min" : "m:ss").font(.ui(13)).foregroundStyle(ink.dim)
-                    }
-                    Spacer()
-                    Button {
-                        if timerTyping { commitTypedTimer() }
-                        wall.send(["timer_min": timerDraft]); Taps.commit()
-                    } label: {
-                        Text("Start").font(.ui(14, .semibold)).foregroundStyle(Ink.ground)
-                            .padding(.horizontal, 20).frame(height: 40)
-                            .background(Capsule().fill(accent))
-                    }
-                    .buttonStyle(PressStyle(scale: 0.95))
-                }
-                slider(key: "timer_min", value: mins, from: 1, to: 180, step: 1) { timerDraft = $0 }
-                HStack(spacing: 8) {
-                    ForEach([5.0, 10.0, 15.0, 30.0], id: \.self) { m in
-                        choice("\(Int(m)) min", m, timerDraft, { timerDraft = $0 })
-                    }
-                }
-                HStack(spacing: 8) {
-                    choice("24 hour", true, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
-                    choice("12 hour", false, wall.state.clock24h, { wall.send(["clock_24h": $0]) })
-                }
-                alarmRow
-                colours
-            }
-        }
-    }
-
-    /// A time of day the wall rings, with the timer's ending.
-    private var alarmRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 8) {
-            Text("Alarm").font(.ui(14)).foregroundStyle(ink.ink)
-            if alarmTyping {
-                TextField("", text: $alarmTyped)
-                    .font(.display(22)).foregroundStyle(ink.ink)
-                    .keyboardType(.numbersAndPunctuation)
-                    .submitLabel(.done)
-                    .focused($alarmFocus)
-                    .onSubmit { commitTypedAlarm() }
-                    .onChange(of: alarmFocus) { _, on in if !on { commitTypedAlarm() } }
-                    .frame(maxWidth: 130)
-            } else {
-                Text(alarmLabel(wall.state.alarmTime)).font(.display(22)).foregroundStyle(ink.ink)
-                    .contentTransition(.numericText())
-                    .onTapGesture {
-                        alarmTyped = alarmLabel(wall.state.alarmTime)
-                        alarmTyping = true
-                        alarmFocus = true
-                        Taps.detent(intensity: 0.3)
-                    }
-                    .accessibilityHint("Tap to type a time")
-            }
-            Spacer()
-            Toggle("", isOn: Binding(get: { wall.state.alarmEnabled },
-                                     set: { wall.send(["alarm_enabled": $0]); Taps.detent(intensity: 0.4) }))
-                .labelsHidden()
-                .tint(accent)
-                .accessibilityLabel("Alarm on")
-        }
-    }
-
-    /// "07:30" on the 24 hour clock, "7:30 AM" on the 12 hour one.
-    private func alarmLabel(_ hhmm: String) -> String {
-        let bits = hhmm.split(separator: ":")
-        guard bits.count == 2, let h = Int(bits[0]), let m = Int(bits[1]) else { return hhmm }
-        if wall.state.clock24h { return String(format: "%02d:%02d", h, m) }
-        let h12 = h % 12 == 0 ? 12 : h % 12
-        return String(format: "%d:%02d %@", h12, m, h < 12 ? "AM" : "PM")
-    }
-
-    /// What was typed, as HH:MM: "7:30", "07:30", "7:30 pm", "7pm", "1930".
-    private func commitTypedAlarm() {
-        guard alarmTyping else { return }
-        alarmTyping = false; alarmFocus = false
-        var t = alarmTyped.lowercased().replacingOccurrences(of: " ", with: "")
-        var pm: Bool? = nil
-        if t.hasSuffix("pm") { pm = true; t = String(t.dropLast(2)) }
-        else if t.hasSuffix("am") { pm = false; t = String(t.dropLast(2)) }
-        t = t.replacingOccurrences(of: ".", with: ":")
-        var h = -1, m = 0
-        if t.contains(":") {
-            let p = t.split(separator: ":", omittingEmptySubsequences: false)
-            if p.count == 2, let hh = Int(p[0]), let mm = Int(p[1]) { h = hh; m = mm }
-        } else if let v = Int(t) {
-            if t.count <= 2 { h = v } else { h = v / 100; m = v % 100 }
-        }
-        guard h >= 0, h < 24 || (pm != nil && h <= 12), m >= 0, m < 60 else { return }
-        if let pm {
-            h = h % 12 + (pm ? 12 : 0)
-        }
-        guard h < 24 else { return }
-        wall.send(["alarm_time": String(format: "%02d:%02d", h, m)])
-        Taps.detent(intensity: 0.3)
-    }
-
-    /// "12" for whole minutes, "1:30" otherwise.
-    private func timerLabel(_ mins: Double) -> String {
-        if mins == mins.rounded(.down) { return "\(Int(mins))" }
-        let total = Int((mins * 60).rounded())
-        return "\(total / 60):" + String(format: "%02d", total % 60)
-    }
-
-    /// What was typed, as minutes: "12", "1:30", "90s", "0.5". Kept within
-    /// what the wall accepts; nonsense leaves the draft alone.
-    private func commitTypedTimer() {
-        guard timerTyping else { return }
-        timerTyping = false; timerFocus = false
-        let t = timerTyped.trimmingCharacters(in: .whitespaces).lowercased()
-        var mins: Double? = nil
-        if t.contains(":") {
-            let parts = t.split(separator: ":", omittingEmptySubsequences: false).map { Double($0) ?? 0 }
-            if parts.count == 2 { mins = parts[0] + parts[1] / 60 }
-            if parts.count == 3 { mins = parts[0] * 60 + parts[1] + parts[2] / 60 }
-        } else if t.hasSuffix("s"), let v = Double(t.dropLast().trimmingCharacters(in: .whitespaces)) {
-            mins = v / 60
-        } else if t.hasSuffix("h"), let v = Double(t.dropLast().trimmingCharacters(in: .whitespaces)) {
-            mins = v * 60
-        } else if let v = Double(t.replacingOccurrences(of: "min", with: "").trimmingCharacters(in: .whitespaces)) {
-            mins = v
-        }
-        guard let m = mins, m > 0 else { return }
-        timerDraft = min(180, max(0.1, m))
-        Taps.detent(intensity: 0.3)
+        TimeWorkbench(accent: accent).padding(20)
+            .background(Ink.ground.opacity(0.97), in: RoundedRectangle(cornerRadius: 24))
     }
 
     private var timingBoard: some View { display(.lyrics) }
@@ -880,33 +715,6 @@ struct ControlCenterPanel: View {
                   accent: accent, ink: ink, sleeve: sleeve) { wall.send(["finish": $0]) }
     }
 
-    /// The wall's own two colours, for every face that letters or lights
-    /// something: pick them, or let the record choose.
-    private var colours: some View {
-        // With the album choosing, the bar shows the album's two colours and
-        // takes no touches: the choice you could make would not be used.
-        let album = wall.state.matchArt
-        let art = wall.state.artColors
-        let shown = album && art.count >= 2 ? art : [wall.state.color, wall.state.color2]
-        return VStack(alignment: .leading, spacing: 10) {
-            ColourBar(colours: [
-                Binding(get: { Color.wall(hex: shown[0]) },
-                        set: { if !album { wall.send(["color": $0.wallHex]) } }),
-                Binding(get: { Color.wall(hex: shown[1]) },
-                        set: { if !album { wall.send(["color2": $0.wallHex]) } }),
-            ], height: 64, stroke: ink.ink.opacity(0.14), enabled: !album,
-                       names: ["Primary", "Secondary"])
-            Toggle(isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) })) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Match album colours").font(.ui(14, .medium)).foregroundStyle(ink.ink)
-                    Text(album ? "Colours follow the current sleeve." : "Choose a colour above.")
-                        .font(.ui(11)).foregroundStyle(ink.dim)
-                }
-            }
-            .tint(accent)
-        }
-    }
-
     // MARK: A rail
 
     /// Where a rail's thumb is while a finger is on it.
@@ -917,7 +725,7 @@ struct ControlCenterPanel: View {
     /// The same rail as the light's, for anything with a range.
     private func slider(key: String, value: Double, from lo: Double, to hi: Double,
                         step: Double, commit: @escaping (Double) -> Void) -> some View {
-        let label = ["rpm": "Record speed", "timer_min": "Duration", "lyric_offset": "Timing offset", "video": "Position"][key] ?? "Value"
+        let label = ["rpm": "Record speed", "lyric_offset": "Timing offset", "video": "Position"][key] ?? "Value"
         return WallValueSlider(value: Binding(get: { rail(key: key) ?? value },
                                              set: { railDrag = (key, $0) }),
                                in: lo...max(lo, hi), step: step, title: label, accent: accent,
@@ -925,7 +733,6 @@ struct ControlCenterPanel: View {
                                format: { number in
                                    switch key {
                                    case "rpm": String(format: "%.1f rpm", number)
-                                   case "timer_min": timerLabel(number)
                                    case "lyric_offset": String(format: "%+.2f s", number)
                                    case "video": PlaybackIdentity.clock(number)
                                    default: String(format: "%.1f", number)

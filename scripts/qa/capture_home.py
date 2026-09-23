@@ -15,6 +15,7 @@ import subprocess
 import sys
 import threading
 import time
+from unittest.mock import patch
 from urllib.parse import urlsplit
 from urllib.request import urlopen
 
@@ -154,6 +155,17 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
             path = urlsplit(self.path).path
             with wall.lock:
                 wall.requests.append({"method": "POST", "path": path})
+            if path == "/routines/preview":
+                from brain.art.text_modes import Clock, Countdown
+                payload = json.loads(data)
+                size = math.isqrt(len(wall.frame) // 3)
+                if payload.get("face") == "timer":
+                    image = Countdown(size).frame_at(payload.get("remaining_s",600), payload.get("total_s",600))
+                else:
+                    with patch("brain.art.text_modes.time.localtime", return_value=time.struct_time((2026,9,23,7,30,24,2,266,1))):
+                        image = Clock(size, twenty_four=payload.get("twenty_four", True)).frame_at(0)
+                self.response(200,json.dumps({"px":base64.b64encode(image.tobytes()).decode(),"side":size}).encode(),"application/json")
+                return
             if path == "/ticker/preview":
                 from brain.art.text_modes import Ticker, Crawl
                 payload = json.loads(data)
@@ -209,6 +221,8 @@ def main() -> int:
     parser.add_argument("--launch-argument", action="append", default=[],
                         help="Extra app argument, for example --launch-argument=-controls")
     parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker"))
+    parser.add_argument("--routine-state", choices=("idle", "active", "complete", "ringing", "location"))
+    parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
     parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
     args = parser.parse_args()
@@ -222,6 +236,8 @@ def main() -> int:
         parser.error("--settle must be between 1 and 30 seconds")
     if args.brightness is not None and (not math.isfinite(args.brightness) or not 0.05 <= args.brightness <= 1):
         parser.error("--brightness must be between 0.05 and 1")
+    if args.renderer_root:
+        sys.path.insert(0, str(args.renderer_root.resolve()))
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     manifest_path = output / "manifest.json"
@@ -281,12 +297,12 @@ def main() -> int:
                 if args.brightness is not None:
                     state["brightness"] = args.brightness
                 if state["mode"] == "cd":
-                    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+                    sys.path.insert(0, str(args.renderer_root.resolve() if args.renderer_root else Path(__file__).resolve().parents[2]))
                     from brain.art.disc import DiscAnimator
                     disc = DiscAnimator(Image.frombytes("RGB", (64, 64), artwork()), 64)
                     frame = disc.frame_at(0, progress_s=93, fraction=93 / 245).tobytes()
             if variant != "wall":
-                sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+                sys.path.insert(0, str(args.renderer_root.resolve() if args.renderer_root else Path(__file__).resolve().parents[2]))
                 from brain.art.pipeline import apply_finish
                 from brain.art.effects import Ambient
                 from brain.art.nine import compose as compose_nine
@@ -301,6 +317,31 @@ def main() -> int:
                 elif state["mode"] == "ambient":
                     state["effect"] = "gradient"
                     frame = Ambient(64,"gradient",state["color"],state["color2"],1).frame_at(8).tobytes()
+                if state["mode"] in {"clock", "timer"} or args.routine_state:
+                    from brain.art.text_modes import Clock, Countdown
+                    now = datetime(2026,9,23,11,30,24,tzinfo=timezone.utc).timestamp()
+                    state.update({"wall_time":now,"wall_timezone":"America/New_York","wall_utc_offset_s":-14400,
+                        "clock_24h":True,"alarm_enabled":True,"alarm_time":"07:30","alarm_next_at":now+86400,
+                        "sun":"on","sun_night":.25,"lat":33.75,"lon":-84.75,"place":"Douglasville, Georgia",
+                        "sun_phase":"day","sun_factor":1.,"sunrise_at":now-600,"sunset_at":now+42480,
+                        "effective_brightness":1.,"sleep_state":"idle","wake_enabled":True,"wake_time":"07:00",
+                        "wake_fade_min":20.,"wake_next_at":now+84576,"wake_next_end_at":now+85776})
+                    if args.routine_state == "active":
+                        state.update({"sleep_state":"fading","sleep_total_s":1800,"sleep_remaining_s":1242,
+                            "sleep_ends_at":now+1242,"effective_brightness":.63,"wake_active":True,"wake_progress":.35})
+                    elif args.routine_state == "complete":
+                        state.update({"sleep_state":"completed","sleep_total_s":1800,"effective_brightness":0.})
+                    elif args.routine_state == "location":
+                        state.update({"sun_phase":"location","lat":999,"lon":999,"place":""})
+                        state.pop("sunrise_at",None);state.pop("sunset_at",None)
+                    if state["mode"] == "timer":
+                        remaining = 0 if args.routine_state == "ringing" else 462
+                        state.update({"timer_remaining_s":remaining,"timer_total_s":600,"timer_ends_at":now+remaining,
+                            "timer_state":"ringing" if remaining == 0 else "counting","timer_ringing":remaining==0,"timer_kind":"countdown"})
+                        frame=Countdown(64).frame_at(remaining,600).tobytes()
+                    elif state["mode"] == "clock":
+                        with patch("brain.art.text_modes.time.localtime", return_value=time.struct_time((2026,9,23,7,30,24,2,266,1))):
+                            frame=Clock(64).frame_at(0).tobytes()
                 base = Image.frombytes("RGB", (64,64), frame)
                 wall.studies["/finishes"] = {name:base64.b64encode(apply_finish(base,name).tobytes()).decode() for name in ("clean","dither","poster")}
                 wall.studies["/ambient/previews"] = {name:base64.b64encode(Ambient(64,name,state["color"],state["color2"],1).frame_at(8).tobytes()).decode() for name in ("solid","breathe","pulse","rainbow","gradient","plaid","weave","deco","snake")}
