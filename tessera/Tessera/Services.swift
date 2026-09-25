@@ -80,6 +80,9 @@ struct WallServices: Decodable {
         var window_s: Double?       // the clip the next ask will send
         var misses: Int?
         var heard_s: Int?
+        struct Rejected: Decodable { var reason: String; var ago_s: Int? }
+        var match_source: String?
+        var last_rejected: Rejected?
         var heard: Heard?
         var pending: Past?          // heard once, no catalogue record: not on the wall yet
         var last_heard: Past?

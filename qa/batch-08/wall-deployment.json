@@ -1,0 +1,41 @@
+{
+  "status": "pending_unreachable",
+  "host": "192.168.12.118:8788",
+  "ssh": "pi@192.168.12.118",
+  "base": "f31d1f1c77549e9f3a111da7823ff886e17bad74",
+  "remote_root": "/home/pi/wall-claude",
+  "attempts": [
+    "SSH timed out repeatedly",
+    "album-matrix.local failed DNS resolution",
+    "LAN neighbour unresolved"
+  ],
+  "remote_mutations": false,
+  "required_files": [
+    {
+      "path": "brain/ask.py",
+      "sha256": "8f63c5ed246663c6414a8a6948f0af3ff5bca7983426ae45f1a243194d5f99cb"
+    },
+    {
+      "path": "brain/control.py",
+      "sha256": "10aff6f49aec367118ea14d0bc398fdf788d3736743929d94a14f49bfee95a2c"
+    },
+    {
+      "path": "brain/imagine.py",
+      "sha256": "7805be0b22bac1a1644aba3003134fc8347f7e1d35e2d685503baf1a9c604ba4"
+    },
+    {
+      "path": "brain/nowplaying/ears.py",
+      "sha256": "4f8b15cc01a50def337ef46d45cec2dadf33c1a6e95a014b81d32e686dbc7665"
+    },
+    {
+      "path": "brain/show.py",
+      "sha256": "cb33feb27877b74065fc75a51539ea717a1a8bb781083a71db2d8d4f2ce13dc8"
+    },
+    {
+      "path": "brain/voice/voice.py",
+      "sha256": "d44ee82c35978032faced9d42172c4470d5a419a8edf39a5875530bc35af8004"
+    }
+  ],
+  "known_remote_delta": "brain/ask.py has an extra method-local import anthropic from batch07. The rewritten earworm uses _client_(), so reconcile this obsolete import when deploying; inspect all files against baseline and preserve other local differences.",
+  "next_action": "Connect wall, verify its state and baseline file hashes, back up and copy scoped production files, compile on Pi, restart its managed service, verify SHA and API behavior without paid inference."
+}

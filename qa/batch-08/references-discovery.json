@@ -1,0 +1,72 @@
+{
+  "date": "2026-09-25",
+  "task_intent": "Refine Tessera’s discovery, imagination, and listening features with expressive native interfaces and reliable wall feedback.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "units": {
+    "F03": {
+      "mobbin": [
+        {
+          "app": "Epidemic Sound",
+          "url": "https://mobbin.com/screens/1500e3b8-9d60-406e-ad79-359d5bc799e7",
+          "image_inspected": true,
+          "observed": "A dark search screen places a single query field above a horizontal category row. Results pair colorful square artwork with a short identity and a clear forward action.",
+          "applied": "One composer with Picture, Cover, and Video scopes; individual remembered drafts; visible source identity retained beside the finished artwork."
+        },
+        {
+          "app": "Mindvalley",
+          "url": "https://mobbin.com/screens/672a42b8-4edb-46ec-b961-7eec035ea1ac",
+          "image_inspected": true,
+          "observed": "A compact search field and scope tabs precede results. Each result gives the title stronger emphasis than the creator and other metadata.",
+          "applied": "Scope-specific prompts and examples, a restrained artist/source line, and a strong artwork title hierarchy."
+        }
+      ],
+      "primary": [
+        {
+          "title": "Apple Human Interface Guidelines — Searching",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/searching",
+          "access": "Official indexed content inspected; direct page requires JavaScript.",
+          "applied": "Descriptive placeholders and a visible scope selector clarify exactly what will be searched; drafts survive a change of scope and failed requests."
+        }
+      ]
+    },
+    "F04": {
+      "mobbin": [
+        {
+          "app": "Shazam",
+          "url": "https://mobbin.com/screens/abd64892-a82c-4e66-98e0-14ebbe8074c8",
+          "image_inspected": true,
+          "observed": "Related songs retain visible artwork and names above a carefully separated Track Information area and one prominent Share Song action.",
+          "applied": "The discovered song remains available while another is identified. Sharing uses metadata, and alternatives are a distinct continuation beneath the principal result."
+        },
+        {
+          "app": "Shazam",
+          "url": "https://mobbin.com/screens/e00c3136-a5fa-4ce1-9bba-93472b83b4cc",
+          "image_inspected": true,
+          "observed": "Artwork and track names lead a recommendation section; additional album metadata sits below with generous separation.",
+          "applied": "Large sleeve, then song and artist, with secondary album metadata kept quieter; alternatives never compete with the current identification."
+        },
+        {
+          "app": "Shazam",
+          "url": "https://mobbin.com/screens/df1cfab2-097b-4045-82f5-8c354943cdb4",
+          "image_inspected": true,
+          "observed": "The result uses a large visual field, a strong song title with artist immediately below, and a single prominent playback action.",
+          "applied": "The result becomes the page's lead object, with one explicit action to show its sleeve again and honest uncertainty language instead of a decorative percentage."
+        }
+      ],
+      "primary": [
+        {
+          "title": "Apple — Shazam User Guide",
+          "url": "https://support.apple.com/guide/shazam/welcome/web",
+          "access": "Read the official guide and its identification, saved-song, and sharing navigation.",
+          "applied": "Identification produces an actionable, shareable result that persists when leaving the screen. Earworm clearly states that it identifies typed clues rather than recording audio."
+        }
+      ]
+    }
+  },
+  "implementation": {
+    "phone_wall_parity": "The JSON result includes a lossless PNG encoded directly from the processed native RGB frame. The phone displays this composition with nearest-neighbor interpolation; identity and controls sit outside the artwork.",
+    "interaction": "No duplicate customization modal. Services links route into the existing Settings destination. A result keeps its stable ID, so showing it again does not spend another inference request.",
+    "reliability": "Serialized discovery requests, typed input bounds, per-result wall receipts, host/request-version guards, provider failure states, and frame-ownership-aware expiration. Late search results yield when the user has selected another face."
+  }
+}

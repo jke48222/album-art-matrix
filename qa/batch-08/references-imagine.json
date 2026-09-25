@@ -1,0 +1,11 @@
+{
+  "unit": "F05",
+  "reviewed_at": "2026-09-25",
+  "task_intent": "Refine Tessera’s discovery, imagination, and listening features with expressive native interfaces and reliable wall feedback.",
+  "references": [
+    {"source": "Mobbin · CapCut", "url": "https://mobbin.com/screens/ad8e2146-70da-4bb5-a6af-d0848a76d28b", "image_inspected": true, "applied": "Keep each saved image attached to its original prompt and explicit action; persistent creation history belongs within the studio."},
+    {"source": "Mobbin · Grok Imagine", "url": "https://mobbin.com/screens/31d698b5-2637-45fc-92c2-f2073badfde5", "image_inspected": true, "applied": "Give artwork the largest surface and use a dense two-column image collection. Keep the composer in the same continuous destination."},
+    {"source": "Apple · Progress indicators", "url": "https://developer.apple.com/design/human-interface-guidelines/progress-indicators", "applied": "Use indeterminate activity plus factual received-image milestones; never synthesize percentage progress for an opaque image model."},
+    {"source": "OpenAI · Image streaming", "url": "https://platform.openai.com/docs/api-reference/images-streaming/image_generation/partial_image", "applied": "Treat partial images as real image events, deduplicate their indices, distinguish final completion, and never silently retry paid generation after a generic stream failure."}
+  ]
+}

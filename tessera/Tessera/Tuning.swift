@@ -47,6 +47,10 @@ final class TuningStore {
     var restartingUntil: Date?
 
     private var host = ""
+    private var connection = UUID()
+    private var requestRevision = 0
+    private var sending = false
+    private var queued: [(String, [String: Any])] = []
 
     var restarting: Bool {
         guard let until = restartingUntil else { return false }
@@ -54,30 +58,51 @@ final class TuningStore {
     }
 
     func load(host: String) async {
-        self.host = host
+        if self.host != host {
+            self.host = host; connection = UUID(); queued = []
+            knobs = []; values = [:]; defaults = [:]; problem = nil
+            restartingUntil = nil
+        } else if sending || busy {
+            // A GET may reach the wall before the in-flight write commits.
+            // Keep the confirmed write response as the source of truth.
+            return
+        }
         await call("/tuning", body: nil)
     }
 
     /// One knob, to the wall. The wall answers with everything it now holds,
     /// so the page shows what the wall took rather than what was asked.
     func send(_ name: String, _ value: Double, isBool: Bool = false) async {
-        await call("/tuning", body: [name: isBool ? (value > 0.5) as Any : value])
+        guard !busy, value.isFinite else { return }
+        queued.removeAll { $0.0 == name }
+        queued.append((name, [name: isBool ? (value > 0.5) as Any : value]))
+        guard !sending else { return }
+        sending = true
+        defer { sending = false }
+        while !queued.isEmpty {
+            let next = queued.removeFirst()
+            await call("/tuning", body: next.1)
+        }
     }
 
     func reset() async {
+        guard !sending, !busy else { return }
         busy = true
         defer { busy = false }
         await call("/tuning/reset", body: [:])
     }
 
-    /// Every request goes through here: one retry, the wall's own words when
-    /// it refuses, and never a bare "not answering" for a wall that answered.
+    /// Read requests can retry once. Writes are sent once and show the wall's
+    /// actual response; repeating a timed-out write could apply it twice.
     private func call(_ path: String, body: [String: Any]?) async {
         guard !host.isEmpty, let url = URL(string: "http://\(host)\(path)") else {
             problem = "No address for the wall yet."
             return
         }
-        for attempt in 0..<2 {
+        let expectedHost = host, expectedConnection = connection
+        requestRevision += 1
+        let revision = requestRevision
+        for attempt in 0..<(body == nil ? 2 : 1) {
             var req = URLRequest(url: url)
             req.timeoutInterval = 12
             if let body {
@@ -85,8 +110,11 @@ final class TuningStore {
                 req.setValue("application/json", forHTTPHeaderField: "Content-Type")
                 req.httpBody = try? JSONSerialization.data(withJSONObject: body)
             }
-            guard let (data, resp) = try? await URLSession.shared.data(for: req) else {
-                if attempt == 0 { continue }
+            let result = try? await URLSession.shared.data(for: req)
+            guard host == expectedHost, connection == expectedConnection,
+                  requestRevision == revision, !Task.isCancelled else { return }
+            guard let (data, resp) = result else {
+                if attempt == 0 && body == nil { continue }
                 problem = "The wall is not answering."
                 return
             }
@@ -157,7 +185,7 @@ struct PanelTuningPage: View {
                     let inGroup = store.knobs.filter { $0.group == group }
                     ForEach(Array(inGroup.enumerated()), id: \.element.id) { i, knob in
                         if i > 0 { Rule() }
-                        row(knob)
+                        row(knob).disabled(store.busy)
                     }
                 }
             }
@@ -172,7 +200,7 @@ struct PanelTuningPage: View {
                 }
             }
         }
-        .task { await store.load(host: wall.host) }
+        .task(id: wall.host) { await store.load(host: wall.host) }
     }
 
     // MARK: The wall, live, at the top of the page

@@ -1,0 +1,106 @@
+{
+  "checks" : [
+    {
+      "name" : "Only active acknowledged art claims current display",
+      "passed" : true
+    },
+    {
+      "name" : "Phone keeps exact wall composition receipt and resolution",
+      "passed" : true
+    },
+    {
+      "name" : "Stable receipt identity survives decoding",
+      "passed" : true
+    },
+    {
+      "name" : "Replaced artwork is not described as current",
+      "passed" : true
+    },
+    {
+      "name" : "Found artwork never falsely claims sending",
+      "passed" : true
+    },
+    {
+      "name" : "Video display receipt is explicit",
+      "passed" : true
+    },
+    {
+      "name" : "Ended video does not claim current playback",
+      "passed" : true
+    },
+    {
+      "name" : "Blank search title falls back to useful album identity",
+      "passed" : true
+    },
+    {
+      "name" : "Picture attribution takes precedence over artist fallback",
+      "passed" : true
+    },
+    {
+      "name" : "Older sparse responses get a readable identity",
+      "passed" : true
+    },
+    {
+      "name" : "Empty success body cannot acknowledge a discovery",
+      "passed" : true
+    },
+    {
+      "name" : "Search success requires an actual wall result receipt",
+      "passed" : true
+    },
+    {
+      "name" : "A complete discovery result can be accepted",
+      "passed" : true
+    },
+    {
+      "name" : "Low confidence is presented as a possibility",
+      "passed" : true
+    },
+    {
+      "name" : "Sharing uses song metadata only",
+      "passed" : true
+    },
+    {
+      "name" : "An identified song remains useful when its cover could not be displayed",
+      "passed" : true
+    },
+    {
+      "name" : "Missing artist cannot masquerade as a song identification",
+      "passed" : true
+    },
+    {
+      "name" : "Moderate confidence avoids certainty claims",
+      "passed" : true
+    },
+    {
+      "name" : "High confidence still leaves room for mistakes",
+      "passed" : true
+    },
+    {
+      "name" : "Missing confidence never claims certainty",
+      "passed" : true
+    },
+    {
+      "name" : "Previous result remains available during a new identification",
+      "passed" : true
+    },
+    {
+      "name" : "Actual search capability and source decode",
+      "passed" : true
+    },
+    {
+      "name" : "Single composer includes pictures covers and videos",
+      "passed" : true
+    },
+    {
+      "name" : "Each scope gives an intentional search prompt",
+      "passed" : true
+    },
+    {
+      "name" : "Search examples stay appropriate to their scope",
+      "passed" : true
+    }
+  ],
+  "passed" : 25,
+  "total" : 25
+}

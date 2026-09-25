@@ -1,0 +1,1 @@
+{"base":"f31d1f1c77549e9f3a111da7823ff886e17bad74","changes":"Baseline Settings Voice route accepts -hearing flag to present original HearingPage. Only navigation instrumentation; no baseline UI or logic changes.","capture":"Actual native app on iPhone17Pro iOS26.5 simulator with isolated local fixtures."}

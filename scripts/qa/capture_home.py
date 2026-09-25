@@ -139,7 +139,7 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
             if path in wall.covers:
                 self.response(200, wall.covers[path], "image/png")
                 return
-            if path in {"/finishes", "/ambient/previews"}:
+            if path in wall.studies:
                 payload = wall.studies.get(path, {})
                 self.response(200, json.dumps(payload).encode(), "application/json")
                 return
@@ -226,10 +226,11 @@ def main() -> int:
     parser.add_argument("--settle", type=float, default=5.0)
     parser.add_argument("--launch-argument", action="append", default=[],
                         help="Extra app argument, for example --launch-argument=-controls")
-    parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker"))
+    parser.add_argument("--mode", choices=("art", "cd", "ambient", "weather", "clock", "timer", "off", "game", "video", "frame", "lyrics", "nine", "ticker", "imagine"))
     parser.add_argument("--routine-state", choices=("idle", "active", "complete", "ringing", "location"))
     parser.add_argument("--timer-kind", choices=("countdown", "alarm"), default="countdown")
     parser.add_argument("--message-state", choices=("ready", "history", "thinking", "missing-key", "note-active", "note-expired"), default="ready")
+    parser.add_argument("--discovery-state", choices=("ready","result","thinking","missing-key","failed","quiet","faint","listening"))
     parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
     parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
@@ -299,6 +300,10 @@ def main() -> int:
                                    "catno": f"TS-{i + 1:03}", "formats": ["Vinyl", "LP"],
                                    "cover": f"http://{fixture_host}{route}", "country": "US",
                                    "url": "https://www.discogs.com", "plays": 12 - i})
+    if args.discovery_state:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+        from discovery_fixtures import configure
+        configure(wall, fixture_host, args.discovery_state, artwork(), next((a for a in args.launch_argument if a in {"show","earworm","imagine","voice","hearing"}), ""))
     captures = []
     try:
         for name in states:
@@ -368,6 +373,8 @@ def main() -> int:
                 base = Image.frombytes("RGB", (64,64), frame)
                 wall.studies["/finishes"] = {name:base64.b64encode(apply_finish(base,name).tobytes()).decode() for name in ("clean","dither","poster")}
                 wall.studies["/ambient/previews"] = {name:base64.b64encode(Ambient(64,name,state["color"],state["color2"],1).frame_at(8).tobytes()).decode() for name in ("solid","breathe","pulse","rainbow","gradient","plaid","weave","deco","snake")}
+            if getattr(wall, "capture_frame", None) is not None:
+                frame = wall.capture_frame
             wall.load(state, frame)
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")

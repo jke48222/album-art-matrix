@@ -1,0 +1,404 @@
+{
+  "source_root": "/private/tmp/tessera-batch08-baseline",
+  "source_sha256": {
+    "brain/imagine.py": "7fa6dd6d839d55f89f8a4ddec778ea3a30befa8c7ed1c6a369b31c8c5c0aaf37",
+    "brain/voice/voice.py": "edcbc52a0cb801099194945e89ba8339a614f4c11e8d8717d25e4f511759f823",
+    "brain/art/horizon.py": "70882e5d47db0b63b6e5d198264da2c64af19a6653f44a232191dd75d68c3901",
+    "brain/art/answer.py": "3638a67596fabc9c45b24f2f42ba16669666eced24a95f8fb90abf3b28576245",
+    "brain/art/pixelfont.py": "2f24bf7146efaa1a1907509d524f2042077f5aec72deca4b4f456eb9dcc9ecc0",
+    "brain/art/sting.py": "e975ddf111cc5e6a9a45ad3c0576ea8b557fd95df69f8a2a8d80cb28be50e2e1",
+    "brain/assets/tessera-record-final-720p.mp4": "d3272eab80e64ad29def8af59fa56911ca922decfdbc9d392d3ab7480e7ab591",
+    "brain/show.py": "1ce1c854a6c37f71f86148c43c63853f1064ddbe1dcaf78994a851b89ff5877d",
+    "brain/art/pipeline.py": "87a50a2728abe74c2db3e7d4f0e64326de42aebeb011c463275c4aaf61d6eb7a",
+    "brain/games/board.py": "61b0c64efc84b824b7ba062415d8da5bd39a732b2a8e554a0a0246de28c074d2",
+    "brain/wall.py": "49469b408376756fcfbd0a21dd20d7476031b802c4a51d3edfce65e1ba6d019c"
+  },
+  "native_frames": [
+    {
+      "case": "imagine-waiting",
+      "side": 64,
+      "file": "imagine-waiting-64.png",
+      "elapsed_s": 1.8,
+      "rgb_sha256": "3ad934ec8f79c892752a0bed24c0af80aaabc6ff2e430a1a2a6b625a671065c3",
+      "description": "Waiting for provider output; no generated image has arrived. No percentage is inferred.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-waiting",
+      "side": 192,
+      "file": "imagine-waiting-192.png",
+      "elapsed_s": 1.8,
+      "rgb_sha256": "8702a0e783d57ed6ac015f233c3c17410a7bd99933956d830f6de834eeff4fb0",
+      "description": "Waiting for provider output; no generated image has arrived. No percentage is inferred.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-waiting",
+      "side": 512,
+      "file": "imagine-waiting-512.png",
+      "elapsed_s": 1.8,
+      "rgb_sha256": "fa20f78c57dcc04450ae6ea86be57ad465bfc346f9aa0384e6bd2633dd754a6a",
+      "description": "Waiting for provider output; no generated image has arrived. No percentage is inferred.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-partial",
+      "side": 64,
+      "file": "imagine-partial-64.png",
+      "elapsed_s": 1.6,
+      "rgb_sha256": "dccca67f361b763237149dc4c9ba719cf6140ea987a78b079305960d46a7dc29",
+      "description": "First real partial image, 1.6 seconds into its production sketch-to-colour reveal.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-partial",
+      "side": 192,
+      "file": "imagine-partial-192.png",
+      "elapsed_s": 1.6,
+      "rgb_sha256": "c419644f4d7f2d2e9da8d42947f15ea91a1d24c20c5514aa481dfe14083181f4",
+      "description": "First real partial image, 1.6 seconds into its production sketch-to-colour reveal.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-partial",
+      "side": 512,
+      "file": "imagine-partial-512.png",
+      "elapsed_s": 1.6,
+      "rgb_sha256": "a841530a2b621d3bf06792058ce4200c91b5bccbde9c6d423b182ccaf760af45",
+      "description": "First real partial image, 1.6 seconds into its production sketch-to-colour reveal.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-done",
+      "side": 64,
+      "file": "imagine-done-64.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "68769f6f25887cc8fba34626b4abad3e98007a487f42b918fc6a917ffe58e5ea",
+      "description": "The final image, settled after the production reveal. Uses the same linear-light panel conversion before and after.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-done",
+      "side": 192,
+      "file": "imagine-done-192.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "10b95b7f1213aac6a585fd9275b8144dc8ac3f4b737e6d043ccb181291f1e94b",
+      "description": "The final image, settled after the production reveal. Uses the same linear-light panel conversion before and after.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "imagine-done",
+      "side": 512,
+      "file": "imagine-done-512.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "4d164c5398a232ba7139add710af80994a60c35568b7adfda09f13c75c8af13f",
+      "description": "The final image, settled after the production reveal. Uses the same linear-light panel conversion before and after.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": "An amber sun over a quiet sea, paper-cut layers",
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "earworm-result",
+      "side": 64,
+      "file": "earworm-result-64.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "a03fc64982dfd14304ab42f4a00b797337755778c36e346024f8d9926f903090",
+      "description": "Production Shower.earworm with an authored song identity and local artwork fixture. Previous text banner versus the current full sleeve, matching phone artwork composition.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "earworm-result",
+      "side": 192,
+      "file": "earworm-result-192.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "efcd2557d2b15b84ebe11ee244184ef761ebf6141db748539c36723b24cf42bf",
+      "description": "Production Shower.earworm with an authored song identity and local artwork fixture. Previous text banner versus the current full sleeve, matching phone artwork composition.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "earworm-result",
+      "side": 512,
+      "file": "earworm-result-512.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "2d6f2ece2152cb948f1f7b3c82b1d878bd66c51bc0f4914417020129c1f6ca5a",
+      "description": "Production Shower.earworm with an authored song identity and local artwork fixture. Previous text banner versus the current full sleeve, matching phone artwork composition.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-listening",
+      "side": 64,
+      "file": "voice-listening-64.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "de9e59d1d48c42bd307bdf0aab1e782e14528bf15d98f5bb030125baa3f808ad",
+      "description": "Production microphone-responsive Horizon with a deterministic loudness envelope and colour derived from the fixture artwork.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": -67,
+      "microphone_level_db": -27.017759444145554
+    },
+    {
+      "case": "voice-listening",
+      "side": 192,
+      "file": "voice-listening-192.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "c9c595b35fe852d1d825dd8157c61cc253163e14ed11c34fdd52cdac3905802e",
+      "description": "Production microphone-responsive Horizon with a deterministic loudness envelope and colour derived from the fixture artwork.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": -67,
+      "microphone_level_db": -27.017759444145554
+    },
+    {
+      "case": "voice-listening",
+      "side": 512,
+      "file": "voice-listening-512.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "2a2bb1e4f8cbc355e6abcd573e948e4ef5af94b52e9d32263a4a6ca1b571df32",
+      "description": "Production microphone-responsive Horizon with a deterministic loudness envelope and colour derived from the fixture artwork.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": -67,
+      "microphone_level_db": -27.017759444145554
+    },
+    {
+      "case": "voice-thinking",
+      "side": 64,
+      "file": "voice-thinking-64.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "a3edb7d85696e23dccf7123e000499ffec2593ad7ff68ee045d1a0313cd73693",
+      "description": "Production Horizon thinking bead at a fixed elapsed time. No transcription or provider request is made.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-thinking",
+      "side": 192,
+      "file": "voice-thinking-192.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "bba532267eec9f689a835afd029aa67e986a82a893267daf461b646e8d531a61",
+      "description": "Production Horizon thinking bead at a fixed elapsed time. No transcription or provider request is made.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-thinking",
+      "side": 512,
+      "file": "voice-thinking-512.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "905dabe2927aaf60dec7813f97ec88963eec19b4673eb2b02f6425b246ce2168",
+      "description": "Production Horizon thinking bead at a fixed elapsed time. No transcription or provider request is made.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": null,
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-answer",
+      "side": 64,
+      "file": "voice-answer-64.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "203a80e585c5b199e67bf8e2ea8626ff72bad35186f34cc1f687bf8b98c5d905",
+      "description": "Production opening transition and paginated AnswerFace with an authored QA answer; text adapts to each native pixel size.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": "A little light for your room. The coast is quiet tonight.",
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-answer",
+      "side": 192,
+      "file": "voice-answer-192.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "efcb7f6ec8020dd4bb520bab3bd2bb85938aabfb8e10b86079abc4fd76ceba93",
+      "description": "Production opening transition and paginated AnswerFace with an authored QA answer; text adapts to each native pixel size.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": "A little light for your room. The coast is quiet tonight.",
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    },
+    {
+      "case": "voice-answer",
+      "side": 512,
+      "file": "voice-answer-512.png",
+      "elapsed_s": 2.8,
+      "rgb_sha256": "20c295eaf6fa72ec808357bb2d57e65cc14cd0c489a9553ad540c0730318223b",
+      "description": "Production opening transition and paginated AnswerFace with an authored QA answer; text adapts to each native pixel size.",
+      "source_dimensions": [
+        1024,
+        1024
+      ],
+      "prompt": null,
+      "answer": "A little light for your room. The coast is quiet tonight.",
+      "microphone_floor_db": null,
+      "microphone_level_db": null
+    }
+  ],
+  "movies": [
+    {
+      "case": "imagine-waiting",
+      "file": "imagine-waiting-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    },
+    {
+      "case": "imagine-partial",
+      "file": "imagine-partial-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    },
+    {
+      "case": "imagine-done",
+      "file": "imagine-done-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    },
+    {
+      "case": "voice-listening",
+      "file": "voice-listening-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    },
+    {
+      "case": "voice-thinking",
+      "file": "voice-thinking-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    },
+    {
+      "case": "voice-answer",
+      "file": "voice-answer-motion.gif",
+      "native_side": 64,
+      "display_side": 384,
+      "fps": 15,
+      "frames": 60
+    }
+  ]
+}

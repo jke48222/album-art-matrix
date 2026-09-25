@@ -1,0 +1,10 @@
+{
+  "device": "Connected iPhone18ProMax",
+  "identifier": "1BED2E47-0A74-5F9E-A99A-61408BF6382C",
+  "bundle": "com.jalenedusei.tessera",
+  "install": "success",
+  "foreground_launch": "blocked_locked_device_after_final_accessibility_update",
+  "earlier_build_launch": "success",
+  "binary_sha256": "5a5d87d2e9437b66660dec86c0067604a7e0e783ff32b0292d86af25e7451951",
+  "source": "Final signed Debug build; final UI changes verified in native Simulator captures."
+}

@@ -23,6 +23,8 @@ behind POST /voice/wake and POST /voice/say.
 from __future__ import annotations
 
 import math
+from collections import deque
+import uuid
 import threading
 import time
 
@@ -78,16 +80,30 @@ class Voice:
         self.wake_dir = enroll_mod.DIR
         self.wake_problem = None
         self._wake_loading = None
+        self._last_audio = None
+        self._generation = 0
+        self._worker_context = threading.local()
+        self._history = deque(maxlen=8)
 
     def configure(self, on=None):
         if on is not None:
-            self.on = bool(on)
-            if not self.on and self.state != "idle":
-                self._finish()
+            with self._lock:
+                self.on = bool(on)
+                if not self.on:
+                    self._generation += 1
+                    self._speech = []
+                    if self.enroller is not None and self.enroller.stage in ("takes", "talk"):
+                        self.enroller.stage = "cancelled"
+                        self.enroller.message = "Learning stopped because Voice was switched off."
+                        self.enroller.finished_at = time.monotonic()
+                    self._face_answer = None
+                    self.state = "idle"
+            self._nudge()
 
     # ---- the capture thread -----------------------------------------------------------
     def feed(self, chunk: bytes, level_db, floor_db, now: float):
         self.level_db, self.floor_db = level_db, floor_db
+        self._last_audio = now
         if self.state == "enrolling":
             self._feed_enroll(chunk, level_db, floor_db, now)
             return
@@ -117,8 +133,11 @@ class Voice:
         """The wake word, or POST /voice/wake."""
         now = time.monotonic() if now is None else now
         with self._lock:
-            if self.state != "idle":
-                return
+            if not self.on or self.state != "idle":
+                return False
+            self._generation += 1
+            self.problem = None
+            self.last_text = self.last_command = self.last_answer = None
             self.wakes += 1
             self.heard_at = now
             pic = getattr(self.ctrl, "last_frame", None)
@@ -129,6 +148,7 @@ class Voice:
             self.state, self.since = "listening", now
         self.log("[voice] listening")
         self._nudge()
+        return True
 
     def _as_picture(self, raw):
         if raw is None:
@@ -153,12 +173,13 @@ class Voice:
             if not nothing:
                 self.state, self.since = "thinking", now
                 self.timings = {"listened_s": round(now - self.heard_at, 2)}
+            generation = self._generation
         # the lock is not reentrant: _missed takes it again, so it is called
         # out here, not under it
         if nothing:
             self._missed(now, "nothing said")
             return
-        threading.Thread(target=self._think, args=(pcm,), name="voice-think", daemon=True).start()
+        threading.Thread(target=self._think, args=(pcm, generation), name="voice-think", daemon=True).start()
 
     # ---- the wake word, chosen and taught -------------------------------------------------
     def set_wake(self, name: str, wait: bool = False) -> dict:
@@ -172,30 +193,42 @@ class Voice:
         if name not in known and not name.endswith(".onnx"):
             return {"error": f"no wake word called {name}"}
 
-        def load() -> bool:
-            w = wake_mod.WakeWord(name, threshold=wake_mod.threshold_for(name), wake_dir=self.wake_dir,
-                                  front=wake_mod.front_end_of(self.wake))
-            self._wake_loading = None
-            if not w.loaded:
-                self.wake_problem = w.problem or "it would not load"
-                self.log(f"[voice] wake word {name!r} would not load: {self.wake_problem}")
-                return False
-            old, self.wake = self.wake, w
-            self.wake_problem = None
-            del old
-            wake_mod.release_memory()
-            wake_mod.save_choice(name)
-            tune = getattr(self.ctrl, "tuning", None)
-            if tune is not None:                 # the tuning page's knob is the word in use
-                try:
-                    tune.update({"wake_threshold": w.threshold})
-                except Exception as exc:
-                    self.log(f"[voice] the tuning page keeps the old sensitivity: {exc}")
-            self.log(f"[voice] the wake word is now {w.label!r}")
-            self._nudge()
-            return True
+        with self._lock:
+            if self._wake_loading is not None:
+                return {"error": "a wake word is already loading; wait for it to finish"}
+            self._wake_loading = name
 
-        self._wake_loading = name
+        def load() -> bool:
+            try:
+                w = wake_mod.WakeWord(name, threshold=wake_mod.threshold_for(name), wake_dir=self.wake_dir,
+                                     front=wake_mod.front_end_of(self.wake))
+                if not w.loaded:
+                    self.wake_problem = w.problem or "it would not load"
+                    self.log(f"[voice] wake word {name!r} would not load: {self.wake_problem}")
+                    return False
+                # Persist the selection before replacing the working detector.
+                wake_mod.save_choice(name)
+                old, self.wake = self.wake, w
+                self.wake_problem = None
+                del old
+                wake_mod.release_memory()
+                tune = getattr(self.ctrl, "tuning", None)
+                if tune is not None:
+                    try:
+                        tune.update({"wake_threshold": w.threshold})
+                    except Exception as exc:
+                        self.log(f"[voice] the tuning page keeps the old sensitivity: {exc}")
+                self.log(f"[voice] the wake word is now {w.label!r}")
+                return True
+            except Exception as exc:
+                self.wake_problem = f"Could not load the wake word: {str(exc)[:120]}"
+                self.log(f"[voice] {self.wake_problem}")
+                return False
+            finally:
+                with self._lock:
+                    self._wake_loading = None
+                self._nudge()
+
         if wait:
             ok = load()
             return {"ok": ok, "error": None if ok else self.wake_problem}
@@ -292,6 +325,10 @@ class Voice:
         w = self.wake
         e = self.enroller
         over = None if self.level_db is None or self.floor_db is None else round(self.level_db - self.floor_db, 1)
+        age = None if self._last_audio is None else max(0.0, time.monotonic() - self._last_audio)
+        live = age is not None and age < 3.0
+        if not live:
+            over = None
         score = float(getattr(w, "score", 0.0) or 0.0)
         peak = w.peak() if callable(getattr(w, "peak", None)) else score
         fires = int(getattr(w, "fires", 0) or 0)
@@ -300,7 +337,8 @@ class Voice:
                 "score": round(score, 3), "peak": round(float(peak), 3),
                 "threshold": getattr(w, "threshold", None), "fires": fires,
                 "last_fire_ago": round(time.monotonic() - last, 1) if fires and last is not None else None,
-                "level_over": over,
+                "level_over": over, "mic_available": live,
+                "last_audio_ago": round(age, 1) if age is not None else None,
                 "enroll": e.public() if e is not None and self.state == "enrolling" else None}
 
     def _enroll_face(self, el: float, size: int):
@@ -310,6 +348,12 @@ class Voice:
         e = self.enroller
         h = self._horizon
         now = time.monotonic()
+        if e is not None and e.stage in ("takes", "talk"):
+            last_audio = self._last_audio if self._last_audio is not None else self.since
+            if self.since + el - last_audio > MAX_LISTEN_S:
+                e.stage = "cancelled"
+                e.message = "Learning stopped: the microphone stopped sending audio. Reconnect it and try again."
+                e.finished_at = now
         if e is None or e.stage == "cancelled" or (
                 e.stage in ("done", "failed") and e.finished_at is not None and now - e.finished_at > 3.0):
             with self._lock:
@@ -382,10 +426,17 @@ class Voice:
 
     def say(self, text: str):
         """POST /voice/say: words without the microphone."""
+        text = str(text or "").strip()
+        if not text or len(text) > 1000:
+            return False
         now = time.monotonic()
         with self._lock:
-            if self.state not in ("idle", "listening"):
+            if not self.on or self.state not in ("idle", "listening"):
                 return False
+            self._generation += 1
+            self.problem = None
+            self.last_text = self.last_command = self.last_answer = None
+            self._speech = []
             if self.state == "idle":
                 self.wakes += 1
                 self.heard_at = now
@@ -394,18 +445,28 @@ class Voice:
                 self._horizon = Horizon(self.size)
             self.state, self.since = "thinking", now
             self.timings = {"listened_s": 0.0}
-        threading.Thread(target=self._think, args=(text,), name="voice-think", daemon=True).start()
+            generation = self._generation
+        threading.Thread(target=self._think, args=(text, generation), name="voice-think", daemon=True).start()
         return True
 
     # ---- the worker ----------------------------------------------------------------------
-    def _think(self, pcm_or_text):
+    def _current_worker(self):
+        generation = getattr(self._worker_context, "generation", None)
+        return generation is None or (self.on and generation == self._generation)
+
+    def _think(self, pcm_or_text, generation=None):
+        self._worker_context.generation = self._generation if generation is None else generation
         t0 = time.monotonic()
+        text = ""
+        receipt = None
         try:
             if isinstance(pcm_or_text, str):
                 text = pcm_or_text
             else:
                 text = self.transcriber.transcribe(pcm_or_text)
                 self.timings["transcribe_s"] = round(time.monotonic() - t0, 2)
+            if not self._current_worker():
+                return
             self.last_text = text
             self.log(f"[voice] heard: {text!r}")
             if not text.strip():
@@ -418,6 +479,7 @@ class Voice:
                 if heard is not None:
                     # the board shows the move itself; only a refusal is read back
                     self.last_command = f"game: {text!r}"
+                    receipt = "Sent to the game on your wall."
                     if heard.get("error"):
                         self._answer(heard["error"])
                     else:
@@ -426,13 +488,23 @@ class Voice:
             cmd = cmds.match(text)
             if cmd is not None:
                 self.last_command = repr(cmd)
+                receipt = self._command_receipt(cmd)
                 self._do(cmd)
                 return
             self._ask(text)
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:120]}"
-            self.log(f"[voice] {self.problem}")
-            self._missed(time.monotonic(), "an error")
+            if self._current_worker():
+                self.problem = f"{type(exc).__name__}: {str(exc)[:120]}"
+                self.log(f"[voice] {self.problem}")
+                self._missed(time.monotonic(), "an error")
+        finally:
+            if text and self._current_worker():
+                with self._lock:
+                    self._history.appendleft({"id": uuid.uuid4().hex, "text": text,
+                                              "command": receipt,
+                                              "answer": self.last_answer,
+                                              "problem": self.problem})
+            self._worker_context.generation = None
 
     # Spoken commands whose feature owns no object of its own, so nothing
     # else would refuse them: note acts straight on ctrl, and earworm shares
@@ -441,6 +513,23 @@ class Voice:
     _SWITCHED = {"note": "Notes are off on this wall.",
                  "earworm": "Naming a song from its words is off on this wall.",
                  "imagine": "Drawing from words is off on this wall."}
+
+    @staticmethod
+    def _command_receipt(cmd: cmds.Command) -> str:
+        words = {
+            "art": "Album art is on the wall.", "cd": "The record is spinning.",
+            "ambient": "The ambient face is on the wall.", "clock": "The clock is on the wall.",
+            "lyrics": "Lyrics are on the wall.", "nine": "The album grid is on the wall.",
+            "off": "The wall is resting.", "on": "The wall is awake.",
+            "brighter": "Brightness increased.", "dimmer": "Brightness reduced.",
+            "note": "Your note is on the wall.", "cancel": "Cancelled.",
+            "video_off": "Video stopped.", "show": "Sent to the wall.",
+            "play": "Sent to the wall.", "imagine": "Sent to the wall.",
+            "earworm": "Sent to the wall.",
+        }
+        if cmd.name == "timer":
+            return f"Timer set for {cmd.args.get('minutes', 0):g} minutes."
+        return words.get(cmd.name, "Done on the wall.")
 
     def _do(self, cmd: cmds.Command):
         ctrl = self.ctrl
@@ -531,12 +620,16 @@ class Voice:
         t0 = time.monotonic()
         answer = self.asker.ask(text, size=self.size)
         self.timings["ask_s"] = round(time.monotonic() - t0, 2)
-        self.last_answer = answer
-        self._answer(answer)
+        if self._current_worker():
+            self.last_answer = answer
+            self._answer(answer)
 
     # ---- outcomes --------------------------------------------------------------------------------
     def _answer(self, text: str):
         with self._lock:
+            if not self._current_worker():
+                return
+            self.last_answer = text
             self._face_answer = AnswerFace(self.size, text, ink=self.ink)
             self.state, self.since = "answering", time.monotonic()
         self.log(f"[voice] answer: {text!r}")
@@ -545,12 +638,16 @@ class Voice:
     def _open(self):
         """A command took effect: hand the opening to the frame tee."""
         with self._lock:
+            if not self._current_worker():
+                return
             self.state = "idle"
         self.ctrl.transition = ("open", time.monotonic(), self.ink)
         self._nudge()
 
     def _missed(self, now: float, why: str):
         with self._lock:
+            if not self._current_worker():
+                return
             self.state, self.since = "missed", now
         self.log(f"[voice] missed: {why}")
         self._nudge()
@@ -571,6 +668,11 @@ class Voice:
     def frame(self, t: float, size: int):
         """The overlay's frame at time t, or None when the wall is its own."""
         state = self.state
+        # Capture can stop between chunks (a disconnected USB microphone). The
+        # render loop owns a second deadline so the wall cannot stay listening.
+        if state == "listening" and t - self.since >= MAX_LISTEN_S:
+            self._end_listening(t)
+            state = self.state
         if state == "idle":
             return None
         if self._horizon is None or self._horizon.size != size:
@@ -607,9 +709,13 @@ class Voice:
         return None
 
     def status(self) -> dict:
+        with self._lock:
+            history = list(self._history)
         return {"on": self.on, "state": self.state, "wakes": self.wakes,
                 "last_text": self.last_text, "last_command": self.last_command,
                 "last_answer": self.last_answer, "timings": self.timings,
+                "history": history,
+                "mic_available": self.meter()["mic_available"],
                 "wake": self.wake.status() if self.wake else None,
                 "wake_choices": wake_mod.choices(self.wake_dir),
                 "wake_loading": self._wake_loading, "wake_problem": self.wake_problem,

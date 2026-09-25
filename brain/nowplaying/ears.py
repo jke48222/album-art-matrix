@@ -228,6 +228,7 @@ class EarsSource(NowPlayingSource):
     def status(self) -> dict:
         with self._lock:
             hit, heard_at = self._hit, self._heard_at
+            hit_key = self._hit_key
             offset, clip_start = self._offset, self._clip_start
             pend, last, named = self._pending, self.last_heard, list(self._named)
         now = time.monotonic()
@@ -239,6 +240,11 @@ class EarsSource(NowPlayingSource):
         listening = bool(s["on"] and self._tools_ok and self.capturing)
         return {
             "engine": "shazam",
+            "match_source": (None if hit is None else "local" if (hit_key or "").startswith("taught:") else "shazam"),
+            "last_rejected": ({"reason": "No catalogue identity. Waiting to hear the same song again before showing it.",
+                               "ago_s": max(0, int(now - pend["at"]))} if pend is not None else
+                              {"reason": "No confident match from the last listen. A longer clip will be tried automatically.",
+                               "ago_s": max(0, int(now - self._last_try))} if self._misses and self._last_try is not None else None),
             "on": bool(s["on"]),
             "tools": self._tools_ok,
             "device": self.device,
@@ -259,7 +265,7 @@ class EarsSource(NowPlayingSource):
             "heard": (None if hit is None else
                       {"title": hit.title, "artist": hit.artist, "album": hit.album,
                        "at_s": (None if offset is None else
-                                int(offset + now - clip_start)),
+                                max(0, min(int(hit.duration_ms / 1000), int(offset + now - clip_start)) if hit.duration_ms else int(offset + now - clip_start))),
                        "length_s": (None if not hit.duration_ms
                                     else int(hit.duration_ms / 1000))}),
             # heard once, with nothing in the catalogue behind it: not on the

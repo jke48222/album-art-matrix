@@ -15,9 +15,9 @@
                                  video face plays it with the phone as the
                                  speaker, as a pasted link would
     earworm("I can't stop...")   Claude names the song from the words, the
-                                 sleeve goes up for eight seconds with the
-                                 name running under it, the phone gets the
-                                 alternatives
+                                 sleeve goes up for ten minutes; the phone
+                                 shows the same composition, song identity,
+                                 and clearly labeled alternatives
     imagine("a purple elephant") a picture from words, by brain/imagine.py:
                                  Claude writes the prompt for a panel, an
                                  image model draws it, the frame face shows
@@ -31,10 +31,14 @@ which is the voice's worker or a request handler.
 from __future__ import annotations
 
 import difflib
+import base64
+import io
+import math
 import re
 import subprocess
 import threading
 import time
+import uuid
 
 import numpy as np
 import requests
@@ -45,7 +49,6 @@ from .art.pipeline import prepare
 from .video import ytdlp
 
 SHOW_S = 600.0                  # a cover asked for stays this long
-EARWORM_S = 8.0                 # the found song's sleeve, before its name runs
 ITUNES = "https://itunes.apple.com/search"
 GOOGLE = "https://www.googleapis.com/customsearch/v1"
 WIKIPEDIA = "https://en.wikipedia.org/w/api.php"
@@ -57,6 +60,10 @@ _COVER_CUES = re.compile(r"\b(cover|sleeve|album|record|song|track|single|ep|lp|
 _PICTURE_OF = re.compile(r"^(?:a |an |the |some )?(?:picture|photo|photograph|image|pic|pictures|photos)s?"
                          r" (?:of |for )(.+)$", re.I)
 _COVER_OF = re.compile(r"^(?:the )?(?:cover|sleeve|album art|art|artwork) (?:of |for )(.+)$", re.I)
+
+
+class DisplayChanged(RuntimeError):
+    """A selection made during discovery takes precedence over its late result."""
 
 
 def _plain(s: str) -> str:
@@ -85,7 +92,7 @@ def find_art(query: str) -> dict | None:
             score = max(difflib.SequenceMatcher(None, q, name).ratio(),
                         difflib.SequenceMatcher(None, q, f"{name} {artist}").ratio(),
                         difflib.SequenceMatcher(None, q, f"{artist} {name}").ratio())
-            if q in name or name in q:
+            if name and (q in name or name in q):
                 score = max(score, 0.9)
             if score > best_score:
                 best, best_score = x, score
@@ -219,6 +226,17 @@ class Shower:
         self.google_key, self.google_cx = google_key or "", google_cx or ""
         self.pictures = 0            # pictures put up, for the phone's page
         self.last_picture = None     # {title, source}
+        self.last_show = None
+        self.last_earworm = None
+        self._work_lock = threading.Lock()
+        self._frame_lock = threading.RLock()
+        self._timer = None
+        self._frame_seq = None
+        self._frame_bytes = None
+        self.pending = None
+        self.problem = None
+        self._problem_kind = None
+        self._local = threading.local()
 
     def configure(self, api_key: str | None = None, cx: str | None = None):
         """The Google key and search engine, from the phone's Services page."""
@@ -229,6 +247,78 @@ class Shower:
         """For GET /services: whether Google is set, and what was last found."""
         return {"key_set": bool(self.google_key), "cx_set": bool(self.google_cx),
                 "pictures": self.pictures, "last": self.last_picture, "problem": None}
+
+    def _receipt(self, value: dict | None) -> dict | None:
+        if value is None:
+            return None
+        result = dict(value)
+        active = (value.get("shown") is True and value.get("frame_seq") == self.ctrl.shown_seq
+                  and self.ctrl.get()["mode"] == "frame"
+                  and time.monotonic() < self._until)
+        if value.get("what") == "play":
+            active = self.ctrl.get()["mode"] == "video" and value.get("frame_seq") == self.ctrl.shown_seq
+        result["active"] = active
+        result["seconds_left"] = max(0, int(self._until - time.monotonic())) if active and value.get("what") != "play" else 0
+        return result
+
+    def discovery_status(self) -> dict:
+        with self._frame_lock:
+            return {"last": self._receipt(self.last_show), "pending": self.pending in ("show", "play"),
+                    "problem": self.problem if self._problem_kind in ("show", "play") else None,
+                    "picture_provider": "Google Images" if self.google_key and self.google_cx else "Web search",
+                    "video_available": getattr(self.ctrl, "video", None) is not None}
+
+    def earworm_status(self) -> dict:
+        with self._frame_lock:
+            return {"last": self._receipt(self.last_earworm), "pending": self.pending == "earworm",
+                    "ready": self.asker is not None and self.asker.ready,
+                    "problem": self.problem if self._problem_kind == "earworm" else None}
+
+    def _remember(self, out: dict, *, earworm: bool = False) -> dict:
+        with self._frame_lock:
+            out = {"id": str(uuid.uuid4()), "created_at": int(time.time()), **out}
+            receipt = getattr(self._local, "receipt", None)
+            if out.get("shown") and receipt is not None:
+                sequence, pixels = receipt
+                size = self.ctrl.wall.width
+                buffer = io.BytesIO()
+                Image.frombytes("RGB", (size, size), pixels).save(buffer, format="PNG")
+                out.update(preview_png=base64.b64encode(buffer.getvalue()).decode("ascii"),
+                           preview_size=size, frame_seq=sequence)
+            self.last = out
+            if earworm:
+                self.last_earworm = out
+            else:
+                self.last_show = out
+            return self._receipt(out)
+
+    def _run(self, kind: str, work) -> dict:
+        if not self._work_lock.acquire(blocking=False):
+            return {"error": "The wall is finishing another discovery. Try again in a moment.", "code": 409}
+        self.pending, self.problem, self._problem_kind = kind, None, kind
+        self._local.selection = (self.ctrl.get()["mode"], self.ctrl.shown_seq)
+        self._local.receipt = None
+        try:
+            result = work()
+            if result.get("error"):
+                self.problem = result["error"]
+            return result
+        except DisplayChanged:
+            self.problem = "Your wall changed while the search was running. Search again when you're ready to replace it."
+            return {"error": self.problem, "code": 409}
+        except Exception as exc:
+            print(f"[show] {kind}: {type(exc).__name__}: {exc}", flush=True)
+            self.problem = "The search service could not finish. Your words are safe; try again."
+            return {"error": self.problem, "code": 502}
+        finally:
+            self.pending = None
+            self._local.selection = None
+            self._work_lock.release()
+
+    def _check_selection(self):
+        expected = getattr(self._local, "selection", None)
+        if expected is not None and expected != (self.ctrl.get()["mode"], self.ctrl.shown_seq):
+            raise DisplayChanged()
 
     # ---- the frame face, for a while --------------------------------------------------------
     def _put_up(self, art_url: str, seconds: float) -> bool:
@@ -257,24 +347,39 @@ class Shower:
         px = ctrl.wall.fit(pre.tobytes())
         if px is None:
             return False
-        here = ctrl.get()["mode"]
-        if here != "frame" or self._ret is None:
-            self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
-        ctrl.frame_override = px
-        ctrl.shown_seq += 1
-        ctrl.apply({"mode": "frame"})
-        self._until = time.monotonic() + seconds
-        t = threading.Timer(seconds, self._take_down)
-        t.daemon = True
-        t.start()
+        if not math.isfinite(seconds) or seconds <= 0:
+            return False
+        with self._frame_lock, ctrl._lock:
+            self._check_selection()
+            here = ctrl.get()["mode"]
+            if here != "frame" or self._ret is None or ctrl.shown_seq != self._frame_seq:
+                self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+            ctrl.frame_override = px
+            ctrl.shown_seq += 1
+            self._frame_seq, self._frame_bytes = ctrl.shown_seq, bytes(px)
+            self._local.receipt = (self._frame_seq, self._frame_bytes)
+            self._local.selection = ("frame", ctrl.shown_seq) if getattr(self._local, "selection", None) is not None else None
+            ctrl.apply({"mode": "frame"})
+            self._until = time.monotonic() + seconds
+            if self._timer is not None:
+                self._timer.cancel()
+            self._timer = threading.Timer(seconds, self._take_down, args=(self._frame_seq,))
+            self._timer.daemon = True
+            self._timer.start()
         return True
 
-    def _take_down(self):
-        if time.monotonic() < self._until - 1.0:
-            return                                 # a later showing took over
-        if self.ctrl.get()["mode"] == "frame":
-            self.ctrl.apply({"mode": self._ret or "art"})
-        self._ret = None
+    def _take_down(self, sequence=None):
+        with self._frame_lock, self.ctrl._lock:
+            if sequence is not None and sequence != self._frame_seq:
+                return
+            if time.monotonic() < self._until - 0.05:
+                return
+            # A drawing, archive selection, or a newer showing owns the wall
+            # now. An old expiry must never remove someone else's artwork.
+            if (self.ctrl.get()["mode"] == "frame" and self.ctrl.shown_seq == self._frame_seq
+                    and self.ctrl.frame_override == self._frame_bytes):
+                self.ctrl.apply({"mode": self._ret or "art"})
+            self._ret = None
 
     # ---- which is meant: a record the wall knows, or a thing in the world ------------------
     def _knows(self, found: dict) -> bool:
@@ -323,13 +428,19 @@ class Shower:
                     out = {"what": "show", "kind": "picture", "title": pic["title"],
                            "artist": pic["credit"], "album": "", "art_url": url,
                            "credit": pic["credit"], "source": pic["source"]}
-                    self.last = out
                     print(f"[show] a picture of {pic['title']!r} ({pic['source']}) on the wall", flush=True)
-                    return {"shown": True, **out, "seconds": SHOW_S}
+                    return self._remember({"shown": True, **out, "seconds": SHOW_S})
         return None
 
     # ---- the four ---------------------------------------------------------------------------------
     def show(self, query: str, kind: str = "any") -> dict:
+        if not isinstance(query, str) or not query.strip() or len(query) > 500:
+            return {"error": "Use a search from 1 to 500 characters.", "code": 400}
+        if kind not in ("any", "picture", "cover"):
+            return {"error": "Choose a picture or a cover.", "code": 400}
+        return self._run("show", lambda: self._show(query, kind))
+
+    def _show(self, query: str, kind: str = "any") -> dict:
         """kind is "cover", "picture" or "any". The words themselves can say:
         "a picture of X" asks for a picture, "the cover of X" or a cover cue
         in the words asks for a sleeve. Left to "any", a record the wall
@@ -364,11 +475,15 @@ class Shower:
         if not self._put_up(found["art_url"], SHOW_S):
             return {"error": f"I found {found['title']} but could not fetch its cover."}
         out = {"what": "show", "kind": "cover", **{k: v for k, v in found.items() if k != "score"}}
-        self.last = out
         print(f"[show] {found['artist']} - {found['title']} on the wall", flush=True)
-        return {"shown": True, **out, "seconds": SHOW_S}
+        return self._remember({"shown": True, **out, "source": "iTunes", "seconds": SHOW_S})
 
     def play(self, query: str) -> dict:
+        if not isinstance(query, str) or not query.strip() or len(query) > 500:
+            return {"error": "Use a video search from 1 to 500 characters.", "code": 400}
+        return self._run("play", lambda: self._play(query.strip()))
+
+    def _play(self, query: str) -> dict:
         ctrl = self.ctrl
         if ctrl.video is None:
             return {"error": "This wall cannot play video."}
@@ -377,59 +492,68 @@ class Shower:
             return {"error": "Finding a video by name needs yt-dlp, which this wall does not have."}
         try:
             out = subprocess.run([bin_, "--default-search", "ytsearch1", "--no-playlist",
-                                  "--skip-download", "--print", "id", "--print", "title", query],
+                                  "--skip-download", "--print", "id", "--print", "title", "--", query],
                                  capture_output=True, text=True, timeout=40)
             lines = [ln.strip() for ln in out.stdout.splitlines() if ln.strip()]
         except (OSError, subprocess.SubprocessError) as exc:
             return {"error": f"The video search failed: {str(exc)[:80]}"}
-        if len(lines) < 1:
+        if out.returncode != 0 or len(lines) < 1 or not re.fullmatch(r"[A-Za-z0-9_-]{11}", lines[0]):
             return {"error": f"I could not find a video for {query}."}
         vid, title = lines[0], (lines[1] if len(lines) > 1 else query)
         url = f"https://www.youtube.com/watch?v={vid}"
+        self._check_selection()
         problem = ctrl.video_start(url, sound=True, loop=False, clock="auto", title=title)
         if problem:
             return {"error": str(problem)}
-        self.last = {"what": "play", "title": title, "url": url}
         print(f"[show] playing {title!r} ({url})", flush=True)
-        return {"playing": True, "title": title, "url": url}
+        return self._remember({"what": "play", "kind": "video", "playing": True, "title": title,
+                               "url": url, "source": "YouTube", "frame_seq": ctrl.shown_seq})
 
     def earworm(self, words: str) -> dict:
+        if not isinstance(words, str) or not words.strip() or len(words) > 2000:
+            return {"error": "Use remembered words from 1 to 2,000 characters.", "code": 400}
+        return self._run("earworm", lambda: self._earworm(words.strip()))
+
+    def _earworm(self, words: str) -> dict:
         if self.asker is None or not self.asker.ready:
             return {"error": "Naming a song from its words needs the Claude key, set under Services."}
         got = self.asker.earworm(words)
         if not got or not got.get("title"):
-            return {"error": "I could not place those words."}
+            return {"error": getattr(self.asker, "problem", None) or "I could not place those words. Try another line or add the artist or decade.", "code": 502}
         found = find_art(f"{got['artist']} {got['title']}") or {}
         art = found.get("art_url")
         shown = False
         if art:
-            # the sleeve with the name on a band along its foot, the artist
-            # under the title at 192, for a while
+            # The artwork is the same square composition on wall and phone;
+            # song identity and actions remain outside the artwork on phone.
             try:
-                from .games.board import banner, INK, fit_text, text_centred
                 ctrl = self.ctrl
                 tune = getattr(ctrl, "tuning", None)
                 pre = prepare(fetch_art(art), ctrl.wall.width,
                               unsharp_radius=tune.get("unsharp_radius") if tune else 1.0,
                               unsharp_percent=tune.get("unsharp_percent") if tune else 60)
-                f = np.asarray(pre, dtype=np.uint8).copy()
-                size = f.shape[0]
-                if size > 96:
-                    band = 26
-                    f[size - band:] = (f[size - band:] * 0.25).astype(np.uint8)
-                    f[size - band] = (f[size - band] * 0.5 + 60).astype(np.uint8)
-                    text_centred(f, fit_text(got["title"], size - 8, 2), size // 2, size - band + 4, INK, 2)
-                    text_centred(f, fit_text(got["artist"], size - 8, 1), size // 2, size - 9, (170, 166, 156), 1)
-                else:
-                    banner(f, size, got["title"], INK, (18, 18, 24))
-                shown = self.show_frame(f, EARWORM_S + 6.0)
+                shown = self.show_frame(pre, SHOW_S)
+            except DisplayChanged:
+                raise
             except Exception as exc:
                 print(f"[show] earworm sleeve: {exc}", flush=True)
-                shown = bool(self._put_up(art, EARWORM_S))
-        self.last = {"what": "earworm", **got, "art_url": art}
+                shown = bool(self._put_up(art, SHOW_S))
         print(f"[show] earworm {words!r} -> {got['artist']} - {got['title']} "
               f"({got.get('confidence')})", flush=True)
-        return {"shown": shown, **got, "art_url": art}
+        return self._remember({"what": "earworm", "shown": shown, **got, "art_url": art,
+                               "album": found.get("album"), "seconds": SHOW_S if shown else 0,
+                               "words": words}, earworm=True)
+
+    def show_earworm(self, result_id: str) -> dict:
+        def work():
+            result = self.last_earworm
+            if not result or not result_id or result_id != result.get("id"):
+                return {"error": "That discovery has changed. Refresh before showing it again.", "code": 409}
+            art = result.get("art_url")
+            if not art or not self._put_up(art, SHOW_S):
+                return {"error": "The song was identified, but its cover is unavailable. Try again shortly.", "code": 502}
+            return self._remember({**result, "shown": True, "seconds": SHOW_S}, earworm=True)
+        return self._run("earworm", work)
 
     def imagine(self, prompt: str) -> dict:
         im = getattr(self.ctrl, "imaginer", None)

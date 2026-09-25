@@ -1,0 +1,29 @@
+{
+  "unit": "F06",
+  "researched_at": "2026-09-25",
+  "task_intent": "Refine Tessera’s discovery, imagination, and listening features with expressive native interfaces and reliable wall feedback.",
+  "references": [
+    {
+      "name": "WhatsApp / Meta AI voice call",
+      "url": "https://mobbin.com/screens/6474d2b9-3803-4bd3-90ee-143cf9dda044",
+      "image_inspected": true,
+      "applied": "One visually quiet listening focal point and clear microphone action. Tessera uses a real level-driven horizon instead of an unrelated orb."
+    },
+    {
+      "name": "Meta AI voice response",
+      "url": "https://mobbin.com/screens/a13d716b-b9dc-4775-9934-b5c881b221a3",
+      "image_inspected": true,
+      "applied": "Readable spoken-text transcript, prominent current state, and an immediately available type alternative. The app shows the actual panel frame alongside state feedback."
+    },
+    {
+      "name": "Apple Human Interface Guidelines / Feedback",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/feedback",
+      "applied": "Integrate confirmation and errors into the surface, with semantic VoiceOver announcements on meaningful state changes. Haptics follow confirmed actions."
+    },
+    {
+      "name": "Apple Human Interface Guidelines / Progress indicators",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+      "applied": "Preserve a stable place for status, use determinate six-take and ten-second enrollment progress, and explain stalled microphone/connection states."
+    }
+  ]
+}

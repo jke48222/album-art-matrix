@@ -1,0 +1,74 @@
+{
+  "checks" : [
+    {
+      "name" : "An unconfigured studio is not busy",
+      "passed" : true
+    },
+    {
+      "name" : "Saved images can exist without an image key",
+      "passed" : true
+    },
+    {
+      "name" : "Background job is pending",
+      "passed" : true
+    },
+    {
+      "name" : "Job identity survives response decoding",
+      "passed" : true
+    },
+    {
+      "name" : "Received first image is described without a percentage",
+      "passed" : true
+    },
+    {
+      "name" : "Received image count is factual",
+      "passed" : true
+    },
+    {
+      "name" : "A failure does not keep the create button spinning",
+      "passed" : true
+    },
+    {
+      "name" : "A completed picture off the wall keeps truthful ownership",
+      "passed" : true
+    },
+    {
+      "name" : "Epoch zero is a valid picture timestamp",
+      "passed" : true
+    },
+    {
+      "name" : "Valid image IDs map to the wall's saved PNG",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity ..\/secret",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity photo?other",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity https:\/\/elsewhere",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity a\/b",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity ",
+      "passed" : true
+    },
+    {
+      "name" : "Reject unsafe image identity aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "passed" : true
+    },
+    {
+      "name" : "A missing wall cannot produce an image URL",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 17
+}

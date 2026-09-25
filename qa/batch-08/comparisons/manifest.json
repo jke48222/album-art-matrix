@@ -1,0 +1,222 @@
+{
+  "base": "f31d1f1",
+  "processing": "Native app screenshots scaled equally, not retouched. Before left, after right.",
+  "comparisons": [
+    {
+      "unit": "F03",
+      "title": "Show me",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-08/before/show/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-08/after/show/room-live.png",
+      "before_sha256": "46605c7740e347dda9a4ab8bba5270d282020fbc162cf11320f7ef10aeee0913",
+      "after_sha256": "bcd131c7915b63c59fe6e4852020ed0f82eec85d734faeef0f1815fc7cf6282a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-08/comparisons/show.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "4063e2c33bf2e5a08f6f5055c90646bc6fdef5ef799363b86770a0788ba94dde"
+    },
+    {
+      "unit": "F04",
+      "title": "Earworm",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-08/before/earworm/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-08/after/earworm/room-live.png",
+      "before_sha256": "f8cdb681d8312d00e89ee323624d0706a2e0c2b066074e3944d719dec51a9a87",
+      "after_sha256": "eb252a04117025cc7fcaa9ece50db2cab521b3dcde8d89d7863dfcc4cd1072cf",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-08/comparisons/earworm.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0aeb0ff18f0f8fab057ee69a24fcc0bd6681134a4ecab3244222fec989689f3c"
+    },
+    {
+      "unit": "F05",
+      "title": "Imagine",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-08/before/imagine/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-08/after/imagine/room-live.png",
+      "before_sha256": "39e1ae8d19b19807de44041a84796498f7731170bff69be2610b361238e9ccca",
+      "after_sha256": "56a83c20940251f45d870294fefecdb69f6471bb32a20172fac56f4b8943fb63",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-08/comparisons/imagine.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0d166ef1d90dc50ebdda7ab68e0c478d92890966f922a218eaa2507bb5a8cc28"
+    },
+    {
+      "unit": "F06",
+      "title": "Voice",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-08/before/voice/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-08/after/voice/room-live.png",
+      "before_sha256": "f7fb87bf1db73001092bae9725ac4e0f7903410955bf3e773b929f11de4cfa2d",
+      "after_sha256": "6bcb28bb53a12b6aeee030ca415512211a6d36231f7ac1c10002fca5f3776418",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-08/comparisons/voice.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "374519ae94ba830db86ad7592ffa5e3e3b356c4b6e0d91426a4aeee2e3faac18"
+    },
+    {
+      "unit": "F07",
+      "title": "Hearing & gestures",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-08/before/hearing/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-08/after/hearing/room-live.png",
+      "before_sha256": "9e4d2e120c3304ba81b5686ff82058a5639f5005b48df217477ab08f7c4d70ef",
+      "after_sha256": "952c8f8b399b9f72b95d152866cc69e22cb988ef7c1248f93257e68c659adfcc",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-08/comparisons/hearing.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "caf0d2dfa4d3d52eb7d6bc13029bab419097e846c1424bd0f5dbc0967017c7a8"
+    }
+  ],
+  "wall_manifest": "../wall/manifest.json",
+  "physical_wall": "unreachable; deployment pending",
+  "references": [
+    "https://developer.apple.com/design/human-interface-guidelines/feedback",
+    "https://developer.apple.com/design/human-interface-guidelines/gauges",
+    "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+    "https://developer.apple.com/design/human-interface-guidelines/searching",
+    "https://mobbin.com/screens/1500e3b8-9d60-406e-ad79-359d5bc799e7",
+    "https://mobbin.com/screens/31d698b5-2637-45fc-92c2-f2073badfde5",
+    "https://mobbin.com/screens/6474d2b9-3803-4bd3-90ee-143cf9dda044",
+    "https://mobbin.com/screens/672a42b8-4edb-46ec-b961-7eec035ea1ac",
+    "https://mobbin.com/screens/966e975a-0116-43b2-970a-09a90697e805",
+    "https://mobbin.com/screens/a13d716b-b9dc-4775-9934-b5c881b221a3",
+    "https://mobbin.com/screens/abd64892-a82c-4e66-98e0-14ebbe8074c8",
+    "https://mobbin.com/screens/ad8e2146-70da-4bb5-a6af-d0848a76d28b",
+    "https://mobbin.com/screens/dbaaabb8-3e1a-42b3-b08a-742054c4924c",
+    "https://mobbin.com/screens/df1cfab2-097b-4045-82f5-8c354943cdb4",
+    "https://mobbin.com/screens/e00c3136-a5fa-4ce1-9bba-93472b83b4cc",
+    "https://platform.openai.com/docs/api-reference/images-streaming/image_generation/partial_image",
+    "https://support.apple.com/guide/shazam/welcome/web"
+  ]
+}

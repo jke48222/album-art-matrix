@@ -12,6 +12,8 @@ import SwiftUI
 
 struct HearingPage: View {
     @Environment(WallSession.self) private var wall
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
     let accent: Color
     @Binding var services: WallServices?
 
@@ -24,113 +26,177 @@ struct HearingPage: View {
     /// The wall's own song library, read from /teach while the page is up.
     @State private var taught: TaughtList?
     @State private var forgetting: String?
+    @State private var readFailed = false
+    @State private var timingExpanded = false
+    private let mint = Color(hex: 0xA9D7C5)
 
     private var ears: WallServices.Hearing? { services?.hearing }
 
     private let blurb = "A microphone on the wall, read all the time. When the room is louder than the gate, the last few seconds are named by Shazam: a record, the TV, a speaker on any app. No account and no key."
 
     var body: some View {
-        SetupPage("The wall's ears", blurb: blurb) {
-            SetupGroup("The room", note: roomNote) {
-                RoomMeter(level: ears?.level_db, floor: ears?.floor_db,
-                          gate: dragging["room_gate"] ?? gateValue,
-                          open: ears?.gate_open == true, accent: accent) { db, live in
-                    setGate(db, live: live)
-                }
-                Rule()
-                stateRow
-                if let heard = ears?.heard {
-                    Rule()
-                    heardRow(heard)
-                } else if let faint = ears?.pending {
-                    Rule()
-                    pastRow(faint, lead: "Heard faintly",
-                            detail: "No catalogue record behind it, so it waits to be heard again before it goes on the wall."
-                                + (faint.heard_s.map { " First heard \(ago($0))." } ?? ""))
-                } else if let last = ears?.last_heard {
-                    Rule()
-                    pastRow(last, lead: "Last on the wall", detail: lastDetail(last))
-                }
+        MessagePage(title: "Hearing", eyebrow: "THE SOUND OF YOUR ROOM", tint: mint) {
+            hero
+            if readFailed || !wall.link.isLive {
+                MessageNotice(title: "Waiting for your wall", detail: "Live levels will return when the connection does. Your settings stay on the wall.", symbol: "wifi.slash", tint: mint)
             }
-            .padding(.top, -12)
-
+            if let problem = store.problem ?? ears?.problem, !problem.isEmpty { MessageProblem(text: problem) }
+            recognition
+            SetupGroup("The listening gate", note: "Place the white mark above the quiet room and below your music. Levels are relative to this microphone, not a sound-pressure reading.") {
+                RoomMeter(level: readFailed ? nil : ears?.level_db, floor: ears?.floor_db,
+                          gate: dragging["room_gate"] ?? gateValue,
+                          open: !readFailed && ears?.gate_open == true, accent: mint) { db, live in
+                    setGate(db, live: live)
+                }.disabled(readFailed || !wall.link.isLive)
+            }
+            SetupGroup("A gesture across the room", note: "Two knocks toggle the wall. Whistle upward to turn it on, downward to turn it off.") {
+                gestureRow("knock", title: "Two knocks", detail: "A tap, a tap. Lights change.", symbol: "hand.tap")
+                Rule()
+                gestureRow("whistle", title: "A rising whistle", detail: "Up for light. Down for quiet.", symbol: "wind")
+                if store.values["knock"] ?? 0 > 0.5 { Rule(); knob("knock_sensitivity") }
+                if let k = ears?.knock { Rule(); fact("Recognized", switchLine(k)) }
+            }
             if let recent = ears?.recent, !recent.isEmpty {
-                SetupGroup("Named lately", note: nil) {
+                SetupGroup("Heard around here", note: "Recent recognition, kept on your wall.") {
                     ForEach(Array(recent.enumerated()), id: \.offset) { i, r in
                         if i > 0 { Rule() }
                         recentRow(r)
                     }
                 }
             }
-
-            SetupGroup("The switch", note: "Two knocks on the frame, alone, turn the wall off and bring it back. A whistle bending up is on, bending down is off. The microphone hears both through the board; every candidate is written to the wall's log with its numbers.") {
-                toggle("knock")
-                Rule()
-                knob("knock_sensitivity")
-                Rule()
-                toggle("whistle")
-                if let k = ears?.knock {
-                    Rule()
-                    fact("Heard", switchLine(k))
-                }
-            }
-
-            SetupGroup("Taught songs", note: taughtNote) {
-                toggle("teach")
-                Rule()
-                toggle("teach_by_ear")
-                Rule()
-                knob("teach_match_score")
-                if let learning = ears?.teacher?.learning {
-                    Rule()
-                    fact("Learning now", learning)
-                }
-                if let songs = taught?.songs, !songs.isEmpty {
-                    ForEach(songs, id: \.id) { song in
-                        Rule()
-                        taughtRow(song)
-                    }
-                }
-            }
-
-            SetupGroup("Microphone", note: "Gain is the microphone's own. Auto gain off keeps the meter and the gate honest; with it on, a quiet room is slowly turned up.") {
+            SetupGroup("The microphone", note: "Recognition uses sound captured by the wall. Questions and voice commands live in Voice.") {
                 toggle("hearing")
                 Rule()
-                fact("Microphone", ears?.mic ?? "None found yet", warn: ears?.mic == nil)
+                fact("Input", ears?.mic ?? "Not available", warn: ears?.mic == nil)
                 Rule()
                 knob("mic_gain")
                 Rule()
                 toggle("mic_auto_gain")
             }
-
-            SetupGroup("Timing", note: "All seconds. Every miss makes the next clip longer on its own, up to twelve seconds, which is what a TV over the music needs.") {
-                knob("listen_for")
+            SetupGroup("Make it personal", note: nil) {
+                NavigationLink {
+                    TeachPage(accent: accent)
+                } label: {
+                    SetupRow(title: "Teach the wall", subtitle: taughtNote) {
+                        Image(systemName: "chevron.right").foregroundStyle(mint)
+                    }
+                }.buttonStyle(.plain)
                 Rule()
-                knob("listen_again_every")
-                Rule()
-                knob("quiet_before_letting_go")
-                Rule()
-                knob("retry_after_miss")
-                Rule()
-                knob("keep_through_noise")
+                NavigationLink { VoicePage(accent: accent) } label: {
+                    SetupRow(title: "Voice & wake word", subtitle: "Ask, listen and speak to your room.") {
+                        Image(systemName: "chevron.right").foregroundStyle(mint)
+                    }
+                }.buttonStyle(.plain)
             }
-
-            Problem(text: store.problem ?? ears?.problem)
+            DisclosureGroup(isExpanded: $timingExpanded) {
+                VStack(spacing: 0) {
+                    knob("listen_for"); Rule(); knob("listen_again_every"); Rule()
+                    knob("quiet_before_letting_go"); Rule(); knob("retry_after_miss"); Rule(); knob("keep_through_noise")
+                }.padding(.top, 12)
+            } label: {
+                Text("Recognition timing").font(.ui(16, .semibold)).foregroundStyle(Ink.ink).frame(minHeight: 44)
+            }.tint(mint).padding(18).messageSurface()
         }
-        .task { await store.load(host: wall.host) }
-        .task {
-            // The meter is live only while this page is up.
+        .task(id: wall.host) { await store.load(host: wall.host) }
+        .task(id: "\(wall.host)|\(scenePhase)") {
+            guard scenePhase == .active else { return }
+            let host = wall.host
+            var count = 0
             while !Task.isCancelled {
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-                try? await Task.sleep(for: .milliseconds(600))
+                let fresh = await WallServices.read(host: host)
+                guard host == wall.host, !Task.isCancelled else { return }
+                if let fresh { services = fresh; readFailed = fresh.hearing == nil } else { readFailed = true }
+                if count % 8 == 0 {
+                    let list = await TaughtList.read(host: host)
+                    guard host == wall.host, !Task.isCancelled else { return }
+                    taught = list
+                }
+                count += 1
+                try? await Task.sleep(for: .milliseconds(650))
             }
         }
-        .task {
-            // the library changes when a song is learnt or forgotten: rarely
-            while !Task.isCancelled {
-                if let list = await TaughtList.read(host: wall.host) { taught = list }
-                try? await Task.sleep(for: .seconds(5))
+        .onChange(of: wall.host) { _, _ in services = nil; taught = nil; dragging = [:]; readFailed = false }
+    }
+
+    private var hero: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(ears?.on == true ? "Every room\nhas a rhythm." : "Let the room play.")
+                .font(typeSize.isAccessibilitySize ? .ui(23, .semibold) : .display(38))
+                .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 16) {
+                Text("A record. The radio.\nA song from somewhere.")
+                    .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if !typeSize.isAccessibilitySize {
+                    HearingField(level: readFailed ? nil : ears?.level_db, active: ears?.listening == true && !readFailed, tint: mint)
+                        .frame(width: 106, height: 112).accessibilityHidden(true)
+                }
             }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { roomStatusLabel; Spacer(minLength: 12); levelLabel }
+                    .fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 10) { roomStatusLabel; levelLabel }
+            }.frame(maxWidth: .infinity, alignment: .leading).accessibilityElement(children: .combine)
+        }.padding(.bottom, 6)
+    }
+
+    private var roomStatusLabel: some View {
+        HStack(spacing: 8) {
+            Circle().fill(readFailed ? Ink.faint : stateColor).frame(width: 7, height: 7)
+            Text(readFailed ? "Reading unavailable" : (ears?.listening == true ? "Live from your wall" : "Microphone standby"))
+                .font(.ui(12, .medium)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        }
+    }
+    @ViewBuilder private var levelLabel: some View {
+        if let level = ears?.level_db, level.isFinite, !readFailed {
+            Text(String(format: "%.0f dB", level)).font(.machine(12)).foregroundStyle(mint)
+        }
+    }
+
+    private var recognition: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: ears?.heard == nil ? "ear.badge.waveform" : "checkmark.seal")
+                    .font(.system(size: 23, weight: .medium)).foregroundStyle(mint)
+                    .frame(width: 46, height: 46).background(mint.opacity(0.09), in: RoundedRectangle(cornerRadius: 14))
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(readFailed ? "Listening status unavailable" : stateWords)
+                        .font(.ui(18, .semibold)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+                    Text(ears?.heard != nil && ears?.match_source == "local" ? "Matched in your taught library" : "Your library first. Shazam when needed.")
+                        .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if let heard = ears?.heard {
+                Rectangle().fill(Ink.hairline).frame(height: 1)
+                heardRow(heard).padding(.horizontal, -16).padding(.vertical, -8)
+            } else if let faint = ears?.pending {
+                pastRow(faint, lead: "Waiting for a second listen", detail: "This match has no catalogue identity. It stays off the wall until heard again.")
+                    .padding(.horizontal, -16)
+            } else if let rejection = ears?.last_rejected {
+                Text(rejection.reason).font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+            } else if let last = ears?.last_heard {
+                pastRow(last, lead: "Last recognized", detail: lastDetail(last)).padding(.horizontal, -16)
+            }
+            if let attempts = ears?.attempts, attempts > 0 {
+                Text("\(ears?.matches ?? 0) MATCHES  /  \(attempts) LISTENS")
+                    .font(.machine(10)).tracking(0.8).foregroundStyle(Ink.dim)
+            }
+        }.padding(20).messageSurface()
+    }
+
+    @ViewBuilder private func gestureRow(_ name: String, title: String, detail: String, symbol: String) -> some View {
+        if spec(name) != nil {
+            Toggle(isOn: Binding(get: { (store.values[name] ?? 0) > 0.5 }, set: { value in
+                Task { await store.send(name, value ? 1 : 0, isBool: true) }
+            })) {
+                HStack(spacing: 12) {
+                    Image(systemName: symbol).font(.system(size: 22)).foregroundStyle(mint).frame(width: 30)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title).font(.ui(16, .medium)).foregroundStyle(Ink.ink)
+                        Text(detail).font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }.tint(mint).padding(16).disabled(readFailed || !wall.link.isLive)
         }
     }
 
@@ -153,39 +219,6 @@ struct HearingPage: View {
         return "\(n) song\(n == 1 ? "" : "s"), \(t.landmarks ?? 0) landmarks, asked before Shazam."
     }
 
-    private func taughtRow(_ song: TaughtList.Song) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(song.title).font(.ui(15)).foregroundStyle(Ink.ink).lineLimit(1)
-                Text(song.artist + "  ·  " + howLine(song)).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(1)
-            }
-            Spacer(minLength: 8)
-            ActionPill(title: forgetting == song.id ? "Forgetting" : "Forget", filled: false) {
-                forget(song.id)
-            }
-        }
-        .padding(.horizontal, 16).padding(.vertical, 9)
-    }
-
-    private func howLine(_ song: TaughtList.Song) -> String {
-        let how = song.how.map { $0 == "preview" ? "preview" : $0 == "ear" ? "the room" : "by name" }
-        var line = "from " + how.joined(separator: " and ")
-        if song.matched > 0 { line += ", named \(song.matched)x" }
-        return line
-    }
-
-    private func forget(_ id: String) {
-        guard forgetting == nil else { return }
-        forgetting = id
-        let h = wall.host
-        Task {
-            _ = await TaughtList.forget(host: h, id: id)
-            if let list = await TaughtList.read(host: h) { taught = list }
-            forgetting = nil
-            Taps.commit()
-        }
-    }
-
     // MARK: The room
 
     private var gateValue: Double {
@@ -201,10 +234,9 @@ struct HearingPage: View {
     }
 
     private func setGate(_ db: Double, live: Bool) {
-        let v = db.rounded()
+        let v = min(-20, max(-80, db.isFinite ? db.rounded() : -52))
         if live {
             dragging["room_gate"] = v
-            throttled("room_gate") { Task { await store.send("room_gate", v) } }
         } else {
             dragging["room_gate"] = nil
             Task { await store.send("room_gate", v) }
@@ -243,7 +275,7 @@ struct HearingPage: View {
             }
             return "Listening."
         case "asking": return "Asking Shazam about the last \(w) s."
-        case "heard": return "Heard. Checking again as it goes."
+        case "heard": return "A song, recognized."
         case "faint": return "Heard something faintly. Listening for it again."
         default: return h.state
         }
@@ -309,7 +341,7 @@ struct HearingPage: View {
             HStack(spacing: 12) {
                 if let at = h.at_s {
                     Text(clock(at) + (h.length_s.map { " of " + clock($0) } ?? "") + " in")
-                        .font(.machine(12)).foregroundStyle(accent)
+                        .font(.machine(12)).foregroundStyle(mint)
                 }
                 if let s = ears?.heard_s {
                     Text("named \(s) s ago").font(.machine(12)).foregroundStyle(Ink.faint)
@@ -370,7 +402,6 @@ struct HearingPage: View {
                 Slider(value: Binding(get: { shown }, set: { raw in
                     let v = (raw / k.step).rounded() * k.step
                     dragging[name] = v
-                    throttled(name) { Task { await store.send(name, v) } }
                 }), in: k.min...k.max, step: k.step) { editing in
                     if editing {
                         touching = name
@@ -412,6 +443,7 @@ struct HearingPage: View {
 /// filled part, the quiet floor as a thin tick, the gate as a mark that is
 /// dragged. Left of the gate the rail is asleep; right of it, awake.
 private struct RoomMeter: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let level: Double?
     let floor: Double?
     let gate: Double
@@ -427,7 +459,7 @@ private struct RoomMeter: View {
     }
 
     private func db(at px: CGFloat, _ w: CGFloat) -> Double {
-        lo + Double(Swift.min(Swift.max(0, px), w) / w) * (hi - lo)
+        lo + Double(Swift.min(Swift.max(0, px), w) / max(1, w)) * (hi - lo)
     }
 
     var body: some View {
@@ -447,7 +479,7 @@ private struct RoomMeter: View {
                     if let level {
                         Capsule().fill(open ? accent : Ink.dim)
                             .frame(width: Swift.max(6, x(level, w)), height: 10)
-                            .animation(.linear(duration: 0.5), value: level)
+                            .animation(reduceMotion ? nil : .linear(duration: 0.5), value: level)
                     }
                     if let floor {
                         Rectangle().fill(Ink.faint)
@@ -472,7 +504,7 @@ private struct RoomMeter: View {
             .accessibilityLabel("Room gate")
             .accessibilityValue(String(format: "%.0f dB", gate))
             .accessibilityAdjustableAction { dir in
-                onGate(gate + (dir == .increment ? 1 : -1), false)
+                onGate(min(hi, max(lo, gate + (dir == .increment ? 1 : -1))), false)
             }
             HStack {
                 Text(floor.map { String(format: "quiet floor %.0f", $0) } ?? "quiet floor")
@@ -522,5 +554,34 @@ struct TaughtList: Decodable {
         req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
         guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
         return (resp as? HTTPURLResponse)?.statusCode == 200
+    }
+}
+
+/// Concentric meter marks are driven only by the wall's current microphone
+/// level. No simulated waveform or animation suggests a recording exists.
+private struct HearingField: View {
+    let level: Double?
+    let active: Bool
+    let tint: Color
+    private var fraction: Double {
+        guard active, let level, level.isFinite else { return 0 }
+        return min(1, max(0, (level + 80) / 60))
+    }
+    var body: some View {
+        Canvas { context, size in
+            let center = CGPoint(x: size.width / 2, y: size.height / 2)
+            for ring in 0..<4 {
+                let radius = CGFloat(22 + ring * 11)
+                for mark in 0..<48 {
+                    let angle = Double(mark) / 48 * .pi * 2 - .pi / 2
+                    let lit = active && Double(mark) / 48 <= fraction
+                    var path = Path()
+                    path.move(to: CGPoint(x: center.x + cos(angle) * radius, y: center.y + sin(angle) * radius))
+                    path.addLine(to: CGPoint(x: center.x + cos(angle) * (radius + 4), y: center.y + sin(angle) * (radius + 4)))
+                    context.stroke(path, with: .color(tint.opacity(lit ? 0.3 + Double(ring) * 0.18 : 0.09)), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                }
+            }
+            context.fill(Path(ellipseIn: CGRect(x: center.x - 4, y: center.y - 4, width: 8, height: 8)), with: .color(active ? tint : Ink.dim))
+        }
     }
 }

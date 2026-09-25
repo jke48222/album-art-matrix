@@ -502,7 +502,7 @@ struct NotePage: View {
     }
 }
 
-private struct MessagePage<Content: View>: View {
+struct MessagePage<Content: View>: View {
     let title: String
     let eyebrow: String
     let tint: Color
@@ -520,7 +520,7 @@ private struct MessagePage<Content: View>: View {
     }
 }
 
-private struct MessageNotice: View {
+struct MessageNotice: View {
     let title: String
     let detail: String
     let symbol: String
@@ -536,7 +536,7 @@ private struct MessageNotice: View {
     }
 }
 
-private struct MessageProblem: View {
+struct MessageProblem: View {
     let text: String
     var body: some View {
         Label(text, systemImage: "exclamationmark.circle").font(.ui(14)).foregroundStyle(Ink.signal)
@@ -583,7 +583,7 @@ private struct AskConstellation: View {
     }
 }
 
-private extension View {
+extension View {
     func messageSurface() -> some View {
         background(Ink.plaster, in: RoundedRectangle(cornerRadius: 24))
             .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(Ink.hairline, lineWidth: 1))

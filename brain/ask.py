@@ -253,32 +253,62 @@ class Asker:
         """{title, artist, confidence, alternatives:[{title, artist}]} from
         the words someone remembers, or None."""
         if not self.ready:
+            self.problem = "Connect Claude in Services to identify a song."
             return None
-        from pydantic import BaseModel
+        if not isinstance(words, str) or not words.strip() or len(words) > 2000:
+            self.problem = "Add a lyric or a description, up to 2,000 characters."
+            return None
+        try:
+            from pydantic import BaseModel, Field
+        except ImportError:
+            self.problem = "Song identification needs the Claude service dependencies installed on this wall."
+            return None
         class Guess(BaseModel):
             title: str
             artist: str
         class Earworm(BaseModel):
             title: str
             artist: str
-            confidence: float
+            confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
             alternatives: list[Guess]
+        if not self._ask_lock.acquire(blocking=False):
+            self.problem = "Claude is finishing another request. Try again in a moment."
+            return None
+        self.pending, self.problem = True, None
         try:
             resp = self._client_().messages.parse(
                 model=self.model, max_tokens=400,
                 system="Someone remembers a fragment of a song's lyrics, or a description of it. Name the song. "
-                       "confidence is 0 to 1. Give up to three alternatives when unsure.",
+                       "confidence is 0 to 1. Give up to three alternatives when unsure. "
+                       "Never invent a title. If no plausible song exists, return an empty title and artist "
+                       "with confidence 0. Return song metadata only; do not quote lyrics.",
                 messages=[{"role": "user", "content": words}],
                 output_format=Earworm, output_config={"effort": "low"},
             )
             self.answers += 1
             got = resp.parsed_output
-            return {"title": got.title, "artist": got.artist, "confidence": got.confidence,
-                    "alternatives": [{"title": g.title, "artist": g.artist} for g in got.alternatives]}
+            if got is None or not got.title.strip() or not got.artist.strip():
+                self.problem = "No confident match yet. Add another line, an artist, or the decade."
+                return None
+            title, artist = got.title.strip()[:300], got.artist.strip()[:300]
+            alternatives, seen = [], {(title.casefold(), artist.casefold())}
+            for guess in got.alternatives:
+                name, who = guess.title.strip()[:300], guess.artist.strip()[:300]
+                key = (name.casefold(), who.casefold())
+                if name and who and key not in seen:
+                    alternatives.append({"title": name, "artist": who})
+                    seen.add(key)
+                if len(alternatives) == 3:
+                    break
+            return {"title": title, "artist": artist, "confidence": got.confidence,
+                    "alternatives": alternatives}
         except Exception as exc:
-            self.problem = f"{type(exc).__name__}: {str(exc)[:300]}"
-            print(f"[ask] earworm: {self.problem}", flush=True)
+            print(f"[ask] earworm: {type(exc).__name__}: {str(exc)[:300]}", flush=True)
+            self.problem = "Song identification could not finish. Check Claude in Services, then try again."
             return None
+        finally:
+            self.pending = False
+            self._ask_lock.release()
 
     def connections_set(self, salt: float = 0.0) -> list[tuple[str, list[str]]] | None:
         """Four groups of four for Connections (brain/games/connections.py),

@@ -1,0 +1,7 @@
+{
+  "passed": 144,
+  "failed": 0,
+  "checks": "Every native PNG dimension and RGB digest; every unretouched comparison paste; all 18 motion GIFs preserve exact 4000ms duration.",
+  "visual_inspection": "Reviewed with view_image: Imagine waiting64, partial192, done512; Voice listening64, thinking192, answer64; Earworm result64. Before and after are legible with artwork preserved; listening/answer compositions intentionally unchanged.",
+  "physical_review": "Not certified by rendered RGB; root performs real wall checks separately."
+}

@@ -1,0 +1,43 @@
+{
+  "captured_at": "2026-09-25T22:06:44.342815+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": "/tmp/tessera-batch08-before/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "art",
+      "state_reads": 3,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": "/tmp/tessera-batch08-before/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "show"
+      ],
+      "captured_at": "2026-09-25T22:06:44.109808+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

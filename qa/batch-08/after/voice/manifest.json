@@ -1,0 +1,121 @@
+{
+  "captured_at": "2026-09-25T22:19:04.450785+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "art",
+      "state_reads": 4,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "voice"
+      ],
+      "captured_at": "2026-09-25T22:18:52.527545+00:00",
+      "dynamic_type": "large"
+    },
+    {
+      "state": "room-large",
+      "image": "room-large.png",
+      "frame": "room-large-frame.png",
+      "mode": "art",
+      "state_reads": 4,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "voice"
+      ],
+      "captured_at": "2026-09-25T22:18:56.348687+00:00",
+      "dynamic_type": "AX5"
+    },
+    {
+      "state": "room-offline",
+      "image": "room-offline.png",
+      "frame": "room-offline-frame.png",
+      "mode": "art",
+      "state_reads": 8,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "voice"
+      ],
+      "captured_at": "2026-09-25T22:19:04.182805+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

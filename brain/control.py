@@ -161,6 +161,14 @@ def _clamp(v, lo, hi):
     return max(lo, min(hi, float(v)))
 
 
+def feature_response_code(result: dict, default: int = 404) -> int:
+    code = result.get("code")
+    if isinstance(code, int) and not isinstance(code, bool) and 400 <= code <= 599:
+        return code
+    return {"busy": 409, "not_found": 404, "invalid_prompt": 400,
+            "unavailable": 503, "not_ready": 503, "provider": 502}.get(code, default) if isinstance(code, str) else default
+
+
 class ControlState:
     """Thread-safe control state shared between the API and the main loop."""
 
@@ -1219,8 +1227,12 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     if path is None:
                         self._json(404, {"error": "no such picture"})
                         return
-                    with open(path, "rb") as fh:
-                        data = fh.read()
+                    try:
+                        with open(path, "rb") as fh:
+                            data = fh.read()
+                    except FileNotFoundError:
+                        self._json(404, {"error": "That picture was removed. Refresh the collection."})
+                        return
                     self.send_response(200)
                     self.send_header("Content-Type", "image/png")
                     self.send_header("Content-Length", str(len(data)))
@@ -1240,9 +1252,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 self._json(200, ctrl.note_status())
                 return
-            if u.path.startswith("/show"):
+            if u.path in ("/show", "/earworm"):
                 sh = getattr(ctrl, "shower", None)
-                self._json(200, {"last": getattr(sh, "last", None)} if sh is not None else {"last": None})
+                method = "discovery_status" if u.path == "/show" else "earworm_status"
+                self._json(200, getattr(sh, method)() if sh is not None and hasattr(sh, method)
+                           else {"last": getattr(sh, "last", None), "ready": False})
                 return
             if u.path.startswith("/shelf"):
                 sh = getattr(ctrl, "shelf", None)
@@ -1510,14 +1524,14 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if patch is None:
                     return
                 image_id = str(patch.get("id") or "").strip()
-                if self.path.startswith("/imagine/show"):
+                if urlparse(self.path).path == "/imagine/show":
                     result = im.show_again(image_id)
-                elif self.path.startswith("/imagine/forget"):
+                elif urlparse(self.path).path == "/imagine/forget":
                     result = im.forget(image_id)
                 else:
                     self._json(404, {"error": "not found"})
                     return
-                self._json(404 if result.get("error") else 200, result)
+                self._json(feature_response_code(result) if result.get("error") else 200, result)
                 return
             if self.path.startswith("/earworm") or self.path.startswith("/show") \
                     or self.path.startswith("/play") or self.path.startswith("/imagine"):
@@ -1525,7 +1539,8 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if sh is None:
                     self._json(404, {"error": "this wall cannot do that yet"})
                     return
-                what = self.path.strip("/").split("/")[0].split("?")[0]
+                route = urlparse(self.path).path
+                what = route.strip("/")
                 # The shower answers for four routes but they are three
                 # features: show and play are both "show". Without this,
                 # "show = false" took earworm down with it and
@@ -1541,17 +1556,32 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 patch = self._body()
                 if patch is None:
                     return
-                text = str(patch.get("text") or patch.get("query") or patch.get("words")
-                           or patch.get("prompt") or "").strip()
-                if not text:
-                    self._json(400, {"error": "some words, please"})
-                    return
-                if what == "show":
-                    # "picture", "cover" or "any": what the words are for
-                    result = sh.show(text, kind=str(patch.get("kind") or "any"))
+                if what == "earworm" and patch.get("action") == "show":
+                    identity = patch.get("id")
+                    if not isinstance(identity, str) or not identity:
+                        self._json(400, {"error": "Refresh the song before showing it."})
+                        return
+                    result = sh.show_earworm(identity)
                 else:
-                    result = getattr(sh, what)(text)
-                code = 200 if not (isinstance(result, dict) and result.get("error")) else 404
+                    text = patch.get("text", patch.get("query", patch.get("words", patch.get("prompt", ""))))
+                    limit = 1200 if what == "imagine" else 2000 if what == "earworm" else 500
+                    if not isinstance(text, str) or not text.strip() or len(text) > limit:
+                        self._json(400, {"error": f"Write between 1 and {limit} characters."})
+                        return
+                    text = text.strip()
+                    if what == "show":
+                        kind = patch.get("kind", "any")
+                        if kind not in ("picture", "cover", "any"):
+                            self._json(400, {"error": "Choose a picture, cover or automatic search."})
+                            return
+                        result = sh.show(text, kind=kind)
+                    elif what == "imagine" and patch.get("async") is True:
+                        im = getattr(ctrl, "imaginer", None)
+                        result = im.begin(text) if im is not None else {"error": "Imagine is unavailable.", "code": 503}
+                    else:
+                        result = getattr(sh, what)(text)
+                code = (feature_response_code(result) if result.get("error") else
+                        202 if result.get("accepted") else 200) if isinstance(result, dict) else 200
                 self._json(code, result if isinstance(result, dict) else {"said": result})
                 return
             if self.path.startswith("/shelf/sync"):
@@ -1606,10 +1636,23 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if self.path.startswith("/voice/wakeword"):
                     out = {}
                     if patch.get("threshold") is not None:
+                        if getattr(v, "_wake_loading", None):
+                            self._json(409, {"error": "Wait for the wake word to finish switching."})
+                            return
                         try:
-                            th = round(max(0.3, min(0.95, float(patch["threshold"]))), 3)
-                        except (TypeError, ValueError):
+                            raw = patch["threshold"]
+                            if isinstance(raw, bool):
+                                raise ValueError()
+                            th = float(raw)
+                            if not math.isfinite(th) or not 0.3 <= th <= 0.95:
+                                raise ValueError()
+                            th = round(th, 3)
+                        except (TypeError, ValueError, OverflowError):
                             self._json(400, {"error": "a threshold from 0.3 to 0.95"})
+                            return
+                        expected = patch.get("expected_model")
+                        if expected is not None and (v.wake is None or expected != v.wake.name):
+                            self._json(409, {"error": "The wake word changed. Refresh its sensitivity."})
                             return
                         if v.wake is not None:
                             from .voice import wake as wake_mod
@@ -1642,12 +1685,16 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(409 if r.get("error") else 200, {**v.status(), **r})
                     return
                 if self.path.startswith("/voice/wake"):
-                    v.wake_now()
-                    self._json(200, v.status())
+                    ok = v.wake_now()
+                    self._json(200 if ok else 409, {**v.status(), **({} if ok else {"error": "The microphone is unavailable or Voice is busy."})})
                     return
                 if self.path.startswith("/voice/say"):
-                    ok = v.say(str(patch.get("text", "")))
-                    self._json(200 if ok else 409, v.status())
+                    text = patch.get("text", "")
+                    if not isinstance(text, str) or not text.strip() or len(text) > 1000:
+                        self._json(400, {"error": "Write a command between 1 and 1000 characters."})
+                        return
+                    ok = v.say(text.strip())
+                    self._json(200 if ok else 409, {**v.status(), **({} if ok else {"error": "Voice is busy. Try again when it finishes."})})
                     return
                 self._json(404, {"error": "not found"})
                 return

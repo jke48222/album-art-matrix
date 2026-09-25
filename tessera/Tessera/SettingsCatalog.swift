@@ -3,7 +3,7 @@ import Foundation
 /// Every settings entry resolves to its existing feature destination. Search
 /// indexes those routes, so a result never creates a second set of controls.
 enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
-    case light, time, sun, sleep, wake, idle, services, voice, shelf, teach
+    case light, time, sun, sleep, wake, idle, services, voice, hearing, shelf, teach
     case ask, note, show, earworm, imagine, weather, games
     case lockScreen, homeKit, guests, colour, panel, health, addresses, about
     var id: String { rawValue }
@@ -18,6 +18,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .idle: "Between songs"
         case .services: "Services"
         case .voice: "Voice"
+        case .hearing: "Hearing & gestures"
         case .shelf: "The shelf"
         case .teach: "Teach the wall"
         case .ask: "Ask the wall"
@@ -48,6 +49,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .idle: "pause.circle"
         case .services: "music.note"
         case .voice: "waveform"
+        case .hearing: "ear.badge.waveform"
         case .shelf: "opticaldisc"
         case .teach: "music.mic"
         case .ask: "text.bubble"
@@ -71,7 +73,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     var section: SettingsSection {
         switch self {
         case .light, .time, .sun, .sleep, .wake, .idle: .rhythm
-        case .services, .voice, .shelf, .teach: .music
+        case .services, .voice, .hearing, .shelf, .teach: .music
         case .ask, .note, .show, .earworm, .imagine, .weather, .games: .explore
         case .lockScreen, .homeKit, .guests: .home
         case .colour, .panel, .health, .addresses, .about: .care
@@ -88,6 +90,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .idle: "Idle, away and off"
         case .services: "Your music and connected accounts"
         case .voice: "Wake word and listening history"
+        case .hearing: "Room recognition, knocks and whistles"
         case .shelf: "Your record collection, from Discogs"
         case .teach: "Build the wall’s song library"
         case .ask: "A question, answered in light"
@@ -118,6 +121,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .idle: "nothing playing pause presence leave black hold ambient drift weather standby power resume"
         case .services: "apple spotify lastfm listenbrainz anthropic api key account login connect"
         case .voice: "microphone speech assistant"
+        case .hearing: "music recognition shazam sound microphone knock whistle gate"
         case .shelf: "vinyl discogs records archive collection"
         case .teach: "recognition identify library learning"
         case .ask: "question answer ai claude prompt"

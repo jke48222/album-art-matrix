@@ -33,6 +33,7 @@ import os
 import re
 import threading
 import time
+import uuid
 
 import numpy as np
 import requests
@@ -41,6 +42,7 @@ from PIL import Image
 from .art.pixelfont import draw_text, text_width
 
 DIR = os.path.expanduser("~/.config/album-art-matrix/imagined")
+MAX_PROMPT = 1200
 MIN_GAP_S = 10.0
 SHOW_S = 600.0
 KEEP = 200                       # pictures kept; the oldest go
@@ -194,18 +196,19 @@ class LiveDrawing:
     def expired(self, now: float | None = None) -> bool:
         now = self._clock() if now is None else now
         if self.stage == "done":
-            return now - (self.done_at or now) > self.hold_s
+            return now - (self.done_at if self.done_at is not None else now) > self.hold_s
         if self.stage == "failed":
-            return now - (self.done_at or now) > 4.0
+            return now - (self.done_at if self.done_at is not None else now) > 4.0
         return False
 
     def elapsed(self) -> float:
         return self._clock() - self.t0 if self.stage != "idle" else 0.0
 
     def public(self) -> dict:
-        return {"stage": self.stage, "prompt": self.prompt, "partials": max(0, len(self.images) - (1 if self.final else 0)),
-                "of": PARTIALS, "elapsed": round(self.elapsed(), 1), "problem": self.problem,
-                "done_ago": round(self._clock() - self.done_at, 1) if self.done_at else None}
+        with self._lock:
+            return {"stage": self.stage, "prompt": self.prompt, "partials": max(0, len(self.images) - (1 if self.final is not None else 0)),
+                    "of": PARTIALS, "elapsed": round(max(0.0, self.elapsed()), 1), "problem": self.problem,
+                    "done_ago": round(max(0.0, self._clock() - self.done_at), 1) if self.done_at is not None else None}
 
     # ---- the pieces of a frame -----------------------------------------------------------------
     def _frame(self, k: int, size: int) -> np.ndarray:
@@ -289,23 +292,17 @@ class LiveDrawing:
                 if stage == "failed":
                     self._words(f, size, "could not draw", (200, 90, 80))
                 elif stage == "waiting":
-                    # the mark going round while the model thinks: the
-                    # sting's icon on its own (art/sting.py), the pencil
-                    # only if the sting cannot be drawn
-                    icon = None
-                    try:
-                        from .art.sting import Sting
-                        icon = Sting.get(size).icon_frame(t)
-                    except Exception:
-                        icon = None
-                    if icon is not None:
-                        f = icon.copy()
-                    else:
-                        breath = 0.5 - 0.5 * np.cos(t * 1.6)
-                        self._glow(f, size, 6 + 8 * breath)
-                        self._pencil(f, size, now, t)
-                    if size > 96:
-                        self._words(f, size, self.prompt, (120, 118, 112))
+                    breath = 0.5 - 0.5 * np.cos(t * 0.8)
+                    self._glow(f, size, 8 + 5 * breath)
+                    self._pencil(f, size, now, t)
+                    # Four quiet registration corners frame the canvas. The
+                    # wandering warm mark communicates activity, not a made-up
+                    # percentage or a fabricated preview of the requested art.
+                    inset, length = max(3, size // 12), max(3, size // 10)
+                    for x, dx in ((inset, 1), (size - inset - 1, -1)):
+                        for y, dy in ((inset, 1), (size - inset - 1, -1)):
+                            f[y, x + dx * np.arange(length)] = (76, 63, 53)
+                            f[y + dy * np.arange(length), x] = (76, 63, 53)
                 return f
             reveal = self.REVEAL_S * (0.5 if self.quick else 1.0)
             cur = self._frame(n - 1, size)
@@ -400,14 +397,18 @@ class Imaginer:
         # plain call unless it hands in `stream` too
         self._stream = stream if stream is not None else (self._http_stream if post is None else None)
         self._clock = clock or time.time
-        self._lock = threading.Lock()
+        self._pace_clock = clock or time.monotonic
+        self._lock = threading.RLock()
+        self._job_id: str | None = None
+        self._showing_id: str | None = None
+        self._pending_config: dict = {}
         self.index: list[dict] = []
         self.count = 0
         self.cost_usd = 0.0
         self.last: dict | None = None
         self.problem: str | None = None
         self.model_used: str | None = None
-        self._last_at = 0.0
+        self._last_at = float("-inf")
         self.busy = False
         self.live = LiveDrawing()
         self._ret: str | None = None
@@ -423,23 +424,51 @@ class Imaginer:
         return self.openai_model if self.provider == "openai" else self.google_model
 
     def configure(self, provider=None, api_key=None, quality=None, model=None):
-        if provider is not None and provider in PROVIDERS and provider != self.provider:
-            self.provider, self.problem = provider, None
-        if api_key is not None and api_key.strip() != self.api_key:
-            self.api_key, self.problem = api_key.strip(), None
-        if quality is not None and quality in QUALITIES:
-            self.quality = quality
-        if model is not None and model.strip():
-            if self.provider == "openai":
-                self.openai_model = model.strip()
-            else:
-                self.google_model = model.strip()
+        # A provider/key edit must not change a paid request halfway through a
+        # stream, or attribute its result to the next provider.
+        with self._lock:
+            if self.busy:
+                self._pending_config.update({k: v for k, v in {
+                    "provider": provider, "api_key": api_key, "quality": quality,
+                    "model": model}.items() if v is not None})
+                return
+            if provider in PROVIDERS and provider != self.provider:
+                self.provider, self.problem = provider, None
+            if isinstance(api_key, str) and api_key.strip() != self.api_key:
+                self.api_key, self.problem = api_key.strip(), None
+            if quality in QUALITIES:
+                self.quality = quality
+            if isinstance(model, str) and model.strip():
+                if self.provider == "openai":
+                    self.openai_model = model.strip()
+                else:
+                    self.google_model = model.strip()
+
+    def _finished(self):
+        with self._lock:
+            self.busy = False
+            pending, self._pending_config = self._pending_config, {}
+            if pending:
+                self.configure(**pending)
+
+    def _on_wall(self) -> bool:
+        try:
+            state = self.ctrl.get()
+            return (state.get("mode") == "imagine"
+                    and getattr(self.ctrl, "display_mode", state.get("mode")) == "imagine"
+                    and getattr(self.ctrl, "timer", None) is None)
+        except Exception:
+            return False
 
     def status(self) -> dict:
-        return {"ready": self.ready, "provider": self.provider, "model": self.model,
-                "model_used": self.model_used, "quality": self.quality, "images": self.count,
-                "cost_usd": round(self.cost_usd, 4), "last": self.last, "busy": self.busy,
-                "problem": self.problem, "live": self.live.public()}
+        with self._lock:
+            return {"ready": self.ready, "provider": self.provider, "model": self.model,
+                    "model_used": self.model_used, "quality": self.quality, "images": self.count,
+                    "cost_usd": round(self.cost_usd, 4), "last": self.last, "busy": self.busy,
+                    "problem": self.problem, "live": self.live.public(),
+                    "job_id": self._job_id, "showing_id": self._showing_id,
+                    "on_wall": self._on_wall(),
+                    "cooldown_s": round(max(0.0, MIN_GAP_S - (self._pace_clock() - self._last_at)), 1)}
 
     # ---- disk -----------------------------------------------------------------------------
     def _index_path(self) -> str:
@@ -468,7 +497,7 @@ class Imaginer:
             print(f"[imagine] could not save: {exc}", flush=True)
 
     def image_path(self, image_id: str) -> str | None:
-        if not re.fullmatch(r"[a-z0-9\-]{1,80}", image_id or ""):
+        if not isinstance(image_id, str) or not re.fullmatch(r"[a-z0-9\-]{1,80}", image_id):
             return None
         p = os.path.join(self.path, image_id + ".png")
         return p if os.path.exists(p) else None
@@ -507,16 +536,19 @@ class Imaginer:
             except ValueError:
                 msg = r.text[:200]
             raise RuntimeError(f"{r.status_code}: {msg}")
-        for line in r.iter_lines(decode_unicode=True):
-            if not line or not line.startswith("data:"):
-                continue
-            payload = line[5:].strip()
-            if payload == "[DONE]":
-                break
-            try:
-                yield json.loads(payload)
-            except ValueError:
-                continue
+        try:
+            for line in r.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data:"):
+                    continue
+                payload = line[5:].strip()
+                if payload == "[DONE]":
+                    break
+                try:
+                    yield json.loads(payload)
+                except ValueError:
+                    continue
+        finally:
+            r.close()
 
     @staticmethod
     def _missing_model(exc: Exception) -> bool:
@@ -537,7 +569,7 @@ class Imaginer:
                         return raw
                     except RuntimeError as exc:
                         low = str(exc).lower()
-                        if "stream" in low or "partial_images" in low:
+                        if low.startswith("400") and any(word in low for word in ("unknown parameter", "unsupported parameter", "not supported")) and ("stream" in low or "partial_images" in low):
                             print(f"[imagine] {model} would not stream; drawing it in one go", flush=True)
                         else:
                             raise
@@ -560,12 +592,19 @@ class Imaginer:
 
     def _openai_streamed(self, body: dict, on_partial=None) -> bytes:
         final = None
+        seen_partials: set[int] = set()
+        deadline = time.monotonic() + 300
         for ev in self._stream(OPENAI_URL, {"Authorization": f"Bearer {self.api_key}"}, body):
+            if time.monotonic() > deadline:
+                raise RuntimeError("Image creation took too long. Try again later.")
             kind = ev.get("type", "")
             if kind == "image_generation.partial_image" and ev.get("b64_json"):
                 if on_partial is not None:
                     try:
-                        on_partial(base64.b64decode(ev["b64_json"]), int(ev.get("partial_image_index", 0)))
+                        index = int(ev.get("partial_image_index", 0))
+                        if 0 <= index < PARTIALS and index not in seen_partials:
+                            seen_partials.add(index)
+                            on_partial(base64.b64decode(ev["b64_json"], validate=True), index)
                     except Exception as exc:
                         print(f"[imagine] partial: {exc}", flush=True)
             elif kind == "image_generation.completed" and ev.get("b64_json"):
@@ -599,19 +638,26 @@ class Imaginer:
     # ---- the deed ------------------------------------------------------------------------------
     def _take(self, prompt: str) -> str | None:
         """The pace and the one-at-a-time rule; the reason when refused."""
-        prompt = " ".join((prompt or "").split())
+        if not isinstance(prompt, str):
+            return "the prompt must be text"
+        prompt = " ".join(prompt.split())
         if not prompt:
             return "describe the picture"
+        if len(prompt) > MAX_PROMPT:
+            return f"use {MAX_PROMPT} characters or fewer"
         if not self.ready:
             return "no image key on the wall yet"
         with self._lock:
-            now = self._clock()
+            now = self._pace_clock()
             if self.busy:
                 return "still drawing the last one"
             if now - self._last_at < MIN_GAP_S:
                 return f"one picture every {int(MIN_GAP_S)} seconds"
             self._last_at = now
             self.busy = True
+            self.problem = None
+            self.model_used = None
+            self._job_id = uuid.uuid4().hex
         return None
 
     def draw(self, prompt: str, expanded: str | None = None, on_partial=None) -> Image.Image:
@@ -645,16 +691,48 @@ class Imaginer:
                     self.cost_usd += usd
             return img
         finally:
-            self.busy = False
+            self._finished()
 
-    def imagine(self, prompt: str) -> dict:
-        prompt = " ".join((prompt or "").split())
+    @staticmethod
+    def _refusal(why: str) -> dict:
+        words = {"describe the picture": "Describe the picture.",
+                 "no image key on the wall yet": "Add an image key in Services to begin.",
+                 "still drawing the last one": "The current picture is still being drawn."}
+        code = "busy" if "drawing" in why or "every" in why else "invalid_prompt"
+        if "key" in why:
+            code = "not_ready"
+        return {"error": words.get(why, why[0].upper() + why[1:] + "."), "code": code}
+
+    def begin(self, prompt: str) -> dict:
+        """Reserve the single creation slot before accepting a background job.
+
+        The phone can leave without closing a five-minute generation request;
+        GET /imagine remains the source of truth for progress and completion.
+        A transport retry cannot launch a second paid request while this runs.
+        """
         why = self._take(prompt)
         if why:
-            words = {"describe the picture": "Describe the picture.",
-                     "no image key on the wall yet": "No image key on the wall yet. Set one under Services, Images.",
-                     "still drawing the last one": "Still drawing the last one."}
-            return {"error": words.get(why, why[0].upper() + why[1:] + ".")}
+            return self._refusal(why)
+        prompt = " ".join(prompt.split())
+        job_id = self._job_id
+        self.live.start(prompt)
+        worker = threading.Thread(target=self._imagine_taken, args=(prompt,),
+                                  name="imagine-" + str(job_id)[:8], daemon=True)
+        try:
+            worker.start()
+        except RuntimeError:
+            self.live.fail("The wall could not start drawing. Try again.")
+            self._finished()
+            return {"error": "The wall could not start drawing. Try again.", "code": "unavailable"}
+        return {"accepted": True, "job_id": job_id, "prompt": prompt}
+
+    def imagine(self, prompt: str) -> dict:
+        why = self._take(prompt)
+        if why:
+            return self._refusal(why)
+        return self._imagine_taken(" ".join(prompt.split()))
+
+    def _imagine_taken(self, prompt: str) -> dict:
         try:
             size = int(getattr(getattr(self.ctrl, "wall", None), "width", 64) or 64)
             self._go_live(prompt)
@@ -679,9 +757,11 @@ class Imaginer:
                 self._nudge()
                 return {"error": "The image came back unreadable."}
             usd = self._cost()
-            image_id = f"{int(self._clock())}-{_slug(prompt)}"
+            image_id = f"{int(self._clock())}-{uuid.uuid4().hex[:8]}-{_slug(prompt)}"
             os.makedirs(self.path, exist_ok=True)
-            img.save(os.path.join(self.path, image_id + ".png"), "PNG")
+            image_path = os.path.join(self.path, image_id + ".png")
+            img.save(image_path + ".tmp", "PNG")
+            os.replace(image_path + ".tmp", image_path)
             entry = {"id": image_id, "prompt": prompt, "expanded": expanded, "provider": self.provider,
                      "model": (self.model_used if self.provider == "openai" and self.model_used else self.model),
                      "quality": self.quality, "ts": int(self._clock()),
@@ -703,18 +783,25 @@ class Imaginer:
                 self._save()
             print(f"[imagine] {self.provider} {entry['model']} {self.quality}: {prompt!r} in {entry['took_s']} s, "
                   f"${usd if usd is not None else '?'}", flush=True)
+            self._showing_id = image_id
             self.live.finish(img)
             self._nudge()
-            return {"imagined": True, "shown": True, "id": image_id, "prompt": prompt,
+            return {"imagined": True, "shown": self._on_wall(), "id": image_id, "prompt": prompt,
                     "expanded": expanded, "usd": usd, "seconds": SHOW_S, "took_s": entry["took_s"],
                     "said": "Drawn."}
+        except Exception as exc:
+            self.problem = f"The wall could not save this picture: {str(exc)[:120]}"
+            self.live.fail(self.problem)
+            self._nudge()
+            return {"error": self.problem, "code": "unavailable"}
         finally:
-            self.busy = False
+            self._finished()
 
     # ---- the wall ----------------------------------------------------------------------------------
     def _go_live(self, prompt: str, quick: bool = False):
         """The wall into its imagine face, remembering what it was doing."""
         self.live.start(prompt, quick=quick)
+        self._showing_id = None
         ctrl = self.ctrl
         try:
             here = ctrl.get()["mode"]
@@ -745,30 +832,45 @@ class Imaginer:
         self.live.clear()
 
     def show_again(self, image_id: str) -> dict:
-        p = self.image_path(image_id)
-        if p is None:
-            return {"error": "No such picture."}
-        try:
-            img = self._decode(open(p, "rb").read())
-        except Exception as exc:
-            return {"error": f"That picture would not open: {exc}"}
-        entry = next((e for e in self.index if e["id"] == image_id), {"id": image_id, "prompt": ""})
-        self._go_live(entry.get("prompt", ""), quick=True)
-        self.live.finish(img)
-        self._nudge()
-        return {"shown": True, **entry, "seconds": SHOW_S, "said": "Up."}
+        with self._lock:
+            if self.busy:
+                return {"error": "Wait for this picture to finish before showing another.", "code": "busy"}
+            p = self.image_path(image_id)
+            if p is None:
+                return {"error": "No such picture.", "code": "not_found"}
+            try:
+                with open(p, "rb") as fh:
+                    img = self._decode(fh.read())
+            except Exception:
+                return {"error": "That saved picture could not be opened.", "code": "unavailable"}
+            entry = next((e for e in self.index if e["id"] == image_id), {"id": image_id, "prompt": ""})
+            self._go_live(entry.get("prompt", ""), quick=True)
+            self._showing_id = image_id
+            self.live.finish(img)
+            self._nudge()
+            if self.ctrl.get().get("mode") != "imagine":
+                return {"error": "The picture is saved, but the wall could not display it.", "code": "unavailable"}
+            return {"shown": True, **entry, "seconds": SHOW_S, "said": "Up."}
 
     def forget(self, image_id: str) -> dict:
-        p = self.image_path(image_id)
         with self._lock:
-            self.index = [e for e in self.index if e["id"] != image_id]
-            self._save()
-        if p:
+            if self.busy:
+                return {"error": "Wait for this picture to finish before removing artwork.", "code": "busy"}
+            p = self.image_path(image_id)
+            if p is None or not any(e["id"] == image_id for e in self.index):
+                return {"error": "No such picture.", "code": "not_found"}
             try:
                 os.remove(p)
             except OSError:
-                pass
-        return {"forgotten": image_id}
+                return {"error": "The wall could not remove that picture. Try again.", "code": "unavailable"}
+            self.index = [e for e in self.index if e["id"] != image_id]
+            if self.last and self.last.get("id") == image_id:
+                self.last = self.index[0] if self.index else None
+            self._save()
+            if self._showing_id == image_id:
+                self.release()
+                self._showing_id = None
+            return {"forgotten": image_id}
 
     def listing(self) -> list[dict]:
         with self._lock:
