@@ -1,0 +1,40 @@
+{
+  "unit": "F09",
+  "task_intent": "Refine Tessera\u2019s personal music library and games with expressive native interfaces and matching wall experiences.",
+  "research_date": "2026-09-26",
+  "mobbin": [
+    {
+      "app": "MD Vinyl",
+      "url": "https://mobbin.com/screens/d5d0c626-a984-4bed-a6bf-2fd5b6716bd1",
+      "inspected": true,
+      "observed": "A compact album cover grid, search field and an anchored sort menu with Recently Added, Record Name, Artist Name and Release Date.",
+      "applied": "One persistent collection view with five native sort choices and a search field; controls stay beside the records instead of creating a second collection popup."
+    },
+    {
+      "app": "Apple Music",
+      "url": "https://mobbin.com/screens/672b3bbf-3cb5-4d8e-abd2-b93b32e86644",
+      "inspected": true,
+      "observed": "Strong Library masthead; real album artwork carries the color; grouped navigation is secondary to the cover collection.",
+      "applied": "Actual collection covers form a record stack above warm typographic counts; pressing rows open a native pushed detail page."
+    }
+  ],
+  "primary_web": [
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/searching",
+      "applied": "Search filters the current collection in place; clear-search and a contextual no-results state preserve orientation."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/layout",
+      "applied": "Adaptive collection grid becomes one column at accessibility text sizes; count rows and sorting controls wrap rather than truncate."
+    },
+    {
+      "url": "https://support.discogs.com/hc/en-us/articles/360007331534-How-Does-The-Collection-Feature-Work",
+      "applied": "Keep exact pressing identity and catalogue details; multiple owned copies of one release have one navigable row and an explicit copy count. Discogs remains the place to edit collection membership."
+    }
+  ],
+  "unavailable_reference": {
+    "url": "https://www.discogs.com/developers/#page:user-collection,header:user-collection-collection-items-by-folder",
+    "result": "403; not used as evidence"
+  },
+  "composition": "Current owned artwork is shown using the actual wall RGB frame. The collection portrait is clearly the personal library and does not pretend to be a wall preview. Existing production owned_mark output is preserved."
+}

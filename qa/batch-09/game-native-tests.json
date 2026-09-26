@@ -1,0 +1,186 @@
+{
+  "checks": [
+    {
+      "name": "active session identity retained",
+      "passed": true
+    },
+    {
+      "name": "wall destination retained",
+      "passed": true
+    },
+    {
+      "name": "player identity and order retained",
+      "passed": true
+    },
+    {
+      "name": "opaque board data retained",
+      "passed": true
+    },
+    {
+      "name": "keyboard state retained",
+      "passed": true
+    },
+    {
+      "name": "game scoring retained",
+      "passed": true
+    },
+    {
+      "name": "legacy idle response remains valid",
+      "passed": true
+    },
+    {
+      "name": "legacy active response remains valid",
+      "passed": true
+    },
+    {
+      "name": "empty acknowledgement is rejected",
+      "passed": true
+    },
+    {
+      "name": "running without a game is rejected",
+      "passed": true
+    },
+    {
+      "name": "stopped with an active game is rejected",
+      "passed": true
+    },
+    {
+      "name": "negative sequence is rejected",
+      "passed": true
+    },
+    {
+      "name": "overflow sequence is rejected",
+      "passed": true
+    },
+    {
+      "name": "wrong sequence type is rejected",
+      "passed": true
+    },
+    {
+      "name": "missing required sequence is rejected",
+      "passed": true
+    },
+    {
+      "name": "positive infinity cannot become Int",
+      "passed": true
+    },
+    {
+      "name": "negative infinity cannot become Int",
+      "passed": true
+    },
+    {
+      "name": "NaN cannot become Int",
+      "passed": true
+    },
+    {
+      "name": "rounded upper Int boundary is rejected",
+      "passed": true
+    },
+    {
+      "name": "minimum Int boundary is safe",
+      "passed": true
+    },
+    {
+      "name": "ordinary integer survives",
+      "passed": true
+    },
+    {
+      "name": "negative array index is safe",
+      "passed": true
+    },
+    {
+      "name": "missing key is safe",
+      "passed": true
+    },
+    {
+      "name": "booleans are not numeric moves",
+      "passed": true
+    },
+    {
+      "name": "catalogue preserves all cards",
+      "passed": true
+    },
+    {
+      "name": "solo game has one player",
+      "passed": true
+    },
+    {
+      "name": "party game permits eight players",
+      "passed": true
+    },
+    {
+      "name": "party destination category",
+      "passed": true
+    },
+    {
+      "name": "duplicate game IDs are rejected",
+      "passed": true
+    },
+    {
+      "name": "unbounded player counts are rejected",
+      "passed": true
+    },
+    {
+      "name": "status request reads matching session",
+      "passed": true
+    },
+    {
+      "name": "error-only status cannot replace a board",
+      "passed": true
+    },
+    {
+      "name": "malformed status cannot replace a board",
+      "passed": true
+    },
+    {
+      "name": "failed HTTP write preserves server reason",
+      "passed": true
+    },
+    {
+      "name": "failed write cannot replace caller snapshot",
+      "passed": true
+    },
+    {
+      "name": "empty200 cannot confirm a move",
+      "passed": true
+    },
+    {
+      "name": "badJSON200 cannot confirm a move",
+      "passed": true
+    },
+    {
+      "name": "JSONerror200 cannot confirm a move",
+      "passed": true
+    },
+    {
+      "name": "acknowledged move supplies newer sequence",
+      "passed": true
+    },
+    {
+      "name": "acknowledged move retains session",
+      "passed": true
+    },
+    {
+      "name": "cancelled transport cannot acknowledge a move",
+      "passed": true
+    },
+    {
+      "name": "empty host prevents write",
+      "passed": true
+    },
+    {
+      "name": "POST failures are never retried",
+      "passed": true
+    },
+    {
+      "name": "session and move survive HTTP serialization",
+      "passed": true
+    },
+    {
+      "name": "cancelled request was issued only once",
+      "passed": true
+    }
+  ],
+  "failed": 0,
+  "passed": 45
+}

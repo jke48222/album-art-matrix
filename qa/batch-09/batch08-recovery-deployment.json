@@ -1,0 +1,44 @@
+{
+  "status": "deployed",
+  "source_commit": "8bdda7511f8365360a9eb1d8db48dc9742d86b1b",
+  "files": [
+    {
+      "path": "brain/ask.py",
+      "before_sha256": "18a82371fd5d7502424c1351c399c27e74ab7a0e0ebf4536ab01f2547c70f92a",
+      "after_sha256": "8f63c5ed246663c6414a8a6948f0af3ff5bca7983426ae45f1a243194d5f99cb"
+    },
+    {
+      "path": "brain/control.py",
+      "before_sha256": "648e8e7a5baf8946f76344a2b4bb90b3ea030c0b7b169e8b3c4a91883d9be3ba",
+      "after_sha256": "10aff6f49aec367118ea14d0bc398fdf788d3736743929d94a14f49bfee95a2c"
+    },
+    {
+      "path": "brain/imagine.py",
+      "before_sha256": "7fa6dd6d839d55f89f8a4ddec778ea3a30befa8c7ed1c6a369b31c8c5c0aaf37",
+      "after_sha256": "7805be0b22bac1a1644aba3003134fc8347f7e1d35e2d685503baf1a9c604ba4"
+    },
+    {
+      "path": "brain/nowplaying/ears.py",
+      "before_sha256": "10e9193fe27387cdd07481cbecba37475edff270676bb36ae2847394af74caa7",
+      "after_sha256": "4f8b15cc01a50def337ef46d45cec2dadf33c1a6e95a014b81d32e686dbc7665"
+    },
+    {
+      "path": "brain/show.py",
+      "before_sha256": "1ce1c854a6c37f71f86148c43c63853f1064ddbe1dcaf78994a851b89ff5877d",
+      "after_sha256": "cb33feb27877b74065fc75a51539ea717a1a8bb781083a71db2d8d4f2ce13dc8"
+    },
+    {
+      "path": "brain/voice/voice.py",
+      "before_sha256": "edcbc52a0cb801099194945e89ba8339a614f4c11e8d8717d25e4f511759f823",
+      "after_sha256": "d44ee82c35978032faced9d42172c4470d5a419a8edf39a5875530bc35af8004"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2714",
+  "current_pid": "165459",
+  "mode_before": "off",
+  "mode_after": "off"
+}

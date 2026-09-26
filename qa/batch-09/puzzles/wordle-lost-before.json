@@ -1,0 +1,62 @@
+{
+  "name": "wordle",
+  "title": "Wordle",
+  "players": [
+    "You"
+  ],
+  "over": true,
+  "won": false,
+  "winner": null,
+  "message": "It was CRANE.",
+  "started": 1790462446,
+  "finished": 1790462446,
+  "seq": 6,
+  "voice": true,
+  "rows": [
+    {
+      "word": "slate",
+      "marks": "xxgxg"
+    },
+    {
+      "word": "ocean",
+      "marks": "xyyyy"
+    },
+    {
+      "word": "cramp",
+      "marks": "gggxx"
+    },
+    {
+      "word": "brick",
+      "marks": "xgxyx"
+    },
+    {
+      "word": "house",
+      "marks": "xxxxg"
+    },
+    {
+      "word": "plumb",
+      "marks": "xxxxx"
+    }
+  ],
+  "keys": {
+    "s": "x",
+    "l": "x",
+    "a": "g",
+    "t": "x",
+    "e": "g",
+    "o": "x",
+    "c": "g",
+    "n": "y",
+    "r": "g",
+    "m": "x",
+    "p": "x",
+    "b": "x",
+    "i": "x",
+    "k": "x",
+    "h": "x",
+    "u": "x"
+  },
+  "guesses_left": 0,
+  "turn": "You",
+  "answer": "crane"
+}

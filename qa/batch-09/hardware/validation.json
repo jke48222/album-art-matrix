@@ -1,0 +1,24 @@
+{
+  "wordle": {
+    "side": 64,
+    "sha256": "cd81527e15a613c5f6c1997f478ba800fb6a279087672ff07012332fc820049e",
+    "file": "wordle-live.png",
+    "nonblack": true
+  },
+  "resume_preserves_board": true,
+  "off_restored_after_end": true,
+  "sudoku_undo_confirmed": true,
+  "sudoku": {
+    "side": 64,
+    "sha256": "2048a7af38e4e0c5748b5f1879a42c4e38fec29ccbd811ad91f86302dd6bfd6e",
+    "file": "sudoku-live.png",
+    "nonblack": true
+  },
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "limitations": "Captured live managed-runtime RGB frames and exercised real APIs. These frames do not certify physical LED colour or phone touch/speech interaction."
+}

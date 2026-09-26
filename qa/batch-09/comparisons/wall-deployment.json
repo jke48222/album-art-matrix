@@ -1,0 +1,69 @@
+{
+  "status": "deployed",
+  "base": "8bdda75",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "10aff6f49aec367118ea14d0bc398fdf788d3736743929d94a14f49bfee95a2c",
+      "after_sha256": "9c8b702c5e9436699cdb423ee7ebd067a575bef142348de41ac83f46715a8570"
+    },
+    {
+      "path": "brain/games/host.py",
+      "before_sha256": "933551c196527cd4d90e6aac39a59993fa0156bf0c8fe92969d976e02799c7f9",
+      "after_sha256": "bda16d8bc38d15c201be9af0e54e5f8ac09688f602978a028d96090c825a6f15"
+    },
+    {
+      "path": "brain/games/sudoku.py",
+      "before_sha256": "2185f6eed1b7869c9eb4c63c10834907c0d8ed455e606b33537688997e792d6d",
+      "after_sha256": "05a3923e460bd88b59438fd0e0bf4f19cf98fba2c5f4f0b06194423110ac9d7b"
+    },
+    {
+      "path": "brain/games/wordle.py",
+      "before_sha256": "cd8b2f77987d6ace101c4bf78c67fa57fde10c4cbd4f1c28e7bc7bae15225f3c",
+      "after_sha256": "bf9390da762d737f7eefaaaa292a5646edb5695e30c2f8ae4c02aa11d6a5865e"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "d8ada9c3b51641ddc7455d76606605a6464298b295ebf739b712a57cce41b557",
+      "after_sha256": "2b5da5327c3fde914e722de26b87ceaccb6ec2dc2d49a9e5f19c0483f7fa4254"
+    },
+    {
+      "path": "brain/nowplaying/teach.py",
+      "before_sha256": "80c128264e961d68356a57f2075eac879f29f3a898a638cc4fcd27006f369b17",
+      "after_sha256": "5664d5917471c1ea9ca1886eac4ce40b2247cc49f92597f9807bba6a352086da"
+    },
+    {
+      "path": "brain/shelf.py",
+      "before_sha256": "9518a538bd0abe29cb51ef16a58506aafe0ce434cae7324a242752a9cd510247",
+      "after_sha256": "3d728243e9b89e992213aaed153dc275c44f9b50b594dffe7c003155961452f3"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "165459",
+  "current_pid": "805840",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 66,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 59.5,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 2,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}

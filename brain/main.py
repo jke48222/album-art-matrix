@@ -216,6 +216,19 @@ def _is_shown(now, last_track, showing) -> bool:
         and plain(now.artist) == plain(showing.get("artist"))
 
 
+def _refresh_shelf_sleeve(base, shelf, shown, mark_enabled):
+    """Refresh membership on the displayed sleeve, without recording a new play.
+
+    `base` is the prepared, unmarked artwork; this also removes a mark after
+    a collection deletion or account switch and works while Archive holds it.
+    """
+    owned = (shelf.note_playing((shown or {}).get("album", ""), (shown or {}).get("artist", ""))
+             if shelf is not None else None)
+    if base is None:
+        return None
+    return owned_mark(base, base.shape[0]) if owned and mark_enabled else base.copy()
+
+
 class _Poller(threading.Thread):
     """Asks the source chain on its own thread. A poll can take seconds when
     a source is slow (the Mac's account helper, a scrobbler across the
@@ -504,6 +517,7 @@ def main():
         threading.Thread(target=boot_sting, name="sting", daemon=True).start()
 
     last_track, last_pre = None, None
+    sleeve_base = None                # prepared artwork before its ownership mark
     animator, t0 = None, time.monotonic()
     ambient, amb_key, amb_t0 = None, None, time.monotonic()
     blacked, need_show = False, False
@@ -528,18 +542,20 @@ def main():
     black = bytes(size * size * 3)
     idle_prev = None                 # which idle override is currently applied
     disc_key = None                  # (pressing, sleeve) the disc was built from
+    shelf_revision = (getattr(ctrl.shelf, "revision", 0), bool(tune.get("shelf_mark")))
 
     def show_sleeve(art_url, owned=False):
         """The one path that puts a sleeve on the wall: fetch, prepare, arm
         the disc animator, extract colours. Callers add their bookkeeping.
         `owned` stamps the shelf's mark into the corner: you have this on
         vinyl, and every face that shows the sleeve shows it."""
-        nonlocal last_pre, animator, t0, need_show
+        nonlocal last_pre, sleeve_base, animator, t0, need_show
         pre = prepare(
             fetch_art(art_url), size,
             unsharp_radius=tune.get("unsharp_radius"),
             unsharp_percent=tune.get("unsharp_percent"),
         )
+        sleeve_base = pre.copy()
         if owned and tune.get("shelf_mark"):
             pre = owned_mark(pre, size)
         last_pre = pre
@@ -690,6 +706,20 @@ def main():
         if now is not None and now.track_id:
             lyric_book.ask(now.track_id, now.artist, now.title, now.album,
                            (now.duration_ms or 0) / 1000.0 or None)
+
+        next_shelf_revision = (getattr(ctrl.shelf, "revision", 0), bool(tune.get("shelf_mark")))
+        if next_shelf_revision != shelf_revision:
+            shelf_revision = next_shelf_revision
+            refreshed = _refresh_shelf_sleeve(sleeve_base, ctrl.shelf, ctrl.now_showing,
+                                             next_shelf_revision[1])
+            if refreshed is not None:
+                last_pre = refreshed
+                animator = build_disc(last_pre)
+                ctrl.finish_base = last_pre
+                ctrl.art_colors = dominant_colors(last_pre)
+                lyric_canvas = None
+                need_show = True
+                ctrl.dirty.set()
 
         if now and now.track_id != last_track \
                 and not replay_hold.active:

@@ -1,0 +1,24 @@
+{
+  "name": "sudoku",
+  "title": "Sudoku",
+  "players": [
+    "You"
+  ],
+  "over": false,
+  "won": false,
+  "winner": null,
+  "message": "That one is wrong.",
+  "started": 1790462446,
+  "finished": null,
+  "seq": 4,
+  "voice": true,
+  "puzzle": "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+  "grid": "534679000600195000098000060800060003400803001700020006060000280000419005000080079",
+  "solution": null,
+  "wrong": [
+    5
+  ],
+  "chosen": 5,
+  "rating": "easy",
+  "left": 48
+}

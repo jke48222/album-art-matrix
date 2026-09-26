@@ -1,11 +1,10 @@
 """Sudoku on the wall.
 
 The phone is where it is played, by touch: pick a cell, pick a digit. The
-wall is the grid, big enough to read from the sofa: at 64 each cell is
-7 pixels with the 3x3 boxes marked by brighter lines, digits in a 3x5
-font; at 192 the cells are 21 pixels and the digits the 5x7 font at 2x.
-Givens are white, the player's digits the accent, a wrong digit red, the
-chosen cell lit. Voice works too: "row three column four is seven" or
+wall is the grid, fitted to the complete panel at 64, 192 and 512.
+Givens are white, the player's digits blue, wrong digits red and
+underlined. Selection lights the row, column, box and matching digits.
+Pencil notes stay in each cell; entry and note edits can be undone. Voice works too: "row three column four is seven" or
 "three four seven", and "clear three four".
 
 Puzzles are our own: a full grid is made by a randomised backtracking
@@ -22,8 +21,7 @@ import re
 
 
 from . import Game, register
-from .board import (BLACK, EDGE, INK, RED, WHITE, banner, blank, fill, header, mix,
-                    text)
+from .board import WHITE, blank, fill, text
 
 DIGITS_3X5 = {
     "1": ["010", "110", "010", "010", "111"],
@@ -36,8 +34,6 @@ DIGITS_3X5 = {
     "8": ["111", "101", "111", "101", "111"],
     "9": ["111", "101", "111", "001", "111"],
 }
-ACCENT = (120, 180, 250)
-CHOSEN = (40, 60, 90)
 _SAY = re.compile(r"^(?:(clear|erase|remove)\s+)?(?:row\s+)?(\w+)\s*(?:,|and)?\s*(?:column\s+|col\s+)?(\w+)"
                   r"(?:\s*(?:is|equals|to|put|=)?\s*(\w+))?[.!?]*$")
 _NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
@@ -46,7 +42,7 @@ _NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven":
 
 def _num(w: str) -> int | None:
     w = w.lower()
-    if w.isdigit():
+    if re.fullmatch(r"[0-9]", w):
         n = int(w)
         return n if 1 <= n <= 9 else None
     return _NUM.get(w)
@@ -77,37 +73,51 @@ def candidates(grid: list[int], i: int) -> set[int]:
     return set(range(1, 10)) - {grid[p] for p in PEERS[i]}
 
 
+def valid_grid(grid: list[int]) -> bool:
+    """Reject malformed givens before either solver can accept a full board."""
+    return (len(grid) == 81
+            and all(type(value) is int and 0 <= value <= 9 for value in grid)
+            and all(not value or all(grid[peer] != value for peer in PEERS[index])
+                    for index, value in enumerate(grid)))
+
+
 def count_solutions(grid: list[int], limit: int = 2, work: list | None = None) -> int:
-    """How many solutions, up to `limit`. `work` collects (guesses) for the
-    rating: every branch the solver had to open."""
+    """Count up to limit; validate once, before descending into the search."""
     grid = list(grid)
-    # the emptiest cell first
-    best, best_c = -1, None
-    for i in range(81):
-        if grid[i] == 0:
-            c = candidates(grid, i)
-            if not c:
-                return 0
-            if best_c is None or len(c) < len(best_c):
-                best, best_c = i, c
-                if len(c) == 1:
-                    break
-    if best < 0:
-        return 1
-    if work is not None and len(best_c) > 1:
-        work.append(len(best_c))
-    n = 0
-    for v in sorted(best_c):
-        grid[best] = v
-        n += count_solutions(grid, limit - n, work)
-        if n >= limit:
-            break
-    grid[best] = 0
-    return n
+    if not valid_grid(grid) or type(limit) is not int or limit < 1:
+        return 0
+
+    def count(cap: int) -> int:
+        best, best_c = -1, None
+        for index in range(81):
+            if grid[index] == 0:
+                choices = candidates(grid, index)
+                if not choices:
+                    return 0
+                if best_c is None or len(choices) < len(best_c):
+                    best, best_c = index, choices
+                    if len(choices) == 1:
+                        break
+        if best < 0:
+            return 1
+        if work is not None and len(best_c) > 1:
+            work.append(len(best_c))
+        found = 0
+        for value in sorted(best_c):
+            grid[best] = value
+            found += count(cap - found)
+            if found >= cap:
+                break
+        grid[best] = 0
+        return found
+
+    return count(limit)
 
 
 def solve(grid: list[int]) -> list[int] | None:
     grid = list(grid)
+    if not valid_grid(grid):
+        return None
     def go() -> bool:
         best, best_c = -1, None
         for i in range(81):
@@ -201,8 +211,11 @@ class Sudoku(Game):
     def setup(self):
         rng = random.Random(self.options.get("seed"))
         want = str(self.options.get("difficulty", "medium")).lower()
-        if self.options.get("puzzle"):
-            p = [int(ch) for ch in str(self.options["puzzle"]) if ch.isdigit()]
+        if "puzzle" in self.options:
+            raw = str(self.options["puzzle"])
+            if not re.fullmatch(r"[0-9.\s]+", raw):
+                raise ValueError("a puzzle is 81 digits; use zero or a dot for blanks")
+            p = [0 if ch == "." else int(ch) for ch in raw if not ch.isspace()]
             if len(p) != 81:
                 raise ValueError("a puzzle is 81 digits")
             sol = solve(p)
@@ -214,11 +227,43 @@ class Sudoku(Game):
         self.grid = list(self.puzzle)
         self.chosen: int | None = None
         self.wrong: set[int] = set()
-        self.filled = 0
+        self.notes: dict[int, set[int]] = {}
+        self._undo: list[tuple] = []
         self.message = f"{self.rating.capitalize()}. {81 - sum(1 for v in self.puzzle if v)} to fill."
 
     # ---- moves ----------------------------------------------------------------------------------
+    def _remember(self):
+        self._undo.append((list(self.grid), {i: set(values) for i, values in self.notes.items()},
+                           set(self.wrong), self.chosen))
+        self._undo = self._undo[-100:]
+
+    def _remaining_message(self):
+        empty = self.grid.count(0)
+        if self.wrong:
+            return f"{empty} to fill. {len(self.wrong)} to correct."
+        return f"{empty} to fill."
+
+    @staticmethod
+    def _digit(value, allow_clear=False):
+        if allow_clear and value in ("", "clear"):
+            return 0
+        if type(value) is int:
+            return value if (0 if allow_clear else 1) <= value <= 9 else None
+        if isinstance(value, str) and re.fullmatch(r"[0-9]", value):
+            digit = int(value)
+            return digit if (allow_clear or digit > 0) else None
+        return None
+
     def apply(self, move: dict, player: str) -> dict:
+        if self.over:
+            return {"error": "the game is over"}
+        if move.get("undo") is True:
+            if not self._undo:
+                return {"error": "nothing to undo yet"}
+            self.grid, self.notes, self.wrong, self.chosen = self._undo.pop()
+            self.message = self._remaining_message()
+            self.changed()
+            return {"undone": True}
         if "choose" in move:
             i = self._cell(move.get("choose"))
             if i is None:
@@ -232,34 +277,51 @@ class Sudoku(Game):
             return {"error": "pick a cell first"}
         if self.puzzle[i]:
             return {"error": "that one is given"}
-        v = move.get("digit", move.get("value"))
-        if v in (None, 0, "0", "", "clear"):
-            self.grid[i] = 0
-            self.wrong.discard(i)
+        if "note" in move:
+            digit = self._digit(move["note"])
+            if digit is None:
+                return {"error": "a note is a digit, one to nine"}
+            if self.grid[i]:
+                return {"error": "erase this entry before adding notes"}
+            self._remember()
+            values = self.notes.setdefault(i, set())
+            if digit in values:
+                values.remove(digit)
+            else:
+                values.add(digit)
+            if not values:
+                self.notes.pop(i, None)
             self.chosen = i
-            self.message = f"{sum(1 for x in self.grid if x == 0)} to fill."
+            self.message = "Pencil notes saved."
             self.changed()
-            return {"cell": i, "digit": 0}
-        try:
-            d = int(v)
-        except (TypeError, ValueError):
-            return {"error": "a digit, one to nine"}
-        if not 1 <= d <= 9:
-            return {"error": "a digit, one to nine"}
-        self.grid[i] = d
+            return {"cell": i, "notes": sorted(self.notes.get(i, set()))}
+        if "digit" not in move and "value" not in move:
+            return {"error": "choose a digit or erase the cell"}
+        digit = self._digit(move.get("digit", move.get("value")), allow_clear=True)
+        if digit is None:
+            return {"error": "a digit, one to nine; zero to erase"}
+        if self.grid[i] != digit or self.notes.get(i):
+            self._remember()
+        self.grid[i] = digit
+        self.notes.pop(i, None)
         self.chosen = i
-        if d != self.solution[i]:
+        if digit and digit != self.solution[i]:
             self.wrong.add(i)
-            self.message = "That one is wrong."
+            self.message = "That one is wrong. Try another digit or undo."
         else:
             self.wrong.discard(i)
-            left = sum(1 for x in self.grid if x == 0)
-            self.message = f"{left} to fill." if left else ""
+            if digit:
+                for peer in PEERS[i]:
+                    if peer in self.notes:
+                        self.notes[peer].discard(digit)
+                        if not self.notes[peer]:
+                            self.notes.pop(peer)
+            self.message = self._remaining_message()
         if self.grid == self.solution:
-            self.finish(won=True, message="Solved.")
+            self.finish(won=True, message="Solved. Every number in its place.")
         else:
             self.changed()
-        return {"cell": i, "digit": d, "right": d == self.solution[i]}
+        return {"cell": i, "digit": digit, "right": digit == self.solution[i]}
 
     def hear(self, text: str, player: str) -> dict | None:
         m = _SAY.match(text.lower().strip())
@@ -280,13 +342,13 @@ class Sudoku(Game):
         return self.apply({"cell": i, "digit": dn}, player)
 
     def _cell(self, v) -> int | None:
-        if isinstance(v, int):
+        if type(v) is int:
             return v if 0 <= v < 81 else None
         if isinstance(v, (list, tuple)) and len(v) == 2:
             r, c = v
-            if isinstance(r, int) and isinstance(c, int) and 0 <= r < 9 and 0 <= c < 9:
+            if type(r) is int and type(c) is int and 0 <= r < 9 and 0 <= c < 9:
                 return r * 9 + c
-        if isinstance(v, str) and v.isdigit() and 0 <= int(v) < 81:
+        if isinstance(v, str) and re.fullmatch(r"[0-9]{1,2}", v) and 0 <= int(v) < 81:
             return int(v)
         return None
 
@@ -294,49 +356,88 @@ class Sudoku(Game):
         return {"puzzle": "".join(str(v) for v in self.puzzle), "grid": "".join(str(v) for v in self.grid),
                 "solution": "".join(str(v) for v in self.solution) if self.over else None,
                 "wrong": sorted(self.wrong), "chosen": self.chosen, "rating": self.rating,
-                "left": sum(1 for x in self.grid if x == 0)}
+                "left": self.grid.count(0),
+                "notes": {str(i): sorted(values) for i, values in self.notes.items()},
+                "can_undo": bool(self._undo) and not self.over,
+                "remaining": sum(value != self.solution[i] for i, value in enumerate(self.grid)),
+                "filled_by_you": sum(bool(value) and not self.puzzle[i] and i not in self.wrong
+                                     for i, value in enumerate(self.grid))}
 
     def voice_words(self) -> list[str]:
         return ["row", "column", "clear"] + list(_NUM)[:9]
 
     # ---- the wall --------------------------------------------------------------------------------
+    @staticmethod
+    def board_geometry(size: int) -> tuple[int, int, int]:
+        margin = 0 if size <= 96 else max(2, size // 64)
+        cell = max(1, (size - margin * 2) // 9)
+        origin = (size - cell * 9) // 2
+        return origin, origin, cell
+
     def frame_at(self, size: int, t: float):
-        c = blank(size)
-        big = size > 96
-        cell = 21 if big else 7
-        x0 = (size - 9 * cell) // 2
-        y0 = (size - 9 * cell) // 2 if not big else 18
-        # the chosen cell's row, column and box, faintly, then the cell
-        if self.chosen is not None and not self.over:
-            cr, cc = divmod(self.chosen, 9)
-            fill(c, x0, y0 + cr * cell, 9 * cell, cell, (14, 16, 24))
-            fill(c, x0 + cc * cell, y0, cell, 9 * cell, (14, 16, 24))
-            fill(c, x0 + (cc // 3) * 3 * cell, y0 + (cr // 3) * 3 * cell, 3 * cell, 3 * cell, (16, 18, 28))
-            fill(c, x0 + cc * cell, y0 + cr * cell, cell, cell, CHOSEN)
-        for i in range(81):
-            r, col = divmod(i, 9)
-            x, y = x0 + col * cell, y0 + r * cell
-            v = self.grid[i]
-            if v:
-                colour = WHITE if self.puzzle[i] else RED if i in self.wrong else ACCENT
-                if big:
-                    text(c, str(v), x + (cell - 10) // 2 + 1, y + (cell - 14) // 2, colour, 2)
+        from .board import rect
+        canvas = blank(size)
+        canvas[:] = (11, 10, 9)
+        x0, y0, cell = self.board_geometry(size)
+        extent = cell * 9
+        fill(canvas, x0, y0, extent, extent, (22, 24, 27))
+        chosen = self.chosen if self.chosen is not None and not self.over else None
+        if chosen is not None:
+            row, column = divmod(chosen, 9)
+            fill(canvas, x0, y0 + row * cell, extent, cell, (29, 36, 44))
+            fill(canvas, x0 + column * cell, y0, cell, extent, (29, 36, 44))
+            fill(canvas, x0 + column // 3 * cell * 3, y0 + row // 3 * cell * 3,
+                 cell * 3, cell * 3, (32, 40, 49))
+            selected = self.grid[chosen]
+            if selected:
+                for index, value in enumerate(self.grid):
+                    if value == selected:
+                        r, col = divmod(index, 9)
+                        fill(canvas, x0 + col * cell, y0 + r * cell, cell, cell, (38, 53, 65))
+            fill(canvas, x0 + column * cell, y0 + row * cell, cell, cell, (43, 67, 85))
+        for index in range(81):
+            row, column = divmod(index, 9)
+            x, y = x0 + column * cell, y0 + row * cell
+            value = self.grid[index]
+            if value:
+                colour = WHITE if self.puzzle[index] else (224, 76, 63) if index in self.wrong else (157, 205, 231)
+                if cell < 12:
+                    self._small_digit(canvas, str(value), x + (cell - 3) // 2 + 1, y + (cell - 5) // 2, colour)
                 else:
-                    rows = DIGITS_3X5[str(v)]
-                    for dy, row in enumerate(rows):
-                        for dx, bit in enumerate(row):
-                            if bit == "1":
-                                c[y + 1 + dy, x + 2 + dx] = colour
-        # the lines: faint between cells, firm between boxes
-        for k in range(10):
-            strong = k % 3 == 0
-            colour = EDGE if strong else (28, 28, 34)
-            thick = (2 if big else 1) if strong else 1
-            pos = k * cell
-            fill(c, x0 + pos - (thick if k == 9 else 0), y0, thick, 9 * cell, colour)
-            fill(c, x0, y0 + pos - (thick if k == 9 else 0), 9 * cell, thick, colour)
-        left = sum(1 for x in self.grid if x == 0)
-        if self.over:
-            banner(c, size, "Solved.", INK, mix((40, 120, 70), BLACK, 0.45))
-        header(c, size, "SUDOKU", f"{self.rating}, {left} left" if not self.over else "", 3 if big else 1, accent=ACCENT)
-        return c
+                    scale = max(1, (cell - 5) // 7)
+                    text(canvas, str(value), x + (cell - 5 * scale) // 2,
+                         y + (cell - 7 * scale) // 2, colour, scale)
+                if index in self.wrong:
+                    # An underline marks an incorrect entry even without colour.
+                    fill(canvas, x + 2, y + cell - 2, max(2, cell - 4), 1, (255, 167, 143))
+            elif self.notes.get(index):
+                for digit in self.notes[index]:
+                    nr, nc = divmod(digit - 1, 3)
+                    if cell < 12:
+                        fill(canvas, x + 1 + nc * 2, y + 1 + nr * 2, 1, 1, (135, 162, 181))
+                    else:
+                        step = (cell - 2) / 3
+                        xx = x + 1 + round(nc * step + (step - 3) / 2)
+                        yy = y + 1 + round(nr * step + (step - 5) / 2)
+                        self._small_digit(canvas, str(digit), xx, yy, (135, 162, 181))
+        for line_ in range(10):
+            strong = line_ % 3 == 0
+            colour = (116, 126, 134) if strong else (54, 62, 69)
+            thickness = max(1, round(size / 96)) if strong else max(1, size // 256)
+            position = line_ * cell
+            edge = thickness if line_ == 9 else 0
+            fill(canvas, x0 + position - edge, y0, thickness, extent, colour)
+            fill(canvas, x0, y0 + position - edge, extent, thickness, colour)
+        if chosen is not None:
+            row, column = divmod(chosen, 9)
+            rect(canvas, x0 + column * cell, y0 + row * cell, cell, cell, (162, 211, 240), max(1, round(size / 96)))
+        elif self.over:
+            rect(canvas, x0, y0, extent, extent, (163, 207, 155), max(1, round(size / 96)))
+        return canvas
+
+    @staticmethod
+    def _small_digit(canvas, digit, x, y, colour):
+        for dy, row in enumerate(DIGITS_3X5[digit]):
+            for dx, bit in enumerate(row):
+                if bit == "1" and 0 <= y + dy < canvas.shape[0] and 0 <= x + dx < canvas.shape[1]:
+                    canvas[y + dy, x + dx] = colour

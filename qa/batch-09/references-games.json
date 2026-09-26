@@ -1,0 +1,42 @@
+{
+  "unit": "G00",
+  "researched_at": "2026-09-26",
+  "task_intent": "Refine Tessera\u2019s personal music library and games with expressive native interfaces and matching wall experiences.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "references": [
+    {
+      "title": "The New Yorker \u2014 Puzzles & Games",
+      "url": "https://mobbin.com/screens/276c7506-2121-4ca8-85a9-7d9267287670",
+      "inspected_image": true,
+      "applied": "Editorial title, broad illustrated feature cards and a clear single route into each puzzle."
+    },
+    {
+      "title": "LinkedIn \u2014 games library",
+      "url": "https://mobbin.com/screens/a2bc6c7e-3472-4f24-b14e-89d1907cdccb",
+      "inspected_image": true,
+      "applied": "Distinctive puzzle motifs, concise rules, and one prominent play action."
+    },
+    {
+      "title": "Apple Fitness \u2014 library",
+      "url": "https://mobbin.com/screens/021d6e62-8a5b-4974-9dcf-4474275a7f49",
+      "inspected_image": true,
+      "applied": "Horizontal category filters and compact grouped rows beneath selected features."
+    },
+    {
+      "title": "Apple Human Interface Guidelines \u2014 Designing for games",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/designing-for-games",
+      "applied": "Native navigation, accessible feedback, appropriately sized controls and clear current game context."
+    },
+    {
+      "title": "Apple Human Interface Guidelines \u2014 Game controls",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+      "applied": "Visible direct input and optional microphone controls; no competing customization sheet."
+    },
+    {
+      "title": "Apple Games introduction",
+      "url": "https://www.apple.com/newsroom/2025/06/introducing-the-apple-games-app-a-personalized-home-for-games/",
+      "applied": "A library organized around discovering a game, continuing a session and playing together."
+    }
+  ]
+}

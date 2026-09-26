@@ -19,6 +19,7 @@ import json
 import os
 import threading
 import time
+import uuid
 
 from . import GAMES, Game
 from .board import scoreboard
@@ -37,6 +38,10 @@ class GameHost:
         self.records: dict = {"players": {}}
         self._ret: str | None = None
         self._t0 = self._clock()
+        self.session_id: str | None = None
+        self._starting: str | None = None
+        self._generation = 0
+        self._recorded: Game | None = None
         self.last: dict | None = None
         self._load()
 
@@ -64,70 +69,115 @@ class GameHost:
     def listing(self) -> list[dict]:
         return [cls.describe() for cls in GAMES.values()]
 
-    def start(self, name: str, options: dict | None = None, players: list[str] | None = None) -> dict:
+    def _stale(self, session_id):
+        if session_id is not None and session_id != self.session_id:
+            return {**self.status(), "error": "The game changed. Refresh before making another move.", "code": 409}
+        return None
+
+    def start(self, name: str, options: dict | None = None, players: list[str] | None = None,
+              session_id: str | None = None) -> dict:
         cls = GAMES.get(str(name or "").strip().lower())
         if cls is None:
-            return {"error": f"no game called {name}"}
-        players = [str(p).strip()[:24] for p in (players or []) if str(p).strip()] or ["You"]
+            return {**self.status(), "error": f"no game called {name}", "code": 404}
+        if options is not None and not isinstance(options, dict):
+            return {**self.status(), "error": "Game options must be an object.", "code": 400}
+        if players is not None and (not isinstance(players, list) or any(not isinstance(p, str) for p in players)):
+            return {**self.status(), "error": "Players must be a list of names.", "code": 400}
+        players = list(dict.fromkeys(p.strip()[:24] for p in (players or []) if p.strip())) or ["You"]
         if len(players) < cls.min_players:
-            return {"error": f"{cls.title} needs {cls.min_players} players"}
+            return {**self.status(), "error": f"{cls.title} needs {cls.min_players} players", "code": 400}
         players = players[:cls.max_players]
         with self._lock:
+            stale = self._stale(session_id)
+            if stale:
+                return stale
+            if self._starting:
+                return {**self.status(), "error": "Another game is getting ready.", "code": 409}
+            self._generation += 1
+            generation = self._generation
+            self._starting = cls.name
+            previous_mode = self.ctrl.get()["mode"]
+            previous_shown = self.ctrl.shown_seq
+        # Provider-backed games may need the network. Keep status, rendering and
+        # ending the old game responsive while the new puzzle is prepared.
+        try:
+            game = cls(self, options or {}, players)
+            game.setup()
+        except Exception as exc:
+            with self._lock:
+                if generation == self._generation:
+                    self._starting = None
+                print(f"[games] {name} could not start: {exc}", flush=True)
+                detail = str(exc)[:200] if isinstance(exc, (ValueError, RuntimeError)) else "Try again when the service is available."
+                return {**self.status(), "error": f"{cls.title} couldn't start. {detail}", "code": 400 if isinstance(exc, ValueError) else 502}
+        with self._lock:
+            if generation != self._generation:
+                return {**self.status(), "error": "Starting this game was cancelled.", "code": 409}
+            self._starting = None
+            if self.ctrl.get()["mode"] != previous_mode or self.ctrl.shown_seq != previous_shown:
+                return {**self.status(), "error": "The wall changed while this game was loading. Start it again when you're ready.", "code": 409}
             if self.game is not None and not self.game.over:
                 self._note_abandoned(self.game)
-            game = cls(self, options or {}, players)
-            try:
-                game.setup()
-            except Exception as exc:
-                print(f"[games] {name} could not start: {exc}", flush=True)
-                return {"error": f"{cls.title} could not start: {str(exc)[:120]}"}
+            elif self.game is not None:
+                self._record(self.game)
             self.game = game
+            self._recorded = None
+            self.session_id = uuid.uuid4().hex
             self._t0 = self._clock()
-            here = self.ctrl.get()["mode"]
-            if here != "game":
-                self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+            if previous_mode != "game":
+                self._ret = previous_mode if previous_mode not in ("frame", "clip", "timer", "video") else "art"
             self.seq += 1
             self.ctrl.apply({"mode": "game"})
             self.ctrl.shown_seq += 1
             self.ctrl.dirty.set()
-        for p in players:
-            self.records["players"].setdefault(p, {})
-        self._save()
-        print(f"[games] {cls.title} for {', '.join(players)}", flush=True)
-        return self.status()
+            for p in players:
+                self.records["players"].setdefault(p, {})
+            self._save()
+            return self.status()
 
-    def move(self, player: str | None, move: dict) -> dict:
+    def move(self, player: str | None, move: dict, session_id: str | None = None) -> dict:
+        restart = None
         with self._lock:
+            stale = self._stale(session_id)
+            if stale:
+                return stale
             g = self.game
             if g is None:
-                return {"error": "no game is on"}
+                return {**self.status(), "error": "no game is on", "code": 409}
+            if not isinstance(move, dict):
+                return {**self.status(), "error": "A move must be an object.", "code": 400}
             if g.over:
-                if (move or {}).get("again"):
-                    # the same game again, same players, same options
-                    return self.start(g.name, g.options, g.players)
-                return {"error": "that game is over", **self.status()}
-            who = self._who(player)
-            try:
-                result = g.apply(move or {}, who)
-            except Exception as exc:
-                print(f"[games] {g.name} move {move}: {exc}", flush=True)
-                return {"error": f"the move went wrong: {str(exc)[:120]}"}
-            self.seq += 1
-            self.ctrl.dirty.set()
-            if g.over:
-                self._record(g)
-            return {**(result or {}), **self.status()}
+                if move.get("again"):
+                    # Provider setup must not inherit this outer RLock. Pin the
+                    # observed session even for a legacy caller without an ID.
+                    restart = (g.name, dict(g.options), list(g.players), self.session_id)
+                else:
+                    return {**self.status(), "error": "that game is over", "code": 409}
+            else:
+                try:
+                    result = g.apply(move, self._who(player))
+                except Exception as exc:
+                    print(f"[games] {g.name} move failed: {exc}", flush=True)
+                    return {**self.status(), "error": "That move could not be applied. Try again.", "code": 400}
+                self.seq += 1
+                self.ctrl.dirty.set()
+                if g.over:
+                    self._record(g)
+                return {**self.status(), **(result or {})}
+        return self.start(*restart)
 
-    def hear(self, text: str, player: str | None = None) -> dict | None:
-        """Words heard: the game's move, or None when they are not one."""
+    def hear(self, text: str, player: str | None = None, session_id: str | None = None) -> dict | None:
         with self._lock:
+            stale = self._stale(session_id)
+            if stale:
+                return stale
             g = self.game
             if g is None or g.over:
                 return None
             try:
                 result = g.hear(" ".join((text or "").split()), self._who(player))
             except Exception as exc:
-                print(f"[games] {g.name} hear {text!r}: {exc}", flush=True)
+                print(f"[games] {g.name} heard move failed: {exc}", flush=True)
                 return None
             if result is None:
                 return None
@@ -135,40 +185,64 @@ class GameHost:
             self.ctrl.dirty.set()
             if g.over:
                 self._record(g)
-            return {**result, **self.status()}
+            return {**self.status(), **result}
 
     def event(self, kind: str, info: dict) -> bool:
-        """The ear's knocks, whistles and pitch, to the running game."""
-        g = self.game
-        if g is None or g.over:
-            return False
-        try:
-            used = bool(g.event(kind, info))
-        except Exception as exc:
-            print(f"[games] {g.name} {kind}: {exc}", flush=True)
-            return False
-        if used:
-            if kind != "pitch":
-                self.seq += 1
-            self.ctrl.dirty.set()
-            if g.over:
-                self._record(g)
-        return used
-
-    def end(self) -> dict:
         with self._lock:
+            g = self.game
+            if g is None or g.over or self.ctrl.get()["mode"] != "game":
+                return False
+            try:
+                used = bool(g.event(kind, info))
+            except Exception as exc:
+                print(f"[games] {g.name} {kind}: {exc}", flush=True)
+                return False
+            if used:
+                if kind != "pitch":
+                    self.seq += 1
+                self.ctrl.dirty.set()
+                if g.over:
+                    self._record(g)
+            return used
+
+    def resume(self, session_id: str | None = None) -> dict:
+        with self._lock:
+            stale = self._stale(session_id)
+            if stale:
+                return stale
+            if self.game is None:
+                return {**self.status(), "error": "No game to return to.", "code": 409}
+            here = self.ctrl.get()["mode"]
+            if here != "game":
+                self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+                self.ctrl.apply({"mode": "game"})
+                self.ctrl.shown_seq += 1
+                self.seq += 1
+                self.ctrl.dirty.set()
+            return self.status()
+
+    def end(self, session_id: str | None = None) -> dict:
+        with self._lock:
+            stale = self._stale(session_id)
+            if stale:
+                return stale
+            self._generation += 1
+            self._starting = None
             g = self.game
             if g is None:
                 return {"ended": False, **self.status()}
             if not g.over:
                 self._note_abandoned(g)
+            else:
+                self._record(g)
             self.game = None
+            self.session_id = None
             self.seq += 1
             if self.ctrl.get()["mode"] == "game":
                 self.ctrl.apply({"mode": self._ret or "art"})
             self._ret = None
             self.ctrl.dirty.set()
-        return {"ended": True, **self.status()}
+            return {"ended": True, **self.status()}
 
     def _who(self, player: str | None) -> str:
         p = (player or "").strip()
@@ -178,6 +252,9 @@ class GameHost:
 
     # ---- results ------------------------------------------------------------------------------
     def _record(self, g: Game):
+        if self._recorded is g:
+            return
+        self._recorded = g
         for p in g.players:
             rec = self.records["players"].setdefault(p, {}).setdefault(
                 g.name, {"played": 0, "won": 0, "streak": 0, "best": 0})
@@ -197,6 +274,9 @@ class GameHost:
               + (f" ({g.message})" if g.message else ""), flush=True)
 
     def _note_abandoned(self, g: Game):
+        if self._recorded is g:
+            return
+        self._recorded = g
         g.over = True
         g.finished = time.time()
         for p in g.players:
@@ -218,22 +298,31 @@ class GameHost:
 
     # ---- for the wall and the phone --------------------------------------------------------------
     def changed(self):
-        self.seq += 1
-        self.ctrl.dirty.set()
+        with self._lock:
+            self.seq += 1
+            self.ctrl.dirty.set()
 
     def status(self) -> dict:
-        g = self.game
-        return {"running": g is not None, "seq": self.seq, "game": g.public() if g else None,
-                "scores": self.scores(g.name) if g else {}, "last": self.last,
-                "voice_words": (g.voice_words() if g else [])[:3000]}
+        with self._lock:
+            g = self.game
+            if g is not None and g.over:
+                self._record(g)
+            return {"running": g is not None, "seq": self.seq, "game": g.public() if g else None,
+                    "session_id": self.session_id, "on_wall": g is not None and self.ctrl.get()["mode"] == "game",
+                    "starting": self._starting, "scores": self.scores(g.name) if g else {}, "last": self.last,
+                    "voice_words": (g.voice_words() if g else [])[:3000]}
 
     def frame_at(self, size: int, now: float | None = None):
-        t = (now if now is not None else self._clock()) - self._t0
-        g = self.game
-        if g is None:
-            lines = []
-            if self.last:
-                lines = [(p, "won" if self.last["winner"] == p or (self.last["won"] and len(self.last["players"]) == 1)
-                          else "played") for p in self.last["players"]]
-            return scoreboard(size, self.last["title"] if self.last else "Games", lines, t)
-        return g.frame_at(size, t)
+        with self._lock:
+            t = (now if now is not None else self._clock()) - self._t0
+            g = self.game
+            if g is None:
+                lines = []
+                if self.last:
+                    lines = [(p, "won" if self.last["winner"] == p or (self.last["won"] and len(self.last["players"]) == 1)
+                              else "played") for p in self.last["players"]]
+                return scoreboard(size, self.last["title"] if self.last else "Games", lines, t)
+            frame = g.frame_at(size, t)
+            if g.over:
+                self._record(g)
+            return frame

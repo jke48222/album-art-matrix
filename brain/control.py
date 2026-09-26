@@ -1002,6 +1002,9 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             except ValueError:
                 self._json(400, {"error": "body must be a JSON object"})
                 return None
+            if n < 0:
+                self._json(400, {"error": "Content-Length must not be negative"})
+                return None
             if n > BODY_MAX:
                 self._json(413, {"error": f"the body must be under {BODY_MAX // 1_000_000} MB"})
                 return None
@@ -1184,12 +1187,12 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
                 return
-            if u.path.startswith("/game"):
+            if u.path in ("/game", "/game/list"):
                 gh = getattr(ctrl, "games", None)
                 if gh is None:
                     self._json(200, {"running": False, "games": [], "problem": "games are off on this wall"})
                     return
-                if u.path.startswith("/game/list"):
+                if u.path == "/game/list":
                     self._json(200, {"games": gh.listing(), **gh.status()})
                     return
                 self._json(200, gh.status())
@@ -1491,29 +1494,38 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             if self.path.startswith("/game/"):
                 gh = getattr(ctrl, "games", None)
                 if gh is None:
-                    self._json(404, {"error": "games are off on this wall"})
+                    self._json(404, {"error": "games are off on this wall", "running": False, "seq": 0})
                     return
                 patch = self._body()
                 if patch is None:
                     return
-                player = str(patch.get("player") or "")
-                if self.path.startswith("/game/start"):
-                    players = patch.get("players")
-                    if not isinstance(players, list):
-                        players = [player] if player else None
-                    result = gh.start(str(patch.get("name") or ""), patch.get("options") or {}, players)
-                elif self.path.startswith("/game/move"):
-                    mv = patch.get("move")
-                    result = gh.move(player, mv if isinstance(mv, dict) else {"guess": mv})
-                elif self.path.startswith("/game/hear"):
-                    heard = gh.hear(str(patch.get("text") or ""), player)
-                    result = heard if heard is not None else {"error": "not a move in this game", **gh.status()}
-                elif self.path.startswith("/game/end"):
-                    result = gh.end()
+                player = patch.get("player", "")
+                session_id = patch.get("session_id")
+                if not isinstance(player, str) or (session_id is not None and not isinstance(session_id, str)):
+                    self._json(400, {**gh.status(), "error": "Invalid player or game session."})
+                    return
+                if self.path == "/game/start":
+                    name = patch.get("name", "")
+                    if not isinstance(name, str):
+                        self._json(400, {**gh.status(), "error": "Choose a game by name."})
+                        return
+                    result = gh.start(name, patch.get("options"), patch.get("players", [player] if player else None), session_id)
+                elif self.path == "/game/move":
+                    result = gh.move(player, patch.get("move"), session_id)
+                elif self.path == "/game/hear":
+                    text = patch.get("text", "")
+                    if not isinstance(text, str) or not text.strip() or len(text) > 1000:
+                        self._json(400, {**gh.status(), "error": "Say a move between 1 and 1000 characters."})
+                        return
+                    result = gh.hear(text, player, session_id) or {**gh.status(), "error": "not a move in this game"}
+                elif self.path == "/game/end":
+                    result = gh.end(session_id)
+                elif self.path == "/game/resume":
+                    result = gh.resume(session_id)
                 else:
                     self._json(404, {"error": "not found"})
                     return
-                self._json(404 if result.get("error") else 200, result)
+                self._json(int(result.get("code", 400)) if result.get("error") else 200, result)
                 return
             if self.path.startswith("/imagine/"):
                 im = getattr(ctrl, "imaginer", None)
@@ -1584,7 +1596,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                         202 if result.get("accepted") else 200) if isinstance(result, dict) else 200
                 self._json(code, result if isinstance(result, dict) else {"said": result})
                 return
-            if self.path.startswith("/shelf/sync"):
+            if self.path == "/shelf/sync":
                 sh = getattr(ctrl, "shelf", None)
                 if sh is None:
                     self._json(404, {"error": "the shelf is off on this wall"})
@@ -1592,8 +1604,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if not sh.configured:
                     self._json(400, {"error": "set the Discogs token and username first", **sh.status()})
                     return
-                sh.sync_soon()
-                self._json(200, {**sh.status(), "syncing": True})
+                if self._body() is None:
+                    return
+                accepted = sh.request_sync()
+                self._json(200 if accepted else 400, {**sh.status(), "sync_id": accepted, "accepted": bool(accepted), **({} if accepted else {"error": "Set the Discogs account before reading the shelf."})})
                 return
             if self.path.startswith("/weather/"):
                 w = getattr(ctrl, "weather", None)
@@ -1707,25 +1721,40 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 patch = self._body()
                 if patch is None:
                     return
-                if self.path.startswith("/teach/forget"):
-                    ok = lib.forget(str(patch.get("id", "")))
-                    self._json(200 if ok else 404, {"forgot": ok, **lib.status()})
-                    return
-                if self.path.startswith("/teach/clear"):
-                    lib.clear()
-                    self._json(200, lib.status())
-                    return
-                if self.path.startswith("/teach/learn"):
-                    # by name: the preview is fetched now, on this request
-                    title, artist = str(patch.get("title", "")).strip(), str(patch.get("artist", "")).strip()
-                    if not title or not artist or ear.teacher is None:
-                        self._json(400, {"error": "title and artist, please"})
+                from .nowplaying.teach import TeachBusy
+                try:
+                    if self.path == "/teach/forget":
+                        song_id = patch.get("id", "")
+                        if not isinstance(song_id, str) or not song_id.strip():
+                            raise ValueError("Choose a song to forget.")
+                        ok = lib.forget(song_id)
+                        self._json(200 if ok else 404, {"forgot": ok, **lib.status(), **({} if ok else {"error": "That song is no longer in the library."})})
                         return
-                    song = ear.teacher.learn_named(title, artist)
-                    if song is None:
-                        self._json(404, {"error": f"iTunes has no preview for {artist} - {title}"})
+                    if self.path == "/teach/clear":
+                        lib.clear()
+                        self._json(200, lib.status())
                         return
-                    self._json(200, {"learnt": song, **lib.status()})
+                    if self.path == "/teach/learn":
+                        title, artist = patch.get("title", ""), patch.get("artist", "")
+                        if not all(isinstance(v, str) and 0 < len(v.strip()) <= 200 for v in (title, artist)):
+                            raise ValueError("Enter a title and artist, each up to 200 characters.")
+                        if ear.teacher is None:
+                            self._json(503, {"error": "Teaching is unavailable on this wall."})
+                            return
+                        song = ear.teacher.learn_named(title.strip(), artist.strip())
+                        if song is None:
+                            self._json(404, {"error": "No preview found for that title and artist. Check the spelling or try another recording."})
+                            return
+                        self._json(200, {"learnt": song, **lib.status()})
+                        return
+                except TeachBusy as exc:
+                    self._json(409, {"error": str(exc)})
+                    return
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                    return
+                except RuntimeError as exc:
+                    self._json(502, {"error": str(exc)})
                     return
                 self._json(404, {"error": "not found"})
                 return

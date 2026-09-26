@@ -1,0 +1,41 @@
+{
+  "units": ["G01", "G02"],
+  "researched_at": "2026-09-26",
+  "task_intent": "Refine Tessera’s personal music library and games with expressive native interfaces and matching wall experiences.",
+  "references": [
+    {
+      "unit": "G01", "name": "Abode — Lexico letter puzzle",
+      "url": "https://mobbin.com/screens/dee1f903-080e-4104-9cc0-2062634126b5",
+      "image_inspected": true,
+      "applied": "Separate the five-letter composition from a dedicated tactile keyboard, with an explicit Enter action and a clear guess count. Tessera preserves unacknowledged drafts."
+    },
+    {
+      "unit": "G01", "name": "Apple News — crossword input",
+      "url": "https://mobbin.com/screens/57fcc0a4-5f6e-4253-ae06-fb09f14c11c6",
+      "image_inspected": true,
+      "applied": "Keep the selected puzzle area prominent; give the input area a distinct visual rhythm and meaningful state feedback."
+    },
+    {
+      "unit": "G01", "name": "Hasbro — licensed Wordle rules",
+      "url": "https://instructions.hasbro.com/en-ca/instruction/wordle-the-party-game-for-2-4-players-ages-14-and-up-inspired-by-wordle-game",
+      "applied": "Preserve five-letter guesses and six attempts, with repeated-letter knowledge and the completed grid visible. Add underline/dot/dash cues alongside colour. The NYT game page was blocked by robots.txt."
+    },
+    {
+      "unit": "G02", "name": "The Atlantic Magazine — grid puzzle",
+      "url": "https://mobbin.com/screens/146abc9f-b2de-44ee-b272-1684f04ecb80",
+      "image_inspected": true,
+      "applied": "Strong major rules, restrained cell surfaces and a readable context strip directly below the grid. This is a crossword reference: a second dedicated Sudoku search returned no screens."
+    },
+    {
+      "unit": "G02", "name": "Apple News — grid selection",
+      "url": "https://mobbin.com/screens/57fcc0a4-5f6e-4253-ae06-fb09f14c11c6",
+      "image_inspected": true,
+      "applied": "Use a firm selected-cell outline with softer related-cell illumination. Sudoku selection reports row, column, given/editable status and mistakes in readable text."
+    },
+    {
+      "unit": "G02", "name": "Nikoli — Sudoku rules",
+      "url": "https://www.nikoli.co.jp/en/puzzles/sudoku/",
+      "applied": "Rows, columns and 3-by-3 boxes each contain 1–9 once. Reject invalid givens before solving; preserve the complete grid in the ending; add reversible pencil notes."
+    }
+  ]
+}

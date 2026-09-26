@@ -1,0 +1,146 @@
+{
+  "checks" : [
+    {
+      "name" : "Known account and token are configured",
+      "passed" : true
+    },
+    {
+      "name" : "Two copies of one pressing count separately",
+      "passed" : true
+    },
+    {
+      "name" : "Repeated artist is counted once",
+      "passed" : true
+    },
+    {
+      "name" : "One row per pressing",
+      "passed" : true
+    },
+    {
+      "name" : "Search folds diacritics",
+      "passed" : true
+    },
+    {
+      "name" : "Search requires all terms across title and catalogue",
+      "passed" : true
+    },
+    {
+      "name" : "Format and country are searchable",
+      "passed" : true
+    },
+    {
+      "name" : "Year is searchable",
+      "passed" : true
+    },
+    {
+      "name" : "Record label is searchable",
+      "passed" : true
+    },
+    {
+      "name" : "Unmatched term does not broaden search",
+      "passed" : true
+    },
+    {
+      "name" : "Whitespace search shows entire collection",
+      "passed" : true
+    },
+    {
+      "name" : "Title ordering is stable",
+      "passed" : true
+    },
+    {
+      "name" : "Artist ordering breaks ties by title",
+      "passed" : true
+    },
+    {
+      "name" : "Release year sorts newest first",
+      "passed" : true
+    },
+    {
+      "name" : "Recently added keeps missing dates last",
+      "passed" : true
+    },
+    {
+      "name" : "Play history orders frequent appearances first",
+      "passed" : true
+    },
+    {
+      "name" : "Fresh collection is not called stale",
+      "passed" : true
+    },
+    {
+      "name" : "Collection overdue for its six hour read is stale",
+      "passed" : true
+    },
+    {
+      "name" : "Clock skew does not falsely age collection",
+      "passed" : true
+    },
+    {
+      "name" : "Pressing formats preserve descriptions",
+      "passed" : true
+    },
+    {
+      "name" : "Pressing link is pinned to trusted Discogs identity",
+      "passed" : true
+    },
+    {
+      "name" : "HTTPS artwork is supported",
+      "passed" : true
+    },
+    {
+      "name" : "Legacy release defaults to one copy",
+      "passed" : true
+    },
+    {
+      "name" : "Read completion carries the exact request identity",
+      "passed" : true
+    },
+    {
+      "name" : "Legacy duplicate IDs cannot destabilize SwiftUI navigation",
+      "passed" : true
+    },
+    {
+      "name" : "Malformed negative copy count is clamped",
+      "passed" : true
+    },
+    {
+      "name" : "Collection artwork cannot open local file URLs",
+      "passed" : true
+    },
+    {
+      "name" : "Invalid pressing ID cannot become external link",
+      "passed" : true
+    },
+    {
+      "name" : "Invalid IDs are excluded from collection navigation",
+      "passed" : true
+    },
+    {
+      "name" : "User alone cannot claim connected account",
+      "passed" : true
+    },
+    {
+      "name" : "Never read collection has no invented freshness",
+      "passed" : true
+    },
+    {
+      "name" : "Nonfinite server timestamp cannot crash date formatting",
+      "passed" : true
+    },
+    {
+      "name" : "Older wall response still decodes",
+      "passed" : true
+    },
+    {
+      "name" : "Sync response permits numeric record count and retains receipt",
+      "passed" : true
+    },
+    {
+      "name" : "Five distinct collection orders",
+      "passed" : true
+    }
+  ],
+  "passed" : 35,
+  "total" : 35
+}

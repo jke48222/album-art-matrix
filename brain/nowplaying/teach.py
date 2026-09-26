@@ -38,18 +38,20 @@ How a song gets in
 3. By name. POST /teach/learn {title, artist} fetches the preview by name,
    for a song nobody in the room is playing from a source right now.
 
-Storage: ~/.config/album-art-matrix/taught/ holds songs.json (what each song
-is, how it was learnt, how often it matched) and index.npz (the landmarks,
-sorted). Delete the directory to forget everything; POST /teach/forget one.
+Storage: ~/.config/album-art-matrix/taught/library.npz holds metadata and
+sorted landmarks in one atomic snapshot. Legacy songs.json/index.npz pairs
+migrate on their next change. POST /teach/forget removes one song.
 """
 from __future__ import annotations
 
 import json
+import copy
 import os
 import re
 import subprocess
 import threading
 import time
+import zipfile
 
 import numpy as np
 import requests
@@ -180,6 +182,10 @@ def pcm_from_bytes(raw: bytes) -> np.ndarray:
 
 
 # ---- the library ---------------------------------------------------------------------
+class TeachBusy(RuntimeError):
+    """A preview or room recording already owns the teacher."""
+
+
 class Match:
     def __init__(self, song: dict, score: int, offset_s: float, song_id: str):
         self.song, self.score, self.offset_s, self.id = song, score, offset_s, song_id
@@ -192,7 +198,8 @@ class Library:
     def __init__(self, path: str = DIR, min_score: int = MIN_SCORE):
         self.path = path
         self.min_score = int(min_score)
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._generation = 0
         self.songs: dict[str, dict] = {}
         self._hash = np.zeros(0, dtype=np.uint32)
         self._song = np.zeros(0, dtype=np.int32)     # index into self._ids
@@ -200,37 +207,74 @@ class Library:
         self._ids: list[str] = []
         self.last_match: dict | None = None
         self.problem: str | None = None
+        self._load_failed = False
         self._load()
 
     # ---- disk -----------------------------------------------------------------------
     def _load(self):
+        # One replacement commits metadata and fingerprints together. Legacy
+        # two-file libraries are read once and migrate on their next change.
+        snapshot = os.path.join(self.path, "library.npz")
         try:
-            with open(os.path.join(self.path, "songs.json")) as fh:
-                data = json.load(fh)
-            self.songs = data.get("songs", {})
-            self._ids = data.get("ids", [])
-            z = np.load(os.path.join(self.path, "index.npz"))
-            self._hash, self._song, self._time = z["hash"], z["song"], z["time"]
-        except (OSError, ValueError, KeyError):
-            self.songs, self._ids = {}, []
-            self._hash = np.zeros(0, dtype=np.uint32)
-            self._song = np.zeros(0, dtype=np.int32)
-            self._time = np.zeros(0, dtype=np.int32)
+            if os.path.exists(snapshot):
+                with np.load(snapshot, allow_pickle=False) as z:
+                    data = json.loads(str(z["metadata"].item()))
+                    hashes, songs, times = z["hash"], z["song"], z["time"]
+            else:
+                with open(os.path.join(self.path, "songs.json")) as fh:
+                    data = json.load(fh)
+                with np.load(os.path.join(self.path, "index.npz"), allow_pickle=False) as z:
+                    hashes, songs, times = z["hash"], z["song"], z["time"]
+            metadata, ids = data["songs"], data["ids"]
+            if (not isinstance(metadata, dict) or not isinstance(ids, list)
+                    or len(ids) != len(set(ids)) or set(ids) != set(metadata)
+                    or any(not isinstance(song, dict) or not isinstance(song.get("title"), str)
+                           or not isinstance(song.get("artist"), str) for song in metadata.values())
+                    or hashes.ndim != 1 or songs.shape != hashes.shape or times.shape != hashes.shape
+                    or (songs.size and (songs.min() < 0 or songs.max() >= len(ids)))
+                    or (hashes.size > 1 and np.any(hashes[1:] < hashes[:-1]))):
+                raise ValueError("inconsistent song library")
+            self.songs, self._ids = metadata, ids
+            self._hash, self._song, self._time = hashes, songs, times
+        except FileNotFoundError:
+            if any(os.path.exists(os.path.join(self.path, name))
+                   for name in ("library.npz", "songs.json", "index.npz")):
+                self._load_failed = True
+                self.problem = "The saved song library is incomplete. Restore its missing file before learning more songs."
+            return
+        except (OSError, ValueError, KeyError, TypeError, EOFError, zipfile.BadZipFile) as exc:
+            self._load_failed = True
+            self.problem = f"Could not read the song library: {exc}"
 
     def _save(self):
+        if self._load_failed:
+            raise RuntimeError("The saved library could not be read. Repair or restore it before adding or removing songs.")
         try:
             os.makedirs(self.path, exist_ok=True)
-            tmp = os.path.join(self.path, "songs.json.tmp")
-            with open(tmp, "w") as fh:
-                json.dump({"songs": self.songs, "ids": self._ids}, fh, indent=1)
-            os.replace(tmp, os.path.join(self.path, "songs.json"))
-            np.savez(os.path.join(self.path, "index.tmp.npz"), hash=self._hash,
-                     song=self._song, time=self._time)
-            os.replace(os.path.join(self.path, "index.tmp.npz"),
-                       os.path.join(self.path, "index.npz"))
+            tmp = os.path.join(self.path, "library.tmp.npz")
+            with open(tmp, "wb") as fh:
+                np.savez(fh, metadata=json.dumps({"songs": self.songs, "ids": self._ids}),
+                         hash=self._hash, song=self._song, time=self._time)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(tmp, os.path.join(self.path, "library.npz"))
+            self.problem = None
         except OSError as exc:
-            self.problem = f"could not save: {exc}"
-            print(f"[teach] {self.problem}", flush=True)
+            self.problem = "The wall could not save its song library. Check its free space and try again."
+            raise RuntimeError(self.problem) from exc
+
+    def _snapshot(self):
+        return (copy.deepcopy(self.songs), list(self._ids), self._hash, self._song,
+                self._time, copy.deepcopy(self.last_match), self._generation)
+
+    def _restore(self, snapshot):
+        (self.songs, self._ids, self._hash, self._song, self._time,
+         self.last_match, self._generation) = snapshot
+
+    @property
+    def generation(self):
+        with self._lock:
+            return self._generation
 
     # ---- songs ----------------------------------------------------------------------
     @staticmethod
@@ -238,18 +282,21 @@ class Library:
         return f"{_plain(artist).split(',')[0]}|{_plain(title)}"
 
     def has(self, title: str, artist: str, how: str | None = None) -> bool:
-        s = self.songs.get(self.song_id(title, artist))
-        if s is None:
-            return False
-        return True if how is None else how in s.get("how", [])
+        with self._lock:
+            s = self.songs.get(self.song_id(title, artist))
+            if s is None:
+                return False
+            return True if how is None else how in s.get("how", [])
 
     def configure(self, min_score=None):
         if min_score is not None:
-            self.min_score = int(min_score)
+            with self._lock:
+                self.min_score = max(5, min(60, int(min_score)))
 
     def learn(self, pcm: np.ndarray, title: str, artist: str, album: str = "",
               art_url: str | None = None, isrc: str | None = None,
-              duration_ms: int | None = None, how: str = "preview") -> dict | None:
+              duration_ms: int | None = None, how: str = "preview",
+              expected_generation: int | None = None) -> dict | None:
         """Fingerprint `pcm` (16 kHz int16) and file it under the song. A
         song already known gets the new recording added to it, so a
         preview and the room's own hearing can both vouch for it."""
@@ -260,6 +307,9 @@ class Library:
             return None
         sid = self.song_id(title, artist)
         with self._lock:
+            if expected_generation is not None and expected_generation != self._generation:
+                raise RuntimeError("The library changed while learning. Try teaching the song again.")
+            snapshot = self._snapshot()
             if sid not in self.songs:
                 if len(self.songs) >= MAX_SONGS:
                     self._evict_oldest()
@@ -279,13 +329,21 @@ class Library:
             self._hash = np.concatenate([self._hash, hs])
             self._song = np.concatenate([self._song, np.full(hs.size, idx, dtype=np.int32)])
             self._time = np.concatenate([self._time, ts])
-            order = np.argsort(self._hash, kind="stable")
-            self._hash, self._song, self._time = self._hash[order], self._song[order], self._time[order]
+            # Re-teaching a preview must not inflate a future match's votes.
+            rows = np.unique(np.stack([self._hash, self._song, self._time], axis=1), axis=0)
+            self._hash = rows[:, 0].astype(np.uint32)
+            self._song = rows[:, 1].astype(np.int32)
+            self._time = rows[:, 2].astype(np.int32)
             song["landmarks"] = int(np.count_nonzero(self._song == idx))
-            self._save()
+            try:
+                self._save()
+            except RuntimeError:
+                self._restore(snapshot)
+                raise
+            result = copy.deepcopy(song)
         print(f"[teach] learnt {artist} - {title} from {how}: {hs.size} landmarks "
               f"({len(self.songs)} songs)", flush=True)
-        return song
+        return result
 
     def _evict_oldest(self):
         oldest = min(self.songs, key=lambda k: self.songs[k].get("last_matched")
@@ -301,22 +359,39 @@ class Library:
         self._song = np.where(self._song > idx, self._song - 1, self._song).astype(np.int32)
         del self._ids[idx]
         del self.songs[sid]
+        if self.last_match and self.last_match.get("id") == sid:
+            self.last_match = None
 
     def forget(self, sid: str) -> bool:
         with self._lock:
             if sid not in self.songs:
                 return False
+            snapshot = self._snapshot()
             self._drop(sid)
-            self._save()
+            self._generation += 1
+            if self.last_match and self.last_match.get("id") == sid:
+                self.last_match = None
+            try:
+                self._save()
+            except RuntimeError:
+                self._restore(snapshot)
+                raise
         return True
 
     def clear(self):
         with self._lock:
+            snapshot = self._snapshot()
             self.songs, self._ids = {}, []
             self._hash = np.zeros(0, dtype=np.uint32)
             self._song = np.zeros(0, dtype=np.int32)
             self._time = np.zeros(0, dtype=np.int32)
-            self._save()
+            self.last_match = None
+            self._generation += 1
+            try:
+                self._save()
+            except RuntimeError:
+                self._restore(snapshot)
+                raise
 
     # ---- asking ----------------------------------------------------------------------
     def query(self, pcm: np.ndarray) -> Match | None:
@@ -329,6 +404,7 @@ class Library:
         with self._lock:
             H, S, T = self._hash, self._song, self._time
             ids = list(self._ids)
+            generation, threshold = self._generation, self.min_score
         lo = np.searchsorted(H, hs, side="left")
         hi = np.searchsorted(H, hs, side="right")
         n = hi - lo
@@ -351,33 +427,31 @@ class Library:
                 score += int(counts[j])
         song_idx = int(uniq[best] // 1_000_000)
         offset_frames = int(uniq[best] % 1_000_000) - 500_000
-        if score < self.min_score or song_idx >= len(ids):
+        if score < threshold or song_idx >= len(ids):
             return None
         sid = ids[song_idx]
-        song = self.songs.get(sid)
-        if song is None:
-            return None
-        song["matched"] = song.get("matched", 0) + 1
-        song["last_matched"] = int(time.time())
-        self.last_match = {"id": sid, "title": song["title"], "artist": song["artist"],
-                           "score": score, "at": song["last_matched"]}
-        return Match(song, score, offset_frames * FRAME_S, sid)
+        with self._lock:
+            song = self.songs.get(sid)
+            if song is None or generation != self._generation:
+                return None
+            song["matched"] = song.get("matched", 0) + 1
+            song["last_matched"] = int(time.time())
+            self.last_match = {"id": sid, "title": song["title"], "artist": song["artist"],
+                               "score": score, "at": song["last_matched"]}
+            return Match(copy.deepcopy(song), score, offset_frames * FRAME_S, sid)
 
     # ---- for the phone -------------------------------------------------------------
     def listing(self) -> list[dict]:
-        out = []
-        for sid, s in self.songs.items():
-            out.append({"id": sid, "title": s["title"], "artist": s["artist"],
-                        "album": s.get("album", ""), "how": s.get("how", []),
-                        "added": s.get("added"), "matched": s.get("matched", 0),
-                        "last_matched": s.get("last_matched"), "landmarks": s.get("landmarks", 0)})
+        with self._lock:
+            out = [{"id": sid, **copy.deepcopy(song)} for sid, song in self.songs.items()]
         out.sort(key=lambda s: s.get("last_matched") or s.get("added") or 0, reverse=True)
         return out
 
     def status(self) -> dict:
-        return {"songs": len(self.songs), "landmarks": int(self._hash.size),
-                "min_score": self.min_score, "last_match": self.last_match,
-                "problem": self.problem}
+        with self._lock:
+            return {"songs": len(self.songs), "landmarks": int(self._hash.size),
+                    "min_score": self.min_score, "last_match": copy.deepcopy(self.last_match),
+                    "problem": self.problem}
 
 
 # ---- the teacher ---------------------------------------------------------------------
@@ -391,6 +465,8 @@ def pick_preview(results: list, title: str, artist: str) -> dict | None:
         if x.get("wrapperType") != "track" or not x.get("previewUrl"):
             continue
         t, a = _plain(x.get("trackName")), _plain(x.get("artistName"))
+        if not t or not a:
+            continue
         ts = 2 if t == want_t else 1 if (want_t and (want_t in t or t in want_t)) else 0
         sc = 2 if a == want_a else 1 if (want_a and (want_a in a or a in want_a)) else 0
         if ts == 0 or sc == 0:
@@ -406,10 +482,11 @@ def itunes_preview(title: str, artist: str) -> dict | None:
         r = requests.get(ITUNES_SEARCH, params={"term": f"{artist} {title}", "entity": "song",
                                                 "limit": 8}, headers={"User-Agent": UA},
                          timeout=10)
+        r.raise_for_status()
         results = r.json().get("results", [])
     except (requests.RequestException, ValueError) as exc:
         print(f"[teach] itunes: {exc}", flush=True)
-        return None
+        raise RuntimeError("The preview catalogue isn't answering. Check the wall's internet connection and try again.") from exc
     best = pick_preview(results, title, artist)
     if best is None:
         return None
@@ -422,13 +499,16 @@ def itunes_preview(title: str, artist: str) -> dict | None:
 def decode_to_pcm(url_or_path: str, seconds: float = 40.0) -> np.ndarray | None:
     """ffmpeg reads the preview (a URL is fine) into 16 kHz mono int16."""
     try:
-        out = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-t", str(seconds),
+        result = subprocess.run(["ffmpeg", "-nostdin", "-loglevel", "error", "-t", str(seconds),
                               "-i", url_or_path, "-f", "s16le", "-ac", "1", "-ar", str(RATE), "-"],
-                             capture_output=True, timeout=60).stdout
+                             capture_output=True, timeout=60)
+        if result.returncode != 0:
+            return None
+        out = result.stdout
     except (OSError, subprocess.SubprocessError) as exc:
         print(f"[teach] ffmpeg: {exc}", flush=True)
         return None
-    if len(out) < RATE * 2 * 2:
+    if len(out) < RATE * 2 * 2 or len(out) % 2:
         return None
     return np.frombuffer(out, dtype=np.int16)
 
@@ -450,10 +530,14 @@ class Teacher:
         self._current_since = 0.0
         self._attempts_at_start = 0
         self._loud_since = None
-        self._ear_taught = set()
+        self._ear_taught: dict[str, int] = {}
         self._tried: dict[str, float] = {}              # song id -> when a preview was tried
         self._busy = threading.Lock()
         self.learning: str | None = None
+        self.problem: str | None = None
+        self.last_learned: dict | None = None
+        self._state_lock = threading.Lock()
+        self._job_generation = 0
 
     def configure(self, by_ear=None):
         if by_ear is not None:
@@ -485,29 +569,53 @@ class Teacher:
         if (ear_hit is None and misses >= self.MISSES_BEFORE_PREVIEW
                 and not self.library.has(now.title, now.artist, "preview")
                 and mono - self._tried.get(sid, -1e9) > self.NEGATIVE_CACHE_S):
-            self._tried[sid] = mono
-            self._start(self._learn_preview, now)
+            if self._start(self._learn_preview, now):
+                self._tried[sid] = mono
         # 2. the room has been loud with this song for a while: learn the room's hearing
         if (self.by_ear and mono - self._loud_since >= self.LOUD_BEFORE_EAR_S
-                and sid not in self._ear_taught and not self.library.has(now.title, now.artist, "ear")
+                and self._ear_taught.get(sid) != self.library.generation and not self.library.has(now.title, now.artist, "ear")
                 and (ear_hit is None or ear_named_it)):
-            self._ear_taught.add(sid)
-            self._start(self._learn_ear, now)
+            if self._start(self._learn_ear, now):
+                self._ear_taught[sid] = self.library.generation
+
+    def _begin(self, title, artist):
+        if not self._busy.acquire(blocking=False):
+            return False
+        self._job_generation = self.library.generation
+        with self._state_lock:
+            self.learning = f"{artist} — {title}"
+            self.problem = None
+        return True
+
+    def _finish(self, song=None, problem=None):
+        with self._state_lock:
+            if song:
+                self.last_learned = {"id": Library.song_id(song["title"], song["artist"]),
+                                     "title": song["title"], "artist": song["artist"],
+                                     "at": int(time.time())}
+            self.problem = problem
+            self.learning = None
+        self._busy.release()
 
     def _start(self, fn, now):
-        if self._busy.locked():
-            return
-        threading.Thread(target=self._run, args=(fn, now), name="teach", daemon=True).start()
+        if not self._begin(now.title, now.artist):
+            return False
+        try:
+            threading.Thread(target=self._run, args=(fn, now), name="teach", daemon=True).start()
+        except RuntimeError:
+            self._finish(problem="The wall could not start learning. Try again.")
+            return False
+        return True
 
     def _run(self, fn, now):
-        with self._busy:
-            self.learning = f"{now.artist} - {now.title}"
-            try:
-                fn(now)
-            except Exception as exc:
-                print(f"[teach] {exc}", flush=True)
-            finally:
-                self.learning = None
+        song, problem = None, None
+        try:
+            song = fn(now)
+        except Exception as exc:
+            problem = str(exc)
+            print(f"[teach] {exc}", flush=True)
+        finally:
+            self._finish(song, problem)
 
     def _fetch_preview(self, title, artist):
         meta = itunes_preview(title, artist)
@@ -516,7 +624,7 @@ class Teacher:
             return None
         pcm = decode_to_pcm(meta["preview"])
         if pcm is None:
-            return None
+            raise RuntimeError("The matching preview could not be read. Check the wall's connection and try again.")
         return pcm, meta
 
     def _learn_preview(self, now):
@@ -524,27 +632,50 @@ class Teacher:
         if got is None:
             return
         pcm, meta = got
-        self.library.learn(pcm, meta.get("title") or now.title, meta.get("artist") or now.artist,
+        return self.library.learn(pcm, meta.get("title") or now.title, meta.get("artist") or now.artist,
                            album=meta.get("album") or now.album, art_url=meta.get("art_url") or now.art_url,
-                           duration_ms=meta.get("duration_ms") or now.duration_ms, how="preview")
+                           duration_ms=meta.get("duration_ms") or now.duration_ms, how="preview",
+                           expected_generation=self._job_generation)
 
     def _learn_ear(self, now):
         ring = getattr(self.ear, "_ring", None)
         if not ring:
             return
         pcm = pcm_from_bytes(b"".join(list(ring)))
-        self.library.learn(pcm, now.title, now.artist, album=now.album, art_url=now.art_url,
-                           duration_ms=now.duration_ms, how="ear")
+        return self.library.learn(pcm, now.title, now.artist, album=now.album, art_url=now.art_url,
+                                  duration_ms=now.duration_ms, how="ear",
+                                  expected_generation=self._job_generation)
 
     def learn_named(self, title: str, artist: str) -> dict | None:
-        """POST /teach/learn: by name, now, on the caller's thread."""
-        got = self._fetch(title, artist)
-        if got is None:
-            return None
-        pcm, meta = got
-        return self.library.learn(pcm, meta.get("title") or title, meta.get("artist") or artist,
-                                  album=meta.get("album") or "", art_url=meta.get("art_url"),
-                                  duration_ms=meta.get("duration_ms"), how="told")
+        """Manual learning shares admission and status with automatic learning."""
+        if not isinstance(title, str) or not isinstance(artist, str):
+            raise ValueError("Enter a song title and artist.")
+        title, artist = title.strip(), artist.strip()
+        if not title or not artist or len(title) > 200 or len(artist) > 200:
+            raise ValueError("Enter a song title and artist, up to 200 characters each.")
+        if not self._begin(title, artist):
+            raise TeachBusy("The wall is learning another song. Try again when it finishes.")
+        song, problem = None, None
+        try:
+            got = self._fetch(title, artist)
+            if got is None:
+                problem = "No matching preview is available. Check the title and artist, or let the wall learn it from the room."
+                return None
+            pcm, meta = got
+            song = self.library.learn(pcm, meta.get("title") or title, meta.get("artist") or artist,
+                                      album=meta.get("album") or "", art_url=meta.get("art_url"),
+                                      duration_ms=meta.get("duration_ms"), how="told",
+                                      expected_generation=self._job_generation)
+            if song is None:
+                problem = "The preview did not contain enough distinct sound to learn."
+            return song
+        except Exception as exc:
+            problem = str(exc)
+            raise
+        finally:
+            self._finish(song, problem)
 
     def status(self) -> dict:
-        return {"by_ear": self.by_ear, "learning": self.learning}
+        with self._state_lock:
+            return {"by_ear": self.by_ear, "learning": self.learning,
+                    "problem": self.problem, "last_learned": copy.deepcopy(self.last_learned)}

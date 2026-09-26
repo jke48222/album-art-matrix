@@ -1,0 +1,36 @@
+{
+  "unit": "F08",
+  "researched_at": "2026-09-26",
+  "task_intent": "Refine Tessera’s personal music library and games with expressive native interfaces and matching wall experiences.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "references": [
+    {
+      "title": "Shazam — song search",
+      "url": "https://mobbin.com/screens/6c26bb6c-af3d-4066-bbdb-d4de49822bb7",
+      "inspected_image": true,
+      "applied": "Artwork-led rows with distinct title and artist hierarchy; local search keeps its scope clear."
+    },
+    {
+      "title": "Shazam — search in library",
+      "url": "https://mobbin.com/screens/5e4f582d-7d87-4444-9823-ae7c24b5114c",
+      "inspected_image": true,
+      "applied": "Keep search next to the library and song-specific details attached to the song. Avoid a second settings popup."
+    },
+    {
+      "title": "Apple Human Interface Guidelines — Searching",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/searching",
+      "applied": "Descriptive scope-specific placeholder, clear search action and explicit no-results feedback."
+    },
+    {
+      "title": "Apple — Identify a song using Shazam",
+      "url": "https://support.apple.com/en-is/guide/shazam/dev9748744b6/web",
+      "applied": "Keep the identified song's durable identity and history visible; separate recognition from playback and avoid implying that a learned song is currently playing."
+    },
+    {
+      "title": "Apple Developer — ShazamKit",
+      "url": "https://developer.apple.com/shazamkit/",
+      "applied": "Explain the distinction between sound fingerprints and audio recordings in a concise, contextual privacy statement. Tessera uses its existing local fingerprint engine."
+    }
+  ]
+}

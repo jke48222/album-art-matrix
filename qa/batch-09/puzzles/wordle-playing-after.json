@@ -1,0 +1,37 @@
+{
+  "name": "wordle",
+  "title": "Wordle",
+  "players": [
+    "You"
+  ],
+  "over": false,
+  "won": false,
+  "winner": null,
+  "message": "4 left.",
+  "started": 1790462445,
+  "finished": null,
+  "seq": 2,
+  "voice": true,
+  "rows": [
+    {
+      "word": "slate",
+      "marks": "xxgxg"
+    },
+    {
+      "word": "trace",
+      "marks": "xggyg"
+    }
+  ],
+  "keys": {
+    "s": "x",
+    "l": "x",
+    "a": "g",
+    "t": "x",
+    "e": "g",
+    "r": "g",
+    "c": "y"
+  },
+  "guesses_left": 4,
+  "turn": "You",
+  "answer": null
+}

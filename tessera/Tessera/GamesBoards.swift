@@ -21,63 +21,6 @@ func groupColour(_ name: String?) -> Color {
     }
 }
 
-// MARK: - Sudoku: tap a cell, tap a digit
-
-struct SudokuBoard: View {
-    let game: GameStatus.Game
-    let accent: Color
-    let send: ([String: Any]) -> Void
-
-    private var puzzle: [Character] { Array(game.state["puzzle"].string ?? "") }
-    private var grid: [Character] { Array(game.state["grid"].string ?? "") }
-    private var wrong: Set<Int> { Set(game.state["wrong"].ints) }
-    private var chosen: Int? { game.state["chosen"].int }
-
-    var body: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 0) {
-                ForEach(0..<9, id: \.self) { r in
-                    HStack(spacing: 0) {
-                        ForEach(0..<9, id: \.self) { c in
-                            let i = r * 9 + c
-                            let given = puzzle.indices.contains(i) && puzzle[i] != "0"
-                            let v = grid.indices.contains(i) && grid[i] != "0" ? String(grid[i]) : ""
-                            Text(v)
-                                .font(.system(size: 20, weight: given ? .bold : .medium, design: .rounded))
-                                .foregroundStyle(wrong.contains(i) ? tileRed : given ? Ink.ink : accent)
-                                .frame(width: 38, height: 38)
-                                .background(chosen == i ? accent.opacity(0.25) : Ink.plaster)
-                                .overlay(alignment: .trailing) { Rectangle().fill(Ink.hairline).frame(width: c % 3 == 2 ? 2 : 0.5) }
-                                .overlay(alignment: .bottom) { Rectangle().fill(Ink.hairline).frame(height: r % 3 == 2 ? 2 : 0.5) }
-                                .contentShape(Rectangle())
-                                .onTapGesture { if !given { send(["choose": i]) } }
-                        }
-                    }
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Round.control, style: .continuous).stroke(Ink.hairline, lineWidth: 1))
-            HStack(spacing: 6) {
-                ForEach(1...9, id: \.self) { d in
-                    Button { if let i = chosen { send(["cell": i, "digit": d]) } } label: {
-                        Text(String(d)).font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .foregroundStyle(Ink.ink).frame(maxWidth: .infinity, minHeight: 44)
-                            .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.sunk))
-                    }
-                    .buttonStyle(PressStyle(scale: 0.92))
-                }
-                Button { if let i = chosen { send(["cell": i, "digit": 0]) } } label: {
-                    Image(systemName: "delete.left").foregroundStyle(Ink.dim).frame(maxWidth: .infinity, minHeight: 44)
-                        .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.sunk))
-                }
-                .buttonStyle(PressStyle(scale: 0.92))
-            }
-            Text((game.state["rating"].string ?? "").capitalized + "  ·  \(game.state["left"].int ?? 0) to fill")
-                .font(.ui(12)).foregroundStyle(Ink.dim)
-        }
-    }
-}
-
 // MARK: - Connections: tap four, submit
 
 struct ConnectionsBoard: View {

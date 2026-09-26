@@ -1,0 +1,70 @@
+{
+  "checks" : [
+    {
+      "name" : "local library enabled",
+      "passed" : true
+    },
+    {
+      "name" : "diacritic insensitive artist",
+      "passed" : true
+    },
+    {
+      "name" : "case insensitive title",
+      "passed" : true
+    },
+    {
+      "name" : "unordered multiword search",
+      "passed" : true
+    },
+    {
+      "name" : "all search words must match",
+      "passed" : true
+    },
+    {
+      "name" : "album included in search",
+      "passed" : true
+    },
+    {
+      "name" : "whitespace-only search includes all",
+      "passed" : true
+    },
+    {
+      "name" : "provenance distinct",
+      "passed" : true
+    },
+    {
+      "name" : "artwork identity preserved",
+      "passed" : true
+    },
+    {
+      "name" : "actual score preserved",
+      "passed" : true
+    },
+    {
+      "name" : "threshold separate from confidence",
+      "passed" : true
+    },
+    {
+      "name" : "completed receipt decoded",
+      "passed" : true
+    },
+    {
+      "name" : "legacy library decodes",
+      "passed" : true
+    },
+    {
+      "name" : "legacy art optional",
+      "passed" : true
+    },
+    {
+      "name" : "legacy teacher optional",
+      "passed" : true
+    },
+    {
+      "name" : "manual provenance",
+      "passed" : true
+    }
+  ],
+  "failed" : 0,
+  "passed" : 16
+}

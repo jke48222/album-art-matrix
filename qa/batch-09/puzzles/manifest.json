@@ -1,0 +1,158 @@
+{
+  "baseline": "8bdda75",
+  "sizes": [
+    64,
+    192,
+    512
+  ],
+  "cases": [
+    {
+      "game": "wordle",
+      "state": "playing",
+      "version": "before",
+      "files": [
+        "wordle-playing-before-64.png",
+        "wordle-playing-before-192.png",
+        "wordle-playing-before-512.png"
+      ]
+    },
+    {
+      "game": "wordle",
+      "state": "playing",
+      "version": "after",
+      "files": [
+        "wordle-playing-after-64.png",
+        "wordle-playing-after-192.png",
+        "wordle-playing-after-512.png"
+      ]
+    },
+    {
+      "game": "wordle",
+      "state": "won",
+      "version": "before",
+      "files": [
+        "wordle-won-before-64.png",
+        "wordle-won-before-192.png",
+        "wordle-won-before-512.png"
+      ]
+    },
+    {
+      "game": "wordle",
+      "state": "won",
+      "version": "after",
+      "files": [
+        "wordle-won-after-64.png",
+        "wordle-won-after-192.png",
+        "wordle-won-after-512.png"
+      ]
+    },
+    {
+      "game": "wordle",
+      "state": "lost",
+      "version": "before",
+      "files": [
+        "wordle-lost-before-64.png",
+        "wordle-lost-before-192.png",
+        "wordle-lost-before-512.png"
+      ]
+    },
+    {
+      "game": "wordle",
+      "state": "lost",
+      "version": "after",
+      "files": [
+        "wordle-lost-after-64.png",
+        "wordle-lost-after-192.png",
+        "wordle-lost-after-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "playing",
+      "version": "before",
+      "files": [
+        "sudoku-playing-before-64.png",
+        "sudoku-playing-before-192.png",
+        "sudoku-playing-before-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "playing",
+      "version": "after",
+      "files": [
+        "sudoku-playing-after-64.png",
+        "sudoku-playing-after-192.png",
+        "sudoku-playing-after-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "error",
+      "version": "before",
+      "files": [
+        "sudoku-error-before-64.png",
+        "sudoku-error-before-192.png",
+        "sudoku-error-before-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "error",
+      "version": "after",
+      "files": [
+        "sudoku-error-after-64.png",
+        "sudoku-error-after-192.png",
+        "sudoku-error-after-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "notes",
+      "version": "before",
+      "files": [
+        "sudoku-notes-before-64.png",
+        "sudoku-notes-before-192.png",
+        "sudoku-notes-before-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "notes",
+      "version": "after",
+      "files": [
+        "sudoku-notes-after-64.png",
+        "sudoku-notes-after-192.png",
+        "sudoku-notes-after-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "won",
+      "version": "before",
+      "files": [
+        "sudoku-won-before-64.png",
+        "sudoku-won-before-192.png",
+        "sudoku-won-before-512.png"
+      ]
+    },
+    {
+      "game": "sudoku",
+      "state": "won",
+      "version": "after",
+      "files": [
+        "sudoku-won-after-64.png",
+        "sudoku-won-after-192.png",
+        "sudoku-won-after-512.png"
+      ]
+    }
+  ],
+  "notes": [
+    "All frames are actual production renderers; no screenshot mockups.",
+    "Wordle flip elapsed time is pinned for animation frames.",
+    "Pencil notes are new; the prior renderer receives the same selected-cell state but has no notes support.",
+    "64-pixel pencil notes use their 3-by-3 positions as dots; digits remain readable at192 and512.",
+    "Phone input controls sit outside the shared board composition."
+  ],
+  "motion": "wordle-reveal.gif"
+}

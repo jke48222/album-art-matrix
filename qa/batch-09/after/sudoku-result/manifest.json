@@ -1,0 +1,66 @@
+{
+  "captured_at": "2026-09-26T23:04:32.539396+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "game",
+      "state_reads": 4,
+      "fixture_writes": [
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        },
+        {
+          "method": "POST",
+          "path": "/services"
+        }
+      ],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "games",
+        "-game-page",
+        "sudoku"
+      ],
+      "library_game_state": "result",
+      "installed_app_identity": {
+        "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+        "files_sha256": {
+          "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+          "Tessera.debug.dylib": "afcde97571f666d3c231a6b91e9bdff0891f4d5f5f4467d6b7686da249b95175"
+        },
+        "production_code_file": "Tessera.debug.dylib"
+      },
+      "captured_at": "2026-09-26T23:04:32.321727+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "installed_app_identity": {
+    "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+    "files_sha256": {
+      "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+      "Tessera.debug.dylib": "afcde97571f666d3c231a6b91e9bdff0891f4d5f5f4467d6b7686da249b95175"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

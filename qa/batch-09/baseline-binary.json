@@ -1,0 +1,13 @@
+{
+  "app": "/tmp/tessera-batch09-before/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "identity": {
+    "source": "Known baseline .app installed before exclusive baseline capture run; baseline app bundle preserved unchanged",
+    "files_sha256": {
+      "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+      "Tessera.debug.dylib": "8729db49294a2e094a9276b22332e6bd8fc59f51a3961ceb1b44a5650ba31e7b"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "revision": "8bdda75",
+  "instrumentation": "DEBUG-only navigation entries documented in baseline-instrumentation.json"
+}

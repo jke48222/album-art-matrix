@@ -1,0 +1,604 @@
+{
+  "feature": "teach",
+  "phase": "ready",
+  "renderer_root": "/private/tmp/tessera-batch09-baseline",
+  "authored_assets": [
+    {
+      "path": "/qa-library-cover-0.png",
+      "sha256": "7e4efd5694998be4bff750739baa568866635aa3ed279ac1b4c5b405a52ae051",
+      "authored_fixture": true
+    },
+    {
+      "path": "/qa-library-cover-1.png",
+      "sha256": "e8c97338686c7a7852437a51bdea5cc4a3ad55588c28a252a50a89ff73d2c092",
+      "authored_fixture": true
+    },
+    {
+      "path": "/qa-library-cover-2.png",
+      "sha256": "9d21e070a1b0ff6b70673602b4659446f5764bb608a32eb2b6a35dfdb8697da9",
+      "authored_fixture": true
+    },
+    {
+      "path": "/qa-library-cover-3.png",
+      "sha256": "c2667f3269396befac1c1397488210ecff866a707f7c34c50db05bdbc06707cd",
+      "authored_fixture": true
+    },
+    {
+      "path": "/qa-library-cover-4.png",
+      "sha256": "6d5ac9ec862dd6c8f665442d994c478f3e4a42c9666d2dde564dfe008aa6c1e3",
+      "authored_fixture": true
+    },
+    {
+      "path": "/qa-library-cover-5.png",
+      "sha256": "de85ac35e38204af551cd36f61f332d24a3968927af6caa5f2a8d404e9c5b111",
+      "authored_fixture": true
+    }
+  ],
+  "payloads": {
+    "/teach": {
+      "enabled": true,
+      "landmarks": 7160,
+      "min_score": 15,
+      "songs": [
+        {
+          "id": "qa-song-0",
+          "title": "Into the Quiet",
+          "artist": "The Tessera Sessions",
+          "album": "After the Rain",
+          "how": [
+            "preview",
+            "ear"
+          ],
+          "added": 1790447400,
+          "matched": 24,
+          "last_matched": 1790447400,
+          "landmarks": 1239,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-0.png"
+        },
+        {
+          "id": "qa-song-1",
+          "title": "Amber Hours",
+          "artist": "Mira Vale",
+          "album": "Amber Hours",
+          "how": [
+            "told"
+          ],
+          "added": 1790361000,
+          "matched": 12,
+          "last_matched": 1790445300,
+          "landmarks": 987,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-1.png"
+        },
+        {
+          "id": "qa-song-2",
+          "title": "Blue Distance",
+          "artist": "North Coast",
+          "album": "Blue Distance",
+          "how": [
+            "ear"
+          ],
+          "added": 1790274600,
+          "matched": 7,
+          "last_matched": 1790443200,
+          "landmarks": 1460,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-2.png"
+        },
+        {
+          "id": "qa-song-3",
+          "title": "Slow Sun",
+          "artist": "Mira Vale",
+          "album": "Slow Sun",
+          "how": [
+            "told"
+          ],
+          "added": 1790188200,
+          "matched": 4,
+          "last_matched": 1790441100,
+          "landmarks": 1192,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-3.png"
+        },
+        {
+          "id": "qa-song-4",
+          "title": "After the Rain",
+          "artist": "The Tessera Sessions",
+          "album": "After the Rain",
+          "how": [
+            "ear"
+          ],
+          "added": 1790101800,
+          "matched": 3,
+          "last_matched": 1790439000,
+          "landmarks": 901,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-4.png"
+        },
+        {
+          "id": "qa-song-5",
+          "title": "Paper Moon",
+          "artist": "Lena June",
+          "album": "Paper Moon",
+          "how": [
+            "told"
+          ],
+          "added": 1790015400,
+          "matched": 1,
+          "last_matched": 1790436900,
+          "landmarks": 1381,
+          "art_url": "http://127.0.0.1:65189/qa-library-cover-5.png"
+        }
+      ],
+      "teacher": {
+        "by_ear": true,
+        "learning": null,
+        "problem": null,
+        "last_learned": null
+      },
+      "last_match": {
+        "id": "qa-song-0",
+        "title": "Into the Quiet",
+        "artist": "The Tessera Sessions",
+        "score": 44,
+        "at": 1790447400
+      },
+      "problem": null
+    },
+    "/shelf": {
+      "releases": [
+        {
+          "release_id": 900100,
+          "title": "After the Rain",
+          "artists": [
+            "The Tessera Sessions"
+          ],
+          "year": 2026,
+          "label": "Tessera Sessions",
+          "catno": "TS-001",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album",
+            "Limited Edition"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-0.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900100",
+          "plays": 24,
+          "added": "2026-09-25T08:00:00-04:00",
+          "copies": 2
+        },
+        {
+          "release_id": 900101,
+          "title": "Amber Hours",
+          "artists": [
+            "Mira Vale"
+          ],
+          "year": 2025,
+          "label": "Tessera Sessions",
+          "catno": "TS-002",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-1.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900101",
+          "plays": 12,
+          "added": "2026-09-24T08:00:00-04:00",
+          "copies": 1
+        },
+        {
+          "release_id": 900102,
+          "title": "Blue Distance",
+          "artists": [
+            "North Coast"
+          ],
+          "year": 2024,
+          "label": "Tessera Sessions",
+          "catno": "TS-003",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-2.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900102",
+          "plays": 7,
+          "added": "2026-09-23T08:00:00-04:00",
+          "copies": 1
+        },
+        {
+          "release_id": 900103,
+          "title": "Slow Sun",
+          "artists": [
+            "Mira Vale"
+          ],
+          "year": 2023,
+          "label": "Tessera Sessions",
+          "catno": "TS-004",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-3.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900103",
+          "plays": 4,
+          "added": "2026-09-22T08:00:00-04:00",
+          "copies": 1
+        },
+        {
+          "release_id": 900104,
+          "title": "After the Rain",
+          "artists": [
+            "The Tessera Sessions"
+          ],
+          "year": 2022,
+          "label": "Tessera Sessions",
+          "catno": "TS-005",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-4.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900104",
+          "plays": 3,
+          "added": "2026-09-21T08:00:00-04:00",
+          "copies": 1
+        },
+        {
+          "release_id": 900105,
+          "title": "Paper Moon",
+          "artists": [
+            "Lena June"
+          ],
+          "year": 2021,
+          "label": "Tessera Sessions",
+          "catno": "TS-006",
+          "formats": [
+            "Vinyl",
+            "LP"
+          ],
+          "descriptions": [
+            "Album"
+          ],
+          "cover": "http://127.0.0.1:65189/qa-library-cover-5.png",
+          "country": "US",
+          "url": "https://www.discogs.com/release/900105",
+          "plays": 1,
+          "added": "2026-09-20T08:00:00-04:00",
+          "copies": 1
+        }
+      ],
+      "user": "tessera_room",
+      "token_set": true,
+      "synced_at": 1790461153.96041,
+      "syncing": false,
+      "sync_id": null,
+      "completed_sync_id": "qa-shelf-done",
+      "problem": null
+    },
+    "/services": {
+      "ears": true,
+      "discogs": {
+        "user": "tessera_room",
+        "token_set": true,
+        "synced_at": 1790461153.96041,
+        "syncing": false,
+        "sync_id": null,
+        "completed_sync_id": "qa-shelf-done",
+        "problem": null,
+        "releases": 6
+      }
+    },
+    "/tuning": {
+      "knobs": [
+        {
+          "name": "teach",
+          "group": "Hearing",
+          "kind": "bool",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "restart": false,
+          "note": "Ask the wall's own song library before Shazam. It learns the songs Shazam misses from their iTunes previews, and from the room."
+        },
+        {
+          "name": "teach_by_ear",
+          "group": "Hearing",
+          "kind": "bool",
+          "min": 0,
+          "max": 1,
+          "step": 1,
+          "restart": false,
+          "note": "Also learn a song the way this room hears it, from the microphone, while another source names it. Fingerprints only, never audio."
+        },
+        {
+          "name": "teach_match_score",
+          "group": "Hearing",
+          "kind": "int",
+          "min": 5,
+          "max": 60,
+          "step": 1,
+          "restart": false,
+          "note": "How many aligned landmarks make a match against the wall's own library. Lower names sooner and risks a wrong song; a real match scores in the dozens."
+        }
+      ],
+      "values": {
+        "teach": true,
+        "teach_by_ear": true,
+        "teach_match_score": 15
+      },
+      "defaults": {
+        "teach": true,
+        "teach_by_ear": true,
+        "teach_match_score": 15
+      }
+    },
+    "/game/list": {
+      "games": [
+        {
+          "name": "wordle",
+          "title": "Wordle",
+          "blurb": "Six guesses at a five-letter word. Say it or type it.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "sudoku",
+          "title": "Sudoku",
+          "blurb": "The grid on the wall, the digits from the phone. Easy, medium or hard.",
+          "players": [
+            1,
+            1
+          ],
+          "voice": true
+        },
+        {
+          "name": "connections",
+          "title": "Connections",
+          "blurb": "Sixteen words, four groups of four. Four mistakes allowed.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "spellingbee",
+          "title": "Spelling Bee",
+          "blurb": "Seven letters, one in the middle. Say words of four or more.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "letterboxed",
+          "title": "Letter Boxed",
+          "blurb": "Twelve letters round a square. Chain words until all are used.",
+          "players": [
+            1,
+            2
+          ],
+          "voice": true
+        },
+        {
+          "name": "strands",
+          "title": "Strands",
+          "blurb": "A grid of letters hiding a themed set. Say a word; the wall lights its path.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "crossword",
+          "title": "Mini crossword",
+          "blurb": "Five by five. Clues on the phone, answers by voice or by typing.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "contexto",
+          "title": "Contexto",
+          "blurb": "Guess the secret word by meaning. Every guess gets a rank.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "sliding",
+          "title": "Sliding puzzle",
+          "blurb": "A sleeve you have played, in blocks. Slide them back.",
+          "players": [
+            1,
+            1
+          ],
+          "voice": true
+        },
+        {
+          "name": "reveal",
+          "title": "Cover reveal",
+          "blurb": "A sleeve sharpens over thirty seconds. First to name it wins.",
+          "players": [
+            1,
+            8
+          ],
+          "voice": true
+        },
+        {
+          "name": "heardle",
+          "title": "Heardle",
+          "blurb": "A song you have played, a second at a time. Name it in six.",
+          "players": [
+            1,
+            6
+          ],
+          "voice": true
+        },
+        {
+          "name": "quiz",
+          "title": "Pub quiz",
+          "blurb": "Ten questions on a theme. Twenty seconds each. Scores on the wall.",
+          "players": [
+            1,
+            8
+          ],
+          "voice": true
+        },
+        {
+          "name": "pictionary",
+          "title": "AI pictionary",
+          "blurb": "The wall draws a secret word. Guess it in sixty seconds.",
+          "players": [
+            1,
+            8
+          ],
+          "voice": true
+        },
+        {
+          "name": "twentyq",
+          "title": "Twenty questions",
+          "blurb": "Think of a thing. The wall asks; knock for yes, whistle for no.",
+          "players": [
+            1,
+            4
+          ],
+          "voice": true
+        },
+        {
+          "name": "reaction",
+          "title": "Reaction knock",
+          "blurb": "Red, then green: knock. The milliseconds on the panel. Five rounds.",
+          "players": [
+            1,
+            6
+          ],
+          "voice": true
+        },
+        {
+          "name": "whistlebird",
+          "title": "Whistle bird",
+          "blurb": "Whistle high to climb, low to dive, through the gaps.",
+          "players": [
+            1,
+            1
+          ],
+          "voice": false
+        },
+        {
+          "name": "pong",
+          "title": "Pong",
+          "blurb": "Your phone is the paddle: tilt it. First to seven.",
+          "players": [
+            1,
+            2
+          ],
+          "voice": false
+        },
+        {
+          "name": "snake",
+          "title": "Snake",
+          "blurb": "The phone is the remote. Eat, grow, do not hit the wall.",
+          "players": [
+            1,
+            1
+          ],
+          "voice": true
+        },
+        {
+          "name": "tetris",
+          "title": "Tetris",
+          "blurb": "The phone is the remote: left, right, rotate, drop.",
+          "players": [
+            1,
+            1
+          ],
+          "voice": true
+        }
+      ]
+    },
+    "/game": {
+      "running": true,
+      "seq": 42,
+      "session_id": "qa-game-001",
+      "on_wall": true,
+      "starting": null,
+      "game": {
+        "name": "wordle",
+        "title": "Wordle",
+        "players": [
+          "You"
+        ],
+        "over": false,
+        "won": false,
+        "winner": null,
+        "message": "4 left.",
+        "started": 1790446980,
+        "finished": null,
+        "seq": 2,
+        "voice": true,
+        "rows": [
+          {
+            "word": "slate",
+            "marks": "xxgxg"
+          },
+          {
+            "word": "trace",
+            "marks": "xggyg"
+          }
+        ],
+        "keys": {
+          "s": "x",
+          "l": "x",
+          "a": "g",
+          "t": "x",
+          "e": "g",
+          "r": "g",
+          "c": "y"
+        },
+        "guesses_left": 4,
+        "turn": "You",
+        "answer": null
+      },
+      "scores": {
+        "You": {
+          "played": 12,
+          "won": 9,
+          "streak": 3,
+          "best": 5
+        }
+      },
+      "voice_words": [
+        "crane",
+        "trace",
+        "slate"
+      ],
+      "error": null
+    }
+  }
+}

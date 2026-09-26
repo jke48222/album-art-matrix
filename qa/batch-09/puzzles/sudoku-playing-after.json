@@ -1,0 +1,26 @@
+{
+  "name": "sudoku",
+  "title": "Sudoku",
+  "players": [
+    "You"
+  ],
+  "over": false,
+  "won": false,
+  "winner": null,
+  "message": "49 to fill.",
+  "started": 1790462446,
+  "finished": null,
+  "seq": 3,
+  "voice": true,
+  "puzzle": "530070000600195000098000060800060003400803001700020006060000280000419005000080079",
+  "grid": "534670000600195000098000060800060003400803001700020006060000280000419005000080079",
+  "solution": null,
+  "wrong": [],
+  "chosen": 5,
+  "rating": "easy",
+  "left": 49,
+  "notes": {},
+  "can_undo": true,
+  "remaining": 49,
+  "filled_by_you": 2
+}

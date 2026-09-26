@@ -6,9 +6,9 @@ place, yellow elsewhere in the word, grey not in it, with the usual rule
 for repeated letters (a letter is yellow only as many times as the answer
 has it spare). A guess that is not a word is refused and does not count.
 
-At 64 the grid is six rows of 9 pixel tiles with a pixel between, the
-letters the 5x7 font; at 192 everything is three times the size and a
-line at the top says how many guesses are left. The answer comes from
+The centered grid keeps all six rows visible at 64, 192 and 512.
+Letters use the native pixel font; filled tiles add a line, two dots or
+a dash so their meanings remain distinct without colour. The answer comes from
 2,400 everyday five-letter words (brain/games/words.py); an option
 {"word": "crane"} sets it, {"seed": n} picks one repeatably.
 """
@@ -18,9 +18,8 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, GREEN, GREY, INK, SLATE, YELLOW, banner, blank,
-                    breathe, ease_in_out, grid_geometry, header, letter_tile, mix, outline, scale_for,
-                    tile)
+from .board import (GREEN, INK, YELLOW, blank, breathe, ease_in_out,
+                    letter_tile, mix, outline, tile)
 from .words import answers5, valid5
 
 ROWS, COLS = 6, 5
@@ -55,7 +54,7 @@ class Wordle(Game):
 
     def setup(self):
         word = str(self.options.get("word", "")).lower().strip()
-        if word and (len(word) != 5 or not word.isalpha()):
+        if word and re.fullmatch(r"[a-z]{5}", word) is None:
             raise ValueError("the word must be five letters")
         if not word:
             pool = answers5()
@@ -84,7 +83,8 @@ class Wordle(Game):
     def guess(self, guess: str, player: str) -> dict:
         if self.over:
             return {"error": "the game is over"}
-        if len(guess) != 5 or not guess.isalpha():
+        guess = str(guess or "").lower().strip()
+        if re.fullmatch(r"[a-z]{5}", guess) is None:
             return {"error": "five letters, please"}
         if guess not in valid5() and guess != self.answer:
             self.message = f"{guess.upper()} is not a word."
@@ -121,51 +121,70 @@ class Wordle(Game):
     # ---- the wall --------------------------------------------------------------------------------
     FLIP_STEP, FLIP_S = 0.14, 0.42
 
+    @staticmethod
+    def board_geometry(size: int) -> tuple[int, int, int, int]:
+        """A centered 5 by 6 board, including its final row at every size."""
+        cell = max(1, round(size * 9 / 64))
+        gap = max(1, round(size / 64))
+        while ROWS * cell + (ROWS - 1) * gap > size - 2:
+            cell -= 1
+        return ((size - (COLS * cell + (COLS - 1) * gap)) // 2,
+                (size - (ROWS * cell + (ROWS - 1) * gap)) // 2, cell, gap)
+
     def frame_at(self, size: int, t: float):
         import time as _time
+        from .board import fill, text
         c = blank(size)
-        s = scale_for(size)
-        big = size > 96
-        cell, gap = 9 * s, 1 * s
-        top = 2 if not big else 18
-        x0, y0, cell, gap = grid_geometry(size, COLS, ROWS, cell, gap, top=top)
-        colours = {"g": GREEN, "y": YELLOW, "x": GREY}
-        now = _time.monotonic()
-        since = (now - self.revealed_at) if self.revealed_at else 99.0
-        cursor = mix(EDGE, INK, 0.35 * breathe(t))
-        for r in range(ROWS):
-            for col in range(COLS):
-                x = x0 + col * (cell + gap)
-                y = y0 + r * (cell + gap)
-                if r < len(self.rows):
-                    word, marks = self.rows[r]
-                    back = colours[marks[col]]
-                    if r == len(self.rows) - 1 and since < self.FLIP_STEP * COLS + self.FLIP_S:
-                        # the flip: the tile squeezes flat, then opens in its colour
-                        f = (since - col * self.FLIP_STEP) / self.FLIP_S
-                        if f < 0:
-                            letter_tile(c, x, y, cell, word[col], SLATE, INK, s)
+        c[:] = (11, 10, 9)
+        x0, y0, cell, gap = self.board_geometry(size)
+        scale = max(1, (cell - max(2, size // 64 * 2)) // 7)
+        colours = {"g": GREEN, "y": YELLOW, "x": (46, 45, 43)}
+        ink_dark = (10, 20, 12)
+        since = max(0.0, _time.monotonic() - self.revealed_at) if self.revealed_at else 99.0
+        cursor = mix((99, 112, 99), (191, 212, 183), 0.2 * breathe(t))
+        for row in range(ROWS):
+            for column in range(COLS):
+                x = x0 + column * (cell + gap)
+                y = y0 + row * (cell + gap)
+                active = row == len(self.rows) and not self.over
+                if row < len(self.rows):
+                    word, marks = self.rows[row]
+                    mark_ = marks[column]
+                    back = colours[mark_]
+                    ink = ink_dark if mark_ in ("g", "y") else INK
+                    if row == len(self.rows) - 1 and since < self.FLIP_STEP * COLS + self.FLIP_S:
+                        phase = (since - column * self.FLIP_STEP) / self.FLIP_S
+                        if phase < 0:
+                            letter_tile(c, x, y, cell, word[column], (26, 28, 25), INK, scale)
                             continue
-                        if f < 1:
-                            k = ease_in_out(abs(f * 2 - 1))          # 1 -> 0 -> 1
-                            h = max(1, int(cell * k))
-                            yy = y + (cell - h) // 2
-                            tile(c, x, yy, cell, h, SLATE if f < 0.5 else back, s)
-                            if k > 0.75:
-                                letter_tile(c, x, yy, h, "", None, INK, s)
-                                gw, gh = 5 * s, 7 * s
-                                if h >= gh:
-                                    from .board import text
-                                    text(c, word[col].upper(), x + (cell - gw) // 2, yy + (h - gh) // 2, INK, s)
+                        if phase < 1:
+                            squeeze = ease_in_out(abs(phase * 2 - 1))
+                            height = max(1, int(cell * squeeze))
+                            top = y + (cell - height) // 2
+                            tile(c, x, top, cell, height, (26, 28, 25) if phase < .5 else back, scale)
+                            if height >= 7 * scale:
+                                text(c, word[column].upper(), x + (cell - 5 * scale) // 2,
+                                     top + (height - 7 * scale) // 2, INK if phase < .5 else ink, scale)
                             continue
-                    letter_tile(c, x, y, cell, word[col], back, INK, s)
-                elif r == len(self.rows) and not self.over:
-                    letter_tile(c, x, y, cell, "", SLATE, INK, s)
-                    outline(c, x, y, cell, cell, cursor, 1 if s == 1 else 3, 1)
+                    letter_tile(c, x, y, cell, word[column], back, ink, scale)
+                    # Position has a solid underline; elsewhere has two dots;
+                    # absent has a short dash. Colour is never the only clue.
+                    baseline = y + cell - max(1, size // 128)
+                    width = max(1, cell // 7)
+                    if mark_ == "g":
+                        fill(c, x + cell // 4, baseline, cell // 2, 1, ink)
+                    elif mark_ == "y":
+                        fill(c, x + cell // 3, baseline, width, 1, ink)
+                        fill(c, x + 2 * cell // 3, baseline, width, 1, ink)
+                    else:
+                        fill(c, x + cell // 2 - width, baseline, width * 2, 1, INK)
                 else:
-                    letter_tile(c, x, y, cell, "", SLATE, INK, s)
+                    letter_tile(c, x, y, cell, "", (26, 28, 25) if active else (22, 21, 19), INK, scale)
+                    outline(c, x, y, cell, cell, cursor if active else (59, 57, 51),
+                            max(1, size // 128), max(1, size // 192))
+        # The solved board remains intact. A quiet perimeter is the ending,
+        # with the answer and next action readable outside it on the phone.
         if self.over:
-            banner(c, size, self.message if self.won else f"It was {self.answer.upper()}.", INK if self.won else DIM,
-                   mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
-        header(c, size, "WORDLE", f"{ROWS - len(self.rows)} left" if not self.over else "", s, accent=GREEN)
+            colour = (163, 207, 155) if self.won else (218, 180, 103)
+            fill(c, x0, max(0, y0 - max(1, gap)), COLS * cell + (COLS - 1) * gap, max(1, size // 192), colour)
         return c

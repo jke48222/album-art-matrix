@@ -1,0 +1,492 @@
+{
+  "base": "8bdda75",
+  "generated_at": "2026-09-26T23:09:29.209805+00:00",
+  "units": [
+    "F08",
+    "F09",
+    "G00",
+    "G01",
+    "G02"
+  ],
+  "processing": "Complete native screenshots scaled equally, not retouched. Before left, after right.",
+  "scope": "Rendering and fixture API states; no touch, spoken-recognition or physical LED certification.",
+  "comparisons": [
+    {
+      "unit": "F08",
+      "title": "Teach the wall",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-09/before/teach/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-09/after/teach/room-live.png",
+      "before_sha256": "21f3a5f753d1010aacf5f3ac0fa70c71d8825ff0e8dc3d21a8047bd6d517ce1b",
+      "after_sha256": "b2e3603643d700213b50e9a6c4d67c11b5531ea90a57dd110b9aa8e7f89ef92d",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-09/comparisons/teach.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "af372ddc77ed7555e09d5797e0865b53349b5c9ed49025ca997694e9c5eff886"
+    },
+    {
+      "unit": "F09",
+      "title": "The shelf",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-09/before/shelf/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-09/after/shelf/room-live.png",
+      "before_sha256": "e49da282bcc32a34abc2ecd9c6cebd2d65c7a1af58eedfea415f611a086f6105",
+      "after_sha256": "06f99c83eedf0fd9f8d5406f5e9cf77651e08ad3988526c4bc9c2ce39ae152ff",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-09/comparisons/shelf.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "6ce378216d079efa3712f9e2218322c1bf679b6b4762c7c20828d9ef71cc51b9"
+    },
+    {
+      "unit": "G00",
+      "title": "Games",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-09/before/games/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-09/after/games/room-live.png",
+      "before_sha256": "23b467f163c3dfec023567d5c4020c6f86328c622ca0875d94a12e0542dd309a",
+      "after_sha256": "e52de304237ddafc0e5cd6d55ee4351cd136f27921af4cdf74008c39bed42084",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-09/comparisons/games.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "e063ddca388e2c49c1f3fd5d756a0518106a5cb5a75ab928cd5e10c4aa44fdc5"
+    },
+    {
+      "unit": "G01",
+      "title": "Wordle",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-09/before/wordle/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-09/after/wordle/room-live.png",
+      "before_sha256": "8a561ae0929ce20dd4723a85fcc2acef7eebb75e5f147a7b8dd82121cca504a3",
+      "after_sha256": "8dcb633e4b3a07adf7860cf1b59fd507c91ace6f0dbc44ccedc26c27d959a09f",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-09/comparisons/wordle.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "03daa6730bd6b133d381e8405952a5bace3bb8c567af29078a8bfaa2ae64c000"
+    },
+    {
+      "unit": "G02",
+      "title": "Sudoku",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-09/before/sudoku/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-09/after/sudoku/room-live.png",
+      "before_sha256": "791530d53fb0c7df4d433e8dac44318bf4bc849390c425df0d0d41efa537e109",
+      "after_sha256": "2a94955534efe12bcf0265f474b057113e99f896a056e772e317df9f8a65d06c",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-09/comparisons/sudoku.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "eab1e920fb525b0c77c438538ab7bc3a15afc69420ae074c9532769c1936e8b7"
+    }
+  ],
+  "pixel_comparisons": [
+    {
+      "case": "wordle-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-playing-before-64.png",
+      "after": "wordle-playing-after-64.png",
+      "before_sha256": "5301ee05ba8e6e0163fff25e5ea1ce1fb1a64de6c2f4a6f0d00f4c048795bda1",
+      "after_sha256": "82a219da465765605e3501ec4c977e857427f1e7977fc9edf2964fb257ba92c6",
+      "output": "wordle-playing-64-comparison.png",
+      "output_sha256": "5e30769ebb7ca24bdb6ce69a9754ebb232feeb9b3011766bbb12522ae22c031c"
+    },
+    {
+      "case": "wordle-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-playing-before-192.png",
+      "after": "wordle-playing-after-192.png",
+      "before_sha256": "b7afaed34e6bc334c87822a26ffdff6270efed64f9a9df434d3701bb8387dcef",
+      "after_sha256": "00def9df75d164aa1a9dcabcd253b938999ac4ef4fc9aeff59efe7af3a70a80d",
+      "output": "wordle-playing-192-comparison.png",
+      "output_sha256": "50da81d27b7c8decc6b08261432703087aa8f061341fcdae38a88504542e868e"
+    },
+    {
+      "case": "wordle-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-playing-before-512.png",
+      "after": "wordle-playing-after-512.png",
+      "before_sha256": "1006e0ac9ef774a498e9f652ee77c934ec85b246dc22329e767685477f7677ca",
+      "after_sha256": "4e854906ca678990d35e64922b5ac6aeafecd8e4f41d49106f121a06ef432254",
+      "output": "wordle-playing-512-comparison.png",
+      "output_sha256": "7a813fa1161ba7e33173eba4f87774bfa9cde79ae39cec9db7769731729074e1"
+    },
+    {
+      "case": "wordle-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-won-before-64.png",
+      "after": "wordle-won-after-64.png",
+      "before_sha256": "874fb7f65e29ff614cfd5e4897984c28787ceb59eec2c800e7236326c4a80229",
+      "after_sha256": "4ee7ae5c778f88cb571e467904d3ff8553d7c3cb0abfd801b1f5785de4ab56c3",
+      "output": "wordle-won-64-comparison.png",
+      "output_sha256": "95afe27f7ed8ac03131c0660bcbcd84a9ef59f0dab838baddf4035057672a4ab"
+    },
+    {
+      "case": "wordle-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-won-before-192.png",
+      "after": "wordle-won-after-192.png",
+      "before_sha256": "6be84c2de2ef92b256c66a06179409eb04b01db0f2d89add57baada726a4a80c",
+      "after_sha256": "1f40d1b484c722c6f74a585250d6ce7b77592e8c997430ba32c8da73bbcba89e",
+      "output": "wordle-won-192-comparison.png",
+      "output_sha256": "a975bef3ab3525da73ced1aaee647d1f2e230c5e8d93bbef02b6e1efea1873f9"
+    },
+    {
+      "case": "wordle-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-won-before-512.png",
+      "after": "wordle-won-after-512.png",
+      "before_sha256": "abe86a2b96d96a4f0eecd61d95f83437de9c3ffd48bb712e5e7db382864f4983",
+      "after_sha256": "f623c541b7e8c642bb2e82d1724b400ba09d67fd50dcd0ddc7ba27e2251610c3",
+      "output": "wordle-won-512-comparison.png",
+      "output_sha256": "c6dab341d10415de62f3360364442c4af3d2548d403a8d73698fe6468efe82b0"
+    },
+    {
+      "case": "wordle-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-lost-before-64.png",
+      "after": "wordle-lost-after-64.png",
+      "before_sha256": "11e4acfff0ba212b6950957b66698a70cb2c20e67794442d1b0033d05637b5b8",
+      "after_sha256": "d576037fa003e28e8a23a36ddd2ebb49f8e8c998c106b481d7ba74b5c9655808",
+      "output": "wordle-lost-64-comparison.png",
+      "output_sha256": "c7d81faf683874f62c1b8b64040ed84ec7e423fb525480e361007ac092239cae"
+    },
+    {
+      "case": "wordle-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-lost-before-192.png",
+      "after": "wordle-lost-after-192.png",
+      "before_sha256": "bf060cbb620b48f4aca4b9d6efd0d4606401718e53776b4581ee03518fcae569",
+      "after_sha256": "d36d883d66cc6e2ad9f73096d976b8a95fd177a914459e1b5b4ba1410d4752e6",
+      "output": "wordle-lost-192-comparison.png",
+      "output_sha256": "29d669e39ed6730ce44dfc48fc33a6ff87f5eca5397e6665724185021bc82b8b"
+    },
+    {
+      "case": "wordle-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "wordle-lost-before-512.png",
+      "after": "wordle-lost-after-512.png",
+      "before_sha256": "9111e7efc17076d634137fa8f8b4cdc89c052215f4b7d1c0133f56b3b76f0663",
+      "after_sha256": "587098ae2d3bf85bddad2cf0bcf99350fc0a5c7c63a274c4ba66d27bb8fc4fb9",
+      "output": "wordle-lost-512-comparison.png",
+      "output_sha256": "3ace9a53e651ef5adb0958599e676b9ace3fc1cbd91b6b7ce4c3207d15231dfb"
+    },
+    {
+      "case": "sudoku-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-playing-before-64.png",
+      "after": "sudoku-playing-after-64.png",
+      "before_sha256": "93bf1300ee6bbcb70d94327e9e1864526189614c453677b498f8c62f73fa49bc",
+      "after_sha256": "79aefe084cac96d3c4bed0443ebc38aaab3045f2fd2691d96f3e9fee4e86a88d",
+      "output": "sudoku-playing-64-comparison.png",
+      "output_sha256": "7032fc32f4e2432149b7a30e382f38c321cad9173ed8d38c6fd3ef7b67893d96"
+    },
+    {
+      "case": "sudoku-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-playing-before-192.png",
+      "after": "sudoku-playing-after-192.png",
+      "before_sha256": "e345d334d755e490ca0782b9b47bdeb9a7fd25a979d332fd88569d6546b9452b",
+      "after_sha256": "6c384c9e93667a43f84db6f3c4a47d0f1f12687c7d6de0bcc3865b0bd618ffb9",
+      "output": "sudoku-playing-192-comparison.png",
+      "output_sha256": "dcda7c4294ba606d0aac34e54c562dd6e450ee54c46fa30a0e6babf709b4b5cb"
+    },
+    {
+      "case": "sudoku-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-playing-before-512.png",
+      "after": "sudoku-playing-after-512.png",
+      "before_sha256": "9e8202d1652ab2bb88bc429c2668df9c895764f9ee1078fca4395db83eba645b",
+      "after_sha256": "120202d35646e960e5da168dde583a6d221dabf4645ef43c25fafbc46ebe5af9",
+      "output": "sudoku-playing-512-comparison.png",
+      "output_sha256": "7e47e0a469fad071d2961e365e45369072534c5f36019185f75daaa25abb22a6"
+    },
+    {
+      "case": "sudoku-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-error-before-64.png",
+      "after": "sudoku-error-after-64.png",
+      "before_sha256": "c48c030efb94137816b7311787f2919452ea6daf45a9ba8c0fb4e44472b06cf2",
+      "after_sha256": "7fd52f257e9d58e49437586596a8c287138daed5b0ad72ef39a64b912ad9930c",
+      "output": "sudoku-error-64-comparison.png",
+      "output_sha256": "68837833643a56f7ef6fd4e9283aa466da3d44f369098beef268bf0a7bdb7722"
+    },
+    {
+      "case": "sudoku-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-error-before-192.png",
+      "after": "sudoku-error-after-192.png",
+      "before_sha256": "11c778fe4ec3e14cef728bb9d6329777807dff632fab7424564dc4e7254cf7b8",
+      "after_sha256": "fde05d4c35c0bc4231a5c458f97ba91d29094d93a2d25e725ae5d3c6a29fa79c",
+      "output": "sudoku-error-192-comparison.png",
+      "output_sha256": "bb4030eb1aee838d5df4649ce65bef278e792fe2465f44ff0582128a05c3c744"
+    },
+    {
+      "case": "sudoku-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-error-before-512.png",
+      "after": "sudoku-error-after-512.png",
+      "before_sha256": "aa261fe0ec9856d7962330a560cde47fa65fcf496eccc49b98d68c0a94f0694b",
+      "after_sha256": "63e28ae44e5700bf6ce67431f3da7faaab479fd47e1940b26ead54453cbe24b7",
+      "output": "sudoku-error-512-comparison.png",
+      "output_sha256": "f43a69fadbdf018608d1976c626277272cd09cb289f9fa8cb6d4784912ad7823"
+    },
+    {
+      "case": "sudoku-notes",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-notes-before-64.png",
+      "after": "sudoku-notes-after-64.png",
+      "before_sha256": "93bf1300ee6bbcb70d94327e9e1864526189614c453677b498f8c62f73fa49bc",
+      "after_sha256": "303a99e7ada96072e56ddf5675c9c7dec41b58a4b12f28e10d51da43bf703cbb",
+      "output": "sudoku-notes-64-comparison.png",
+      "output_sha256": "df252c9539b36d2c5e83da34260f4d457554869647c371f4906e6f6fcd87492a"
+    },
+    {
+      "case": "sudoku-notes",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-notes-before-192.png",
+      "after": "sudoku-notes-after-192.png",
+      "before_sha256": "e345d334d755e490ca0782b9b47bdeb9a7fd25a979d332fd88569d6546b9452b",
+      "after_sha256": "8711398258db7304a59f35881b03954f7c8de260da7ca9c793d3fa0d7ee27cf6",
+      "output": "sudoku-notes-192-comparison.png",
+      "output_sha256": "d2223d9eb162ed8d119764eeb00e3c3d7072708a351ef12ae7d0e292bc0204bb"
+    },
+    {
+      "case": "sudoku-notes",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-notes-before-512.png",
+      "after": "sudoku-notes-after-512.png",
+      "before_sha256": "9e8202d1652ab2bb88bc429c2668df9c895764f9ee1078fca4395db83eba645b",
+      "after_sha256": "e6f56fed921b8aecb352768f74a2ae90e67f5a59bec7e2d8fa44367b4882c6d5",
+      "output": "sudoku-notes-512-comparison.png",
+      "output_sha256": "c535a7a610ed30cb9d317c12156ab4ecaecd80d1c380793f3b1787de3560b2c5"
+    },
+    {
+      "case": "sudoku-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-won-before-64.png",
+      "after": "sudoku-won-after-64.png",
+      "before_sha256": "e5275c0f7a4c97b4dba0872fa0f7e8a3c1af35f6c6e609b00c4185eafb53e37f",
+      "after_sha256": "c2c100593e922015b30a656549e483f132e12560a2218a2f27eeb341768be035",
+      "output": "sudoku-won-64-comparison.png",
+      "output_sha256": "8b8ce5825ebafedb89531b91c2a94d9214cbc5baf6895386fac58c32d74782fc"
+    },
+    {
+      "case": "sudoku-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-won-before-192.png",
+      "after": "sudoku-won-after-192.png",
+      "before_sha256": "d95b7937f4950b92af9701f8f28b50cdd47b825332268112e000031468f1cf34",
+      "after_sha256": "faf2e3963157cedbf6c55b661a997b6591b5141777cb7089cbc94d13021e700c",
+      "output": "sudoku-won-192-comparison.png",
+      "output_sha256": "55a3b2358e2d205108137d99d1ffe4c4da5643059378f1a82c5ef700c84d0446"
+    },
+    {
+      "case": "sudoku-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sudoku-won-before-512.png",
+      "after": "sudoku-won-after-512.png",
+      "before_sha256": "a4e054ba48dccc24091c017975574c6a8d0ff1ff791686543bf587211746cd43",
+      "after_sha256": "d1dfd93d8478e76a432ade5fb8a2f9f8973f0d45bff268ae012a5fdf5a7f87d3",
+      "output": "sudoku-won-512-comparison.png",
+      "output_sha256": "9803aee765c1db89274851efc412f8ec6a07c5100edf6f22cb6182265848b410"
+    }
+  ],
+  "puzzle_manifest": "../puzzles/manifest.json",
+  "motion": "wordle-reveal.gif",
+  "extra_native_states": 8,
+  "deployment_note": "Wall deployed and managed services active; real Wordle/Sudoku moves, notes, undo and resume verified; original Off restored. Final app installed on iPhone 18 Pro Max. User will open the installed app manually; automated foreground launch is unverified.",
+  "validation_present": true,
+  "references": [
+    "https://developer.apple.com/design/human-interface-guidelines/designing-for-games",
+    "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+    "https://developer.apple.com/design/human-interface-guidelines/layout",
+    "https://developer.apple.com/design/human-interface-guidelines/searching",
+    "https://developer.apple.com/shazamkit/",
+    "https://instructions.hasbro.com/en-ca/instruction/wordle-the-party-game-for-2-4-players-ages-14-and-up-inspired-by-wordle-game",
+    "https://mobbin.com/screens/021d6e62-8a5b-4974-9dcf-4474275a7f49",
+    "https://mobbin.com/screens/146abc9f-b2de-44ee-b272-1684f04ecb80",
+    "https://mobbin.com/screens/276c7506-2121-4ca8-85a9-7d9267287670",
+    "https://mobbin.com/screens/57fcc0a4-5f6e-4253-ae06-fb09f14c11c6",
+    "https://mobbin.com/screens/5e4f582d-7d87-4444-9823-ae7c24b5114c",
+    "https://mobbin.com/screens/672b3bbf-3cb5-4d8e-abd2-b93b32e86644",
+    "https://mobbin.com/screens/6c26bb6c-af3d-4066-bbdb-d4de49822bb7",
+    "https://mobbin.com/screens/a2bc6c7e-3472-4f24-b14e-89d1907cdccb",
+    "https://mobbin.com/screens/d5d0c626-a984-4bed-a6bf-2fd5b6716bd1",
+    "https://mobbin.com/screens/dee1f903-080e-4104-9cc0-2062634126b5",
+    "https://support.apple.com/en-is/guide/shazam/dev9748744b6/web",
+    "https://support.discogs.com/hc/en-us/articles/360007331534-How-Does-The-Collection-Feature-Work",
+    "https://www.apple.com/newsroom/2025/06/introducing-the-apple-games-app-a-personalized-home-for-games/",
+    "https://www.discogs.com/developers/#page:user-collection,header:user-collection-collection-items-by-folder",
+    "https://www.nikoli.co.jp/en/puzzles/sudoku/"
+  ]
+}

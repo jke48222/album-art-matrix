@@ -519,43 +519,7 @@ private struct RoomMeter: View {
 }
 
 
-// MARK: - The wall's own song library, as /teach describes it
-
-struct TaughtList: Decodable {
-    struct Song: Decodable {
-        var id: String
-        var title: String
-        var artist: String
-        var album: String?
-        var how: [String]
-        var matched: Int
-        var last_matched: Int?
-        var landmarks: Int?
-    }
-    var enabled: Bool?
-    var landmarks: Int?
-    var songs: [Song]
-
-    static func read(host: String) async -> TaughtList? {
-        guard !host.isEmpty, let url = URL(string: "http://\(host)/teach") else { return nil }
-        var req = URLRequest(url: url)
-        req.timeoutInterval = 6
-        guard let (data, resp) = try? await URLSession.shared.data(for: req),
-              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        return try? JSONDecoder().decode(TaughtList.self, from: data)
-    }
-
-    static func forget(host: String, id: String) async -> Bool {
-        guard !host.isEmpty, let url = URL(string: "http://\(host)/teach/forget") else { return false }
-        var req = URLRequest(url: url)
-        req.httpMethod = "POST"
-        req.timeoutInterval = 6
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.httpBody = try? JSONSerialization.data(withJSONObject: ["id": id])
-        guard let (_, resp) = try? await URLSession.shared.data(for: req) else { return false }
-        return (resp as? HTTPURLResponse)?.statusCode == 200
-    }
-}
+// The library response lives in TeachModels.swift.
 
 /// Concentric meter marks are driven only by the wall's current microphone
 /// level. No simulated waveform or animation suggests a recording exists.

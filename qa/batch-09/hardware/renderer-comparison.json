@@ -1,0 +1,29 @@
+[
+  {
+    "game": "wordle",
+    "side": 64,
+    "live_frame": "hardware/wordle-live.png",
+    "production_frame": "puzzles/wordle-playing-after-64.png",
+    "exact_pixels": 3956,
+    "total_pixels": 4096,
+    "max_channel_difference": 5,
+    "mean_channel_difference": 0.15950520833333334,
+    "difference_scope": "Only the gently breathing border of the current guess row; sampled at different live times.",
+    "difference_bounds": [
+      7,
+      22,
+      55,
+      30
+    ]
+  },
+  {
+    "game": "sudoku",
+    "side": 64,
+    "live_frame": "hardware/sudoku-live.png",
+    "production_frame": "puzzles/sudoku-playing-after-64.png",
+    "exact_pixels": 4096,
+    "total_pixels": 4096,
+    "max_channel_difference": 0,
+    "mean_channel_difference": 0.0
+  }
+]

@@ -1,0 +1,100 @@
+{
+  "reviewed_at": "2026-09-26T23:09:28.168490+00:00",
+  "images": [
+    "after/games/room-large.png",
+    "after/games/room-live.png",
+    "after/games/room-offline.png",
+    "after/shelf-empty/room-live.png",
+    "after/shelf-failed/room-live.png",
+    "after/shelf/room-large.png",
+    "after/shelf/room-live.png",
+    "after/shelf/room-offline.png",
+    "after/sudoku-result/room-live.png",
+    "after/sudoku/room-large.png",
+    "after/sudoku/room-live.png",
+    "after/sudoku/room-offline.png",
+    "after/teach-compose/room-live.png",
+    "after/teach-empty/room-live.png",
+    "after/teach-learning/room-live.png",
+    "after/teach/room-large.png",
+    "after/teach/room-live.png",
+    "after/teach/room-offline.png",
+    "after/wordle-result/room-live.png",
+    "after/wordle-setup/room-live.png",
+    "after/wordle/room-large.png",
+    "after/wordle/room-live.png",
+    "after/wordle/room-offline.png"
+  ],
+  "count": 23,
+  "scope": "Visual inspection of actual native captures and fixture API states. Does not certify scrolling, touch input, real listening, or physical LED colour.",
+  "pending_findings": [],
+  "images_sha256": {
+    "after/games/room-large.png": "271c843f18ecc501aaf55fe8df42b1814f2d4082fce21d6f8ad154a5271b20e4",
+    "after/games/room-live.png": "e52de304237ddafc0e5cd6d55ee4351cd136f27921af4cdf74008c39bed42084",
+    "after/games/room-offline.png": "e06c4c3ec2a5d86e79a913646d67b53e05086a81486621e0653e9c2272cfc7fd",
+    "after/shelf-empty/room-live.png": "c5a3fc8e2a654452c866264dae36d7eb6d245253f413d80edd64018576f208f6",
+    "after/shelf-failed/room-live.png": "99e6a23f9e10af7c46fbf3ffc8168f8a6235a139c6b29c41df01e7a37a17b97c",
+    "after/shelf/room-large.png": "2de45a91fd2f71ac663cfcbded0354ed58f1f35f6becda970d9c0d531e76f98e",
+    "after/shelf/room-live.png": "06f99c83eedf0fd9f8d5406f5e9cf77651e08ad3988526c4bc9c2ce39ae152ff",
+    "after/shelf/room-offline.png": "def408aa98caa60f26b1113a963e2b0ff4420fd4f15584cb5841fef330078ef5",
+    "after/sudoku-result/room-live.png": "9f3e5c8c2948365fd30d09bd4fec6f716b205656a734186e6f484cb80a3544ad",
+    "after/sudoku/room-large.png": "59ce32e8d1b296c6e31c78b6f8ced3fb70f2459da8bee0fc293adb8f3af0baea",
+    "after/sudoku/room-live.png": "2a94955534efe12bcf0265f474b057113e99f896a056e772e317df9f8a65d06c",
+    "after/sudoku/room-offline.png": "b93d718b2e22222c59a122e53110902577998f2adc1cdd3ef336b5e16c2aedb1",
+    "after/teach-compose/room-live.png": "e63112f08b6251ad905a213710bf9cc1e3661ca25c316a6985d43b1863528e51",
+    "after/teach-empty/room-live.png": "e94a57232a52552954f3396e198c482b5f56ee8031f01e602a1e2bece4daf736",
+    "after/teach-learning/room-live.png": "0aa8973cc451a9346284931c8e1141cdc1e8ca16197ef7f092a549fb13c06e1d",
+    "after/teach/room-large.png": "52eaeb3efc2724a82e764918df5c1c0a2f5ed030b9d80b614362b75c89318e03",
+    "after/teach/room-live.png": "b2e3603643d700213b50e9a6c4d67c11b5531ea90a57dd110b9aa8e7f89ef92d",
+    "after/teach/room-offline.png": "05a793f8d852cab5fa628bff81ffcb387101c47174a938c8d91aa8c9ecd79c68",
+    "after/wordle-result/room-live.png": "6a1087181590fd35047160051d3849d7f0f695fac77e993a21e1608610c5dbb9",
+    "after/wordle-setup/room-live.png": "85d5aa0a05d97366d04db03a8411d84047d2fc5edf4422be1cc8244668615539",
+    "after/wordle/room-large.png": "cc87584467e060fa3e1c69a9886aa62a764bdca9876f7840d028a584ff2d9bb3",
+    "after/wordle/room-live.png": "8dcb633e4b3a07adf7860cf1b59fd507c91ace6f0dbc44ccedc26c27d959a09f",
+    "after/wordle/room-offline.png": "7ef5c82863701bb98e03a7116ef80f1d44e8e9cb136ee47f33a111faa9775bfa"
+  },
+  "installed_app_identity": {
+    "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+    "files_sha256": {
+      "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+      "Tessera.debug.dylib": "afcde97571f666d3c231a6b91e9bdff0891f4d5f5f4467d6b7686da249b95175"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "resolved_findings": [
+    {
+      "surface": "Teach AX5",
+      "finding": "Headline remembers broke across a word.",
+      "resolution": "Accessibility title is now Your room. Your songs. Complete words wrap without truncation.",
+      "evidence": [
+        "after/teach/room-large.png"
+      ]
+    },
+    {
+      "surface": "Wordle/Sudoku AX5 receipt",
+      "finding": "Live-wall subtitle truncated.",
+      "resolution": "Subtitle fully wraps through and on the wall. in both games.",
+      "evidence": [
+        "after/wordle/room-large.png",
+        "after/sudoku/room-large.png"
+      ]
+    },
+    {
+      "surface": "Shelf failed",
+      "finding": "Failure appeared under an up-to-date heading.",
+      "resolution": "Heading now says Showing your saved collection with a failure symbol and recovery explanation.",
+      "evidence": [
+        "after/shelf-failed/room-live.png"
+      ]
+    },
+    {
+      "surface": "Sudoku completed",
+      "finding": "Disabled styling dimmed the completed board.",
+      "resolution": "Solved board preserves bright given and entered digits with completion borders and status.",
+      "evidence": [
+        "after/sudoku-result/room-live.png"
+      ]
+    }
+  ],
+  "result": "All 23 final native captures visually inspected. Four findings resolved; no remaining visible layout defects in the captured viewports."
+}

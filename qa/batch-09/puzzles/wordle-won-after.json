@@ -1,0 +1,42 @@
+{
+  "name": "wordle",
+  "title": "Wordle",
+  "players": [
+    "You"
+  ],
+  "over": true,
+  "won": true,
+  "winner": null,
+  "message": "Impressive.",
+  "started": 1790462445,
+  "finished": 1790462445,
+  "seq": 3,
+  "voice": true,
+  "rows": [
+    {
+      "word": "slate",
+      "marks": "xxgxg"
+    },
+    {
+      "word": "trace",
+      "marks": "xggyg"
+    },
+    {
+      "word": "crane",
+      "marks": "ggggg"
+    }
+  ],
+  "keys": {
+    "s": "x",
+    "l": "x",
+    "a": "g",
+    "t": "x",
+    "e": "g",
+    "r": "g",
+    "c": "g",
+    "n": "g"
+  },
+  "guesses_left": 3,
+  "turn": "You",
+  "answer": "crane"
+}

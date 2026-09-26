@@ -28,11 +28,14 @@ from __future__ import annotations
 
 import difflib
 import json
+import math
 import os
 import re
 import threading
 import time
 import unicodedata
+import uuid
+from urllib.parse import quote
 
 import requests
 
@@ -116,8 +119,15 @@ class Shelf:
         self.user = (user or "").strip()
         self.path = path
         self._fetch = fetch or self._http_get
+        self._custom_fetch = fetch is not None
         self._clock = clock or time.time
         self._lock = threading.Lock()
+        self._sync_lock = threading.Lock()
+        self._generation = 0
+        self.revision = 0
+        self._requested = False
+        self.sync_id: str | None = None
+        self.completed_sync_id: str | None = None
         self.releases: list[dict] = []
         self.synced_at: float | None = None
         self.syncing = False
@@ -140,8 +150,22 @@ class Shelf:
         try:
             with open(self.path) as fh:
                 d = json.load(fh)
-            self.releases = d.get("releases", [])
-            self.synced_at = d.get("synced_at")
+            if not isinstance(d, dict):
+                return
+            # An old account's collection must never become the new account's
+            # ownership badges, even while its first network read is pending.
+            if d.get("user") != self.user:
+                return
+            releases = d.get("releases")
+            if not isinstance(releases, list):
+                return
+            self.releases = [r for r in releases if isinstance(r, dict)
+                             and isinstance(r.get("id"), int) and not isinstance(r.get("id"), bool)
+                             and r["id"] > 0 and isinstance(r.get("title"), str)
+                             and isinstance(r.get("artists"), list)
+                             and all(isinstance(artist, str) for artist in r["artists"])]
+            at = d.get("synced_at")
+            self.synced_at = at if isinstance(at, (int, float)) and not isinstance(at, bool) and math.isfinite(at) and at > 0 else None
             self._prices = {int(k): tuple(v) for k, v in (d.get("prices") or {}).items()}
             self._details = {int(k): tuple(v) for k, v in (d.get("details") or {}).items()}
         except (OSError, ValueError, TypeError):
@@ -165,17 +189,39 @@ class Shelf:
         return bool(self.token and self.user)
 
     def configure(self, token=None, user=None):
-        changed = False
-        if token is not None and token.strip() != self.token:
-            self.token, changed = token.strip(), True
-        if user is not None and user.strip() != self.user:
-            self.user, changed = user.strip(), True
-        if changed:
+        with self._lock:
+            next_token = self.token if token is None else token.strip()
+            next_user = self.user if user is None else user.strip()
+            if (next_token, next_user) == (self.token, self.user):
+                return
+            self._generation += 1
+            self.revision += 1
+            if next_user != self.user:
+                self.releases, self.synced_at, self.playing = [], None, None
+                self._prices, self._details = {}, {}
+            self.token, self.user = next_token, next_user
             self.problem = None
-            self.sync_soon()
+            self._requested = False
+            self.syncing = False
+            self.sync_id = self.completed_sync_id = None
+            self._save()
+        self.request_sync()
 
     def sync_soon(self):
+        return self.request_sync()
+
+    def request_sync(self) -> str | None:
+        """Acknowledge one read, coalescing repeated taps and retaining cache age."""
+        with self._lock:
+            if not self.configured:
+                return None
+            if self._requested or self.syncing:
+                return self.sync_id
+            self.sync_id = uuid.uuid4().hex
+            self._requested = True
+            self.problem = None
         self._wake.set()
+        return self.sync_id
 
     # ---- Discogs -------------------------------------------------------------------------------
     def _headers(self) -> dict:
@@ -184,11 +230,18 @@ class Shelf:
             h["Authorization"] = f"Discogs token={self.token}"
         return h
 
-    def _http_get(self, path: str, params: dict | None = None):
-        r = requests.get(API + path, params=params or {}, headers=self._headers(), timeout=20)
+    def _http_get(self, path: str, params: dict | None = None, token: str | None = None):
+        headers = self._headers()
+        if token is not None:
+            headers["Authorization"] = f"Discogs token={token}"
+        r = requests.get(API + path, params=params or {}, headers=headers, timeout=20)
         if r.status_code == 429:
-            time.sleep(float(r.headers.get("Retry-After", 60)))
-            r = requests.get(API + path, params=params or {}, headers=self._headers(), timeout=20)
+            try:
+                delay = min(60.0, max(1.0, float(r.headers.get("Retry-After", 60))))
+            except (ValueError, TypeError):
+                delay = 60.0
+            time.sleep(delay)
+            r = requests.get(API + path, params=params or {}, headers=headers, timeout=20)
         if r.status_code == 401:
             raise PermissionError("Discogs rejected the token")
         if r.status_code == 404:
@@ -198,49 +251,73 @@ class Shelf:
 
     def _loop(self):
         while True:
+            self._wake.clear()
             try:
                 self.tick()
             except Exception as exc:
                 self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
                 print(f"[shelf] {self.problem}", flush=True)
             self._wake.wait(SYNC_EVERY_S)
-            self._wake.clear()
 
     def tick(self):
         if not self.configured:
             return
         due = self.synced_at is None or self._clock() - self.synced_at >= SYNC_EVERY_S - 5
-        if due:
+        if due or self._requested:
             self.sync()
 
     def sync(self) -> int:
         """Every release in folder 0, page by page. Returns how many."""
-        if not self.configured:
+        if not self.configured or not self._sync_lock.acquire(blocking=False):
             return 0
-        self.syncing = True
+        with self._lock:
+            self.syncing = True
+            self._requested = False
+            if self.sync_id is None or self.sync_id == self.completed_sync_id:
+                self.sync_id = uuid.uuid4().hex
+            request_id, generation = self.sync_id, self._generation
+            user, token = self.user, self.token
         try:
             got, page, pages = [], 1, 1
             while page <= pages:
-                data = self._fetch(f"/users/{self.user}/collection/folders/0/releases",
-                                   {"per_page": PAGE, "page": page, "sort": "added", "sort_order": "desc"})
+                path = f"/users/{quote(user, safe='')}/collection/folders/0/releases"
+                params = {"per_page": PAGE, "page": page, "sort": "added", "sort_order": "desc"}
+                data = self._fetch(path, params) if self._custom_fetch else self._http_get(path, params, token=token)
+                if not isinstance(data, dict) or not isinstance(data.get("releases"), list):
+                    raise ValueError("Invalid collection response")
                 pages = int((data.get("pagination") or {}).get("pages") or 1)
+                if pages < 1 or pages > 10000:
+                    raise ValueError("Invalid collection response")
                 got.extend(release_from_api(x) for x in data.get("releases") or [])
+                if generation != self._generation:
+                    return 0
                 page += 1
                 if page <= pages:
                     time.sleep(PACE_S)
             with self._lock:
+                if generation != self._generation:
+                    return 0
                 self.releases = got
                 self.synced_at = self._clock()
+                self.revision += 1
                 self.problem = None
                 self._save()
             print(f"[shelf] {len(got)} releases on the shelf for {self.user}", flush=True)
             return len(got)
-        except PermissionError as exc:
-            self.problem = str(exc)
-            print(f"[shelf] {exc}", flush=True)
+        except Exception as exc:
+            with self._lock:
+                if generation == self._generation:
+                    self.problem = ("Discogs rejected the token. Check your account in Discogs settings."
+                                    if isinstance(exc, PermissionError) else
+                                    "Discogs couldn’t finish this read. Your previous collection is safe; try again.")
+            print(f"[shelf] read failed: {type(exc).__name__}", flush=True)
             return 0
         finally:
-            self.syncing = False
+            with self._lock:
+                if generation == self._generation:
+                    self.syncing = False
+                    self.completed_sync_id = request_id
+            self._sync_lock.release()
 
     # ---- matching -----------------------------------------------------------------------------
     def match(self, album: str, artist: str) -> dict | None:
@@ -368,14 +445,24 @@ class Shelf:
         for e in journal or []:
             key = fold(e.get("album", "")) + "|" + fold_artist(e.get("artist", ""))
             plays[key] = plays.get(key, 0) + 1
-        out = []
+        out = {}
         with self._lock:
             rels = list(self.releases)
         for r in rels:
+            rid = r.get("id")
+            if not isinstance(rid, int) or isinstance(rid, bool) or rid <= 0:
+                continue
+            if rid in out:
+                out[rid]["copies"] += 1
+                continue
             key = fold(r.get("title", "")) + "|" + fold_artist((r.get("artists") or [""])[0])
-            out.append({**self.pressing(r), "plays": plays.get(key, 0), "added": r.get("added", "")})
-        return out
+            out[rid] = {**self.pressing(r), "plays": plays.get(key, 0), "added": r.get("added", ""), "copies": 1}
+        return list(out.values())
 
     def status(self) -> dict:
-        return {"user": self.user, "token_set": bool(self.token), "releases": len(self.releases),
-                "synced_at": self.synced_at, "syncing": self.syncing, "problem": self.problem}
+        with self._lock:
+            return {"user": self.user, "token_set": bool(self.token), "releases": len(self.releases),
+                    "synced_at": self.synced_at, "syncing": self.syncing or self._requested,
+                    "revision": self.revision,
+                    "sync_id": self.sync_id, "completed_sync_id": self.completed_sync_id,
+                    "problem": self.problem}

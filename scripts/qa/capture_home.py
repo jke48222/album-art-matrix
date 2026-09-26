@@ -9,6 +9,8 @@ import io
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
+import hashlib
+import plistlib
 import math
 from pathlib import Path
 import subprocess
@@ -36,6 +38,22 @@ SAFE_STATE_KEYS = (
 def command(*args: str, capture: bool = False) -> str:
     result = subprocess.run(args, check=True, text=True, capture_output=True, timeout=90)
     return result.stdout.strip() if capture else ""
+
+
+def app_identity(app: Path, source: str) -> dict:
+    """Debug builds put Swift code in a dylib; the executable can be a fixed stub."""
+    with (app / "Info.plist").open("rb") as handle:
+        executable = plistlib.load(handle).get("CFBundleExecutable", "Tessera")
+    files = {}
+    for name in (executable, executable + ".debug.dylib"):
+        path = app / name
+        if path.is_file():
+            with path.open("rb") as handle:
+                files[name] = hashlib.file_digest(handle, "sha256").hexdigest()
+    if executable not in files:
+        raise ValueError("The installed app executable is missing")
+    return {"source": source, "files_sha256": files,
+            "production_code_file": executable + ".debug.dylib" if executable + ".debug.dylib" in files else executable}
 
 
 def artwork(side: int = 64) -> bytes:
@@ -161,6 +179,13 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
             path = urlsplit(self.path).path
             with wall.lock:
                 wall.requests.append({"method": "POST", "path": path})
+            if getattr(wall, "library_game_fixture", None) is not None:
+                from library_games_fixtures import respond
+                result = respond(wall, path, json.loads(data or b"{}"))
+                if result is not None:
+                    code, payload = result
+                    self.response(code, json.dumps(payload).encode(), "application/json")
+                    return
             if path == "/routines/preview":
                 from brain.art.text_modes import Clock, Countdown
                 payload = json.loads(data)
@@ -231,6 +256,7 @@ def main() -> int:
     parser.add_argument("--timer-kind", choices=("countdown", "alarm"), default="countdown")
     parser.add_argument("--message-state", choices=("ready", "history", "thinking", "missing-key", "note-active", "note-expired"), default="ready")
     parser.add_argument("--discovery-state", choices=("ready","result","thinking","missing-key","failed","quiet","faint","listening"))
+    parser.add_argument("--library-game-state", choices=("ready","empty","learning","failed","result"))
     parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
     parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
@@ -256,6 +282,8 @@ def main() -> int:
         previous_captures = {capture["state"]: capture for capture in prior.get("captures", [])}
     if args.app:
         command("xcrun", "simctl", "install", args.simulator, str(args.app.resolve()))
+    installed_app = Path(command("xcrun", "simctl", "get_app_container", args.simulator, args.bundle, "app", capture=True))
+    installed_identity = app_identity(installed_app, "Actual installed simulator bundle, resolved by simctl get_app_container")
     actual = wall_snapshot(args.wall_host, output) if args.wall_host else None
     states = list(args.states)
     if actual is not None and "classic-wall" not in states:
@@ -304,6 +332,13 @@ def main() -> int:
         sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
         from discovery_fixtures import configure
         configure(wall, fixture_host, args.discovery_state, artwork(), next((a for a in args.launch_argument if a in {"show","earworm","imagine","voice","hearing"}), ""))
+    if args.library_game_state:
+        sys.path.insert(0, str(args.renderer_root.resolve() if args.renderer_root else Path(__file__).resolve().parents[2]))
+        from library_games_fixtures import configure
+        feature = next((a for a in args.launch_argument if a in {"wordle", "sudoku"}), None)
+        feature = feature or next((a for a in args.launch_argument if a in {"teach", "shelf", "games"}), "games")
+        configure(wall, fixture_host, args.library_game_state, feature, args.renderer_root)
+        (output / "fixture-payloads.json").write_text(json.dumps(wall.library_game_fixture, indent=2) + "\n")
     captures = []
     try:
         for name in states:
@@ -401,6 +436,8 @@ def main() -> int:
                              "mode": state["mode"], "state_reads": reads, "fixture_writes": writes,
                              "app": str(args.app) if args.app else None,
                              "launch_arguments": args.launch_argument,
+                             "library_game_state": args.library_game_state,
+                             "installed_app_identity": installed_identity,
                              "captured_at": datetime.now(timezone.utc).isoformat(),
                              "dynamic_type": "AX5" if variant == "large" else "large"})
             print(image_path, flush=True)
@@ -414,6 +451,7 @@ def main() -> int:
         manifest = {"captured_at": datetime.now(timezone.utc).isoformat(), "simulator": args.simulator,
                     "bundle": args.bundle, "app": str(args.app) if args.app else None,
                     "fixture_only": True, "captures": list(previous_captures.values()),
+                    "installed_app_identity": installed_identity,
                     "interaction_scope": "Rendering and network-state transitions; no simulated touches"}
         manifest_path.write_text(json.dumps(manifest, indent=2) + "\n")
     return 0
