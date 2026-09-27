@@ -51,6 +51,7 @@ is on — no Mac required.
   POST /note     -> {text, minutes?}: words on the panel for a while
   POST /earworm  -> {words}: name a song from the words remembered; sleeve up
   POST /show     -> {query}: a cover by name    POST /play {query}: a video by name
+  GET  /pictures/last.png -> the frame the last picture put on the wall (404 before one)
   GET  /weather  -> the forecast the face draws, the place, its age
   POST /weather/place {query}  a place by name, geocoded   POST /weather/refresh
   GET  /shelf    -> the Discogs collection with plays per release; POST /shelf/sync
@@ -80,6 +81,7 @@ import json
 import math
 import os
 import threading
+import tempfile
 import time
 import uuid
 from dataclasses import asdict
@@ -181,6 +183,8 @@ class ControlState:
         192x192, so every frame crossing this API is translated: what the
         phone sends is scaled up, what it reads back is scaled down."""
         self._lock = threading.RLock()
+        from .display_session import DisplaySession
+        self.display_session = DisplaySession(self)
         self._s = dict(DEFAULTS)
         self.dirty = threading.Event()
         self.loop_beat = None        # main loop: last pass, for /health
@@ -275,6 +279,26 @@ class ControlState:
         with self._lock:
             return dict(self._s)
 
+    def save_colour_gains(self, gains):
+        """Atomically save a confirmed calibration without persisting its preview."""
+        with self._lock:
+            candidate = {**self._s, **gains}
+            directory = os.path.dirname(STATE_PATH)
+            os.makedirs(directory, exist_ok=True)
+            fd, temporary = tempfile.mkstemp(prefix=".calibration-", dir=directory)
+            try:
+                with os.fdopen(fd, "w") as handle:
+                    os.fchmod(handle.fileno(), 0o600)
+                    json.dump(candidate, handle, indent=2)
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                os.replace(temporary, STATE_PATH)
+                self._s = candidate
+            finally:
+                if os.path.exists(temporary):
+                    os.unlink(temporary)
+            self.dirty.set()
+
     def nudge(self):
         """A source changed its mind: poll again now, not next tick."""
         self.repoll.set()
@@ -338,8 +362,9 @@ class ControlState:
             self._note_timer = timer
             timer.start()
 
-    def clear_note(self, expected_id: str | None = None) -> bool:
-        """Dismiss only a note that still owns the current display."""
+    def clear_note(self, expected_id: str | None = None, *, interrupt: bool = True) -> bool:
+        """Dismiss only a note that still owns the current display. A note
+        running out on its own (interrupt=False) leaves a check on the wall."""
         with self._lock:
             if expected_id is not None and expected_id != getattr(self, "_note_id", None):
                 return False
@@ -347,7 +372,7 @@ class ControlState:
             restore = dict(getattr(self, "_note_restore", None) or {"mode": "art"})
             self._clear_note_metadata()
             if current:
-                self.apply(restore)
+                self.apply(restore, interrupt=interrupt)
             return current
 
     def _note_over(self, generation=None):
@@ -357,7 +382,7 @@ class ControlState:
             until = getattr(self, "_note_until", None)
             if until is None or time.monotonic() < until:
                 return
-            self.clear_note()
+            self.clear_note(interrupt=False)
 
     def note_status(self) -> dict:
         with self._lock:
@@ -366,7 +391,7 @@ class ControlState:
                 return {"text": None, "seconds_left": None, "active": False, "id": None}
             left = max(0, math.ceil(self._note_until - time.monotonic()))
             if left == 0:
-                self.clear_note()
+                self.clear_note(interrupt=False)
                 return {"text": None, "seconds_left": 0, "active": False, "id": None}
             return {"text": self._note_text, "seconds_left": left, "active": True, "id": self._note_id}
 
@@ -548,10 +573,18 @@ class ControlState:
             return None
         return "This action is not available for the current timer."
 
-    def apply(self, patch: dict) -> dict:
-        """Merge a patch, persist, wake the main loop. Returns rejected keys."""
+    def apply(self, patch: dict, *, interrupt: bool = True) -> dict:
+        """Merge a patch, persist, wake the main loop. Returns rejected keys.
+        A command from someone ends a display check that is up. A face putting
+        itself back on its own (a note or a picture running out) passes
+        interrupt=False and leaves the check where it is."""
         with self._lock:
-            return self._apply_locked(dict(patch))
+            rejected = self._apply_locked(dict(patch))
+            keys = {"mode", "brightness", "wb_r", "wb_g", "wb_b", "timer_min", "timer_action", "sleep_fade_min", "resume_music"}
+            if (interrupt and self.display_session.item and "timer_action" not in rejected and
+                    any(k in patch and k not in rejected for k in keys)):
+                self.display_session.cancel()
+            return rejected
 
     def _apply_locked(self, patch: dict) -> dict:
         rejected_commands = {}
@@ -662,6 +695,10 @@ class ControlState:
                "wall": {"width": self.wall.width, "height": self.wall.height,
                         "tile": self.wall.tile, "cols": self.wall.cols,
                         "rows": self.wall.rows, "frame_side": self.phone_side}}
+        temporary = self.display_session.status()
+        out["display_session"] = {k: v for k, v in temporary.items() if k != "token"}
+        if temporary["active"]:
+            out["display_mode"] = "frame"
         # which song the phone's pressing is for, so the app (and anyone
         # looking) can tell whether the spin face has one to turn
         if self.pressing is not None:
@@ -733,7 +770,8 @@ class ControlState:
             # pictures: whether Google is set up for "show me", and what was last found
             "google": (self.shower.status() if getattr(self, "shower", None)
                        else {"key_set": False, "cx_set": False, "pictures": 0, "last": None,
-                             "problem": "show me is off on this wall"}),
+                             "state": "off", "verified": False, "checking": False,
+                             "checked_at": None, "problem": "Show me is off on this wall."}),
             # the shelf: whose Discogs collection, how many releases, when synced
             "discogs": (self.shelf.status() if getattr(self, "shelf", None)
                         else {"user": "", "token_set": False, "releases": 0,
@@ -1313,6 +1351,21 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, getattr(sh, method)() if sh is not None and hasattr(sh, method)
                            else {"last": getattr(sh, "last", None), "ready": False})
                 return
+            if u.path == "/pictures/last.png":
+                # Served on its own so /services polls do not carry the image.
+                sh = getattr(ctrl, "shower", None)
+                png = sh.last_picture_frame() if sh is not None and hasattr(sh, "last_picture_frame") else None
+                if png is None:
+                    self._json(404, {"error": "No picture has been shown yet."})
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(png)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(png)
+                return
             if u.path.startswith("/shelf"):
                 sh = getattr(ctrl, "shelf", None)
                 if sh is None:
@@ -1348,6 +1401,9 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if u.path.startswith("/health"):
                 self._json(200, ctrl.health())
+                return
+            if u.path == "/display-session":
+                self._json(200, ctrl.display_session.status())
                 return
             if u.path.startswith("/state"):
                 ctrl.last_client = time.monotonic()
@@ -1843,6 +1899,35 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, ctrl.public_state())
                 return
 
+            if self.path == "/pictures/check":
+                # Read the body even though it carries nothing: an unread body
+                # stays on the kept-alive connection and spoils the next request.
+                if self._body() is None:
+                    return
+                checker = getattr(getattr(ctrl, "shower", None), "picture_connection", None)
+                if checker is None:
+                    self._json(503, {"error": "Picture search is unavailable on this wall."})
+                elif not checker.check():
+                    self._json(409, {"error": "Save an existing Google key and search engine first."})
+                else:
+                    self._json(200, ctrl.services())
+                return
+            if self.path in ("/display-session", "/display-session/end"):
+                body = self._body()
+                if body is None:
+                    return
+                try:
+                    result = (ctrl.display_session.end(body) if self.path.endswith("/end")
+                              else ctrl.display_session.begin(body))
+                    self._json(200, result)
+                except ValueError as exc:
+                    self._json(400, {"error": str(exc)})
+                except RuntimeError as exc:
+                    self._json(409, {"error": str(exc)})
+                except OSError:
+                    self._json(503, {"error": "The wall could not save the correction. Try again."})
+                return
+
             if self.path.startswith("/frame"):
                 patch = self._body()
                 if patch is None:
@@ -2125,7 +2210,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 try:
                     rejected = ctrl.apply_services(patch)
                 except OSError:
-                    self._json(503, {"error": "the wall could not save these service details; try again"})
+                    self._json(503, {"error": "The wall could not save these service details. Try again."})
                     return
                 resp = ctrl.services()
                 if rejected:
@@ -2142,15 +2227,15 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 cid = tokens.get("client_id")
                 if cid is not None and (not isinstance(cid, str) or cid.strip() != ctrl.spotify.client_id):
-                    self._json(409, {"error": "the Spotify app ID changed; sign in again"})
+                    self._json(409, {"error": "The Spotify app ID changed. Sign in again."})
                     return
                 try:
                     ctrl.spotify.accept_tokens(tokens, client_id=cid.strip() if isinstance(cid, str) else ctrl.spotify.client_id)
                 except ValueError:
-                    self._json(400, {"error": "Spotify sent invalid credentials; sign in again"})
+                    self._json(400, {"error": "Spotify sent invalid credentials. Sign in again."})
                     return
                 except OSError:
-                    self._json(503, {"error": "the wall could not save the Spotify connection; try again"})
+                    self._json(503, {"error": "The wall could not save the Spotify connection. Try again."})
                     return
                 ctrl.dirty.set()
                 self._json(200, ctrl.services())
@@ -2163,7 +2248,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     if ctrl.spotify is not None:
                         ctrl.spotify.unlink()
                 except OSError:
-                    self._json(503, {"error": "the wall could not forget the Spotify connection; try again"})
+                    self._json(503, {"error": "The wall could not forget the Spotify connection. Try again."})
                     return
                 ctrl.dirty.set()
                 self._json(200, ctrl.services())

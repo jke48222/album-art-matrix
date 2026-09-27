@@ -1,0 +1,13 @@
+{
+  "google": {
+    "key_set": false,
+    "cx_set": false,
+    "pictures": 0,
+    "last": null,
+    "state": "off",
+    "verified": false,
+    "checking": false,
+    "checked_at": null,
+    "problem": "Show me is off on this wall."
+  }
+}

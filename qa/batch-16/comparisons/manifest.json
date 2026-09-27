@@ -1,0 +1,283 @@
+{
+  "base": "1303f46",
+  "units": [
+    "S14",
+    "D01",
+    "D03",
+    "D04",
+    "D05"
+  ],
+  "native": [
+    {
+      "unit": "S14",
+      "title": "Pictures",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-16/before/pictures/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-16/after/pictures/room-live.png",
+      "before_sha256": "5590c4e355cb23a60a9cea35ed19ee53b0a4d309c0af6a3146f646a289711c94",
+      "after_sha256": "f14a541416f3137c3543c0ef6c8a926339b512764a1354164f92ce01ced1bdf8",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-16/comparisons/pictures.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "8aa8efe320b3999d22b527b0d7f39b4b77a0c9b90379211859e7a149429c34e3"
+    },
+    {
+      "unit": "D01",
+      "title": "First run",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-16/before/onboarding/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-16/after/onboarding/room-live.png",
+      "before_sha256": "905c56906014b7142ac193edfc012b52ed561e9a109806d1caaee35902cf28e8",
+      "after_sha256": "2a4d056b336f0b730cb5fced4cf3d693bfd2024c291cf910d5534d3933df5074",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-16/comparisons/onboarding.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "4d5f1965a628173e7916e655bf61e9d231c6762be237099baf48c97d730a7519"
+    },
+    {
+      "unit": "D03",
+      "title": "True colour",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-16/before/colour/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-16/after/colour/room-live.png",
+      "before_sha256": "e2361432769ea6ae376fc532718243f0f82d24fa7c09af5b2036db03bdbb79b2",
+      "after_sha256": "aafa702cea23b20018cfdacc51d8b39fadc5973ac8a151153bb6404fd7311d3b",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-16/comparisons/colour.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "802bc8e1f0f6b4be91bac1cd34486b600784aa7e1743e5ce77406adffd214bf8"
+    },
+    {
+      "unit": "D04",
+      "title": "Panel check",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-16/before/panel/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-16/after/panel/room-live.png",
+      "before_sha256": "7be172457dde5bdabe47f3d326a8ff188c84eda628b224a574f2ba3e457b8396",
+      "after_sha256": "1f227b0804f8c442755f9eb3b4bb1b9a18cda96affebd44b55b14805b7e5571a",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-16/comparisons/panel.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "748402f413422b9d76230fa9c12109c9237ecd46943636cff47b610bfe745f95"
+    },
+    {
+      "unit": "D05",
+      "title": "Guests",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-16/before/guests/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-16/after/guests/room-live.png",
+      "before_sha256": "65042489c1f5cbc7a39e43d12bdf5e4255d77f01cd328787f34189a51bc39708",
+      "after_sha256": "13526e12daa2a1a06bb4e5abb806ad8725d03402514e725e1d4a457cb482f129",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-16/comparisons/guests.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "dee52ae5f4210483b09f85a2a2a2c77a3008b61730751c6935cd98c2189da345"
+    }
+  ],
+  "state_captures": [
+    "pictures-room-large.png",
+    "pictures-room-offline.png",
+    "pictures-checking-room-live.png",
+    "pictures-last-room-live.png",
+    "pictures-off-room-live.png",
+    "pictures-refused-room-live.png",
+    "pictures-saved-room-live.png",
+    "pictures-verified-room-live.png",
+    "onboarding-room-large.png",
+    "onboarding-room-offline.png",
+    "onboarding-done-room-live.png",
+    "onboarding-find-room-live.png",
+    "onboarding-found-room-live.png",
+    "onboarding-glow-room-live.png",
+    "onboarding-light-room-live.png",
+    "onboarding-noWall-room-live.png",
+    "onboarding-services-room-live.png",
+    "colour-room-large.png",
+    "colour-room-offline.png",
+    "colour-card-room-live.png",
+    "colour-clipped-room-live.png",
+    "colour-dark-room-live.png",
+    "colour-denied-room-live.png",
+    "colour-occupied-room-live.png",
+    "colour-offline-room-live.png",
+    "colour-restricted-room-live.png",
+    "colour-result-room-live.png",
+    "panel-room-large.png",
+    "panel-room-offline.png",
+    "panel-black-room-live.png",
+    "panel-grid-room-live.png",
+    "panel-ramp-room-live.png",
+    "panel-red-room-live.png",
+    "panel-running-192-room-live.png",
+    "panel-running-64-room-live.png",
+    "guests-room-large.png",
+    "guests-room-offline.png",
+    "guests-dense-room-live.png",
+    "guests-hidden-room-live.png",
+    "guests-link-room-live.png",
+    "guests-long-room-live.png",
+    "guests-open-room-live.png",
+    "guests-showing-192-room-live.png",
+    "guests-showing-64-room-live.png"
+  ],
+  "references": [
+    "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+    "https://developer.apple.com/design/human-interface-guidelines/onboarding",
+    "https://developer.apple.com/documentation/avfoundation/avcapturedevice/setwhitebalancemodelocked(with:completionhandler:)",
+    "https://developer.apple.com/documentation/coreimage/ciqrcodegenerator",
+    "https://developers.google.com/custom-search/v1/overview",
+    "https://github.com/zxing/zxing/blob/master/core/src/main/java/com/google/zxing/client/result/WifiResultParser.java",
+    "https://github.com/zxing/zxing/wiki/Barcode-Contents#wi-fi-network-config-android-ios-11",
+    "https://mobbin.com/screens/0e2ec18f-59b1-4704-ac9d-1dae6575a632",
+    "https://mobbin.com/screens/11cd9ff0-d824-4dcd-85d3-a97b7491e894",
+    "https://mobbin.com/screens/42bd144e-3f8f-462a-bb8c-4ccd3faeb025",
+    "https://mobbin.com/screens/5131f5fa-1510-4d29-b9eb-b400d3de1fe4",
+    "https://mobbin.com/screens/571c159f-bff3-4997-89f7-05933a567f32",
+    "https://mobbin.com/screens/5b10fd05-a7df-4d48-a6b5-a7482113af5c",
+    "https://mobbin.com/screens/7047e51a-57c3-4ec6-8f82-21a562e3854c",
+    "https://mobbin.com/screens/83f9bd3b-b0bc-4ab9-8027-9203baece16e",
+    "https://mobbin.com/screens/9438fa24-940d-4483-b09a-05d0037c8821",
+    "https://mobbin.com/screens/a00976e0-d7b9-437a-999a-522fbd2ff65b",
+    "https://mobbin.com/screens/b0ac4909-814a-4fda-9136-28308619ddf6",
+    "https://mobbin.com/screens/b4576738-d5e3-49e6-8099-5fc70a857230",
+    "https://mobbin.com/screens/c0ed4e69-6909-40a5-9e0f-80aa931856f5",
+    "https://mobbin.com/screens/cea70b62-a53f-4bc2-9bb1-a4610f79dee7",
+    "https://mobbin.com/screens/cf99a035-93e4-405a-b110-1e7ed1d205b9",
+    "https://mobbin.com/screens/d5b4bd02-8e65-4e03-893a-6bad5fdce193",
+    "https://mobbin.com/screens/f4b1811e-3d31-4e1a-a953-d87e2eadec7d",
+    "https://registry.color.org/rgb-registry/srgb",
+    "https://support.apple.com/en-us/101944",
+    "https://support.apple.com/en-us/102229",
+    "https://www.qrcode.com/en/howto/code.html"
+  ]
+}

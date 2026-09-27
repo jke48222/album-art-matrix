@@ -1,0 +1,94 @@
+[
+  {
+    "case": "panel-running",
+    "side": 64,
+    "session": {
+      "active": true,
+      "token": "0FE0A306-90AD-4AA9-A59D-A7DCBDBE329D",
+      "purpose": "panel",
+      "seconds_remaining": 116.96240608301014
+    },
+    "frame": {
+      "bytes": 12288,
+      "sha256": "91fce29a51924d450e8a7b2ed852ba1358477710b7f9e3dcc93a297a4c6f6053",
+      "first_rgb": [
+        191,
+        191,
+        191
+      ],
+      "uniform": false
+    },
+    "requests": [
+      "/display-session"
+    ]
+  },
+  {
+    "case": "guests-showing",
+    "side": 64,
+    "session": {
+      "active": true,
+      "token": "295F6942-AC74-4DA5-816B-F6DEDCAF7160",
+      "purpose": "guests",
+      "seconds_remaining": 116.76897083397489
+    },
+    "frame": {
+      "bytes": 12288,
+      "sha256": "b5d5349fd6b911573c7d8ef2de908e7d3f883eb1f09c519446fbf3c59a56d20d",
+      "first_rgb": [
+        255,
+        255,
+        255
+      ],
+      "uniform": false
+    },
+    "requests": [
+      "/display-session"
+    ]
+  },
+  {
+    "case": "panel-running",
+    "side": 192,
+    "session": {
+      "active": true,
+      "token": "813D0039-4700-4978-8E7B-2929BDF79999",
+      "purpose": "panel",
+      "seconds_remaining": 116.97320962499361
+    },
+    "frame": {
+      "bytes": 110592,
+      "sha256": "0487e64b1b923d7420bb9c7ee8af9e6cfa615e43380bd0b26cdc18b1ca6fba95",
+      "first_rgb": [
+        191,
+        191,
+        191
+      ],
+      "uniform": false
+    },
+    "requests": [
+      "/display-session"
+    ]
+  },
+  {
+    "case": "guests-showing",
+    "side": 192,
+    "session": {
+      "active": true,
+      "token": "50BC3F0E-C08A-4771-A943-41A5AC948FAC",
+      "purpose": "guests",
+      "seconds_remaining": 116.963283375022
+    },
+    "frame": {
+      "bytes": 110592,
+      "sha256": "c91518b3f3ea5280f7ef85fb3dee1ddd4cc1f4c2421096135cd2ee3474fde476",
+      "first_rgb": [
+        255,
+        255,
+        255
+      ],
+      "uniform": false
+    },
+    "requests": [
+      "/display-session"
+    ]
+  }
+]

@@ -82,6 +82,7 @@ struct SettingsSheet: View {
             if let initialDestination { path = [initialDestination] }
             #if DEBUG
             let args = CommandLine.arguments
+            if args.contains("-calibration-step") { showCalibrate = true }
             if let i = args.firstIndex(of: "-settings-query"), args.indices.contains(i + 1) { query = args[i + 1] }
             if let i = args.firstIndex(of: "-settings-page") ?? args.firstIndex(of: "-routine-page"), args.indices.contains(i + 1),
                let route = SettingsDestination(rawValue: args[i + 1]) { path = [route] }
@@ -147,7 +148,7 @@ struct SettingsSheet: View {
             if let suggestion {
                 Rectangle().fill(warm.opacity(0.15)).frame(height: 1).padding(.horizontal, 20)
                 Button {
-                    if !wall.link.isLive && !wall.link.isStandIn { wall.lookForWallAgain() }
+                    if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { wall.lookForWallAgain() }
                     else { path.append(suggestion.route) }
                 } label: {
                     HStack(spacing: 10) {
@@ -176,7 +177,7 @@ struct SettingsSheet: View {
                 Text(statusWord.uppercased()).font(.machine(8)).tracking(0.5).foregroundStyle(Ink.ink)
             }
             Text("Your wall").font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(26)).foregroundStyle(Ink.ink)
-            Text(wall.link.isLive ? "\(Panel.side) × \(Panel.side) · \(wall.state.mode == "off" ? "Lights out" : "\(Int(wall.state.brightness * 100))% light")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
+            Text(wall.link.isLive ? "\(Panel.side) x \(Panel.side), \(wall.state.mode == "off" ? "lights out" : "\(Int(wall.state.brightness * 100))% light")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
                 .font(.ui(12)).foregroundStyle(Color(hex: 0xB8BBAF))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -292,7 +293,7 @@ struct SettingsSheet: View {
 
     private var statusWord: String {
         switch wall.link {
-        case .live: wall.state.mode == "off" ? "Connected · off" : "Connected"
+        case .live: wall.state.mode == "off" ? "Connected, off" : "Connected"
         case .searching: "Finding the wall"
         case .offline: "Offline"
         case .standIn: "Phone preview"
@@ -301,9 +302,15 @@ struct SettingsSheet: View {
     private var statusColor: Color {
         switch wall.link { case .live: Ink.moss; case .searching: warm; case .offline: Ink.signal; case .standIn: Ink.dim }
     }
-    private var corrected: Bool { wall.state.wbR < 0.995 || wall.state.wbG < 0.995 || wall.state.wbB < 0.995 }
+    /// The wall only uses the gains' ratio (it divides by the largest), so
+    /// saved gains above 1 are judged the same way.
+    private var corrected: Bool {
+        let peak = max(wall.state.wbR, wall.state.wbG, wall.state.wbB, 0.001)
+        return min(wall.state.wbR, wall.state.wbG, wall.state.wbB) / peak < 0.995
+    }
     private var suggestion: (title: String, symbol: String, route: SettingsDestination)? {
-        if !wall.link.isLive && !wall.link.isStandIn { return ("Look for your wall again", "arrow.clockwise", .addresses) }
+        // Also while the owner chose this phone: that stand-in never probes.
+        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { return ("Look for your wall again", "arrow.clockwise", .addresses) }
         if !musicConnected && !musicRefused { return ("Connect Apple Music", "music.note", .services) }
         if let services, !services.spotify.linked, services.lastfm.user.isEmpty { return ("Connect your music services", "music.note", .services) }
         if wall.link.isLive && !corrected { return ("Find your panel’s true colour", "camera.aperture", .colour) }
@@ -315,29 +322,29 @@ struct SettingsSheet: View {
         case .light: return "\(Int(wall.state.brightness * 100))% brightness"
         case .time:
             if wall.state.timerRinging { return wall.state.timerKind == "alarm" ? "Your alarm is ringing" : "Timer complete" }
-            if let left = wall.state.timerSeconds() { return "Timer · \(TimeInput.clock(left)) remaining" }
+            if let left = wall.state.timerSeconds() { return "Timer, \(TimeInput.clock(left)) remaining" }
             return item.detail
-        case .sun: return wall.state.sun == "on" ? "On · \(Int(wall.state.sunNight * 100))% after dark" : item.detail
+        case .sun: return wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : item.detail
         case .sleep:
-            if let left = wall.state.sleepSeconds(), left > 0 { return "Fading · \(max(1, (left + 59) / 60)) min remaining" }
+            if let left = wall.state.sleepSeconds(), left > 0 { return "Fading, \(max(1, (left + 59) / 60)) min remaining" }
             return item.detail
-        case .wake: return wall.state.wakeEnabled ? "Every day · \(TimeInput.timeLabel(wall.state.wakeTime, twentyFour: wall.state.clock24h))" : item.detail
+        case .wake: return wall.state.wakeEnabled ? "Every day at \(TimeInput.timeLabel(wall.state.wakeTime, twentyFour: wall.state.clock24h))" : item.detail
         case .idle:
             let names = ["black": "Go dark", "hold": "Hold the sleeve", "dim": "Dim the sleeve", "ambient": "Drift", "weather": "Show the weather"]
-            return "\(names[wall.state.idle] ?? "Go dark") · \(wall.state.away == "off" ? "Off when away" : "Stay on when away")"
+            return "\(names[wall.state.idle] ?? "Go dark"), \(wall.state.away == "off" ? "off when away" : "stays on when away")"
         case .services:
             var connected: [String] = []
             if musicConnected { connected.append("Apple Music") }
             if services?.spotify.linked == true { connected.append("Spotify") }
             if let user = services?.lastfm.user, !user.isEmpty { connected.append("Last.fm") }
             if let user = services?.listenbrainz?.user, !user.isEmpty { connected.append("ListenBrainz") }
-            return connected.isEmpty ? item.detail : connected.joined(separator: " · ")
+            return connected.isEmpty ? item.detail : connected.joined(separator: ", ")
         case .weather: return wall.state.place.isEmpty ? item.detail : wall.state.place
         case .lockScreen: return wall.live.enabled ? "Live Activity is on" : item.detail
         case .colour: return corrected ? "Your panel is calibrated" : item.detail
         case .health:
-            if let vitals, vitals.throttled?.now == true { return "Thermal throttling · open details" }
-            if let temperature = vitals?.tempC { return String(format: "%.0f°C · diagnostics", temperature) }
+            if let vitals, vitals.throttled?.now == true { return "Thermal throttling, open details" }
+            if let temperature = vitals?.tempC { return String(format: "%.0f°C, diagnostics", temperature) }
             return item.detail
         default: return item.detail
         }
@@ -822,87 +829,6 @@ struct ChoicePage<T: Hashable>: View {
 
 // MARK: - The pages
 
-struct ColourPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @Binding var showCalibrate: Bool
-
-    private var corrected: Bool {
-        wall.state.wbR < 0.995 || wall.state.wbG < 0.995 || wall.state.wbB < 0.995
-    }
-
-    var body: some View {
-        SetupPage("True colour",
-                  blurb: "LED panels lean green. Point your camera at the wall and Tessera measures the cast and corrects it. Run it again if a tint is left.") {
-            VStack(alignment: .leading, spacing: 16) {
-                PrimaryButton(title: corrected ? "Calibrate again" : "Calibrate with the camera",
-                              accent: accent) { showCalibrate = true }
-                HStack(spacing: 8) {
-                    if corrected {
-                        Done(text: "Corrected")
-                    } else {
-                        Text("Not corrected yet").font(.ui(13)).foregroundStyle(Ink.dim)
-                    }
-                    Spacer()
-                }
-            }
-            .padding(.top, 6)
-        }
-    }
-}
-
-struct PanelPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-
-    private let patterns: [(String, (UInt8, UInt8, UInt8))] = [
-        ("White", (255, 255, 255)), ("Red", (255, 0, 0)),
-        ("Green", (0, 255, 0)), ("Blue", (0, 0, 255)),
-    ]
-
-    var body: some View {
-        SetupPage("Panel check",
-                  blurb: "Fills the wall with one colour, so a dead light or a colour cast shows. It stays until you pick a mode.") {
-            VStack(spacing: 16) {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-                    ForEach(patterns, id: \.0) { (name, rgb) in
-                        Button {
-                            wall.pushFlat(r: rgb.0, g: rgb.1, b: rgb.2)
-                            Taps.commit()
-                        } label: {
-                            VStack(spacing: 12) {
-                                RoundedRectangle(cornerRadius: Round.card, style: .continuous)
-                                    .fill(Color(red: Double(rgb.0) / 255, green: Double(rgb.1) / 255, blue: Double(rgb.2) / 255))
-                                    .frame(height: 76)
-                                    .overlay { RoundedRectangle(cornerRadius: Round.card, style: .continuous).strokeBorder(Ink.hairline, lineWidth: 1) }
-                                Text(name).font(.ui(14, .medium)).foregroundStyle(Ink.ink)
-                            }
-                            .padding(12)
-                            .background(Ink.plaster)
-                            .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
-                        }
-                        .buttonStyle(PressStyle(scale: 0.97))
-                        .accessibilityLabel("Show full \(name) on the wall")
-                    }
-                }
-                PrimaryButton(title: "Back to the album", accent: accent) {
-                    wall.send(["mode": "art"])
-                }
-            }
-            .padding(.top, 6)
-        }
-    }
-}
-
-struct GuestsPage: View {
-    let accent: Color
-    var body: some View {
-        SetupPage("Guests", blurb: nil) {
-            GuestsSection(accent: accent)
-        }
-    }
-}
-
 struct HealthPage: View {
     @Environment(WallSession.self) private var wall
     let accent: Color
@@ -1005,7 +931,9 @@ struct AddressesPage: View {
         guard !trimmed.isEmpty else { return }
         wall.host = trimmed
         Taps.commit()
-        Task { await wall.pollState() }
+        // A plain poll is ignored while the owner has chosen the phone, so a
+        // new address has to leave that choice and look for the wall.
+        wall.lookForWallAgain()
     }
 
 }

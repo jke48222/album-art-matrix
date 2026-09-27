@@ -328,7 +328,7 @@ struct WallOwned: Equatable {
             let sym = currency == "USD" ? "$" : currency == "GBP" ? "£" : currency == "EUR" ? "€" : currency + " "
             bits.append(String(format: "copies from %@%.0f", sym, low))
         }
-        return bits.joined(separator: "  ·  ")
+        return bits.joined(separator: ", ")
     }
 }
 
@@ -473,6 +473,7 @@ final class WallSession {
     @ObservationIgnored private var playbackClock = PlaybackClock()
     @ObservationIgnored private var stateRequest = 0
     @ObservationIgnored private var appliedStateRequest = 0
+    @ObservationIgnored private var connectionEpoch = UUID()
     /// Keys written locally and not yet echoed back. A /state poll must not
     /// clobber them: the brain persists asynchronously, so between the tap and
     /// the next poll the wall can still be reporting the old value, and the
@@ -651,13 +652,16 @@ final class WallSession {
     }
 
     func pollState() async {
+        guard !explicitStandIn else { return }
         guard let stateURL = url("/state") else { return }
         let requestedHost = host
+        let requestedEpoch = connectionEpoch
         stateRequest &+= 1
         let request = stateRequest
         do {
             let (data, response) = try await http.data(from: stateURL)
-            guard requestedHost == host, request >= appliedStateRequest else { return }
+            guard !Task.isCancelled, !explicitStandIn, requestedEpoch == connectionEpoch,
+                  requestedHost == host, request >= appliedStateRequest else { return }
             guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
                 throw URLError(.badServerResponse)
             }
@@ -725,7 +729,8 @@ final class WallSession {
             syncWidget()
             live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: host)
         } catch {
-            guard requestedHost == host, request >= appliedStateRequest else { return }
+            guard !Task.isCancelled, !explicitStandIn, requestedEpoch == connectionEpoch,
+                  requestedHost == host, request >= appliedStateRequest else { return }
             misses += 1
             // Three misses is about six seconds of asking. After that, stop
             // showing an empty room and run a wall instead. Anything the app
@@ -751,6 +756,34 @@ final class WallSession {
 
     // MARK: - Stand-in
 
+    /// The owner chose this phone over the wall. Nothing probes until they
+    /// look again, so a screen that offers that look reads this.
+    private(set) var explicitStandIn = false
+
+    func useStandIn() {
+        explicitStandIn = true
+        invalidateConnectionQueries()
+        wasLive = false
+        lookedFromStandIn = false
+        hadSnapshot = false
+        lastSync = nil
+        misses = 0
+        playbackClock = PlaybackClock()
+        push.setPhoneOnly(true)
+        enterStandIn()
+        frame = standIn.frame()
+        syncWidget()
+        live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
+    }
+
+    private func invalidateConnectionQueries() {
+        connectionEpoch = UUID()
+        stateRequest &+= 1
+        appliedStateRequest = stateRequest
+        // Local-only changes have no remote acknowledgement to wait for.
+        pending.removeAll()
+    }
+
     private func enterStandIn() {
         guard !link.isStandIn else { return }
         FlightLog.note("LINK", "stand-in takes over")
@@ -762,9 +795,13 @@ final class WallSession {
     /// Leave the stand-in and go looking again. The next successful poll
     /// takes over completely.
     func lookForWallAgain() {
+        invalidateConnectionQueries()
+        explicitStandIn = false
         misses = 0
         lookedFromStandIn = link.isStandIn
         link = .searching
+        push.wallHost = host
+        push.setPhoneOnly(false)
         Task { await pollState() }
     }
 
@@ -864,7 +901,7 @@ final class WallSession {
     /// The one JSON POST every endpoint shares: request shape, status check,
     /// timeout. Four hand-rolled copies of this had already drifted apart.
     private func postJSON(_ path: String, _ obj: [String: Any]) async -> Bool {
-        guard let u = url(path),
+        guard !explicitStandIn, let u = url(path),
               let body = try? JSONSerialization.data(withJSONObject: obj) else { return false }
         var req = URLRequest(url: u)
         req.httpMethod = "POST"
@@ -876,9 +913,11 @@ final class WallSession {
     }
 
     private func pullFrame() async {
-        guard let frameURL = url("/frame.raw") else { return }
+        guard !explicitStandIn, let frameURL = url("/frame.raw") else { return }
         let requestedHost = host
-        if let (data, resp) = try? await http.data(from: frameURL), requestedHost == host,
+        let requestedEpoch = connectionEpoch
+        if let (data, resp) = try? await http.data(from: frameURL), !Task.isCancelled,
+           !explicitStandIn, requestedEpoch == connectionEpoch, requestedHost == host,
            (resp as? HTTPURLResponse)?.statusCode == 200,
            Panel.square(data.count) != nil {
             // Only publish when the bytes actually changed. Two identical

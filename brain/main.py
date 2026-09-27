@@ -290,6 +290,7 @@ class _FrameTee:
         return f.tobytes()
 
     def show(self, rgb888: bytes, pre_wb_img=None):
+        shown = pre_wb_img           # before the voice-opening mask replaces it
         # a face opening from the voice's line: the frames after a command
         # are unmasked from the middle outwards for a moment (art/horizon.py)
         settings = self._ctrl.get()
@@ -317,8 +318,13 @@ class _FrameTee:
                     pre_wb_img = (masked if isinstance(pre_wb_img, np.ndarray)
                                   else Image.fromarray(masked))
                 self._ctrl.dirty.set()               # keep the frames coming
-        self._ctrl.last_frame = (pre_wb_img.tobytes()
-                                 if pre_wb_img is not None else rgb888)
+        # A guest code carries the Wi-Fi password. The frame everyone else
+        # reads (/frame.raw, the phone widget's snapshot, the voice's "what
+        # is on the wall") keeps showing what was up before it.
+        session = getattr(self._ctrl, "display_session", None)
+        private, cover = session.cover(shown) if session is not None else (False, None)
+        self._ctrl.last_frame = (cover if private else
+                                 pre_wb_img.tobytes() if pre_wb_img is not None else rgb888)
         # every mode reaches the wall through here, so the halo hangs off this
         # one call and follows album art, video and effects alike
         if self._halo is not None and pre_wb_img is not None:
@@ -541,6 +547,7 @@ def main():
     clip_i, clip_next, clip_id = 0, 0.0, None
     now, video_shown = None, None
     black = bytes(size * size * 3)
+    overlay_left = False             # a display check just ended over a sleeve-less face
     idle_prev = None                 # which idle override is currently applied
     disc_key = None                  # (pressing, sleeve) the disc was built from
     shelf_revision = (getattr(ctrl.shelf, "revision", 0), bool(tune.get("shelf_mark")))
@@ -778,6 +785,21 @@ def main():
             while time.monotonic() < poll_end and ctrl.replay is None \
                     and not ctrl.news.is_set():
                 routine = ctrl.tick_routines()
+                overlay = ctrl.display_session.render(tune.gains)
+                if overlay is not None:
+                    # Not "source": that name is the music source chain.
+                    picture, balanced = overlay
+                    sink.show(balanced, pre_wb_img=picture)
+                    # On dismissal every mode must redraw, including an Off
+                    # wall and a static frame whose identity never changed.
+                    # Nine and a paused video only repaint when their cached
+                    # key changes, and the wake-up that ends the check is
+                    # usually swallowed by the wait below, so forget them too.
+                    need_show, blacked, frame_shown, fin_key = True, False, None, None
+                    nine_shown, video_shown, overlay_left = None, None, True
+                    if ctrl.dirty.wait(0.1):
+                        ctrl.dirty.clear()
+                    continue
                 s = ctrl.get()
                 sl = ctrl.sleep
                 fade = routine["sleep_factor"]
@@ -1166,6 +1188,13 @@ def main():
                 # last, which is to say always one behind.
                 if last_pre is not None:
                     ctrl.finish_base = last_pre
+                elif need_show and overlay_left:
+                    # No sleeve has arrived yet, so nothing would paint over
+                    # the check that just ended. Clear it, as lyrics does.
+                    empty = Image.new("RGB", (size, size))
+                    ctrl.finish_base = empty
+                    sink.show(black, pre_wb_img=empty)
+                    need_show = overlay_left = False
                 if need_show and last_pre is not None:
                     if (id(last_pre), s["finish"]) != fin_key:
                         fin_img = apply_finish(last_pre, s["finish"])

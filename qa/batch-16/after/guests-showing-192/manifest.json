@@ -1,0 +1,23 @@
+{
+  "case": "guests-showing",
+  "side": 192,
+  "session": {
+    "active": true,
+    "token": "50BC3F0E-C08A-4771-A943-41A5AC948FAC",
+    "purpose": "guests",
+    "seconds_remaining": 116.963283375022
+  },
+  "frame": {
+    "bytes": 110592,
+    "sha256": "c91518b3f3ea5280f7ef85fb3dee1ddd4cc1f4c2421096135cd2ee3474fde476",
+    "first_rgb": [
+      255,
+      255,
+      255
+    ],
+    "uniform": false
+  },
+  "requests": [
+    "/display-session"
+  ]
+}

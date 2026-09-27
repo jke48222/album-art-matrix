@@ -111,6 +111,8 @@ class FixtureWall:
         self.lock = threading.Lock()
         self.journal = []
         self.covers = {}
+        # GET /pictures/last.png, kept apart from covers so nine mode never composes it.
+        self.last_picture_png = None
         self.shelf = []
         self.lyrics = {"state": "done", "lines": [
             {"at": 0, "text": "the room is full of light", "words": []},
@@ -154,6 +156,13 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 return
             if path == "/frame.raw":
                 self.response(200, frame, "application/octet-stream")
+                return
+            if path == "/pictures/last.png":
+                # Like the brain: 404 until a picture has been shown.
+                if wall.last_picture_png is None:
+                    self.response(404, b'{"error": "No picture has been shown yet."}', "application/json")
+                else:
+                    self.response(200, wall.last_picture_png, "image/png")
                 return
             if path in wall.covers:
                 self.response(200, wall.covers[path], "image/png")
@@ -247,6 +256,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--launch-environment", action="append", default=[])
     parser.add_argument("--device-services-state", choices=("connected","unlinked","refused","empty","paused","external","paired","showing","disabled","google","checking","artwork","notinstalled"))
+    parser.add_argument("--setup-state", choices=("ready","default","saved","verified","refused","checking","last","off"))
     parser.add_argument("--service-detail-state", choices=("connected", "unlinked", "refused", "queued", "paused", "syncing", "empty"))
     parser.add_argument("--connections-state", choices=("unlinked","connected","expired","refused","unavailable"))
     parser.add_argument("--arcade-games-state", choices=("ready","playing","paused","lost","won"))
@@ -374,6 +384,10 @@ def main() -> int:
         from device_services_fixtures import configure
         payload = configure(wall, args.device_services_state, fixture_host)
         (output / "fixture-devices.json").write_text(json.dumps(payload, indent=2)+"\n")
+    if args.setup_state:
+        from setup_fixtures import configure
+        payload = configure(wall, args.setup_state, fixture_host)
+        (output / "fixture-setup.json").write_text(json.dumps(payload, indent=2)+"\n")
     if args.service_detail_state:
         from service_details_fixtures import configure
         payload = configure(wall, args.service_detail_state)

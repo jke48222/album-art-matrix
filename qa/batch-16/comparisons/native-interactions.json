@@ -1,0 +1,60 @@
+{
+  "passed": true,
+  "cases": [
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testCalibrationOnlyStartsOnActionAndCancelPreservesGains]' passed (13.617 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testCalibrationRefusedStartPreservesPreviousView]' passed (14.267 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testGuestCodeShowsAndHidesWithoutChangingSavedMode]' passed (12.165 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testGuestFailedShowDoesNotClaimSuccess]' passed (8.510 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testGuestPasswordIsForgottenWhenAppBackgrounds]' passed (13.500 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testGuestPasswordIsSecureAndInvalidInputCannotShow]' passed (10.370 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testOnboardingCanBeFinishedLater]' passed (8.271 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testOnboardingCanContinueOnThisPhone]' passed (18.107 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testPanelInterruptedSessionDoesNotRestoreOverNewMode]' passed (9.330 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testPanelPatternChangeAndEndPreservePreviousView]' passed (12.173 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testPicturesKeyIsSecureAndMalformedKeyCannotSave]' passed (8.740 seconds).",
+    "Test Case '-[SetupInteractionTests.SetupInteractionTests testPicturesRemoveGoogleKeepsWebFallback]' passed (11.673 seconds)."
+  ],
+  "app": "/private/tmp/tessera-batch16-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "app_sha256": {
+    "Tessera.debug.dylib": "c00756fb5c4f8fe5f4c775e1af695b64028f0da331469b16b9232f7fe266b5a3",
+    "Tessera": "b652c8726586fbbf6fa74739b441b323bd329e65fa9536aa9bc50d061b424050"
+  },
+  "scope": "Real XCUITest taps and secure text input on production Swift; isolated loopback fixture uses production ControlState, DisplaySession and service validation with synthetic accounts. No real credentials, network setup, or wall writes.",
+  "xcode_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "9108AFCE-E437-42FF-A946-C41349BE6540",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 12,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "SetupInteractionTests \u00b7 Built with macOS 27.0",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1790521596.985,
+    "passedTests": 12,
+    "result": "Passed",
+    "runtimeWarnings": [],
+    "skippedTests": 0,
+    "startTime": 1790521450.373,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - SetupInteractionTests",
+    "topInsights": [],
+    "totalTestCount": 12
+  }
+}

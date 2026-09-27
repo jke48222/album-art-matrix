@@ -1,0 +1,48 @@
+{
+  "captured_at": "2026-09-27T11:48:46.416811+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": "/tmp/tessera-batch16-before-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "art",
+      "state_reads": 6,
+      "fixture_writes": [],
+      "app": "/tmp/tessera-batch16-before-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "services",
+        "-service-page",
+        "pictures"
+      ],
+      "library_game_state": null,
+      "word_games_state": null,
+      "motion_games_state": null,
+      "party_games_state": null,
+      "installed_app_identity": {
+        "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+        "files_sha256": {
+          "Tessera": "2b0b296a0b4ad870887d196dabd8f2ad9df110a245ff0b717954263e4ed9892c",
+          "Tessera.debug.dylib": "575f667530fcd6aa4b57c29e7b61df22a48737eb13c0be7be4b9df9c2e4c0f46"
+        },
+        "production_code_file": "Tessera.debug.dylib"
+      },
+      "captured_at": "2026-09-27T11:48:46.120594+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "installed_app_identity": {
+    "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+    "files_sha256": {
+      "Tessera": "2b0b296a0b4ad870887d196dabd8f2ad9df110a245ff0b717954263e4ed9892c",
+      "Tessera.debug.dylib": "575f667530fcd6aa4b57c29e7b61df22a48737eb13c0be7be4b9df9c2e4c0f46"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

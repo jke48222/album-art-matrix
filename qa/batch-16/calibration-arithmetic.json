@@ -1,0 +1,10 @@
+{
+  "passed": 29,
+  "kind": "compiled Swift arithmetic checks",
+  "command": "swiftc tessera/Tessera/CalibrationMeasurement.swift scripts/qa/calibration-tests/main.swift -o /tmp/tessera-calibration-tests && /tmp/tessera-calibration-tests",
+  "source_sha256": {
+    "tessera/Tessera/CalibrationMeasurement.swift": "f02f822fb5156ce04f77e21361f9e0afcf27043fd08933e0f79c01f1531a5c0f",
+    "scripts/qa/calibration-tests/main.swift": "3d2e18a09cd5c3f886bdeefdbfabd01483f9361856402609eb7f9c29e7179c36"
+  },
+  "validated_at": "2026-09-27T14:02:01.214000+00:00"
+}

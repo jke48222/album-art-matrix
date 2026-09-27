@@ -1,0 +1,13 @@
+{
+  "id": "D03",
+  "mobbin": [
+    {"url":"https://mobbin.com/screens/d5b4bd02-8e65-4e03-893a-6bad5fdce193","app":"Noom","inspected_image":true,"applied":"A bounded target anchored inside the camera view, rather than a separate instructional modal."},
+    {"url":"https://mobbin.com/screens/a00976e0-d7b9-437a-999a-522fbd2ff65b","app":"Yubo","inspected_image":true,"applied":"One short positioning instruction alongside the capture frame, with recovery guidance close to the action."},
+    {"url":"https://mobbin.com/screens/cf99a035-93e4-405a-b110-1e7ed1d205b9","app":"Wise","inspected_image":true,"applied":"Status belongs beside the actual capture target; explicit close remains accessible."}
+  ],
+  "primary": [
+    {"url":"https://developer.apple.com/documentation/avfoundation/avcapturedevice/setwhitebalancemodelocked(with:completionhandler:)","applied":"Acquire device configuration lock, clamp each custom gain to the supported range, wait for the white balance lock before enabling capture."},
+    {"url":"https://registry.color.org/rgb-registry/srgb","applied":"Explicit sRGB profile conversion and per-pixel inverse transfer function before mean RGB ratios."}
+  ],
+  "instrument_limits":"A camera measurement is a visual adjustment, not colorimetric certification. The user compares the original and proposed correction on the actual wall before keeping it. No claim that repeating converges or that a software preview certifies LED colour."
+}

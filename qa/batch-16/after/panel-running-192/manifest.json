@@ -1,0 +1,23 @@
+{
+  "case": "panel-running",
+  "side": 192,
+  "session": {
+    "active": true,
+    "token": "813D0039-4700-4978-8E7B-2929BDF79999",
+    "purpose": "panel",
+    "seconds_remaining": 116.97320962499361
+  },
+  "frame": {
+    "bytes": 110592,
+    "sha256": "0487e64b1b923d7420bb9c7ee8af9e6cfa615e43380bd0b26cdc18b1ca6fba95",
+    "first_rgb": [
+      191,
+      191,
+      191
+    ],
+    "uniform": false
+  },
+  "requests": [
+    "/display-session"
+  ]
+}

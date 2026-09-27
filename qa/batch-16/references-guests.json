@@ -1,0 +1,58 @@
+{
+  "units": [
+    "D05"
+  ],
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine Tessera setup and calibration flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/42bd144e-3f8f-462a-bb8c-4ccd3faeb025",
+      "app": "Splitwise",
+      "image_inspected": true,
+      "observed": "Personal share card frames the QR under the person's name, with Share, Copy and Change actions outside the code. A separate footer explains who can use it.",
+      "applied": "An ivory guest pass gives the network or domain a clear identity, keeps the shared QR unmodified, and places timed wall actions and privacy guidance outside the code."
+    },
+    {
+      "url": "https://mobbin.com/screens/cea70b62-a53f-4bc2-9bb1-a4610f79dee7",
+      "app": "YouTube",
+      "image_inspected": true,
+      "observed": "A QR invitation pairs an explicit expiry sentence with a sparse scan area and one completion action.",
+      "applied": "The wall action states the selected expiry before sending and shows confirmed active time with a single Hide action."
+    },
+    {
+      "url": "https://mobbin.com/screens/5131f5fa-1510-4d29-b9eb-b400d3de1fe4",
+      "app": "Acorns",
+      "image_inspected": true,
+      "observed": "The code occupies a clear white field, with a short human scan instruction below it and ample surrounding space.",
+      "applied": "Clear optical separation, a lit margin around the code and a plain camera instruction. Decorative marks stay outside the code, and no logo covers any module."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://www.qrcode.com/en/howto/code.html",
+      "applied": "The standard quiet zone is four modules on every edge. On the wall the whole field is lit, so Tessera keeps at least one lit module of margin and gives the rest of the space to larger modules. The Core Image border is stripped so the margin and the module size are measured on the code itself. A code that would need fewer than 2 LEDs per module is refused."
+    },
+    {
+      "url": "https://github.com/zxing/zxing/wiki/Barcode-Contents#wi-fi-network-config-android-ios-11",
+      "applied": "Explicit WPA or nopass mode, hidden-network H:true, complete HTTP/HTTPS URLs and escaping of backslash, semicolon, colon, comma and quotation mark. Passwords are omitted entirely for open networks."
+    },
+    {
+      "url": "https://github.com/zxing/zxing/blob/master/core/src/main/java/com/google/zxing/client/result/WifiResultParser.java",
+      "applied": "The payload follows the scanner's actual parser. Hidden network is a boolean and the SSID remains exact, without silent trimming."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/coreimage/ciqrcodegenerator",
+      "applied": "Core Image generates local module data. No third-party QR service receives the network credential or link."
+    }
+  ],
+  "parity": {
+    "source": "tessera/Tessera/GuestQRCode.swift",
+    "composition": "The code is laid out at the wall's side, 64 or 192. Each module is a solid block of at least 2 LEDs, the largest whole-LED module that leaves at least 1 lit module of margin. The phone shows this same frame, one image pixel per LED, scaled with no interpolation. On a 64 wall codes up to 29 modules (version 3) fit at 2 LEDs per module. Denser codes are refused on 64. The 192 wall has room for denser codes.",
+    "fixtures": "Authored Wi-Fi, open network, hidden network, escaped special characters, a dense network and an example.com link, each laid out at 64 and 192. Apple Vision must decode every shown layout both at wall pixels and as the phone shows it. The escaped and dense fixtures are refused at 64 as expected.",
+    "receipt": "guests-parity/validation.json, written by scripts/qa/verify_guest_qr.swift with that directory as its argument.",
+    "limitations": "Software QR decoding does not certify physical LED scanning. LED brightness, viewing distance and camera focus still affect the real panel. No real network password was read or captured.",
+    "physical_scan": "Not performed yet. Scan the Wi-Fi fixture off the 64 panel (2 LEDs per module, 29 modules, 3 LEDs of margin) with iOS and Android cameras, join a test network with a numeric password and a hexadecimal-looking name from both, and record the results here."
+  }
+}

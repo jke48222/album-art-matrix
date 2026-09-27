@@ -1,0 +1,30 @@
+{
+  "unit": "D04",
+  "researched_at": "2026-09-27",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/571c159f-bff3-4997-89f7-05933a567f32",
+      "app": "Meta Quest",
+      "image_inspected": true,
+      "applied": "One labelled instrument at a time, direct adjustment beneath guidance."
+    },
+    {
+      "url": "https://mobbin.com/screens/83f9bd3b-b0bc-4ab9-8027-9203baece16e",
+      "app": "NYTimes",
+      "image_inspected": true,
+      "applied": "Keep the live sample close to the setting and selected-state marks."
+    },
+    {
+      "url": "https://mobbin.com/screens/b0ac4909-814a-4fda-9136-28308619ddf6",
+      "app": "Woolworths",
+      "image_inspected": true,
+      "applied": "A focused physical action beside a simple live test illustration."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://support.apple.com/en-us/101944",
+      "applied": "Use explicit colour/pattern inspection instructions with a clear end action; do not imply software detects faulty LEDs."
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "unit": "D01",
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine Tessera setup and calibration flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "app": "IKEA Home smart",
+      "url": "https://mobbin.com/screens/11cd9ff0-d824-4dcd-85d3-a97b7491e894",
+      "inspected_image": true,
+      "observed": "A single physical action sits beneath a vivid, bounded product illustration. Compact stage progress does not compete with the task.",
+      "applied": "One decision per screen with a dedicated first-light stage, three compact section indicators and a stable bottom action."
+    },
+    {
+      "app": "SmartThings",
+      "url": "https://mobbin.com/screens/f4b1811e-3d31-4e1a-a953-d87e2eadec7d",
+      "inspected_image": true,
+      "observed": "The room illustration explains the object, while available-device identity and searching status remain separate.",
+      "applied": "Separate the authored welcome study from actual live wall frames and show the answering host beneath the found state."
+    },
+    {
+      "app": "Eight Sleep",
+      "url": "https://mobbin.com/screens/7047e51a-57c3-4ec6-8f82-21a562e3854c",
+      "inspected_image": true,
+      "observed": "Pairing confirmation offers two concrete outcomes: the device flashed, or it did not. Recovery is available without leaving the flow.",
+      "applied": "Five-second glow has yes/no outcomes, retry and skip; asynchronous restoration is handled by the shared temporary-display lease."
+    },
+    {
+      "app": "Roku",
+      "url": "https://mobbin.com/screens/c0ed4e69-6909-40a5-9e0f-80aa931856f5",
+      "inspected_image": true,
+      "observed": "Local Network access is explained before discovery, with a help route close to the connect action.",
+      "applied": "Explain the iOS prompt in discovery and provide inline network troubleshooting plus a direct app-settings action, without falsely diagnosing denied permission."
+    },
+    {
+      "app": "Philips Hue",
+      "url": "https://mobbin.com/screens/0e2ec18f-59b1-4704-ac9d-1dae6575a632",
+      "inspected_image": true,
+      "observed": "An isolated product group provides visual focus, with concise setup text and an anchored primary action.",
+      "applied": "A framed panel, warm room planes and one bottom action create object-first composition; canonical Services handles account configuration."
+    }
+  ],
+  "primary_sources": [
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/onboarding",
+      "applied": "Keep first run optional, brief and connected to real interaction. All steps retain a finish-later path."
+    },
+    {
+      "url": "https://support.apple.com/en-us/102229",
+      "applied": "Describe Local Network permission accurately and offer Settings recovery. Lack of a discovery result is not treated as proof of denial."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+      "applied": "Use Dynamic Type, VoiceOver step and live-source labels, scrollable content, persistent actions and no required movement."
+    }
+  ],
+  "assets": {
+    "welcome_study": "Authored deterministic 64x64 RGB weave in OnboardingLightStudy. Clearly labelled first-light study, never sent to wall or presented as live.",
+    "room_stage": "Native SwiftUI Canvas room geometry, not a stock image."
+  }
+}

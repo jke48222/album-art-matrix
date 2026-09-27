@@ -102,7 +102,9 @@ class RoutineEngine:
         if sl and mono >= sl["t0"] + sl["minutes"] * 60:
             ctrl.sleep = None
             self.sleep_state = "completed"
-            ctrl.apply({"mode": "off"})
+            # The wall finishing its own fade is not a command, so a check
+            # someone is in the middle of stays up (interrupt=False).
+            ctrl.apply({"mode": "off"}, interrupt=False)
             state = ctrl.get()
 
         local = time.localtime(now)
@@ -129,7 +131,7 @@ class RoutineEngine:
         timer = ctrl.timer
         if timer and mono >= timer["end"] + 180:
             ctrl.timer = None
-            ctrl.apply({"mode": timer["ret"]})
+            ctrl.apply({"mode": timer["ret"]}, interrupt=False)
 
     def snapshot(self, ctrl, now: float, mono: float) -> dict:
         state = ctrl.get()

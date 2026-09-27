@@ -1,0 +1,12 @@
+{
+  "google": {
+    "key_set": true,
+    "cx_set": true,
+    "pictures": 0,
+    "last": null,
+    "state": "refused",
+    "verified": false,
+    "checking": false,
+    "problem": "Google refused this connection. Check your existing API access, key and search engine ID."
+  }
+}

@@ -6,6 +6,7 @@ they name a record the wall knows, and the words can say which is meant.
 Pictures come from Google when a key is on the wall, the web otherwise,
 then Wikipedia, then Openverse.
 """
+import io
 import os
 import sys
 
@@ -26,6 +27,9 @@ class FakeResponse:
     def json(self):
         return self._p
 
+    def close(self):
+        pass
+
 
 def itunes_song(name, artist):
     return {"trackName": name, "artistName": artist, "collectionName": f"{name} - Single",
@@ -42,7 +46,7 @@ def world(monkeypatch):
     """The services, answered from a script per test, and the fetch of any
     picture answered with a small landscape image unless the URL is on the
     refused list."""
-    script = {"itunes": {"album": [], "song": []}, "google": [], "web": [],
+    script = {"itunes": {"album": [], "song": []}, "google": [], "google_status": 200, "web": [],
               "wikipedia": [], "openverse": [], "refuse": set()}
     calls = []
 
@@ -53,7 +57,7 @@ def world(monkeypatch):
             return FakeResponse({"results": script["itunes"][params["entity"]]})
         if url == S.GOOGLE:
             calls.append(("google", params.get("q")))
-            return FakeResponse({"items": script["google"]})
+            return FakeResponse({"items": script["google"]}, script["google_status"])
         if url == S.WIKIPEDIA:
             calls.append(("wikipedia", params.get("gsrsearch")))
             return FakeResponse({"query": {"pages": script["wikipedia"]}})
@@ -178,3 +182,46 @@ def test_nothing_anywhere_says_so(world, shower):
     out = shower.show("zxqv plorb")
     assert "could not find a picture or a cover" in out["error"]
     assert shower.ctrl.get()["mode"] != "frame"
+
+
+def test_the_last_picture_keeps_the_frame_the_wall_showed(world, shower, monkeypatch):
+    world["web"] = [web_hit("Eiffel Tower", "https://web/eiffel.jpg", None, source="paris.fr")]
+    shower.show("the eiffel tower")
+    last = shower.status()["last"]
+    assert last["art_url"] == "https://web/eiffel.jpg" and last["credit"] == "paris.fr"
+    assert isinstance(last["at"], int) and last["frame"] is True
+    png = shower.last_picture_frame()
+    frame = Image.open(io.BytesIO(png)).convert("RGB")
+    assert frame.size == (64, 64) and frame.tobytes() == bytes(shower.ctrl.frame_override)
+    # A cover shown afterwards is the wall's newest frame, not the last picture.
+    monkeypatch.setattr(S, "fetch_art", lambda url, timeout=15.0: Image.new("RGB", (300, 300), (10, 200, 30)))
+    world["itunes"]["album"] = [itunes_album("Blond", "Frank Ocean")]
+    assert shower.show("blond", kind="cover")["kind"] == "cover"
+    assert bytes(shower.ctrl.frame_override) != frame.tobytes()
+    assert shower.last_picture_frame() == png and shower.status()["last"]["title"] == "Eiffel Tower"
+
+
+def test_a_failed_google_search_never_prints_the_key(monkeypatch, capsys):
+    secret = "AIza" + "S" * 35
+
+    def fail(*args, **kwargs):
+        raise S.requests.ConnectionError(f"{S.GOOGLE}?key={secret}&cx=engine12345")
+
+    monkeypatch.setattr(S.requests, "get", fail)
+    assert S.google_pictures("tower", secret, "engine12345") == []
+    assert secret not in capsys.readouterr().out
+
+
+def test_real_searches_keep_the_google_connection_honest(world, shower):
+    shower.configure(api_key="A" * 39, cx="0123456789abcdef0")
+    world["web"] = [web_hit("Eiffel Tower", "https://web/eiffel.jpg", None)]
+    world["google_status"] = 403
+    assert shower.show("the eiffel tower")["source"] == "web"
+    assert shower.status()["state"] == "refused" and "A" * 39 not in str(shower.status())
+    world["google_status"] = 429
+    shower.show("the eiffel tower")
+    assert shower.status()["state"] == "limited"
+    world["google_status"] = 200
+    world["google"] = [{"title": "Eiffel Tower", "link": "https://g/eiffel.jpg"}]
+    assert shower.show("the eiffel tower")["source"] == "google"
+    assert shower.status()["verified"] and shower.status()["problem"] is None

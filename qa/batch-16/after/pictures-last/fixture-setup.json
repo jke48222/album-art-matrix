@@ -1,0 +1,20 @@
+{
+  "google": {
+    "key_set": true,
+    "cx_set": true,
+    "pictures": 12,
+    "last": {
+      "title": "Quiet water, late afternoon",
+      "source": "openverse",
+      "credit": "Authored QA artwork",
+      "art_url": "http://127.0.0.1:52758/qa/art.png",
+      "at": 1790521526,
+      "frame": true
+    },
+    "state": "ready",
+    "verified": true,
+    "checking": false,
+    "problem": null,
+    "checked_at": 1790521646
+  }
+}

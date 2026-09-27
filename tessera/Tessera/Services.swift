@@ -104,7 +104,12 @@ struct WallServices: Decodable {
     /// Pictures: whether a Google key and search engine are on the wall for
     /// "show me", and what it last found.
     struct Google: Decodable {
-        struct Last: Decodable { var title: String; var source: String? }
+        var state: String?
+        var verified: Bool?
+        var checking: Bool?
+        var checked_at: Double?
+        /// frame: the wall kept the square it made, at GET /pictures/last.png.
+        struct Last: Decodable { var title: String; var source: String?; var art_url: String?; var credit: String?; var at: Double?; var frame: Bool? }
         var key_set: Bool
         var cx_set: Bool
         var pictures: Int?
@@ -339,91 +344,6 @@ struct Problem: View {
 
 
 // MARK: - Pictures: a Google key and search engine, so "show me" searches Google Images
-
-struct PicturesPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var key = ""
-    @State private var cx = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var google: WallServices.Google? { services?.google }
-    private var ready: Bool { google?.key_set == true && google?.cx_set == true }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var typedCx: String { cx.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil, !typedKey.isEmpty || !typedCx.isEmpty else { return false }
-        let keyOK = typedKey.isEmpty ? google?.key_set == true : typedKey.count >= 30
-        let cxOK = typedCx.isEmpty ? google?.cx_set == true : typedCx.count >= 8
-        return keyOK && cxOK
-    }
-    private var foundLine: String {
-        guard let g = google else { return "" }
-        if !ready { return "Without a key the wall searches the web, then Wikipedia." }
-        let n = g.pictures ?? 0
-        if n == 0 { return "Ready. Say \"show me the Eiffel Tower\"." }
-        return n == 1 ? "One picture found so far." : "\(n) pictures found so far."
-    }
-
-    var body: some View {
-        SetupPage("Pictures",
-                  blurb: "\"Show me the Eiffel Tower\" puts a picture of it on the wall. With a Google key and a search engine of your own it searches Google Images; without them it searches the web through DuckDuckGo, then Wikipedia.") {
-            SetupGroup("Your Google key", note: "Free for a hundred searches a day. An API key from the Google Cloud console with the Custom Search API turned on, and the id of a Programmable Search Engine set to search the entire web with image search on. Both kept on the wall.") {
-                KeyField(placeholder: google?.key_set == true ? "API key (one is on the wall)" : "API key", text: $key)
-                Rule()
-                KeyField(placeholder: google?.cx_set == true ? "Search engine id (one is on the wall)" : "Search engine id", text: $cx)
-                Rule()
-                SetupRow(title: "Need them?", subtitle: "Opens Programmable Search Engine in Safari. Make an engine that searches the entire web with image search on; its id is on the Basics page, and the API key is under Custom Search JSON API, Get a key.") {
-                    ActionPill(title: "Get them", filled: false) {
-                        openURL(URL(string: "https://programmablesearchengine.google.com/controlpanel/all")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: (ready && typedKey.isEmpty && typedCx.isEmpty) ? "On the wall" : nil,
-                         accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem ?? google?.problem)
-
-            SetupGroup("On the wall", note: "Google first when it is set up, the web otherwise, then the lead image of the thing's Wikipedia page, then an open photo library. A picture stays up for ten minutes.") {
-                SetupRow(title: "Found", subtitle: foundLine) { EmptyView() }
-                if let l = google?.last {
-                    Rule()
-                    SetupRow(title: "Last picture", subtitle: l.title + (l.source.map { ", from \($0)" } ?? "")) {
-                        EmptyView()
-                    }
-                }
-            }
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                if Task.isCancelled { break }
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-            }
-        }
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        var patch: [String: Any] = [:]
-        if !typedKey.isEmpty { patch["api_key"] = typedKey }
-        if !typedCx.isEmpty { patch["cx"] = typedCx }
-        Task {
-            let (fresh, why) = await ServiceSave.send(["google": patch], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); key = ""; cx = "" }
-            busy = false
-        }
-    }
-}
 
 // MARK: - Posters: the TMDB key, so what the Mac watches gets its poster
 

@@ -1,0 +1,150 @@
+{
+  "assertions" : 141,
+  "authored_fixtures_only" : true,
+  "physical_scan" : "Not performed. Software decoding does not certify reading the LEDs with a camera.",
+  "results" : [
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "wifi",
+      "leds_per_module" : 2,
+      "margin_leds" : 3,
+      "margin_modules" : 1.5,
+      "modules" : 29,
+      "phone_file" : "wifi-64-phone.png",
+      "refused" : false,
+      "side" : 64,
+      "wall_file" : "wifi-64.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "wifi",
+      "leds_per_module" : 6,
+      "margin_leds" : 9,
+      "margin_modules" : 1.5,
+      "modules" : 29,
+      "phone_file" : "wifi-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "wifi-192.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "hidden",
+      "leds_per_module" : 2,
+      "margin_leds" : 3,
+      "margin_modules" : 1.5,
+      "modules" : 29,
+      "phone_file" : "hidden-64-phone.png",
+      "refused" : false,
+      "side" : 64,
+      "wall_file" : "hidden-64.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "hidden",
+      "leds_per_module" : 6,
+      "margin_leds" : 9,
+      "margin_modules" : 1.5,
+      "modules" : 29,
+      "phone_file" : "hidden-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "hidden-192.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "open",
+      "leds_per_module" : 2,
+      "margin_leds" : 7,
+      "margin_modules" : 3.5,
+      "modules" : 25,
+      "phone_file" : "open-64-phone.png",
+      "refused" : false,
+      "side" : 64,
+      "wall_file" : "open-64.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "open",
+      "leds_per_module" : 7,
+      "margin_leds" : 8,
+      "margin_modules" : 1.1428571428571428,
+      "modules" : 25,
+      "phone_file" : "open-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "open-192.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "link",
+      "leds_per_module" : 2,
+      "margin_leds" : 7,
+      "margin_modules" : 3.5,
+      "modules" : 25,
+      "phone_file" : "link-64-phone.png",
+      "refused" : false,
+      "side" : 64,
+      "wall_file" : "link-64.png"
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "link",
+      "leds_per_module" : 7,
+      "margin_leds" : 8,
+      "margin_modules" : 1.1428571428571428,
+      "modules" : 25,
+      "phone_file" : "link-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "link-192.png"
+    },
+    {
+      "fixture" : "escaped",
+      "modules" : null,
+      "refused" : true,
+      "side" : 64
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "escaped",
+      "leds_per_module" : 5,
+      "margin_leds" : 13,
+      "margin_modules" : 2.6000000000000001,
+      "modules" : 33,
+      "phone_file" : "escaped-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "escaped-192.png"
+    },
+    {
+      "fixture" : "dense",
+      "modules" : null,
+      "refused" : true,
+      "side" : 64
+    },
+    {
+      "decoded_as_phone" : true,
+      "decoded_at_wall_pixels" : true,
+      "fixture" : "dense",
+      "leds_per_module" : 5,
+      "margin_leds" : 13,
+      "margin_modules" : 2.6000000000000001,
+      "modules" : 33,
+      "phone_file" : "dense-192-phone.png",
+      "refused" : false,
+      "side" : 192,
+      "wall_file" : "dense-192.png"
+    }
+  ],
+  "rule" : "At least 2 LEDs per module and 1 lit module of margin, laid out at the wall's side."
+}

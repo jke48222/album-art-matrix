@@ -1,0 +1,30 @@
+{
+  "review": "initial native captures",
+  "inspected": {
+    "after/pictures/room-live.png": "e2c1a545dfd802013a58ef03578535e099be3bd07638c2a895709dbcdf0f1153",
+    "after/pictures/room-large.png": "1a73b861df02ef105308d43dbec779c0b385964e81994d488a24e022954e6de0",
+    "after/pictures/room-offline.png": "0ba6720510244190c0fd218fa4b8ff02cb13f2011bc8eafc1255f8ebeac8be36",
+    "after/colour/room-live.png": "cb419361180b76caf13d4cf3dbd7f282889ca30f7bc05caef924fd5db5914812",
+    "after/colour/room-large.png": "c17009d9c9ead811e3088e0519d977bbe8ac6e2ef6bf5ad6c60b08931c3d2d99",
+    "after/colour/room-offline.png": "3e61bc8f7efd2830e648f1b641d9008c116a65c267c1d4411dc562ff5e553f8a"
+  },
+  "findings": [
+    {
+      "surface": "Pictures normal/offline",
+      "result": "No clipping; source order, direct search action and offline recovery readable."
+    },
+    {
+      "surface": "Pictures AX",
+      "result": "Oversized action and source heading pushed setup below several screens; compacted AX type and moved Google disclosure directly after search action."
+    },
+    {
+      "surface": "Colour normal/offline",
+      "result": "No clipping; neutral spectrum, gain rails and last-known/offline wording legible."
+    },
+    {
+      "surface": "Colour AX",
+      "result": "Decorative headline dominated screen; removed decorative hero at AX, compacted label/status/rails and brought Measure action before gain readout."
+    }
+  ],
+  "final_recapture_review": "pending"
+}

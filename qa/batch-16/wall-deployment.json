@@ -1,0 +1,61 @@
+{
+  "status": "deployed",
+  "base": "1303f46",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "94bd297fb654e581e56867d0ff354677243e79b3f4caaa788076ec257ff7481f",
+      "after_sha256": "8748fa9076c0d2c3213aa4b77d1208eab625d2508299d37b0539d0d923463339"
+    },
+    {
+      "path": "brain/display_session.py",
+      "before_sha256": null,
+      "after_sha256": "3ce069a1fc33c52a2081f85d79a411bc4b9b6d7e9414573a33533adb33642bfb"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "4e5745aef33f11d91c0ab8cf009a86cfd864e0340aa7b27cd169e8ae154baeb2",
+      "after_sha256": "ea8711e3e9dab3a2d715047ebd1f8b72108476174961c9938515a40a55c47a03"
+    },
+    {
+      "path": "brain/picture_connection.py",
+      "before_sha256": null,
+      "after_sha256": "319a9e813afd8f35a838848b19a76cb9e6a806d02cd2f76fa0af217eb6689d28"
+    },
+    {
+      "path": "brain/routines.py",
+      "before_sha256": "ea3fdfbda83d928dda4ef86485d8b85e4afc63c347b3ba105614fa08306b3493",
+      "after_sha256": "2305b69476f978c6d2c44c92aa567e76fb7ca00892029977f5de1e7459868626"
+    },
+    {
+      "path": "brain/show.py",
+      "before_sha256": "cb33feb27877b74065fc75a51539ea717a1a8bb781083a71db2d8d4f2ce13dc8",
+      "after_sha256": "b934211c36920bc87d130b30bdbb56ea42faa51e6f0c500972b92707ce56e090"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2860",
+  "current_pid": "301214",
+  "mode_before": "off",
+  "mode_after": "off",
+  "display_session": {
+    "active": false
+  },
+  "health": {
+    "fps": 0.0,
+    "temp_c": 56.8,
+    "throttled": {
+      "now": false,
+      "ever": false
+    },
+    "uptime_s": 4,
+    "loop_age_s": null,
+    "quiet_s": null,
+    "idle": null,
+    "mode": "off",
+    "ytdlp": "2026.08.19"
+  }
+}

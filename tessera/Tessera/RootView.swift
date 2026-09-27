@@ -246,6 +246,7 @@ struct RootView: View {
             // `-settings` on the launch line opens Setup straight away, so a
             // simulator run can be looked at without a tap nobody can make.
             if CommandLine.arguments.contains("-settings") { router.present(.settings) }
+            if CommandLine.arguments.contains("-onboarding-step") { router.present(.onboarding) }
             if CommandLine.arguments.contains("-archive") { page = 1 }
             if CommandLine.arguments.contains("-studio") { router.present(.studio) }
             if let index = CommandLine.arguments.firstIndex(of: "-display-page"), index + 1 < CommandLine.arguments.count {

@@ -1,0 +1,11 @@
+{
+  "id": "S14",
+  "mobbin": [
+    {"url":"https://mobbin.com/screens/5b10fd05-a7df-4d48-a6b5-a7482113af5c","app":"Arc Search","inspected_image":true,"inspected_by":"root","applied":"An ordered, named source route makes the active search path understandable without exposing a duplicate search editor."},
+    {"url":"https://mobbin.com/screens/b4576738-d5e3-49e6-8099-5fc70a857230","app":"Deepstash","inspected_image":true,"inspected_by":"root","applied":"Source-labelled image groups inform the last picture card: the frame the wall showed, with its source and when it was shown."},
+    {"url":"https://mobbin.com/screens/9438fa24-940d-4483-b09a-05d0037c8821","app":"Dropbox","inspected_image":true,"inspected_by":"root","applied":"Inline management keeps saved connection details beside their status instead of opening another setup surface."}
+  ],
+  "primary": [
+    {"url":"https://developers.google.com/custom-search/v1/overview","reviewed":"2026-09-27","applied":"Google Custom Search JSON API is closed to new customers. Existing customers have until January 1, 2027. The optional existing-account connection is separated from Tessera’s built-in search. The explicit verification action explains its quota use."}
+  ]
+}

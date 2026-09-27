@@ -47,6 +47,7 @@ from PIL import Image
 from .art.fetch import fetch_art
 from .art.pipeline import prepare
 from .video import ytdlp
+from .picture_connection import PictureConnection
 
 SHOW_S = 600.0                  # a cover asked for stays this long
 ITUNES = "https://itunes.apple.com/search"
@@ -113,34 +114,45 @@ def find_art(query: str) -> dict | None:
 # thumb (a smaller copy, or None), credit, source}. The first that can be
 # fetched is the one shown.
 
-def google_pictures(query: str, api_key: str, cx: str) -> list[dict]:
-    """Google Images, through the Custom Search JSON API: a key from the
-    Cloud console and a Programmable Search Engine that searches the whole
-    web with image search on. A hundred searches a day are free."""
+def google_pictures(query: str, api_key: str, cx: str, note=None) -> list[dict]:
+    """Existing Google customers only; failures fall through to built-in search.
+    note(api_key, cx, status) hears how Google answered, so the saved
+    connection's state follows real searches and not only manual checks."""
     if not api_key or not cx:
         return []
     try:
-        r = requests.get(GOOGLE, params={
+        response = requests.get(GOOGLE, params={
             "key": api_key, "cx": cx, "q": query, "searchType": "image",
-            "num": 6, "safe": "active", "imgSize": "large",
-        }, headers={"User-Agent": UA}, timeout=10)
-        body = r.json()
-        if r.status_code != 200:
-            why = (body.get("error") or {}).get("message", f"http {r.status_code}")
-            print(f"[show] google: {why}", flush=True)
+            "num": 6, "safe": "active"}, headers={"User-Agent": UA}, timeout=10)
+        try:
+            if response.status_code != 200:
+                if note is not None:
+                    note(api_key, cx, response.status_code)
+                return []
+            body = response.json()
+        finally:
+            response.close()
+        if not isinstance(body, dict) or not isinstance(body.get("items", []), list):
             return []
-        items = body.get("items", [])
-    except (requests.RequestException, ValueError) as exc:
-        print(f"[show] google: {exc}", flush=True)
+    except (requests.RequestException, ValueError, TypeError):
+        # Requests exceptions can contain the complete URL, including the key.
+        print("[show] google: search unavailable", flush=True)
         return []
+    if note is not None and "error" not in body:
+        note(api_key, cx, 200)
     out = []
-    for x in items:
-        link = x.get("link")
-        if not link:
+    for item in body.get("items", []):
+        if not isinstance(item, dict):
             continue
-        out.append({"title": x.get("title") or query, "art_url": link,
-                    "thumb": (x.get("image") or {}).get("thumbnailLink"),
-                    "credit": x.get("displayLink") or "Google", "source": "google"})
+        link = item.get("link")
+        if not isinstance(link, str) or not link.startswith(("https://", "http://")):
+            continue
+        image = item.get("image") if isinstance(item.get("image"), dict) else {}
+        thumb = image.get("thumbnailLink")
+        out.append({"title": item.get("title") if isinstance(item.get("title"), str) else query,
+                    "art_url": link, "thumb": thumb if isinstance(thumb, str) else None,
+                    "credit": item.get("displayLink") if isinstance(item.get("displayLink"), str) else "Google",
+                    "source": "google"})
     return out
 
 
@@ -224,8 +236,10 @@ class Shower:
         self._until = 0.0
         self.last = None
         self.google_key, self.google_cx = google_key or "", google_cx or ""
+        self.picture_connection = PictureConnection(self.google_key, self.google_cx)
         self.pictures = 0            # pictures put up, for the phone's page
-        self.last_picture = None     # {title, source}
+        self.last_picture = None     # {title, source, art_url, credit, at, frame}
+        self._last_picture_png = None    # the frame that picture made, for GET /pictures/last.png
         self.last_show = None
         self.last_earworm = None
         self._work_lock = threading.Lock()
@@ -242,11 +256,17 @@ class Shower:
         """The Google key and search engine, from the phone's Services page."""
         self.google_key = (api_key or "").strip()
         self.google_cx = (cx or "").strip()
+        self.picture_connection.configure(self.google_key, self.google_cx)
 
     def status(self) -> dict:
         """For GET /services: whether Google is set, and what was last found."""
         return {"key_set": bool(self.google_key), "cx_set": bool(self.google_cx),
-                "pictures": self.pictures, "last": self.last_picture, "problem": None}
+                "pictures": self.pictures, "last": self.last_picture, **self.picture_connection.status()}
+
+    def last_picture_frame(self) -> bytes | None:
+        """The PNG of the frame the last picture put on the wall, or None."""
+        with self._frame_lock:
+            return self._last_picture_png
 
     def _receipt(self, value: dict | None) -> dict | None:
         if value is None:
@@ -308,7 +328,7 @@ class Shower:
             return {"error": self.problem, "code": 409}
         except Exception as exc:
             print(f"[show] {kind}: {type(exc).__name__}: {exc}", flush=True)
-            self.problem = "The search service could not finish. Your words are safe; try again."
+            self.problem = "The search service could not finish. Your words are safe. Try again."
             return {"error": self.problem, "code": 502}
         finally:
             self.pending = None
@@ -378,7 +398,7 @@ class Shower:
             # now. An old expiry must never remove someone else's artwork.
             if (self.ctrl.get()["mode"] == "frame" and self.ctrl.shown_seq == self._frame_seq
                     and self.ctrl.frame_override == self._frame_bytes):
-                self.ctrl.apply({"mode": self._ret or "art"})
+                self.ctrl.apply({"mode": self._ret or "art"}, interrupt=False)
             self._ret = None
 
     # ---- which is meant: a record the wall knows, or a thing in the world ------------------
@@ -409,7 +429,8 @@ class Shower:
     def find_pictures(self, query: str) -> list[dict]:
         """Candidates for a picture of the words, best first: Google when it
         is set up, the web, Wikipedia's page, Openverse."""
-        out = google_pictures(query, self.google_key, self.google_cx)
+        out = google_pictures(query, self.google_key, self.google_cx,
+                              note=self.picture_connection.note)
         out += web_pictures(query)
         for one in (wikipedia_picture(query), openverse_picture(query)):
             if one is not None:
@@ -423,13 +444,22 @@ class Shower:
             # hand the picture over (hotlinking refused, a login wall)
             for url in (u for u in (pic["art_url"], pic.get("thumb")) if u):
                 if self._put_up(url, SHOW_S):
-                    self.pictures += 1
-                    self.last_picture = {"title": pic["title"], "source": pic["source"]}
                     out = {"what": "show", "kind": "picture", "title": pic["title"],
                            "artist": pic["credit"], "album": "", "art_url": url,
                            "credit": pic["credit"], "source": pic["source"]}
                     print(f"[show] a picture of {pic['title']!r} ({pic['source']}) on the wall", flush=True)
-                    return self._remember({"shown": True, **out, "seconds": SHOW_S})
+                    shown = self._remember({"shown": True, **out, "seconds": SHOW_S})
+                    # Kept apart from last_show, which a later cover or video
+                    # replaces: the phone's Pictures page shows this frame, the
+                    # square the wall made, rather than fetching the source.
+                    png = shown.get("preview_png")
+                    with self._frame_lock:
+                        self._last_picture_png = base64.b64decode(png) if png else None
+                        self.pictures += 1
+                        self.last_picture = {"title": pic["title"], "source": pic["source"], "art_url": url,
+                                             "credit": pic["credit"], "at": int(time.time()),
+                                             "frame": self._last_picture_png is not None}
+                    return shown
         return None
 
     # ---- the four ---------------------------------------------------------------------------------

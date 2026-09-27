@@ -1,0 +1,406 @@
+{
+  "batch": 16,
+  "base": "1303f46",
+  "implemented_units": [
+    "S14",
+    "D01",
+    "D03",
+    "D04",
+    "D05"
+  ],
+  "validated_at": "2026-09-27T15:13:49.129584+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed"
+  },
+  "tests": {
+    "python_full_suite": 1877,
+    "native_interactions": 12,
+    "symbols": {
+      "checked": 147,
+      "missing": [],
+      "passed": 147
+    },
+    "calibration_arithmetic": 29,
+    "guest_qr_assertions": 141
+  },
+  "native_screens": [
+    {
+      "case": "colour",
+      "state": "room-live",
+      "file": "after/colour/room-live.png",
+      "sha256": "aafa702cea23b20018cfdacc51d8b39fadc5973ac8a151153bb6404fd7311d3b"
+    },
+    {
+      "case": "colour",
+      "state": "room-large",
+      "file": "after/colour/room-large.png",
+      "sha256": "c8d663d26dd7277761b9ec11ad4711af17c025680f04e0ace97f031daab19d9c"
+    },
+    {
+      "case": "colour",
+      "state": "room-offline",
+      "file": "after/colour/room-offline.png",
+      "sha256": "8d9dd3a35168e955c43d7c4fa8b3a4e0e7ca92eb65b6c4396c94fad7289fd060"
+    },
+    {
+      "case": "colour-card",
+      "state": "room-live",
+      "file": "after/colour-card/room-live.png",
+      "sha256": "fb06203e6a91d36bac8b62f415d6148467affffefa22242982c37071a8387f50"
+    },
+    {
+      "case": "colour-clipped",
+      "state": "room-live",
+      "file": "after/colour-clipped/room-live.png",
+      "sha256": "5e908c7679fb1779e527f7f0dfbd54798f2ad5f0bb091188025d11713842e8dd"
+    },
+    {
+      "case": "colour-dark",
+      "state": "room-live",
+      "file": "after/colour-dark/room-live.png",
+      "sha256": "facfcc308fb9e609c50b028e223430cb7cbb5d4ff44b09d857d58e5333679fca"
+    },
+    {
+      "case": "colour-denied",
+      "state": "room-live",
+      "file": "after/colour-denied/room-live.png",
+      "sha256": "abf3b55b265fcb961bed7e824f8f6414f977a3523e8c38e80c2a6682197f3310"
+    },
+    {
+      "case": "colour-occupied",
+      "state": "room-live",
+      "file": "after/colour-occupied/room-live.png",
+      "sha256": "55212b467fceb8bf9a5863b63fb8bd5cf0001e905e411f718af30b7e866f7456"
+    },
+    {
+      "case": "colour-offline",
+      "state": "room-live",
+      "file": "after/colour-offline/room-live.png",
+      "sha256": "228183b8fd99a5f6a32c540cac9fe71f8f6e572cce9b0197688bce4f61dfc50b"
+    },
+    {
+      "case": "colour-restricted",
+      "state": "room-live",
+      "file": "after/colour-restricted/room-live.png",
+      "sha256": "50658a45dbd9826a162dd60e5a3536caba4652e1879ea73dcff7289c40525a00"
+    },
+    {
+      "case": "colour-result",
+      "state": "room-live",
+      "file": "after/colour-result/room-live.png",
+      "sha256": "63f31f67c9dfc1e803df3c58899c4d7e818b5e7f8832d50cd9fc8ccce7be28a8"
+    },
+    {
+      "case": "guests",
+      "state": "room-live",
+      "file": "after/guests/room-live.png",
+      "sha256": "13526e12daa2a1a06bb4e5abb806ad8725d03402514e725e1d4a457cb482f129"
+    },
+    {
+      "case": "guests",
+      "state": "room-large",
+      "file": "after/guests/room-large.png",
+      "sha256": "be2b806d5ba5330fd6c4805a57741572524be48f768c934ba54f174507a0ca53"
+    },
+    {
+      "case": "guests",
+      "state": "room-offline",
+      "file": "after/guests/room-offline.png",
+      "sha256": "4e7e303c1344e1fe56892ef1a56cdde131234558a7de3c8b75ba076e8fdc45f2"
+    },
+    {
+      "case": "guests-dense",
+      "state": "room-live",
+      "file": "after/guests-dense/room-live.png",
+      "sha256": "bc486af432490984a0263678b90e4f36a74e58a96c9baadbd52f4bad63910a78"
+    },
+    {
+      "case": "guests-hidden",
+      "state": "room-live",
+      "file": "after/guests-hidden/room-live.png",
+      "sha256": "edd887c7624dba398f0a93d3f03dde6e7ed66fdbba00caf675a160da729cdadd"
+    },
+    {
+      "case": "guests-link",
+      "state": "room-live",
+      "file": "after/guests-link/room-live.png",
+      "sha256": "1c070784755f19a55b11bd2487ac0199af16f260e9fb275c009df30ad85d2772"
+    },
+    {
+      "case": "guests-long",
+      "state": "room-live",
+      "file": "after/guests-long/room-live.png",
+      "sha256": "a64772bb0bc64ec5e596766d8ad938d470a4eb895a1d4be91d0488793b3a2b82"
+    },
+    {
+      "case": "guests-open",
+      "state": "room-live",
+      "file": "after/guests-open/room-live.png",
+      "sha256": "0441db83014a241efaf3c980e99ebcaeb6d1eba6e6fd9460812222f97e9126c9"
+    },
+    {
+      "case": "onboarding",
+      "state": "room-live",
+      "file": "after/onboarding/room-live.png",
+      "sha256": "2a4d056b336f0b730cb5fced4cf3d693bfd2024c291cf910d5534d3933df5074"
+    },
+    {
+      "case": "onboarding",
+      "state": "room-large",
+      "file": "after/onboarding/room-large.png",
+      "sha256": "ed844bc5d69f6ef1a68443c23d914542a457c200e5e13085132fa82445d568ce"
+    },
+    {
+      "case": "onboarding",
+      "state": "room-offline",
+      "file": "after/onboarding/room-offline.png",
+      "sha256": "9ded278826d05ccdcf491417142145f34d73da695cd3d55f4c99d85d7f80f2d5"
+    },
+    {
+      "case": "onboarding-done",
+      "state": "room-live",
+      "file": "after/onboarding-done/room-live.png",
+      "sha256": "efe2b3c7b90bc3f042ba6e58dc4eae729e5cac320b5033404000118333522bdc"
+    },
+    {
+      "case": "onboarding-find",
+      "state": "room-live",
+      "file": "after/onboarding-find/room-live.png",
+      "sha256": "d5eb7d122aa58829890079a284584e8161ae0d2bcb0007dddc7c9a5cd377e21b"
+    },
+    {
+      "case": "onboarding-found",
+      "state": "room-live",
+      "file": "after/onboarding-found/room-live.png",
+      "sha256": "c599a3fc3070f9c8d7bc03dcb38492e6bb59f06dc5ba762d05ad7c9ede85eebc"
+    },
+    {
+      "case": "onboarding-glow",
+      "state": "room-live",
+      "file": "after/onboarding-glow/room-live.png",
+      "sha256": "c8cbd4aca76798800773b9832359c852173621a23a563ada60a755f568a3700e"
+    },
+    {
+      "case": "onboarding-light",
+      "state": "room-live",
+      "file": "after/onboarding-light/room-live.png",
+      "sha256": "0edf96be07f747aa5020d2d03fbafb01fcc12feae1670736aae2d39174883e27"
+    },
+    {
+      "case": "onboarding-noWall",
+      "state": "room-live",
+      "file": "after/onboarding-noWall/room-live.png",
+      "sha256": "3d3fccf8a7eecf05f659f058f62e8b62bf13564559092e3eca52d69d082c2474"
+    },
+    {
+      "case": "onboarding-services",
+      "state": "room-live",
+      "file": "after/onboarding-services/room-live.png",
+      "sha256": "097bf27674035aeb8a43295a3e96b7b3ba54ebd384a0593b04cf274030485c2a"
+    },
+    {
+      "case": "panel",
+      "state": "room-live",
+      "file": "after/panel/room-live.png",
+      "sha256": "1f227b0804f8c442755f9eb3b4bb1b9a18cda96affebd44b55b14805b7e5571a"
+    },
+    {
+      "case": "panel",
+      "state": "room-large",
+      "file": "after/panel/room-large.png",
+      "sha256": "c02dc9bc8de7ae5a2e0098374e86baa70df4fbca131c6c6b555f1d084736bc96"
+    },
+    {
+      "case": "panel",
+      "state": "room-offline",
+      "file": "after/panel/room-offline.png",
+      "sha256": "887b5ca5f14ac9b8df945770738dd459ba18702cce8dd2abf0251fbaff1573ff"
+    },
+    {
+      "case": "panel-black",
+      "state": "room-live",
+      "file": "after/panel-black/room-live.png",
+      "sha256": "04ff40022cf4b926a24b3391cccf953b549abaec2f1572b8f841f41dc2a88287"
+    },
+    {
+      "case": "panel-grid",
+      "state": "room-live",
+      "file": "after/panel-grid/room-live.png",
+      "sha256": "3c8e6a7a8881a9be913d1d4587652dd96292908dad797b7cf9552d2099235e4e"
+    },
+    {
+      "case": "panel-ramp",
+      "state": "room-live",
+      "file": "after/panel-ramp/room-live.png",
+      "sha256": "705099222cb380382f6b8b992c0404a10a495d5f88b8d72b8118cbc0205aeb22"
+    },
+    {
+      "case": "panel-red",
+      "state": "room-live",
+      "file": "after/panel-red/room-live.png",
+      "sha256": "9daa225e1e7a4a88d3c4374c6bac77174d6ea40d69d3dd84036423a7b04ce2d4"
+    },
+    {
+      "case": "pictures",
+      "state": "room-live",
+      "file": "after/pictures/room-live.png",
+      "sha256": "f14a541416f3137c3543c0ef6c8a926339b512764a1354164f92ce01ced1bdf8"
+    },
+    {
+      "case": "pictures",
+      "state": "room-large",
+      "file": "after/pictures/room-large.png",
+      "sha256": "e110e43375bb85892dee02fe1e87a6b1231466a96ab5f1901f5eb381c75d1d67"
+    },
+    {
+      "case": "pictures",
+      "state": "room-offline",
+      "file": "after/pictures/room-offline.png",
+      "sha256": "04cb11b9b16ebdfee4058722d32903700b5a566d6f4080ff5795ed9fcc8dee17"
+    },
+    {
+      "case": "pictures-checking",
+      "state": "room-live",
+      "file": "after/pictures-checking/room-live.png",
+      "sha256": "dc9fb7a7cf493a946785cca4cada7bc0ce8e4bbed20a07b4802f4390b310ae0a"
+    },
+    {
+      "case": "pictures-last",
+      "state": "room-live",
+      "file": "after/pictures-last/room-live.png",
+      "sha256": "35c889f473973162813b50db7740eb58ff8c7bc00aa78783cc52b6f6a4e757a8"
+    },
+    {
+      "case": "pictures-off",
+      "state": "room-live",
+      "file": "after/pictures-off/room-live.png",
+      "sha256": "48560dc5470ec3345d3bec7092bfaf16a32aa62d904388a0b1c44eae70ed5488"
+    },
+    {
+      "case": "pictures-refused",
+      "state": "room-live",
+      "file": "after/pictures-refused/room-live.png",
+      "sha256": "c5ef9b13782b2838bf40893afacb92511f6775886558511804969ba5cbeb99c5"
+    },
+    {
+      "case": "pictures-saved",
+      "state": "room-live",
+      "file": "after/pictures-saved/room-live.png",
+      "sha256": "764ca235af0fb2ec4b58f08622a5298200043b458dfffb02f880e988f2c49c1c"
+    },
+    {
+      "case": "pictures-verified",
+      "state": "room-live",
+      "file": "after/pictures-verified/room-live.png",
+      "sha256": "a604a5a15681620367d845ca242e6c675a97b81ec7e0a678bddfa9415a612479"
+    }
+  ],
+  "live_wall_sessions": [
+    {
+      "case": "panel-running",
+      "side": 64,
+      "session": {
+        "active": true,
+        "token": "0FE0A306-90AD-4AA9-A59D-A7DCBDBE329D",
+        "purpose": "panel",
+        "seconds_remaining": 116.96240608301014
+      },
+      "frame": {
+        "bytes": 12288,
+        "sha256": "91fce29a51924d450e8a7b2ed852ba1358477710b7f9e3dcc93a297a4c6f6053",
+        "first_rgb": [
+          191,
+          191,
+          191
+        ],
+        "uniform": false
+      },
+      "requests": [
+        "/display-session"
+      ]
+    },
+    {
+      "case": "guests-showing",
+      "side": 64,
+      "session": {
+        "active": true,
+        "token": "295F6942-AC74-4DA5-816B-F6DEDCAF7160",
+        "purpose": "guests",
+        "seconds_remaining": 116.76897083397489
+      },
+      "frame": {
+        "bytes": 12288,
+        "sha256": "b5d5349fd6b911573c7d8ef2de908e7d3f883eb1f09c519446fbf3c59a56d20d",
+        "first_rgb": [
+          255,
+          255,
+          255
+        ],
+        "uniform": false
+      },
+      "requests": [
+        "/display-session"
+      ]
+    },
+    {
+      "case": "panel-running",
+      "side": 192,
+      "session": {
+        "active": true,
+        "token": "813D0039-4700-4978-8E7B-2929BDF79999",
+        "purpose": "panel",
+        "seconds_remaining": 116.97320962499361
+      },
+      "frame": {
+        "bytes": 110592,
+        "sha256": "0487e64b1b923d7420bb9c7ee8af9e6cfa615e43380bd0b26cdc18b1ca6fba95",
+        "first_rgb": [
+          191,
+          191,
+          191
+        ],
+        "uniform": false
+      },
+      "requests": [
+        "/display-session"
+      ]
+    },
+    {
+      "case": "guests-showing",
+      "side": 192,
+      "session": {
+        "active": true,
+        "token": "50BC3F0E-C08A-4771-A943-41A5AC948FAC",
+        "purpose": "guests",
+        "seconds_remaining": 116.963283375022
+      },
+      "frame": {
+        "bytes": 110592,
+        "sha256": "c91518b3f3ea5280f7ef85fb3dee1ddd4cc1f4c2421096135cd2ee3474fde476",
+        "first_rgb": [
+          255,
+          255,
+          255
+        ],
+        "uniform": false
+      },
+      "requests": [
+        "/display-session"
+      ]
+    }
+  ],
+  "all_screens_and_native_tests_match_app": {
+    "Tessera.debug.dylib": "c00756fb5c4f8fe5f4c775e1af695b64028f0da331469b16b9232f7fe266b5a3",
+    "Tessera": "b652c8726586fbbf6fa74739b441b323bd329e65fa9536aa9bc50d061b424050"
+  },
+  "deployment": "Wall brain updated (six files), service restarted by systemd, original Off mode kept. A black panel check ran on the real wall: display_mode went to frame and back to off, and a pictures check followed by /services on one kept-alive connection both answered. Final signed app installed on the iPhone 18 Pro Max.",
+  "review": "Independent review of every unit with a skeptic pass, two fix rounds with a reviewer each, a test writer for the shared display plumbing, and a visual critic pass over every screenshot followed by a visual fix round.",
+  "limitations": [
+    "Physical review is the owner's: touch on the phone, reading the guest QR off the real LEDs with a camera, and the calibration photo on the real panel.",
+    "Static captures use a fixture wall with no display session, so their wall frames show the fixture artwork. Live captures (panel running, guest code showing, at 64 and 192) show the true wall frame.",
+    "The 64 wall now refuses guest codes that would need modules smaller than 2 LEDs, as the shipped version before this batch did. Long network names or passwords need a 192 wall."
+  ],
+  "tracking_semantics": "IDs indicate finished implementation; roadmap checkboxes await physical review."
+}

@@ -35,6 +35,16 @@ final class NowPlayingPush {
     }
 
     @ObservationIgnored var onSample: (() -> Void)?
+    @ObservationIgnored private var phoneOnly = false
+
+    /// An explicit stand-in is a local session, even if its saved wall address
+    /// still answers. Restarting after a permission change must respect it too.
+    func setPhoneOnly(_ enabled: Bool) {
+        guard phoneOnly != enabled else { return }
+        phoneOnly = enabled
+        stop()
+        if !enabled { start() }
+    }
     @ObservationIgnored private let pushSession = UUID().uuidString
     @ObservationIgnored private var sequence = 0
     private var sample: LocalPlaybackSample?
@@ -52,7 +62,8 @@ final class NowPlayingPush {
     func refine(_ state: inout WallState) { sample?.apply(to: &state) }
 
     private var targets: [String] {
-        Array(Set([wallHost, host].filter { !$0.isEmpty })).sorted()
+        guard !phoneOnly else { return [] }
+        return Array(Set([wallHost, host].filter { !$0.isEmpty })).sorted()
     }
 
     /// The broadcast extension (TesseraEars) runs as its own process and

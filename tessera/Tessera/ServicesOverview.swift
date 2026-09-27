@@ -88,7 +88,7 @@ struct ServicesPage: View {
                     Rule()
                     destination("Posters", detail: "The films and shows you love", status: !available ? "Not checked" : services?.tmdb?.checking == true ? "Checking" : services?.tmdb?.problem != nil ? "Needs attention" : services?.tmdb?.key_set != true ? "Set up" : services?.tmdb?.verified == true ? "Ready" : "Key saved", symbol: "tv") { PostersPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Pictures", detail: "Search the web or your Google provider", status: available ? (services?.google?.key_set == true && services?.google?.cx_set == true ? "Google ready" : "Web search") : "Not checked", symbol: "photo") { PicturesPage(accent: accent, services: $services) }
+                    destination("Pictures", detail: "Search the web or your Google provider", status: picturesStatus, symbol: "photo") { PicturesPage(accent: accent, services: $services) }
                 }
 
             }.padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 42)
@@ -111,6 +111,7 @@ struct ServicesPage: View {
             else if qaRoute == "otherPlayers" { OtherPlayersPage(accent: accent, services: $services) }
             else if qaRoute == "claude" { ClaudePage(accent: accent, services: $services) }
             else if qaRoute == "discogs" { DiscogsPage(accent: accent, services: $services) }
+            else if qaRoute == "pictures" { PicturesPage(accent: accent, services: $services) }
             else if qaRoute == "posters" { PostersPage(accent: accent, services: $services) }
             else if qaRoute == "images" { ImagesPage(accent: accent, services: $services) }
             else if qaRoute == "airplay" { AirPlayPage(accent: accent, services: $services) }
@@ -146,6 +147,16 @@ struct ServicesPage: View {
         if services?.spotify.state == "checking" { return "Checking" }
         if let status = services?.spotify.state, ["expired", "refused", "unavailable", "rate_limited"].contains(status) { return "Needs attention" }
         return services?.spotify.linked == true ? "Connected" : "Connect"
+    }
+    /// Off comes first: a wall with Show me switched off also reports a problem.
+    private var picturesStatus: String {
+        guard available else { return "Not checked" }
+        let google = services?.google
+        if google?.state == "off" { return "Off" }
+        if google?.checking == true { return "Checking" }
+        if google?.problem != nil { return "Needs attention" }
+        guard google?.key_set == true && google?.cx_set == true else { return "Built-in search" }
+        return google?.verified == true ? "Google checked" : "Saved"
     }
     private func state(_ ready: Bool) -> String { available ? (ready ? "Ready" : "Set up") : "Not checked" }
     private func featured(_ service: Service, detail: String, state: String, ready: Bool, tint: Color) -> some View {

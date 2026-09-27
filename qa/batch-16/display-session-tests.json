@@ -1,0 +1,7 @@
+{
+  "suite": "brain/tests/test_display_session_batch.py",
+  "passed": 51,
+  "failed": 0,
+  "duration_seconds": 6.84,
+  "validation": "Real ControlState and HTTP routes; deterministic monotonic deadlines; no real wall or account state touched."
+}
