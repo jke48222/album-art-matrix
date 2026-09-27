@@ -22,34 +22,10 @@ struct WallServices: Decodable {
         var account_name: String?
         var can_retry: Bool?
     }
-    struct Lastfm: Decodable { var user: String; var key_set: Bool? }
+
     /// Reading needs the username. Writing, the records the ear names, needs
     /// the user token; the rest is the wall's scrobbler saying how that goes.
-    struct Listenbrainz: Decodable {
-        struct Listen: Decodable {
-            var title: String
-            var artist: String
-            var album: String?
-            var at: Int             // unix seconds the play started
-            var kind: String?
-        }
-        struct Playing: Decodable {
-            var title: String
-            var artist: String
-            var heard_s: Int
-            var needs_s: Int
-            var listened: Bool
-        }
-        var user: String
-        var token_set: Bool?
-        var valid: Bool?
-        var user_name: String?
-        var playing: Playing?
-        var last_listen: Listen?
-        var queued: Int?
-        var submitted: Int?
-        var problem: String?
-    }
+
     /// The wall's ears: a microphone read all the time, Shazam naming the
     /// last few seconds when the room is loud enough. Levels are dB below
     /// the microphone's ceiling, so they are negative and louder is higher.
@@ -117,20 +93,7 @@ struct WallServices: Decodable {
     }
     struct Mac: Decodable { var endpoint: String; var answering: Bool? }
     /// Ask the wall: whether a Claude key is on the wall and how asking has gone.
-    struct Claude: Decodable {
-        struct Last: Decodable { var q: String; var a: String; var s: Double?; var usd: Double?; var ts: Int? }
-        var ready: Bool?
-        var key_set: Bool?
-        var workspace_set: Bool?
-        var history: [Last]?
-        /// A key is on the wall, whichever word the wall uses for it.
-        var isReady: Bool { ready ?? key_set ?? false }
-        var model: String?
-        var answers: Int?
-        var cost_usd: Double?
-        var last: Last?
-        var problem: String?
-    }
+
 
     /// AirPlay: whether shairport-sync is there and who is sending.
     struct Airplay: Decodable {
@@ -190,14 +153,7 @@ struct WallServices: Decodable {
         var problem: String?
     }
     /// The shelf: whose Discogs collection the wall knows, and how the sync went.
-    struct Discogs: Decodable {
-        var user: String
-        var token_set: Bool?
-        var releases: Int?
-        var synced_at: Double?
-        var syncing: Bool?
-        var problem: String?
-    }
+
 
     var spotify: Spotify
     var lastfm: Lastfm
@@ -264,6 +220,14 @@ struct WallServices: Decodable {
         await call(host: host, path: "/spotify/retry", body: [:])
     }
 
+    static func retryLastfm(host: String) async -> WallServices? {
+        await call(host: host, path: "/lastfm/retry", body: [:])
+    }
+
+    static func retryListenBrainz(host: String) async -> WallServices? {
+        await call(host: host, path: "/listenbrainz/retry", body: [:])
+    }
+
     /// Hand the wall new details. Comes back with what the wall now has,
     /// or nil when the wall did not answer.
     static func save(host: String, _ patch: [String: Any]) async -> WallServices? {
@@ -275,7 +239,8 @@ struct WallServices: Decodable {
     }
 
     /// What the wall has, after quietly handing it any developer key it is
-    /// missing (DeveloperKeys). A person only ever signs in or types a name.
+    /// missing (DeveloperKeys). Account names are always an explicit choice;
+    /// an intentionally disconnected account must stay disconnected.
     static func seeded(host: String) async -> WallServices? {
         guard let current = await read(host: host) else { return nil }
         var patch: [String: Any] = [:]
@@ -287,13 +252,7 @@ struct WallServices: Decodable {
         if !DeveloperKeys.lastfmAPIKey.isEmpty, current.lastfm.key_set != true {
             lastfm["api_key"] = DeveloperKeys.lastfmAPIKey
         }
-        if !DeveloperKeys.lastfmUser.isEmpty, current.lastfm.user.isEmpty {
-            lastfm["user"] = DeveloperKeys.lastfmUser
-        }
         if !lastfm.isEmpty { patch["lastfm"] = lastfm }
-        if !DeveloperKeys.listenbrainzUser.isEmpty, (current.listenbrainz?.user ?? "").isEmpty {
-            patch["listenbrainz"] = ["user": DeveloperKeys.listenbrainzUser]
-        }
         if patch.isEmpty { return current }
         return await save(host: host, patch) ?? current
     }
@@ -399,415 +358,17 @@ struct Problem: View {
 
 // MARK: - The hub
 
-struct LastfmPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var user = ""
-    @State private var key = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var savedUser: String { services?.lastfm.user ?? "" }
-    private var keyBaked: Bool { !DeveloperKeys.lastfmAPIKey.isEmpty }
-    private var keySet: Bool { services?.lastfm.key_set == true }
-    private var on: Bool { !savedUser.isEmpty && keySet }
-    private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil, !typedUser.isEmpty else { return false }
-        return typedUser != savedUser || (!keyBaked && !typedKey.isEmpty)
-    }
-
-    private var blurb: String {
-        "One account that Spotify, Tidal and Deezer report to on their own. The wall reads it a few seconds behind the music. Free; "
-            + (keyBaked ? "needs only your username." : "needs your username and a key.")
-    }
-    private var accountNote: String {
-        keyBaked ? "Your username is the last part of your profile address on last.fm."
-                 : "Last.fm hands any account a key: on the key page, name the application anything and leave the rest empty, then copy the API key it shows. Not the shared secret."
-    }
-
-    var body: some View {
-        SetupPage("Last.fm", blurb: blurb) {
-            SetupGroup("Your account", note: accountNote) {
-                KeyField(placeholder: "Username", text: $user)
-                Rule()
-                if !keyBaked {
-                    KeyField(placeholder: keySet ? "API key (one is on the wall)" : "API key", text: $key)
-                    Rule()
-                    SetupRow(title: "Need a key?", subtitle: "Opens last.fm in Safari.") {
-                        ActionPill(title: "Get a key", filled: false) {
-                            openURL(URL(string: "https://www.last.fm/api/account/create")!)
-                        }
-                    }
-                    Rule()
-                }
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: on && !canSave ? "Following \(savedUser)" : nil,
-                         accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem)
-
-            SetupGroup("Send your players to it", note: "Nothing here needs Premium or an app id. On a computer, the Web Scrobbler browser extension adds YouTube Music, SoundCloud and Amazon Music.") {
-                SetupRow(title: "Spotify", subtitle: "Linked on last.fm, under Applications.",
-                         leading: { ServiceMark(service: .spotify) }) {
-                    ActionPill(title: "Link", filled: false) {
-                        openURL(URL(string: "https://www.last.fm/settings/applications")!)
-                    }
-                }
-                Rule()
-                SetupRow(title: "Tidal", subtitle: "In Tidal: Settings, then Connect to Last.fm. Desktop, web and iPhone.",
-                         leading: { ServiceMark(service: .tidal) }) { EmptyView() }
-                Rule()
-                SetupRow(title: "Deezer", subtitle: "Linked on deezer.com, under Sharing. Covers the phone too.",
-                         leading: { ServiceMark(service: .deezer) }) {
-                    ActionPill(title: "Link", filled: false) {
-                        openURL(URL(string: "https://www.deezer.com/account/share")!)
-                    }
-                }
-            }
-        }
-        .onAppear { user = savedUser }
-        .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        var patch: [String: Any] = ["user": typedUser]
-        if keyBaked, !keySet { patch["api_key"] = DeveloperKeys.lastfmAPIKey }
-        else if !typedKey.isEmpty { patch["api_key"] = typedKey }   // empty would clear the one on the wall
-        busy = true
-        Task {
-            let (fresh, why) = await ServiceSave.send(["lastfm": patch], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { key = ""; Taps.commit() }
-            busy = false
-        }
-    }
-}
 
 // MARK: - ListenBrainz
 
-struct ListenBrainzPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var user = ""
-    @State private var token = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var lb: WallServices.Listenbrainz? { services?.listenbrainz }
-    private var savedUser: String { lb?.user ?? "" }
-    private var tokenSet: Bool { lb?.token_set == true }
-    private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var typedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil else { return false }
-        if !typedToken.isEmpty { return true }
-        return !typedUser.isEmpty && typedUser != savedUser
-    }
-    private var doneLine: String? {
-        guard !savedUser.isEmpty, typedUser == savedUser, typedToken.isEmpty else { return nil }
-        return tokenSet ? "Following \(savedUser), writing records" : "Following \(savedUser)"
-    }
-    /// The records row's state: what the wall's scrobbler says of the token.
-    private var recordsState: (text: String, done: Bool) {
-        guard let lb else { return ("Set up", false) }
-        if lb.token_set != true { return ("Needs your token", false) }
-        switch lb.valid {
-        case .some(true): return ("On" + (lb.user_name.map { " as \($0)" } ?? ""), true)
-        case .some(false): return ("Token refused", false)
-        default: return (lb.problem ?? "Checking", false)
-        }
-    }
-    private var recordsSubtitle: String {
-        guard let lb else { return "The wall is not answering." }
-        if let n = lb.submitted, n > 0 { return n == 1 ? "One listen written so far." : "\(n) listens written so far." }
-        if lb.token_set == true { return "Nothing written yet. Play a record." }
-        return "Paste your user token above."
-    }
-
-    var body: some View {
-        SetupPage("ListenBrainz",
-                  blurb: "The open version of Last.fm, run by the MusicBrainz people. Free. Your username lets the wall read what you play; your user token lets it write down the records it hears.") {
-            SetupGroup("Your account", note: "An account takes a minute. Then every scrobbler that can post there (Web Scrobbler in a computer's browser, Pano Scrobbler on Android) reaches the wall.") {
-                KeyField(placeholder: "Username", text: $user)
-                Rule()
-                KeyField(placeholder: tokenSet ? "User token (one is on the wall)" : "User token", text: $token)
-                Rule()
-                SetupRow(title: "Your token", subtitle: "On your ListenBrainz settings page, under User token. Opens in Safari.") {
-                    ActionPill(title: "Open settings", filled: false) {
-                        openURL(URL(string: "https://listenbrainz.org/settings/")!)
-                    }
-                }
-                Rule()
-                SetupRow(title: "No account yet?", subtitle: "Opens listenbrainz.org in Safari.") {
-                    ActionPill(title: "Make one", filled: false) {
-                        openURL(URL(string: "https://listenbrainz.org/")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: doneLine, accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem)
-
-            SetupGroup("The wall's records",
-                       note: "Every record the ear names goes into your listening history like a streamed song: half the song or four minutes, whichever comes first. Listens the wall could not send wait and go later.") {
-                SetupRow(title: "Writing records", subtitle: recordsSubtitle) {
-                    StateValue(recordsState.text, done: recordsState.done)
-                }
-                if let p = lb?.playing {
-                    Rule()
-                    SetupRow(title: p.title,
-                             subtitle: p.artist + (p.listened ? ", counted" : ", \(p.heard_s) of \(p.needs_s) s heard")) {
-                        EmptyView()
-                    }
-                }
-                if let l = lb?.last_listen {
-                    Rule()
-                    SetupRow(title: "Last written", subtitle: "\(l.title), \(l.artist), \(ago(l.at))") {
-                        EmptyView()
-                    }
-                }
-                if let q = lb?.queued, q > 0 {
-                    Rule()
-                    SetupRow(title: "Waiting to send",
-                             subtitle: q == 1 ? "One listen, until the network is back." : "\(q) listens, until the network is back.") {
-                        EmptyView()
-                    }
-                }
-            }
-        }
-        .onAppear { user = savedUser }
-        .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
-        .task {
-            // the records group is live while the page is up: the scrobbler's
-            // state changes as a record plays, and a token check takes a moment
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(4))
-                if Task.isCancelled { break }
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-            }
-        }
-    }
-
-    private func ago(_ unix: Int) -> String {
-        let s = Int(Date().timeIntervalSince1970) - unix
-        if s < 90 { return "just now" }
-        if s < 3600 { return "\(s / 60) min ago" }
-        if s < 86400 { return "\(s / 3600) h ago" }
-        return "\(s / 86400) d ago"
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        var patch: [String: String] = [:]
-        if !typedUser.isEmpty { patch["user"] = typedUser }
-        if !typedToken.isEmpty { patch["token"] = typedToken }
-        Task {
-            let (fresh, why) = await ServiceSave.send(["listenbrainz": patch], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); token = "" }
-            busy = false
-        }
-    }
-}
 
 
 // MARK: - Claude: the key that lets the wall answer questions
 
-struct ClaudePage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var key = ""
-    @State private var workspace = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var claude: WallServices.Claude? { services?.claude }
-    private var ready: Bool { claude?.isReady == true }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var typedWorkspace: String { workspace.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil else { return false }
-        if typedKey.hasPrefix("sk-ant-") && typedKey.count > 20 { return true }
-        return typedWorkspace.hasPrefix("wrkspc_") && typedWorkspace.count > 10
-    }
-    private var needsWorkspace: Bool {
-        (claude?.problem ?? "").contains("workspace") && claude?.workspace_set != true
-    }
-
-    var body: some View {
-        SetupPage("Claude",
-                  blurb: "Say the wake word and ask the wall anything: what played at dinner, how long until sunset, what this record is about. The words go to Claude with the wall's own state, and the answer is drawn on the panel. A Siri Shortcut can ask too and speak the answer back.") {
-            SetupGroup("Your key", note: "An Anthropic API key. It is kept on the wall and used for nothing but these questions; each answer costs about a cent.") {
-                KeyField(placeholder: ready ? "API key (one is on the wall)" : "API key, sk-ant-...", text: $key)
-                Rule()
-                KeyField(placeholder: claude?.workspace_set == true ? "Workspace id (one is on the wall)" : "Workspace id, wrkspc_... (only if the wall asks)", text: $workspace)
-                Rule()
-                SetupRow(title: "Need a key?", subtitle: "Opens the Anthropic console in Safari. A key made inside a workspace needs nothing else; a key made at the organisation level also needs that workspace's id, from Settings, Workspaces.") {
-                    ActionPill(title: "Get a key", filled: false) {
-                        openURL(URL(string: "https://console.anthropic.com/settings/keys")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: (ready && typedKey.isEmpty && typedWorkspace.isEmpty) ? (claude?.workspace_set == true ? "Key and workspace on the wall" : "Key on the wall") : nil,
-                         accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem ?? (needsWorkspace
-                ? "Your key was made at the organisation level, so the wall also needs the workspace id it spends from. In the Anthropic console: Settings, Workspaces, open one, copy its id (wrkspc_...) and paste it above."
-                : claude?.problem))
-
-            SetupGroup("Asking", note: "Say the wake word, wait for the line, then talk. Commands (off, clock, lyrics, brighter, a timer, show me a cover) are done on the wall itself; anything else is a question. Ask from this phone under Settings, Ask the wall. Shortcut recipes for Siri are in docs/ASK.md.") {
-                SetupRow(title: "Model", subtitle: claude?.model ?? "claude-opus-5") { EmptyView() }
-                Rule()
-                SetupRow(title: "Answered", subtitle: answeredLine) { EmptyView() }
-                if let last = claude?.last {
-                    Rule()
-                    SetupRow(title: "Last question", subtitle: "\(last.q)  ·  \(last.a)") { EmptyView() }
-                }
-            }
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(4))
-                if Task.isCancelled { break }
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-            }
-        }
-    }
-
-    private var answeredLine: String {
-        let n = claude?.answers ?? 0
-        let usd = claude?.cost_usd ?? 0
-        if n == 0 { return "Nothing asked yet." }
-        return String(format: "%d question%@, about $%.2f so far.", n, n == 1 ? "" : "s", usd)
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        var patch: [String: String] = [:]
-        if !typedKey.isEmpty { patch["api_key"] = typedKey }
-        if !typedWorkspace.isEmpty { patch["workspace"] = typedWorkspace }
-        Task {
-            let (fresh, why) = await ServiceSave.send(["claude": patch], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); key = ""; workspace = "" }
-            busy = false
-        }
-    }
-}
 
 
 // MARK: - Discogs: the shelf, so the wall knows what is owned on vinyl
 
-struct DiscogsPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var user = ""
-    @State private var token = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var dg: WallServices.Discogs? { services?.discogs }
-    private var savedUser: String { dg?.user ?? "" }
-    private var tokenSet: Bool { dg?.token_set == true }
-    private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var typedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil else { return false }
-        if !typedToken.isEmpty { return true }
-        return !typedUser.isEmpty && typedUser != savedUser
-    }
-    private var doneLine: String? {
-        guard !savedUser.isEmpty, typedUser == savedUser, typedToken.isEmpty else { return nil }
-        return tokenSet ? "Reading \(savedUser)'s shelf" : "Username on the wall"
-    }
-    var body: some View {
-        SetupPage("Discogs",
-                  blurb: "Discogs is where a record collection is written down, pressing by pressing. With your username and a personal access token the wall reads your shelf. A streamed song from an album you own gets a small record in the sleeve's corner, and when one of your records plays, the pressing and what copies are going for show under the song.") {
-            SetupGroup("Your account", note: "Free. The token is kept on the wall and used only to read your collection and look up your pressings.") {
-                KeyField(placeholder: "Username", text: $user)
-                Rule()
-                KeyField(placeholder: tokenSet ? "Personal access token (one is on the wall)" : "Personal access token", text: $token)
-                Rule()
-                SetupRow(title: "Your token", subtitle: "Discogs settings, Developers, Generate new token. Opens in Safari.") {
-                    ActionPill(title: "Open settings", filled: false) {
-                        openURL(URL(string: "https://www.discogs.com/settings/developers")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: doneLine, accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem)
-
-            SetupGroup("Your collection", note: "Browse your records, see their pressing details and read the latest collection in The shelf.") {
-                NavigationLink { ShelfPage(accent: accent) } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: "opticaldisc").foregroundStyle(accent.toned(forDark: true))
-                        Text("Open The shelf").font(.ui(16, .medium)).foregroundStyle(Ink.ink)
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right").foregroundStyle(Ink.dim)
-                    }.frame(minHeight: 48)
-                }
-            }
-        }
-        .onAppear { user = savedUser }
-        .onChange(of: savedUser) { _, fresh in if user.isEmpty { user = fresh } }
-        .onChange(of: wall.host) { _, _ in
-            user = ""; token = ""; busy = false; problem = nil; services = nil
-        }
-        .task(id: wall.host) {
-            let host = wall.host
-            while !Task.isCancelled {
-                if let fresh = await WallServices.read(host: host), !Task.isCancelled, wall.host == host { services = fresh }
-                try? await Task.sleep(for: .seconds(5))
-            }
-        }
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        var patch: [String: String] = [:]
-        if !typedUser.isEmpty { patch["user"] = typedUser }
-        if !typedToken.isEmpty { patch["token"] = typedToken }
-        let host = wall.host
-        Task {
-            let (fresh, why) = await ServiceSave.send(["discogs": patch], to: host)
-            guard !Task.isCancelled, wall.host == host else { return }
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); token = "" }
-            busy = false
-        }
-    }
-
-}
 
 
 // MARK: - Pictures: a Google key and search engine, so "show me" searches Google Images

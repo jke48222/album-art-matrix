@@ -1,0 +1,51 @@
+{
+  "unit": "S04",
+  "feature": "Last.fm",
+  "researched_at": "2026-09-27",
+  "mobbin": [
+    {
+      "app": "Airbuds Widget",
+      "url": "https://mobbin.com/screens/89955520-23d3-43b1-adf0-9d869dc2daad",
+      "inspected_image": true,
+      "observed": "Centered identity separates the public profile from the editable current status. Clear one-action sheet with readable social status.",
+      "applied": "Persistent account identity and a separate listening-status surface; one inline editor in Tessera instead of a duplicate sheet."
+    },
+    {
+      "app": "Shelf",
+      "url": "https://mobbin.com/screens/2e228091-87ca-4b95-bde7-b4fd5c4c6799",
+      "inspected_image": true,
+      "observed": "Prominent sleeve and track identity precede secondary activity. Strong single accent ties the artwork area and activity hierarchy.",
+      "applied": "Real current artwork beside title/artist, with restrained coral identity and a distinct historical-listen label."
+    },
+    {
+      "app": "Apple Music",
+      "url": "https://mobbin.com/screens/531286ef-3097-4c10-9581-74762f9f4000",
+      "inspected_image": true,
+      "observed": "Profile name and edit action sit above Listening To shelves; song playback remains separate from account management.",
+      "applied": "A direct edit connection action and readable listening card keep account setup out of everyday playback status."
+    }
+  ],
+  "primary_web": [
+    {
+      "url": "https://www.last.fm/api/show/user.getRecentTracks",
+      "applied": "Only explicit nowplaying=true drives the wall. A completed scrobble remains history. Reading needs username/API key but no listener authentication."
+    },
+    {
+      "url": "https://www.last.fm/api/errorcodes",
+      "applied": "Typed access, missing-profile, rate-limit and service-unavailable outcomes; fixed public error copy never reflects upstream URLs or keys."
+    },
+    {
+      "url": "https://www.last.fm/api/scrobbling",
+      "applied": "Now Playing is a distinct optional report from a completed scrobble, so the page avoids promising live artwork from history-only scrobblers."
+    }
+  ],
+  "implementation": "tessera/Tessera/LastfmPage.swift",
+  "verification": {
+    "python_tests": "brain/tests/test_lastfm_batch.py",
+    "passed": 69,
+    "swift_frontend_parse": true
+  },
+  "limitations": [
+    "Live personal Last.fm credentials and external API responses are not used by automated fixtures."
+  ]
+}

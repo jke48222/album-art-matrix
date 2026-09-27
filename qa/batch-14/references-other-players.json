@@ -1,0 +1,39 @@
+{
+  "unit": "S06",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/33af76b3-c892-42c6-bec6-0a399cf51098",
+      "app": "Amazon Alexa",
+      "observed": "Two-column logo tiles make provider identification quick. Applied consistent provider footprints in a compact selection strip."
+    },
+    {
+      "url": "https://mobbin.com/screens/311be3b5-63ca-4484-bded-38b9ca3c292f",
+      "app": "Live Nation",
+      "observed": "Separate provider rows distinguish connected status from an available connect action. Applied honest journal status, separate from guidance."
+    },
+    {
+      "url": "https://mobbin.com/screens/1d6b039f-6a4a-4d3c-b9c8-930928966e99",
+      "app": "Airbuds Widget",
+      "observed": "Provider marks and right-aligned actions use a stable rhythm. Applied selectable source marks and canonical setup links."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://webscrobbler.com/",
+      "applied": "Browser extension installs, Accounts setup, Safari iPhone support, Last.fm and ListenBrainz destinations."
+    },
+    {
+      "url": "https://github.com/web-scrobbler/web-scrobbler",
+      "applied": "Verified current connectors for Tidal, Deezer, SoundCloud, YouTube Music and Amazon Music in src/connectors."
+    },
+    {
+      "url": "https://support.last.fm/t/tidal-scrobbling/181",
+      "applied": "Separate native Tidal account connection guidance from browser reporting."
+    },
+    {
+      "url": "https://support.last.fm/t/deezer-scrobbling/177",
+      "applied": "Sharing preferences/desktop-mode and Family/Duo limitations."
+    }
+  ],
+  "assets": "Uses existing official service marks and native SF Symbols; no remote placeholder artwork."
+}

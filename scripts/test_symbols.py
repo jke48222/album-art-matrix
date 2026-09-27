@@ -4,7 +4,7 @@ import argparse,json,re,subprocess,tempfile
 from pathlib import Path
 parser=argparse.ArgumentParser();parser.add_argument('--json',type=Path,required=True);args=parser.parse_args()
 root=Path(__file__).resolve().parents[1]
-names=sorted({name for file in (root/'tessera/Tessera').glob('*.swift') for name in re.findall(r'system(?:Name|Image):\s*"([\w.]+)"',file.read_text())})
+names=sorted({name for file in (root/'tessera/Tessera').glob('*.swift') for name in re.findall(r'(?:system(?:Name|Image)|symbol):\s*"([\w.]+)"',file.read_text())})
 with tempfile.TemporaryDirectory(prefix='tessera-symbols-') as temp:
  path=Path(temp);source=path/'main.swift';binary=path/'symbols'
  source.write_text('import UIKit\nlet names: [String] = '+json.dumps(names)+'\nlet missing = names.filter { UIImage(systemName:$0) == nil }\nlet data = try JSONSerialization.data(withJSONObject:["checked":names.count,"passed":names.count-missing.count,"missing":missing],options:[.prettyPrinted,.sortedKeys])\ntry data.write(to: URL(fileURLWithPath:CommandLine.arguments[1]))\nif !missing.isEmpty { exit(1) }\n')

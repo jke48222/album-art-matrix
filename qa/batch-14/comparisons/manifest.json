@@ -1,0 +1,264 @@
+{
+  "base": "fd79bb3",
+  "units": [
+    "S04",
+    "S05",
+    "S06",
+    "S07",
+    "S08"
+  ],
+  "native": [
+    {
+      "unit": "S04",
+      "title": "Last.fm",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-14/before/lastfm/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-14/after/lastfm/room-live.png",
+      "before_sha256": "be92655788b3f77f158caf2884dd32811e895c67f1cd1be4d9aaafcdf6368ad1",
+      "after_sha256": "8931a01148a48a5f0e66a49aff309655b72a1a71fd0cb8914cf7caa7fab82f7d",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-14/comparisons/lastfm.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "938d21f832ad91f5df98dd19639408212c0f7739c98cdd06cdf2e0ae2a722a76"
+    },
+    {
+      "unit": "S05",
+      "title": "ListenBrainz",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-14/before/listenbrainz/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-14/after/listenbrainz/room-live.png",
+      "before_sha256": "db6e817aed74b75c299ff522dcadc87edd8e8f168239cc99a25154cd1cb83ddc",
+      "after_sha256": "30ae309dff09bba7acd3a5611d119f53364e6568fd425300beaa5350d8c15e3b",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-14/comparisons/listenbrainz.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "c9700dd3d2793785ccf8191cab7cf24279d2cb575f23eb9e78518520c0a31a1f"
+    },
+    {
+      "unit": "S06",
+      "title": "Other music players",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-14/before/otherPlayers/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-14/after/otherPlayers/room-live.png",
+      "before_sha256": "02f381fb163bdc0148da5c944eb25640a90f29c2568ff8cd84f9590e887c4dde",
+      "after_sha256": "501f782761236f01a9718fea6b115864fa35830ad9626f24c55531a5047b793e",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-14/comparisons/otherPlayers.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "9ac2ee04893fb2ff135b09df551333cf298842147a265d2cf0a7baa74d4c7648"
+    },
+    {
+      "unit": "S07",
+      "title": "Claude",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-14/before/claude/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-14/after/claude/room-live.png",
+      "before_sha256": "156a1b07a3be47b0cb4b193829d923d8650d24875dc859c78a478ca770f88dfc",
+      "after_sha256": "200d817485e2ec75ad7dea7f7e365e0c1d417460f1a115b5e5a8a8bfab746363",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-14/comparisons/claude.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "bd1515a7c394e7c1e3391a10c48b43d47ab936755c86256444fba0d9fe3cafee"
+    },
+    {
+      "unit": "S08",
+      "title": "Discogs",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-14/before/discogs/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-14/after/discogs/room-live.png",
+      "before_sha256": "3d386aae91d21f5c95162953a94f5f67aa2ca1a2c736ef40f0adaf16b773f248",
+      "after_sha256": "0170199a893041c7c3c71ea6e102be8f9dffe281baa0ea165cff7ea1f7d864de",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-14/comparisons/discogs.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "6fdf1065fc0ddb0fb65a08ac4add1b7371e277a86c3ca96d715d9c22e5c0caf0"
+    }
+  ],
+  "state_captures": [
+    "lastfm-room-large.png",
+    "lastfm-room-offline.png",
+    "lastfm-empty-room-live.png",
+    "lastfm-refused-room-live.png",
+    "lastfm-unlinked-room-live.png",
+    "listenbrainz-room-large.png",
+    "listenbrainz-room-offline.png",
+    "listenbrainz-empty-room-live.png",
+    "listenbrainz-paused-room-live.png",
+    "listenbrainz-queued-room-live.png",
+    "listenbrainz-refused-room-live.png",
+    "listenbrainz-unlinked-room-live.png",
+    "otherPlayers-room-large.png",
+    "otherPlayers-room-offline.png",
+    "claude-room-large.png",
+    "claude-room-offline.png",
+    "claude-empty-room-live.png",
+    "claude-refused-room-live.png",
+    "claude-unlinked-room-live.png",
+    "discogs-room-large.png",
+    "discogs-room-offline.png",
+    "discogs-empty-room-live.png",
+    "discogs-refused-room-live.png",
+    "discogs-syncing-room-live.png",
+    "discogs-unlinked-room-live.png"
+  ],
+  "references": [
+    "https://github.com/web-scrobbler/web-scrobbler",
+    "https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html",
+    "https://listenbrainz.readthedocs.io/en/latest/users/api/core.html",
+    "https://listenbrainz.readthedocs.io/en/latest/users/json.html",
+    "https://mobbin.com/screens/035eeb71-dd57-4203-9615-5f1bda565dbf",
+    "https://mobbin.com/screens/04a6d577-ecc9-464e-a459-2d25e3c79f4a",
+    "https://mobbin.com/screens/1d6b039f-6a4a-4d3c-b9c8-930928966e99",
+    "https://mobbin.com/screens/2e228091-87ca-4b95-bde7-b4fd5c4c6799",
+    "https://mobbin.com/screens/311be3b5-63ca-4484-bded-38b9ca3c292f",
+    "https://mobbin.com/screens/33af76b3-c892-42c6-bec6-0a399cf51098",
+    "https://mobbin.com/screens/43f2d5ac-d08f-44a4-9d25-84712b3c68a8",
+    "https://mobbin.com/screens/531286ef-3097-4c10-9581-74762f9f4000",
+    "https://mobbin.com/screens/56ac89ba-f822-4966-9ea6-eee8d7de17e5",
+    "https://mobbin.com/screens/89955520-23d3-43b1-adf0-9d869dc2daad",
+    "https://mobbin.com/screens/94e38e93-e753-4727-ac19-4dbb6e1b31a2",
+    "https://mobbin.com/screens/a6404f2c-6c05-4030-868a-a0b5ffd6accd",
+    "https://mobbin.com/screens/e779c6a0-bcdf-47e5-ad1b-77d69d21efa0",
+    "https://mobbin.com/screens/f52e7728-117b-47dc-bb14-7d34087c95e0",
+    "https://mobbin.com/screens/ffe8b065-1f3c-4cc2-99dc-b669366b7ec3",
+    "https://platform.claude.com/docs/en/manage-claude/authentication",
+    "https://platform.claude.com/docs/en/manage-claude/workspaces",
+    "https://support.discogs.com/hc/en-us/articles/360007423833-How-Do-I-Change-My-Account-Settings",
+    "https://support.last.fm/t/deezer-scrobbling/177",
+    "https://support.last.fm/t/tidal-scrobbling/181",
+    "https://webscrobbler.com/",
+    "https://www.last.fm/api/errorcodes",
+    "https://www.last.fm/api/scrobbling",
+    "https://www.last.fm/api/show/user.getRecentTracks"
+  ]
+}

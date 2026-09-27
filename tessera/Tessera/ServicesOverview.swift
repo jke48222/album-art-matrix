@@ -14,16 +14,16 @@ struct ServicesPage: View {
     @State private var failed = false
     @State private var checked = false
     @State private var sourceHost = ""
-    @State private var showOtherPlayers = false
     @State private var showPriority = false
     @State private var qaRoute: String?
     private let mint = Color(hex: 0xADD2C5)
     private var available: Bool { wall.link.isLive && checked && !failed }
     private var spotifyReady: Bool { services?.spotify.linked == true && !["expired", "refused", "unavailable", "rate_limited", "checking"].contains(services?.spotify.state ?? "") }
-    private var lastfmReady: Bool { services?.lastfm.key_set == true && !(services?.lastfm.user ?? "").isEmpty }
+    private var lastfmReady: Bool { ["idle", "playing"].contains(services?.lastfm.state ?? "") }
+    private var listenbrainzReady: Bool { ["ready", "playing"].contains(services?.listenbrainz?.read_state ?? "") }
     private var readyCount: Int {
         [musicConnected, available && spotifyReady,
-         available && lastfmReady, available && !(services?.listenbrainz?.user ?? "").isEmpty,
+         available && lastfmReady, available && listenbrainzReady,
          available && services?.hearing?.listening == true, available && services?.airplay?.running == true].filter { $0 }.count
     }
     private var featuredLayout: AnyLayout { typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 12)) : AnyLayout(HStackLayout(alignment: .top, spacing: 12)) }
@@ -51,7 +51,10 @@ struct ServicesPage: View {
                 section("More ways to listen", subtitle: "A player, a record, a room full of sound.") {
                     destination("Last.fm", detail: available && lastfmReady ? services?.lastfm.user ?? "Connected" : "Listening from linked music players", status: state(lastfmReady), service: .lastfm) { LastfmPage(accent: accent, services: $services) }
                     Rule()
-                    destination("ListenBrainz", detail: "Your listening journal and scrobbles", status: state(!(services?.listenbrainz?.user ?? "").isEmpty), symbol: "waveform") { ListenBrainzPage(accent: accent, services: $services) }
+                    destination("ListenBrainz", detail: "Your listening journal and scrobbles", status: state(listenbrainzReady), symbol: "waveform") { ListenBrainzPage(accent: accent, services: $services) }
+                    Rule()
+                    destination("Other music players", detail: "Tidal, Deezer, SoundCloud and more", status: "Find a path", symbol: "point.3.connected.trianglepath.dotted") { OtherPlayersPage(accent: accent, services: $services) }
+                        .accessibilityIdentifier("services.otherPlayers")
                     Rule()
                     destination("The wall’s ears", detail: "Recognize music playing in the room", status: state(services?.hearing?.listening == true), symbol: "ear") { HearingPage(accent: accent, services: $services) }
                     Rule()
@@ -77,9 +80,9 @@ struct ServicesPage: View {
                 } label: { Label("How the wall chooses", systemImage: "arrow.triangle.branch").font(.ui(15, .medium)).foregroundStyle(Ink.ink) }
                 .tint(mint).padding(18).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 18))
                 section("A little more possibility", subtitle: "Art, answers and your record collection.") {
-                    destination("Claude", detail: "Questions and conversations", status: state(services?.claude?.isReady == true), symbol: "text.bubble") { ClaudePage(accent: accent, services: $services) }
+                    destination("Claude", detail: "Questions and conversations", status: available && services?.claude?.problem != nil ? "Needs attention" : state(services?.claude?.isReady == true), symbol: "text.bubble") { ClaudePage(accent: accent, services: $services) }
                     Rule()
-                    destination("Discogs", detail: "Bring your record shelf along", status: state(services?.discogs?.token_set == true), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
+                    destination("Discogs", detail: "Bring your record shelf along", status: available && services?.discogs?.syncing == true ? "Reading collection" : available && services?.discogs?.problem != nil ? "Needs attention" : state(services?.discogs?.token_set == true && !(services?.discogs?.user ?? "").isEmpty), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
                     Rule()
                     destination("Images", detail: "Draw from your imagination", status: state(services?.images?.ready == true), symbol: "paintbrush") { ImagesPage(accent: accent, services: $services) }
                     Rule()
@@ -87,16 +90,7 @@ struct ServicesPage: View {
                     Rule()
                     destination("Pictures", detail: "Search the web or your Google provider", status: available ? (services?.google?.key_set == true && services?.google?.cx_set == true ? "Google ready" : "Web search") : "Not checked", symbol: "photo") { PicturesPage(accent: accent, services: $services) }
                 }
-                DisclosureGroup(isExpanded: $showOtherPlayers) {
-                    VStack(alignment: .leading, spacing: 18) {
-                        other(.tidal, "Connect Last.fm in Tidal’s settings, then add the same account above.")
-                        other(.deezer, "Link Last.fm in your Deezer account, then add that account above.")
-                        other(.soundcloud, "Use Web Scrobbler in your computer’s browser, the Mac reporter, or the wall’s ears.")
-                        other(.youtubeMusic, "Use Web Scrobbler in your computer’s browser, the Mac reporter, or the wall’s ears.")
-                        other(.amazonMusic, "Use Web Scrobbler in your computer’s browser, the Mac reporter, or the wall’s ears.")
-                        Link("Open Web Scrobbler", destination: URL(string: "https://web-scrobbler.com")!).font(.ui(14, .medium)).foregroundStyle(mint).frame(minHeight: 44)
-                    }.padding(.top, 16)
-                } label: { Text("Listening somewhere else?").font(.ui(15, .medium)).foregroundStyle(Ink.ink) }.tint(mint)
+
             }.padding(.horizontal, 22).padding(.top, 8).padding(.bottom, 42)
         }
         .scrollIndicators(.hidden).background(Ink.ground.ignoresSafeArea()).navigationBarTitleDisplayMode(.inline)
@@ -112,7 +106,12 @@ struct ServicesPage: View {
         }
         #if DEBUG
         .navigationDestination(isPresented: Binding(get: { qaRoute != nil }, set: { if !$0 { qaRoute = nil } })) {
-            if qaRoute == "spotify" { SpotifyPage(accent: accent, services: $services) }
+            if qaRoute == "lastfm" { LastfmPage(accent: accent, services: $services) }
+            else if qaRoute == "listenbrainz" { ListenBrainzPage(accent: accent, services: $services) }
+            else if qaRoute == "otherPlayers" { OtherPlayersPage(accent: accent, services: $services) }
+            else if qaRoute == "claude" { ClaudePage(accent: accent, services: $services) }
+            else if qaRoute == "discogs" { DiscogsPage(accent: accent, services: $services) }
+            else if qaRoute == "spotify" { SpotifyPage(accent: accent, services: $services) }
             else { AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused) }
         }
         .onAppear {
@@ -183,15 +182,6 @@ struct ServicesPage: View {
                 Spacer(minLength: 2); Chevron()
             }.padding(.vertical, 17).contentShape(Rectangle())
         }.buttonStyle(PressStyle(scale: 0.99)).accessibilityElement(children: .combine)
-    }
-    private func other(_ service: Service, _ description: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            ServiceMark(service: service)
-            VStack(alignment: .leading, spacing: 5) {
-                Text(service.name).font(.ui(15, .medium)).foregroundStyle(Ink.ink)
-                Text(description).font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-            }
-        }
     }
     private func refresh() async {
         guard !refreshing else { return }

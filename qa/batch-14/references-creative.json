@@ -1,0 +1,94 @@
+{
+  "review_units": [
+    "S07",
+    "S08"
+  ],
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine Tessera music and creative service connection flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "index": 0,
+      "id": "04a6d577-ecc9-464e-a459-2d25e3c79f4a",
+      "image_url": "https://mobbin.com/api/mcp/short/ISIyjLqj",
+      "mobbin_url": "https://mobbin.com/screens/04a6d577-ecc9-464e-a459-2d25e3c79f4a",
+      "app_name": "Mesh",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Separate connected state from available setup and preserve one clear route to the feature."
+    },
+    {
+      "index": 1,
+      "id": "a6404f2c-6c05-4030-868a-a0b5ffd6accd",
+      "image_url": "https://mobbin.com/api/mcp/short/tvtpcJh9",
+      "mobbin_url": "https://mobbin.com/screens/a6404f2c-6c05-4030-868a-a0b5ffd6accd",
+      "app_name": "Linktree",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Pair status with the connected identity; keep management actions attached to that identity."
+    },
+    {
+      "index": 2,
+      "id": "035eeb71-dd57-4203-9615-5f1bda565dbf",
+      "image_url": "https://mobbin.com/api/mcp/short/7FKoCQqG",
+      "mobbin_url": "https://mobbin.com/screens/035eeb71-dd57-4203-9615-5f1bda565dbf",
+      "app_name": "Uber Eats",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Give disconnect a visible, direct action and show confirmation at the connection."
+    },
+    {
+      "index": 0,
+      "id": "56ac89ba-f822-4966-9ea6-eee8d7de17e5",
+      "image_url": "https://mobbin.com/api/mcp/short/d6SmRMEB",
+      "mobbin_url": "https://mobbin.com/screens/56ac89ba-f822-4966-9ea6-eee8d7de17e5",
+      "app_name": "Spotify",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Use collection identity and restrained editorial spacing to lead into the canonical shelf."
+    },
+    {
+      "index": 1,
+      "id": "43f2d5ac-d08f-44a4-9d25-84712b3c68a8",
+      "image_url": "https://mobbin.com/api/mcp/short/YYyQubb1",
+      "mobbin_url": "https://mobbin.com/screens/43f2d5ac-d08f-44a4-9d25-84712b3c68a8",
+      "app_name": "SoundCloud",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Keep account actions subordinate to collection content and direct navigation."
+    },
+    {
+      "index": 2,
+      "id": "f52e7728-117b-47dc-bb14-7d34087c95e0",
+      "image_url": "https://mobbin.com/api/mcp/short/0GGnbEMJ",
+      "mobbin_url": "https://mobbin.com/screens/f52e7728-117b-47dc-bb14-7d34087c95e0",
+      "app_name": "Airbuds Widget",
+      "platform": "ios",
+      "preview_visually_inspected": true,
+      "applied": "Show a recent meaningful item with its timestamp, not decorative fabricated metrics."
+    }
+  ],
+  "primary_sources": [
+    {
+      "url": "https://platform.claude.com/docs/en/manage-claude/authentication",
+      "read": true,
+      "applied": "Workspace is optional for workspace-scoped keys; multi-workspace keys need an explicit workspace ID. API keys can expire or lose access, so saved credentials never imply successful provider validation."
+    },
+    {
+      "url": "https://platform.claude.com/docs/en/manage-claude/workspaces",
+      "read": true,
+      "applied": "Workspace field remains collapsed unless needed; help points to Settings, Workspaces."
+    },
+    {
+      "url": "https://support.discogs.com/hc/en-us/articles/360007423833-How-Do-I-Change-My-Account-Settings",
+      "read": true,
+      "applied": "Discogs Developers account settings is the official destination for generating a token. Collection management remains in the canonical Shelf."
+    }
+  ],
+  "limitations": [
+    "Discogs developer documentation direct open returned an error; official Discogs account-settings documentation supplied the supported token-generation path.",
+    "No real provider key, token, collection, or question was created, removed, or submitted during QA.",
+    "Custom line and vinyl illustrations are decorative native Canvas geometry, never album artwork or provider logos."
+  ]
+}

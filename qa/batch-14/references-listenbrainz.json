@@ -1,0 +1,42 @@
+{
+  "unit": "S05",
+  "researched_at": "2026-09-27",
+  "mobbin": [
+    {
+      "title": "Spotify listening history",
+      "url": "https://mobbin.com/screens/ffe8b065-1f3c-4cc2-99dc-b669366b7ec3",
+      "image_inspected": true,
+      "observed": "Dark canvas, fine concentric record outlines, large negative space and one dated listening result.",
+      "used": "A restrained record-line motif beside the journal introduction; actual listening data remains the focal point."
+    },
+    {
+      "title": "timespent activity sessions",
+      "url": "https://mobbin.com/screens/94e38e93-e753-4727-ac19-4dbb6e1b31a2",
+      "image_inspected": true,
+      "observed": "Plain ruled session rows pair subdued dates with bold right-aligned elapsed durations.",
+      "used": "Prominent tabular counted time with quieter qualification threshold and no extrapolated playback clock."
+    },
+    {
+      "title": "Headspace activity history",
+      "url": "https://mobbin.com/screens/e779c6a0-bcdf-47e5-ad1b-77d69d21efa0",
+      "image_inspected": true,
+      "observed": "A thin vertical timeline separates dated sections while title, content identity and duration remain immediately legible.",
+      "used": "Left-aligned receipt and queued-listen rows, clear status symbols, track identity before incidental metadata."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://listenbrainz.readthedocs.io/en/latest/users/api/core.html",
+      "used": "Public username reading is separate from token-authenticated writing. Validate the token and returned account; submit after half a song or four minutes; scoped playing-now deletion clears only this client's notice."
+    },
+    {
+      "url": "https://listenbrainz.readthedocs.io/en/latest/users/json.html",
+      "used": "Playing-now is temporary and lacks listened_at. Permanent submissions use the first-heard timestamp. Keep retry payload metadata and timestamps stable."
+    },
+    {
+      "url": "https://listenbrainz.readthedocs.io/en/latest/users/api-usage.html",
+      "used": "Link to the official user-token settings page and keep authentication in headers, separate from public reader configuration."
+    }
+  ],
+  "scope": "Native service connection and listening journal; this unit introduces no new wall canvas. Existing now-playing artwork remains the wall composition."
+}

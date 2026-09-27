@@ -693,16 +693,17 @@ class ControlState:
         return {
             "spotify": (sp.status() if sp and hasattr(sp, "status") else
                         {"client_id": sp.client_id if sp else "", "linked": bool(sp and sp.linked)}),
-            "lastfm": {"user": lf.user if lf else "",
-                       "key_set": bool(lf and lf.api_key)},
+            "lastfm": (lf.status() if lf and hasattr(lf, "status") else
+                       {"user": lf.user if lf else "", "key_set": bool(lf and lf.api_key)}),
             # reading needs the username; writing (the ear's listens) needs
             # the token, and the scrobbler says how that is going
             "listenbrainz": {"user": lb.user if lb else "",
                              **(self.scrobbler.status() if getattr(self, "scrobbler", None)
-                                else {"token_set": False, "valid": None, "user_name": None,
+                                else {"state": "disabled", "token_set": False, "valid": None, "user_name": None,
                                       "sources": [], "playing": None, "last_listen": None,
                                       "queued": 0, "submitted": 0,
-                                      "problem": "scrobbling is off on this wall"})},
+                                      "problem": "scrobbling is off on this wall"}),
+                             **(lb.status() if lb and hasattr(lb, "status") else {})},
             "hearing": hearing,
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
@@ -764,6 +765,8 @@ class ControlState:
         if "lastfm" in changed and self.lastfm:
             self.lastfm.configure(store.get("lastfm", "api_key"),
                                   store.get("lastfm", "user"))
+            if hasattr(self.lastfm, "retry"):
+                self.lastfm.retry()
         if "listenbrainz" in changed and self.listenbrainz:
             self.listenbrainz.configure(store.get("listenbrainz", "user"))
         if "listenbrainz" in changed and getattr(self, "scrobbler", None):
@@ -2144,6 +2147,25 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(503, {"error": "the wall could not forget the Spotify connection; try again"})
                     return
                 ctrl.dirty.set()
+                self._json(200, ctrl.services())
+                return
+
+            if self.path in ("/lastfm/retry", "/listenbrainz/retry"):
+                if self._body() is None:
+                    return
+                sources = ([ctrl.lastfm] if self.path == "/lastfm/retry" else
+                           [ctrl.listenbrainz, getattr(ctrl, "scrobbler", None)])
+                sources = [source for source in sources if source is not None and hasattr(source, "retry")]
+                if not sources:
+                    self._json(404, {"error": "this connection is not available on the wall"})
+                    return
+                # Evaluate every source; short-circuiting would skip the writer
+                # whenever the ListenBrainz reader accepted its retry first.
+                accepted = [source.retry() for source in sources]
+                if not any(accepted):
+                    self._json(409, {"error": "the connection is checking, needs setup, or needs more time"})
+                    return
+                ctrl.nudge()
                 self._json(200, ctrl.services())
                 return
 

@@ -1,0 +1,29 @@
+{
+  "status": "passed",
+  "retry_endpoints": {
+    "/lastfm/retry": "accepted",
+    "/listenbrainz/retry": "accepted"
+  },
+  "mode_before": "off",
+  "mode_after": "off",
+  "frame_size": 64,
+  "frame_sha256": "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a",
+  "service_states": {
+    "lastfm": "idle",
+    "listenbrainz_read": "ready",
+    "listenbrainz_write": "unlinked",
+    "claude_key_set": true,
+    "discogs_token_set": false
+  },
+  "privacy": "No credentials changed or persisted in QA; only provider status is recorded. No paid Claude request or external collection write.",
+  "wall_parity": "Connection editors have no new wall canvas. Current wall mode is preserved; original live RGB captured at native size.",
+  "runtime_health": {
+    "mode": "off",
+    "loop_age_s": 1.3,
+    "uptime_s": 213,
+    "throttled": {
+      "now": false,
+      "ever": false
+    }
+  }
+}

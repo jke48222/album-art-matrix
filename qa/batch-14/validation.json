@@ -1,0 +1,219 @@
+{
+  "batch": 14,
+  "base": "fd79bb3",
+  "implemented_units": [
+    "S04",
+    "S05",
+    "S06",
+    "S07",
+    "S08"
+  ],
+  "validated_at": "2026-09-27T09:29:15.580725+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed"
+  },
+  "tests": {
+    "python_full_suite": 1641,
+    "native_interactions": 9,
+    "symbols": {
+      "checked": 130,
+      "missing": [],
+      "passed": 130
+    }
+  },
+  "native_screens": [
+    {
+      "case": "claude",
+      "state": "room-live",
+      "file": "after/claude/room-live.png",
+      "sha256": "200d817485e2ec75ad7dea7f7e365e0c1d417460f1a115b5e5a8a8bfab746363"
+    },
+    {
+      "case": "claude",
+      "state": "room-large",
+      "file": "after/claude/room-large.png",
+      "sha256": "3d023e47ef3ed93d03b8e30778c4c218564f8356a2f68136c4d153c9f368dd6e"
+    },
+    {
+      "case": "claude",
+      "state": "room-offline",
+      "file": "after/claude/room-offline.png",
+      "sha256": "8f8f17f6d2c403fb26f18604e96869a13cbc15a725dcb9323c9d3e7916cfacac"
+    },
+    {
+      "case": "claude-empty",
+      "state": "room-live",
+      "file": "after/claude-empty/room-live.png",
+      "sha256": "7907475f7ff1eb500c857e9377e31d3a66018f42246971628cae903ffeaed423"
+    },
+    {
+      "case": "claude-refused",
+      "state": "room-live",
+      "file": "after/claude-refused/room-live.png",
+      "sha256": "b3d2e0467b5742caa176d6cbec22a863794d2afe243618027f18cf166d8b34df"
+    },
+    {
+      "case": "claude-unlinked",
+      "state": "room-live",
+      "file": "after/claude-unlinked/room-live.png",
+      "sha256": "e16a54a375e31a9b96454726a0fac3f9edbeac10d5b2e7ba0a955b05a04e91f2"
+    },
+    {
+      "case": "discogs",
+      "state": "room-live",
+      "file": "after/discogs/room-live.png",
+      "sha256": "0170199a893041c7c3c71ea6e102be8f9dffe281baa0ea165cff7ea1f7d864de"
+    },
+    {
+      "case": "discogs",
+      "state": "room-large",
+      "file": "after/discogs/room-large.png",
+      "sha256": "c6535ff5721b5ebde8b4c45cbe8f65876412f6c1e9759888a50eacee8180fd75"
+    },
+    {
+      "case": "discogs",
+      "state": "room-offline",
+      "file": "after/discogs/room-offline.png",
+      "sha256": "db07bb6f481cce8edb105e554a37b4c62bf466971a70b4f1f5c81e22abcb5cbd"
+    },
+    {
+      "case": "discogs-empty",
+      "state": "room-live",
+      "file": "after/discogs-empty/room-live.png",
+      "sha256": "99764ce12a1c4ce1974d3f4b37f6447a59dce9cd7b72425ef4e74aa48886427e"
+    },
+    {
+      "case": "discogs-refused",
+      "state": "room-live",
+      "file": "after/discogs-refused/room-live.png",
+      "sha256": "726000cda6d83d2ad2ad50e3f0ab9b03cbe07cd4fe1a8047bf6c124dce5fdaa1"
+    },
+    {
+      "case": "discogs-syncing",
+      "state": "room-live",
+      "file": "after/discogs-syncing/room-live.png",
+      "sha256": "5b0b8c02a53d102a54aedbef590aa2f18c1df867a07362035787f914fd90c5cf"
+    },
+    {
+      "case": "discogs-unlinked",
+      "state": "room-live",
+      "file": "after/discogs-unlinked/room-live.png",
+      "sha256": "91264e21836104dd95f5f2b939fe43693e0dbc07016febc61fd45919c4cde271"
+    },
+    {
+      "case": "lastfm",
+      "state": "room-live",
+      "file": "after/lastfm/room-live.png",
+      "sha256": "8931a01148a48a5f0e66a49aff309655b72a1a71fd0cb8914cf7caa7fab82f7d"
+    },
+    {
+      "case": "lastfm",
+      "state": "room-large",
+      "file": "after/lastfm/room-large.png",
+      "sha256": "399262dae3b4ce203cd0c3a8dff2e32fe88bdb1fe9d0710fb9793b620a1989c7"
+    },
+    {
+      "case": "lastfm",
+      "state": "room-offline",
+      "file": "after/lastfm/room-offline.png",
+      "sha256": "06b611d5cdb97b5a91567fa7042dbd721218a8e3a820e03ccfa9dc82e38a1c83"
+    },
+    {
+      "case": "lastfm-empty",
+      "state": "room-live",
+      "file": "after/lastfm-empty/room-live.png",
+      "sha256": "b5fb3a26cccbb82ebdf91ad61fead2960fa69c555976b01c68666ac686344a28"
+    },
+    {
+      "case": "lastfm-refused",
+      "state": "room-live",
+      "file": "after/lastfm-refused/room-live.png",
+      "sha256": "4c64fb2a15541c4a50476a13d5360d39fb8e62eaf40581c1810deb1f501a6bc6"
+    },
+    {
+      "case": "lastfm-unlinked",
+      "state": "room-live",
+      "file": "after/lastfm-unlinked/room-live.png",
+      "sha256": "21e1452a933b754c833e9ccc6708d6f2c98926f766daf3ea1847ca0e3fe59cae"
+    },
+    {
+      "case": "listenbrainz",
+      "state": "room-live",
+      "file": "after/listenbrainz/room-live.png",
+      "sha256": "30ae309dff09bba7acd3a5611d119f53364e6568fd425300beaa5350d8c15e3b"
+    },
+    {
+      "case": "listenbrainz",
+      "state": "room-large",
+      "file": "after/listenbrainz/room-large.png",
+      "sha256": "9c109cfaa668e3aa7fa17273beb5c9fbae21dd2d195fd5e9d25c9217d8187515"
+    },
+    {
+      "case": "listenbrainz",
+      "state": "room-offline",
+      "file": "after/listenbrainz/room-offline.png",
+      "sha256": "a4c41a14ad0cb4643230ac39317fd34db820c5437e45bda83679b83cc4fba84f"
+    },
+    {
+      "case": "listenbrainz-empty",
+      "state": "room-live",
+      "file": "after/listenbrainz-empty/room-live.png",
+      "sha256": "ab624f85395761fad9e1720f8e01efe4ebdb003d017e3d33ac61506fc1927d7f"
+    },
+    {
+      "case": "listenbrainz-paused",
+      "state": "room-live",
+      "file": "after/listenbrainz-paused/room-live.png",
+      "sha256": "58cd8e0dfb91d8da6ad97c0a17a4087c889b028c75c61dadcd79a250b15fa993"
+    },
+    {
+      "case": "listenbrainz-queued",
+      "state": "room-live",
+      "file": "after/listenbrainz-queued/room-live.png",
+      "sha256": "6dfd0709d38303b138ddcef5e6a2de89d7ceb7bd6303e572ccc2cfbfaba427d0"
+    },
+    {
+      "case": "listenbrainz-refused",
+      "state": "room-live",
+      "file": "after/listenbrainz-refused/room-live.png",
+      "sha256": "8008e7fad223062b52771157c6c340ae7228baacec96722763ef151c41413ccb"
+    },
+    {
+      "case": "listenbrainz-unlinked",
+      "state": "room-live",
+      "file": "after/listenbrainz-unlinked/room-live.png",
+      "sha256": "746d103636a3e2f9bf9f2814bd2743dd4fbe58c8b72df9a7bde08f0b71250aaf"
+    },
+    {
+      "case": "otherPlayers",
+      "state": "room-live",
+      "file": "after/otherPlayers/room-live.png",
+      "sha256": "501f782761236f01a9718fea6b115864fa35830ad9626f24c55531a5047b793e"
+    },
+    {
+      "case": "otherPlayers",
+      "state": "room-large",
+      "file": "after/otherPlayers/room-large.png",
+      "sha256": "031959e0dc32fc00fc75796f6eec2420bfcc18f5c50460bbf667f0d3795e86bf"
+    },
+    {
+      "case": "otherPlayers",
+      "state": "room-offline",
+      "file": "after/otherPlayers/room-offline.png",
+      "sha256": "6614c034d010de0148474ee5ab16e523e9870ae353e92b47b8ca82891380de90"
+    }
+  ],
+  "all_screens_and_native_tests_match_app": {
+    "Tessera.debug.dylib": "92f989bc1f7cef00188fb19e2378e52c66020e77f36588bfaec1c64f87eaf579",
+    "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87"
+  },
+  "deployment": "Managed wall runtime updated and real Last.fm/ListenBrainz retry routes checked; original wall mode preserved. Final signed build installed on iPhone18ProMax; user will open it.",
+  "limitations": [
+    "Physical iPhone touch review and real provider credential entry remain for the user. Native tests use isolated synthetic provider statuses and production service field validation.",
+    "No paid Claude inference or external account mutation was performed. Legacy unowned listening queue entries stay held instead of being assigned to an unverified account."
+  ],
+  "wall_parity": "These five units configure connections; they introduce no display canvas. Native64 wall RGB and live status recorded with original mode preserved.",
+  "tracking_semantics": "IDs indicate finished implementation; roadmap checkboxes await physical review."
+}

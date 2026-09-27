@@ -45,11 +45,14 @@ themselves. `[features] scrobble = false` turns the whole thing off.
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import math
 import os
 import re
 import threading
 import time
+import tempfile
 
 import requests
 
@@ -154,7 +157,15 @@ class Scrobbler:
         self._post = post or self._http_post
         self._gate = gate                    # () -> bool, the ear's gate
         self._current = current              # () -> NowPlaying | None
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._tick_lock = threading.Lock()
+        self._generation = 0
+        self._validation_after = 0.0
+        self._state = "checking" if self.token else "unlinked"
+        self._checked_at = None
+        self._retrying = False
+        self._counting = False
+        self._queue_saved = True
         self.episode: Episode | None = None
         self.recent: Episode | None = None   # the last episode, for the resume rule
         self.valid: bool | None = None
@@ -166,6 +177,15 @@ class Scrobbler:
         self._rate_limited_until = 0.0
         self._token_checked = None           # the token that was validated
         self._queue = self._load_queue()
+        # Older releases did not record queue ownership. Never guess: those
+        # listens stay held until expiry, even if credentials changed while off.
+        migrated = False
+        for item in self._queue:
+            if "owner" not in item:
+                item["owner"] = "unowned"
+                migrated = True
+        if migrated:
+            self._save_queue()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._loop, name="scrobble", daemon=True)
 
@@ -190,17 +210,56 @@ class Scrobbler:
         self._stop.set()
 
     # ---- settings from the phone ----------------------------------------------
+    def _owner(self):
+        return hashlib.sha256(self.token.encode("utf-8")).hexdigest() if self.token else "unowned"
+
     def configure(self, user=None, token=None):
         with self._lock:
             if user is not None:
                 self.user = user.strip()
             if token is not None and token.strip() != self.token:
                 self.token = token.strip()
+                self._generation += 1
                 self.valid = None
-                self.user_name = None
-                self.problem = None
-                self._token_checked = None
-                self._rate_limited_until = 0.0
+                self.user_name = self.problem = self._token_checked = None
+                self._rate_limited_until = self._validation_after = 0.0
+                self._state = "checking" if self.token else "unlinked"
+                self._checked_at = None
+                self.episode = self.recent = None
+                self._counting = False
+                self.last_listen = self.playing_now = None
+                self.submitted = 0
+
+    def retry(self):
+        """Coalesced user retry. A provider rate limit is never bypassed."""
+        with self._lock:
+            if not self.token or self._retrying or self._mono() < self._rate_limited_until:
+                return False
+            self._retrying = True
+            self._token_checked = None
+            self._validation_after = 0.0
+            self._state = "checking"
+            generation = self._generation
+        def check():
+            try:
+                with self._tick_lock:
+                    self._check_token(generation)
+                    with self._lock:
+                        if generation != self._generation:
+                            return
+                        for item in self._queue:
+                            if self._owns(item):
+                                item["next"] = 0.0
+                    self._retry_queue(generation)
+            finally:
+                with self._lock:
+                    self._retrying = False
+        threading.Thread(target=check, name="listenbrainz-write-check", daemon=True).start()
+        return True
+
+    def _owns(self, item):
+        return bool(self.token) and (item.get("owner") == self._owner() or bool(
+            self.valid is True and self.user_name and item.get("owner_name") == self.user_name))
 
     @property
     def configured(self) -> bool:
@@ -253,64 +312,73 @@ class Scrobbler:
                 print(f"[scrobble] tick: {exc}", flush=True)
 
     def tick(self, dt: float):
-        """One look at the ear, `dt` seconds after the last. Public so the
-        tests can drive it with a fake clock."""
+        with self._tick_lock:
+            self._tick(dt)
+
+    def _tick(self, dt: float):
         mono = self._mono()
+        with self._lock:
+            generation = self._generation
+            self._expire_queue()
         if self.configured:
-            self._check_token()
-        cur = self._ear_current()
-        ep = self.episode
-        if cur is None:
-            if ep is not None:
-                ep.ended_mono = mono
-                self.recent, self.episode = ep, None
-                print(f"[scrobble] {ep.track.artist} - {ep.track.title}: play over "
-                      f"after {int(ep.heard_s)} s heard", flush=True)
-        else:
-            if ep is None or not _same_song(ep.track, cur):
-                rec = self.recent
-                if rec is not None and _same_song(rec.track, cur) and rec.still_this_play(mono):
-                    ep = rec                         # the same play, heard again
-                    ep.ended_mono = None
-                    ep.playing_now_sent = False      # ListenBrainz's note expired
-                    print(f"[scrobble] {cur.artist} - {cur.title}: heard again, same play",
-                          flush=True)
-                else:
-                    ep = Episode(cur, self._ear_isrc(cur), self._clock(), mono)
-                    print(f"[scrobble] {cur.artist} - {cur.title}: new play", flush=True)
-                if self.episode is not None and self.episode is not ep:
-                    self.episode.ended_mono = mono   # replaced mid-play: it may come back
-                    self.recent = self.episode
-                elif ep is rec:
-                    self.recent = None
-                self.episode = ep
-            elif cur.duration_ms and not ep.track.duration_ms:
-                ep.track = cur                       # the dressing arrived late
-            ep.last_mono = mono
-            if self._ear_gate():
-                ep.heard_s += dt
-            if self.configured:
-                if not ep.playing_now_sent:
-                    ep.playing_now_sent = True       # once, whatever happens to it
-                    self._send_playing_now(ep)
-                if not ep.listen_sent and ep.heard_s >= ep.needs_s:
-                    ep.listen_sent = True
-                    self._send_listen(ep)
+            self._check_token(generation)
+        cur = self._ear_current() if "ears" in self.sources else None
+        counting = bool(cur is not None and cur.is_playing and self._ear_gate())
+        with self._lock:
+            if generation != self._generation:
+                return
+            ep = self.episode
+            previous = ep
+            self._counting = counting
+            if cur is None:
+                if ep is not None:
+                    ep.ended_mono = mono
+                    self.recent, self.episode = ep, None
+                ep = None
+            else:
+                if ep is None or not _same_song(ep.track, cur):
+                    rec = self.recent
+                    if rec is not None and _same_song(rec.track, cur) and rec.still_this_play(mono):
+                        ep = rec
+                        ep.ended_mono = None
+                        ep.playing_now_sent = False
+                    else:
+                        ep = Episode(cur, self._ear_isrc(cur), self._clock(), mono)
+                    if self.episode is not None and self.episode is not ep:
+                        self.episode.ended_mono = mono
+                        self.recent = self.episode
+                    elif ep is rec:
+                        self.recent = None
+                    self.episode = ep
+                elif cur.duration_ms and not ep.track.duration_ms:
+                    ep.track = cur
+                ep.last_mono = mono
+                # A blocked network request or a sleeping process is not
+                # evidence of listening. New tracks do not inherit prior time.
+                if counting and ep is previous and math.isfinite(dt) and 0 <= dt <= POLL_S * 3:
+                    ep.heard_s += dt
+        if not counting and self.configured:
+            self._clear_playing_now(generation)
+        if ep is not None and self.configured:
+            if not ep.playing_now_sent and counting:
+                self._send_playing_now(ep, generation)
+            if not ep.listen_sent and ep.heard_s >= ep.needs_s:
+                self._send_listen(ep, generation)
         if self.configured:
-            self._retry_queue()
+            self._retry_queue(generation)
 
     # ---- posting ------------------------------------------------------------------
-    def _headers(self) -> dict:
-        return {"Authorization": f"Token {self.token}", "User-Agent": UA,
+    def _headers(self, token) -> dict:
+        return {"Authorization": f"Token {token}", "User-Agent": UA,
                 "Content-Type": "application/json"}
 
-    def _http_post(self, path: str, body: dict | None, method: str = "POST"):
+    def _http_post(self, path: str, body: dict | None, method: str = "POST", token=None):
         """(status code, json or None). Network errors are status 0."""
         try:
             if method == "GET":
-                r = requests.get(API + path, headers=self._headers(), timeout=10)
+                r = requests.get(API + path, headers=self._headers(token if token is not None else self.token), timeout=10)
             else:
-                r = requests.post(API + path, headers=self._headers(), json=body, timeout=15)
+                r = requests.post(API + path, headers=self._headers(token if token is not None else self.token), json=body, timeout=15)
             try:
                 data = r.json()
             except ValueError:
@@ -319,78 +387,149 @@ class Scrobbler:
         except requests.RequestException as exc:
             return 0, {"error": str(exc)[:120]}, {}
 
-    def _check_token(self):
-        if self._token_checked == self.token:
-            return
-        self._token_checked = self.token
-        code, data, _ = self._post("/validate-token", None, method="GET")
-        if code == 200 and isinstance(data, dict):
-            self.valid = bool(data.get("valid"))
-            self.user_name = data.get("user_name") or None
-            self.problem = None if self.valid else "the token is not one ListenBrainz knows"
-            print(f"[scrobble] token {'valid' if self.valid else 'REJECTED'}"
-                  f"{' for ' + self.user_name if self.user_name else ''}", flush=True)
-        elif code == 0:
-            self._token_checked = None           # ask again when the network is back
+    def _request(self, path, body, generation, method="POST"):
+        with self._lock:
+            if generation != self._generation or not self.token:
+                return None
+            token = self.token
+        if self._post == self._http_post:
+            result = self._http_post(path, body, method, token=token)
         else:
-            self.valid = None
-            self.problem = f"validate-token answered {code}"
+            result = self._post(path, body, method=method)
+        with self._lock:
+            return result if generation == self._generation else None
 
-    def _send_playing_now(self, ep: Episode):
-        if self.valid is False or self._mono() < self._rate_limited_until:
+    def _check_token(self, generation):
+        with self._lock:
+            if generation != self._generation or self._token_checked == self.token or self._mono() < self._validation_after:
+                return
+        result = self._request("/validate-token", None, generation, method="GET")
+        if result is None:
             return
+        code, data, headers = result
+        with self._lock:
+            if generation != self._generation:
+                return
+            self._checked_at = self._clock()
+            if code == 200 and isinstance(data, dict) and isinstance(data.get("valid"), bool):
+                self.valid = data["valid"]
+                name = data.get("user_name")
+                if self.valid and (not isinstance(name, str) or not name.strip()):
+                    self.valid = None
+                    self._state = "unavailable"
+                    self.problem = "ListenBrainz did not identify the token’s account."
+                    self._validation_after = self._mono() + 60
+                    return
+                self.user_name = name if self.valid else None
+                self._token_checked = self.token
+                self.problem = None if self.valid else "ListenBrainz rejected this user token. Replace it in Writing."
+                self._state = "ready" if self.valid else "refused"
+            else:
+                self.valid = None
+                self._validation_after = self._mono() + 60
+                self._note_failure(code, data, headers, "token check")
+
+    def _send_playing_now(self, ep: Episode, generation):
+        with self._lock:
+            if generation != self._generation or self.valid is not True or self._mono() < self._rate_limited_until:
+                return
         body = {"listen_type": "playing_now",
                 "payload": [{"track_metadata": listen_payload(ep.track, ep.isrc)}]}
-        code, data, headers = self._post("/submit-listens", body)
-        if code == 200:
-            self.playing_now = {"title": ep.track.title, "artist": ep.track.artist,
-                                "at": int(self._clock())}
-        else:
-            self._note_failure(code, data, headers, "playing now")
-        # a playing-now that failed is not queued: it is about this minute
+        result = self._request("/submit-listens", body, generation)
+        with self._lock:
+            if result is None or generation != self._generation:
+                return
+            code, data, headers = result
+            ep.playing_now_sent = True
+            if code == 200:
+                self.playing_now = {"title": ep.track.title, "artist": ep.track.artist,
+                                    "at": int(self._clock())}
+                self._state = "ready"
+                self.problem = None
+            else:
+                self._note_failure(code, data, headers, "playing now")
 
-    def _send_listen(self, ep: Episode):
-        item = {"kind": "single",
-                "payload": {"listened_at": int(ep.started_at),
-                            "track_metadata": listen_payload(ep.track, ep.isrc)},
-                "queued_at": self._clock(), "tries": 0, "next": 0.0}
-        if self.valid is False or self._mono() < self._rate_limited_until:
-            self._enqueue(item)
-            return
+    def _clear_playing_now(self, generation):
+        with self._lock:
+            if generation != self._generation or self.playing_now is None or self.valid is not True:
+                return
+            # A playing-now notice is temporary. Clear only this client's
+            # notice, never one recently sent by the user's music player.
+            self.playing_now = None
+            if self.episode:
+                self.episode.playing_now_sent = False
+            if self._mono() < self._rate_limited_until:
+                return
+        result = self._request("/playing-now/delete", {"client": CLIENT}, generation)
+        with self._lock:
+            if result is None or generation != self._generation:
+                return
+            code, data, headers = result
+            if code not in (200, 404):
+                self._note_failure(code, data, headers, "clear playing now")
+
+    def _send_listen(self, ep: Episode, generation):
+        with self._lock:
+            if generation != self._generation or not self.token or ep.listen_sent:
+                return
+            ep.listen_sent = True
+            item = {"kind": "single",
+                    "payload": {"listened_at": int(ep.started_at),
+                                "track_metadata": listen_payload(ep.track, ep.isrc)},
+                    "queued_at": self._clock(), "tries": 0, "next": 0.0,
+                    "owner": self._owner(), "owner_name": self.user_name}
+            if self.valid is not True or self._mono() < self._rate_limited_until:
+                self._enqueue(item)
+                return
+            # Save before transmission. A retry uses the same timestamp and
+            # metadata so ListenBrainz can recognize duplicate submissions.
+            self._queue.append(item)
+            self._save_queue()
         body = {"listen_type": "single", "payload": [item["payload"]]}
-        code, data, headers = self._post("/submit-listens", body)
-        if code == 200:
-            self._landed([item])
-        elif self._retryable(code):
-            self._note_failure(code, data, headers, "listen")
-            self._enqueue(item)
-        else:
-            self._note_failure(code, data, headers, "listen")
-            print(f"[scrobble] dropped: {ep.track.artist} - {ep.track.title} "
-                  f"({code} {data})", flush=True)
+        result = self._request("/submit-listens", body, generation)
+        with self._lock:
+            if result is None or generation != self._generation:
+                return
+            code, data, headers = result
+            if code == 200:
+                self._landed([item])
+                self._remove_items([item])
+            elif self._retryable(code):
+                self._note_failure(code, data, headers, "listen")
+                self._enqueue(item)
+            else:
+                self._remove_items([item])
+                self._note_failure(code, data, headers, "listen")
 
     def _retryable(self, code: int) -> bool:
-        return code == 0 or code == 429 or code >= 500
+        return code in (0, 401, 403, 429) or code >= 500
 
     def _note_failure(self, code, data, headers, what):
-        if code == 401:
+        if code in (401, 403):
             self.valid = False
-            self.problem = "ListenBrainz rejected the token"
+            self._state = "refused"
+            self.problem = "ListenBrainz rejected the token. Replace it in Writing."
         elif code == 429:
             try:
                 wait = float((headers or {}).get("X-RateLimit-Reset-In", RATE_LIMIT_FALLBACK_S))
             except (TypeError, ValueError):
                 wait = RATE_LIMIT_FALLBACK_S
+            wait = min(3600.0, max(1.0, wait)) if math.isfinite(wait) else RATE_LIMIT_FALLBACK_S
             self._rate_limited_until = self._mono() + wait
-            self.problem = f"rate limited, {int(wait)} s"
+            self._state = "rate_limited"
+            self.problem = f"ListenBrainz is rate limited; retry in {int(wait)} seconds."
         elif code == 0:
-            self.problem = "no network; listens are kept for later"
+            self._state = "offline"
+            self.problem = "ListenBrainz has no network connection. Counted listens wait here."
         else:
-            self.problem = f"ListenBrainz answered {code}"
-        print(f"[scrobble] {what} failed: {code} {data}", flush=True)
+            self._state = "unavailable"
+            self.problem = "ListenBrainz could not accept the request. Try again."
+        # Never echo provider error bodies: they can contain credentials.
+        print(f"[scrobble] {what} failed: HTTP {code}", flush=True)
 
     def _landed(self, items: list[dict]):
         self.problem = None
+        self._state = "ready"
         for it in items:
             tm = it["payload"]["track_metadata"]
             self.submitted += 1
@@ -412,22 +551,51 @@ class Scrobbler:
 
     # ---- the queue ------------------------------------------------------------------
     def _load_queue(self) -> list[dict]:
+        items = []
         try:
             with open(self.queue_path) as fh:
-                return [json.loads(ln) for ln in fh if ln.strip()]
-        except (OSError, json.JSONDecodeError):
-            return []
+                for line in fh:
+                    try:
+                        item = json.loads(line)
+                        payload = item.get("payload", {})
+                        meta = payload.get("track_metadata", {})
+                        if not isinstance(meta.get("track_name"), str) or not isinstance(meta.get("artist_name"), str):
+                            continue
+                        if not isinstance(payload.get("listened_at"), (int, float)):
+                            continue
+                        if not all(isinstance(item.get(k, 0), (int, float)) and math.isfinite(item.get(k, 0)) for k in ("queued_at", "tries", "next")):
+                            continue
+                        items.append(item)
+                    except (ValueError, TypeError, AttributeError):
+                        continue
+        except OSError:
+            pass
+        return items
 
     def _save_queue(self):
+        tmp = None
         try:
-            os.makedirs(os.path.dirname(self.queue_path), exist_ok=True)
-            tmp = self.queue_path + ".tmp"
-            with open(tmp, "w") as fh:
+            directory = os.path.dirname(self.queue_path) or "."
+            os.makedirs(directory, exist_ok=True)
+            fd, tmp = tempfile.mkstemp(prefix=".scrobbles-", dir=directory)
+            with os.fdopen(fd, "w") as fh:
                 for it in self._queue:
                     fh.write(json.dumps(it) + "\n")
+                fh.flush()
+                os.fsync(fh.fileno())
             os.replace(tmp, self.queue_path)
-        except OSError as exc:
-            print(f"[scrobble] queue: {exc}", flush=True)
+            self._queue_saved = True
+        except OSError:
+            self._queue_saved = False
+            print("[scrobble] could not save the listening queue", flush=True)
+        finally:
+            if tmp and os.path.exists(tmp):
+                os.unlink(tmp)
+
+    def _remove_items(self, items):
+        with self._lock:
+            self._queue = [it for it in self._queue if all(it is not item for item in items)]
+            self._save_queue()
 
     def _enqueue(self, item: dict):
         item["tries"] = item.get("tries", 0) + 1
@@ -435,59 +603,67 @@ class Scrobbler:
         wait = RETRY_S[step] if item["tries"] <= len(RETRY_S) else RETRY_HOURLY_S
         item["next"] = self._clock() + wait
         with self._lock:
-            self._queue.append(item)
+            if not any(it is item for it in self._queue):
+                self._queue.append(item)
             self._save_queue()
         print(f"[scrobble] queued ({len(self._queue)} waiting), next try in {int(wait)} s",
               flush=True)
 
-    def _retry_queue(self):
-        if not self._queue or self.valid is False or self._mono() < self._rate_limited_until:
-            return
+    def _expire_queue(self):
         now = self._clock()
-        with self._lock:
-            keep, due = [], []
-            for it in self._queue:
-                if now - it.get("queued_at", now) > QUEUE_MAX_AGE_S:
-                    print(f"[scrobble] gave up after a week: "
-                          f"{it['payload']['track_metadata']['track_name']}", flush=True)
-                    continue
-                (due if it.get("next", 0) <= now else keep).append(it)
-            if len(keep) + len(due) != len(self._queue):
-                self._queue = keep + due          # something aged out: say so on disk
-                self._save_queue()
-            if not due:
-                return
-            batch, later = due[:BATCH], due[BATCH:]
-            self._queue = keep + later
+        kept = [item for item in self._queue if now - item.get("queued_at", now) <= QUEUE_MAX_AGE_S]
+        if len(kept) != len(self._queue):
+            self._queue = kept
             self._save_queue()
+
+    def _retry_queue(self, generation):
+        with self._lock:
+            if generation != self._generation or not self._queue or self.valid is not True or self._mono() < self._rate_limited_until:
+                return
+            now = self._clock()
+            kept = [it for it in self._queue if now - it.get("queued_at", now) <= QUEUE_MAX_AGE_S]
+            if len(kept) != len(self._queue):
+                self._queue = kept
+                self._save_queue()
+            batch = [it for it in self._queue if self._owns(it) and it.get("next", 0) <= now][:BATCH]
+        if not batch:
+            return
         body = {"listen_type": "import", "payload": [it["payload"] for it in batch]}
-        code, data, headers = self._post("/submit-listens", body)
-        if code == 200:
-            self._landed(batch)
-            if later:
-                return                           # the rest on the next tick
-        elif self._retryable(code):
-            self._note_failure(code, data, headers, "retry")
-            for it in batch:
-                self._enqueue(it)
-        else:
-            self._note_failure(code, data, headers, "retry")
-            print(f"[scrobble] dropped {len(batch)} queued listens ({code})", flush=True)
+        result = self._request("/submit-listens", body, generation)
+        if result is None:
+            return
+        with self._lock:
+            if generation != self._generation:
+                return
+            code, data, headers = result
+            if code == 200:
+                self._landed(batch)
+                self._remove_items(batch)
+            elif self._retryable(code):
+                self._note_failure(code, data, headers, "retry")
+                for item in batch:
+                    self._enqueue(item)
+            else:
+                self._note_failure(code, data, headers, "retry")
+                self._remove_items(batch)
 
     # ---- for /services --------------------------------------------------------------
     def status(self) -> dict:
-        ep = self.episode
-        return {
-            "user": self.user,
-            "token_set": bool(self.token),
-            "valid": self.valid,
-            "user_name": self.user_name,
-            "sources": list(self.sources),
-            "playing": ({"title": ep.track.title, "artist": ep.track.artist,
-                         "heard_s": int(ep.heard_s), "needs_s": int(ep.needs_s),
-                         "listened": ep.listen_sent} if ep is not None else None),
-            "last_listen": self.last_listen,
-            "queued": len(self._queue),
-            "submitted": self.submitted,
-            "problem": self.problem,
-        }
+        with self._lock:
+            ep = self.episode
+            queued = sum(1 for item in self._queue if self._owns(item))
+            return {
+                "user": self.user, "token_set": bool(self.token), "valid": self.valid,
+                "user_name": self.user_name, "sources": list(self.sources),
+                "state": self._state, "checked_at": self._checked_at,
+                "counting": self._counting,
+                "retry_after": max(0, int(math.ceil(self._rate_limited_until - self._mono()))),
+                "playing": ({"title": ep.track.title, "artist": ep.track.artist,
+                             "heard_s": int(ep.heard_s), "needs_s": int(math.ceil(ep.needs_s)),
+                             "listened": ep.listen_sent} if ep is not None else None),
+                "last_listen": self.last_listen, "queued": queued,
+                "held_queued": len(self._queue) - queued,
+                "legacy_queued": sum(1 for item in self._queue if item.get("owner") == "unowned"),
+                "queue_saved": self._queue_saved,
+                "submitted": self.submitted, "problem": self.problem,
+            }

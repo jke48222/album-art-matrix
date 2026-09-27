@@ -1,0 +1,84 @@
+{
+  "spotify": {
+    "client_id": "1234567890abcdef1234567890abcdef",
+    "linked": true,
+    "state": "idle",
+    "problem": null,
+    "can_retry": false
+  },
+  "lastfm": {
+    "user": "",
+    "key_set": false,
+    "state": "unconfigured",
+    "checked_at": 1790501175,
+    "current": null,
+    "last_listen": null,
+    "problem": null,
+    "can_retry": true
+  },
+  "listenbrainz": {
+    "user": "",
+    "token_set": false,
+    "valid": null,
+    "user_name": null,
+    "state": "unlinked",
+    "read_state": "unlinked",
+    "read_playing": null,
+    "read_problem": null,
+    "read_checked_at": 1790501175,
+    "playing": null,
+    "counting": false,
+    "last_listen": null,
+    "queued": 0,
+    "held_queued": 0,
+    "queue_saved": true,
+    "submitted": 0,
+    "problem": null
+  },
+  "ears": false,
+  "hearing": {
+    "on": false,
+    "tools": false,
+    "listening": false,
+    "state": "off",
+    "gate_open": false
+  },
+  "airplay": {
+    "running": false,
+    "state": "off"
+  },
+  "mac": {
+    "endpoint": "",
+    "answering": false
+  },
+  "source_order": [
+    "phone",
+    "airplay",
+    "applemusic",
+    "spotify",
+    "lastfm",
+    "listenbrainz",
+    "ears"
+  ],
+  "claude": {
+    "ready": false,
+    "key_set": false,
+    "workspace_set": false,
+    "model": "claude-opus-5",
+    "answers": 0,
+    "cost_usd": 0,
+    "problem": null,
+    "last": null
+  },
+  "discogs": {
+    "user": "",
+    "token_set": false,
+    "releases": 0,
+    "synced_at": null,
+    "syncing": false,
+    "problem": null,
+    "pages_read": 0,
+    "pages_total": 0,
+    "releases_read": 0
+  }
+}

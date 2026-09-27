@@ -1,0 +1,103 @@
+{
+  "spotify": {
+    "client_id": "1234567890abcdef1234567890abcdef",
+    "linked": true,
+    "state": "idle",
+    "problem": null,
+    "can_retry": false
+  },
+  "lastfm": {
+    "user": "tessera_studies",
+    "key_set": true,
+    "state": "refused",
+    "checked_at": 1790501302,
+    "current": null,
+    "last_listen": {
+      "title": "Into the Quiet",
+      "artist": "The Tessera Sessions",
+      "album": "After the Rain",
+      "at": 1790500102
+    },
+    "problem": "Last.fm refused this API key. Replace it and check again.",
+    "can_retry": true
+  },
+  "listenbrainz": {
+    "user": "tessera_studies",
+    "token_set": true,
+    "valid": false,
+    "user_name": "tessera_studies",
+    "state": "refused",
+    "read_state": "playing",
+    "read_playing": {
+      "title": "Into the Quiet",
+      "artist": "The Tessera Sessions",
+      "album": "After the Rain"
+    },
+    "read_problem": null,
+    "read_checked_at": 1790501302,
+    "playing": null,
+    "counting": false,
+    "last_listen": {
+      "title": "Into the Quiet",
+      "artist": "The Tessera Sessions",
+      "album": "After the Rain",
+      "at": 1790500102,
+      "kind": "listen"
+    },
+    "queued": 0,
+    "held_queued": 0,
+    "queue_saved": true,
+    "submitted": 37,
+    "problem": "ListenBrainz refused the token. Replace it in your account settings."
+  },
+  "ears": false,
+  "hearing": {
+    "on": false,
+    "tools": false,
+    "listening": false,
+    "state": "off",
+    "gate_open": false
+  },
+  "airplay": {
+    "running": false,
+    "state": "off"
+  },
+  "mac": {
+    "endpoint": "",
+    "answering": false
+  },
+  "source_order": [
+    "phone",
+    "airplay",
+    "applemusic",
+    "spotify",
+    "lastfm",
+    "listenbrainz",
+    "ears"
+  ],
+  "claude": {
+    "ready": true,
+    "key_set": true,
+    "workspace_set": false,
+    "model": "claude-opus-5",
+    "answers": 12,
+    "cost_usd": 0.074,
+    "problem": "Claude refused the key. Replace it in connection settings.",
+    "last": {
+      "q": "What was playing after dinner?",
+      "a": "Into the Quiet by The Tessera Sessions was the most recent track.",
+      "ts": 1790500102
+    }
+  },
+  "discogs": {
+    "user": "tessera_studies",
+    "token_set": true,
+    "releases": 163,
+    "synced_at": 1790500102,
+    "syncing": false,
+    "problem": "Discogs refused the token. Replace it and sync again.",
+    "pages_read": 0,
+    "pages_total": 0,
+    "releases_read": 0
+  }
+}

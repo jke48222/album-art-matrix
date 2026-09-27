@@ -131,6 +131,9 @@ class Shelf:
         self.releases: list[dict] = []
         self.synced_at: float | None = None
         self.syncing = False
+        self.pages_read = 0
+        self.pages_total: int | None = None
+        self.releases_read = 0
         self.problem: str | None = None
         self._prices: dict[int, tuple[float, dict]] = {}
         self._details: dict[int, tuple[float, dict]] = {}
@@ -204,6 +207,7 @@ class Shelf:
             self._requested = False
             self.syncing = False
             self.sync_id = self.completed_sync_id = None
+            self.pages_read, self.pages_total, self.releases_read = 0, None, 0
             self._save()
         self.request_sync()
 
@@ -219,6 +223,7 @@ class Shelf:
                 return self.sync_id
             self.sync_id = uuid.uuid4().hex
             self._requested = True
+            self.pages_read, self.pages_total, self.releases_read = 0, None, 0
             self.problem = None
         self._wake.set()
         return self.sync_id
@@ -231,6 +236,7 @@ class Shelf:
         return h
 
     def _http_get(self, path: str, params: dict | None = None, token: str | None = None):
+        generation = self._generation
         headers = self._headers()
         if token is not None:
             headers["Authorization"] = f"Discogs token={token}"
@@ -241,6 +247,8 @@ class Shelf:
             except (ValueError, TypeError):
                 delay = 60.0
             time.sleep(delay)
+            if generation != self._generation:
+                raise InterruptedError("Discogs account changed")
             r = requests.get(API + path, params=params or {}, headers=headers, timeout=20)
         if r.status_code == 401:
             raise PermissionError("Discogs rejected the token")
@@ -255,7 +263,7 @@ class Shelf:
             try:
                 self.tick()
             except Exception as exc:
-                self.problem = f"{type(exc).__name__}: {str(exc)[:100]}"
+                self.problem = "The collection could not update. Try reading it again."
                 print(f"[shelf] {self.problem}", flush=True)
             self._wake.wait(SYNC_EVERY_S)
 
@@ -275,11 +283,14 @@ class Shelf:
             self._requested = False
             if self.sync_id is None or self.sync_id == self.completed_sync_id:
                 self.sync_id = uuid.uuid4().hex
+            self.pages_read, self.pages_total, self.releases_read = 0, None, 0
             request_id, generation = self.sync_id, self._generation
             user, token = self.user, self.token
         try:
             got, page, pages = [], 1, 1
             while page <= pages:
+                if generation != self._generation:
+                    return 0
                 path = f"/users/{quote(user, safe='')}/collection/folders/0/releases"
                 params = {"per_page": PAGE, "page": page, "sort": "added", "sort_order": "desc"}
                 data = self._fetch(path, params) if self._custom_fetch else self._http_get(path, params, token=token)
@@ -288,9 +299,19 @@ class Shelf:
                 pages = int((data.get("pagination") or {}).get("pages") or 1)
                 if pages < 1 or pages > 10000:
                     raise ValueError("Invalid collection response")
-                got.extend(release_from_api(x) for x in data.get("releases") or [])
-                if generation != self._generation:
-                    return 0
+                items = data.get("releases") or []
+                if any(not isinstance(item, dict) or not isinstance(item.get("basic_information"), dict) for item in items):
+                    raise ValueError("Invalid collection response")
+                parsed = [release_from_api(item) for item in items]
+                if any(not isinstance(item.get("id"), int) or isinstance(item.get("id"), bool) or item["id"] <= 0
+                       or not isinstance(item.get("title"), str) or not isinstance(item.get("artists"), list)
+                       or any(not isinstance(artist, str) for artist in item["artists"]) for item in parsed):
+                    raise ValueError("Invalid collection response")
+                got.extend(parsed)
+                with self._lock:
+                    if generation != self._generation:
+                        return 0
+                    self.pages_read, self.pages_total, self.releases_read = page, pages, len(got)
                 page += 1
                 if page <= pages:
                     time.sleep(PACE_S)
@@ -374,11 +395,15 @@ class Shelf:
         """A song went up: remember its pressing (None when it is not on
         the shelf) and fetch the country and the price on a worker, so the
         render loop never waits on Discogs."""
+        generation = self._generation
         r = self.match(album or "", artist or "") if album and album != "?" else None
-        if r is None:
-            self.playing = None
-            return None
-        self.playing = self.pressing(r)
+        with self._lock:
+            if generation != self._generation:
+                return None
+            if r is None:
+                self.playing = None
+                return None
+            self.playing = self.pressing(r)
         rid = int(r["id"])
         det, pr = self._details.get(rid), self._prices.get(rid)
         now = self._clock()
@@ -387,12 +412,13 @@ class Shelf:
         if self.configured and not fresh:
             def work():
                 try:
-                    p = self.enrich(rid)
+                    p = self.enrich(rid, expected_generation=generation)
                 except Exception as exc:
-                    print(f"[shelf] enrich {rid}: {exc}", flush=True)
+                    print(f"[shelf] enrich {rid}: {type(exc).__name__}", flush=True)
                     return
-                if self.playing is not None and self.playing.get("release_id") == rid:
-                    self.playing = p
+                with self._lock:
+                    if generation == self._generation and self.playing is not None and self.playing.get("release_id") == rid:
+                        self.playing = p
             threading.Thread(target=work, name="shelf-enrich", daemon=True).start()
         return self.playing
 
@@ -411,33 +437,51 @@ class Shelf:
             out["price"] = pr[1]
         return out
 
-    def enrich(self, release_id: int) -> dict:
-        """Country, release date and the marketplace's lowest price, fetched
-        once and kept; on a worker, never on the render loop."""
-        rid = int(release_id)
-        now = self._clock()
-        det = self._details.get(rid)
+    def enrich(self, release_id: int, *, expected_generation: int | None = None) -> dict:
+        """Read pressing details under one account; discard work after disconnect."""
+        rid, now = int(release_id), self._clock()
+        with self._lock:
+            if expected_generation is not None and expected_generation != self._generation:
+                return {"release_id": rid}
+            generation, token = self._generation, self.token
+            det, pr = self._details.get(rid), self._prices.get(rid)
+            release = next((r for r in self.releases if int(r["id"]) == rid),
+                           {"id": rid, "title": "", "artists": []})
+            if not self.configured:
+                return self.pressing(release)
+        def fetch(path, params):
+            if generation != self._generation:
+                raise InterruptedError("Discogs account changed")
+            return self._fetch(path, params) if self._custom_fetch else self._http_get(path, params, token=token)
         if det is None or now - det[0] > DETAILS_CACHE_S:
             try:
-                d = self._fetch(f"/releases/{rid}", {})
-                self._details[rid] = (now, {"country": d.get("country", ""),
-                                            "released": d.get("released", ""),
-                                            "notes": (d.get("notes") or "")[:200]})
+                data = fetch(f"/releases/{rid}", {})
+                if isinstance(data, dict):
+                    det = (now, {"country": data.get("country", ""), "released": data.get("released", ""),
+                                 "notes": (data.get("notes") or "")[:200]})
             except Exception as exc:
-                print(f"[shelf] release {rid}: {exc}", flush=True)
-        pr = self._prices.get(rid)
+                print(f"[shelf] release {rid}: {type(exc).__name__}", flush=True)
         if pr is None or now - pr[0] > PRICE_CACHE_S:
             try:
+                if generation != self._generation:
+                    return {"release_id": rid}
                 time.sleep(PACE_S)
-                p = self._fetch(f"/marketplace/stats/{rid}", {"curr_abbr": "USD"})
-                low = p.get("lowest_price") or {}
-                self._prices[rid] = (now, {"lowest": low.get("value"), "currency": low.get("currency", "USD"),
-                                           "for_sale": p.get("num_for_sale", 0)})
+                data = fetch(f"/marketplace/stats/{rid}", {"curr_abbr": "USD"})
+                if isinstance(data, dict):
+                    low = data.get("lowest_price") or {}
+                    pr = (now, {"lowest": low.get("value"), "currency": low.get("currency", "USD"),
+                                "for_sale": data.get("num_for_sale", 0)})
             except Exception as exc:
-                print(f"[shelf] price {rid}: {exc}", flush=True)
+                print(f"[shelf] price {rid}: {type(exc).__name__}", flush=True)
         with self._lock:
+            if generation != self._generation:
+                return {"release_id": rid}
+            if det is not None:
+                self._details[rid] = det
+            if pr is not None:
+                self._prices[rid] = pr
             self._save()
-        return self.pressing(next((r for r in self.releases if int(r["id"]) == rid), {"id": rid, "title": "", "artists": []}))
+            return self.pressing(release)
 
     # ---- for the phone ---------------------------------------------------------------------------
     def listing(self, journal: list[dict] | None = None) -> list[dict]:
@@ -464,5 +508,7 @@ class Shelf:
             return {"user": self.user, "token_set": bool(self.token), "releases": len(self.releases),
                     "synced_at": self.synced_at, "syncing": self.syncing or self._requested,
                     "revision": self.revision,
+                    "pages_read": self.pages_read, "pages_total": self.pages_total,
+                    "releases_read": self.releases_read,
                     "sync_id": self.sync_id, "completed_sync_id": self.completed_sync_id,
                     "problem": self.problem}

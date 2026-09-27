@@ -1,0 +1,14 @@
+{
+  "status": "installed",
+  "device": "iPhone 18 Pro Max",
+  "device_id": "1BED2E47-0A74-5F9E-A99A-61408BF6382C",
+  "signed_build": "passed",
+  "signature_verification": "passed",
+  "app": "/tmp/tessera-batch14-phone/Build/Products/Debug-iphoneos/Tessera.app",
+  "app_sha256": {
+    "Tessera.debug.dylib": "6370e42c1a40bedb761827eecc2467f7baf8f94245f071f80d35ff997a9e9a33",
+    "Tessera": "209dc3b28e2e487daaf40ad8efe9ee9b704f7875b6286baac5115cdc3af80688"
+  },
+  "bundle_id": "com.jalenedusei.tessera",
+  "launch": "User prefers opening the installed app himself; physical launch not attempted."
+}

@@ -1,0 +1,65 @@
+{
+  "status": "deployed",
+  "dependency_review": "Compared changed runtime files with the deployed source. Service modules compile and import before managed restart; backups retained.",
+  "base": "fd79bb3",
+  "files": [
+    {
+      "path": "brain/ask.py",
+      "before_sha256": "8f63c5ed246663c6414a8a6948f0af3ff5bca7983426ae45f1a243194d5f99cb",
+      "after_sha256": "eabbf263d2ab074bc75aa2d87530037ed479c653ffe4a4870e4afb32a6adc7e5"
+    },
+    {
+      "path": "brain/control.py",
+      "before_sha256": "18b5b53c4b26aaf99ca8e73a6c51716cf5910c642826db6321f3b595808ff536",
+      "after_sha256": "8d3f06512ba3378283d381792b66f647eedb598d0050e93fd168b4ec356b73b8"
+    },
+    {
+      "path": "brain/nowplaying/lastfm.py",
+      "before_sha256": "859110931750c365306aa5636d7c2089ed90f37a44cb0d07b28ebc89a8fb4e99",
+      "after_sha256": "9e3adc0543770cce9c31d637cc41fa5704491e8739cd6f968070169f2a80ae88"
+    },
+    {
+      "path": "brain/nowplaying/listenbrainz.py",
+      "before_sha256": "b3a3a9a51595ca920321d292790931b56e7b240a7e822eb5a0f75af760480ae7",
+      "after_sha256": "9f3da633bf5ac95996d0d3856ad8888de288cfa6f044da9230fd20e7397c21c3"
+    },
+    {
+      "path": "brain/scrobble.py",
+      "before_sha256": "edacdde9e54f91a80bed327b79e368cadc19058821ec91b5c4d35208b5fd41c9",
+      "after_sha256": "a4412101d4fcb25fe0264fc32c0d95f365f021e19a5e6551cab150cb98fae1eb"
+    },
+    {
+      "path": "brain/shelf.py",
+      "before_sha256": "3d728243e9b89e992213aaed153dc275c44f9b50b594dffe7c003155961452f3",
+      "after_sha256": "4654272dfbaa47569f20ac24ffd3b90bc03a7d0d0df2531a01734d2f2e02014d"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "1038391",
+  "current_pid": "2052982",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 72,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 57.9,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 29,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}
