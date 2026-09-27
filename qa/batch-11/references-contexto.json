@@ -1,0 +1,51 @@
+{
+  "unit": "G08",
+  "feature": "Contexto",
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine five Tessera games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "references": [
+    {
+      "source": "Mobbin",
+      "app": "Oura",
+      "url": "https://mobbin.com/screens/03958157-6ab8-4046-9a49-ebf639baa348",
+      "image_inspected": true,
+      "observed": "An expansive readiness arc frames a large score; the status and supporting explanation have a clear hierarchy.",
+      "applied": "A 41-tick proximity dial frames the current semantic rank, with a separate word and compact best-rank footer. The same geometry is drawn natively and on the wall."
+    },
+    {
+      "source": "Mobbin",
+      "app": "Oura",
+      "url": "https://mobbin.com/screens/aba0560d-220a-4b2c-9700-d603272c67f7",
+      "image_inspected": true,
+      "observed": "Contributor rows pair concise labels and right-aligned values with restrained horizontal measure bars.",
+      "applied": "The guess trail pairs words and ranks with logarithmic proximity bars. Closest/recent ordering and incremental inline expansion keep the main gameplay controls reachable."
+    },
+    {
+      "source": "Contexto official",
+      "url": "https://contexto.me/",
+      "observed": "The official game presents finding a secret word as its central objective. Its full game requires JavaScript.",
+      "applied": "The native flow foregrounds the secret-word objective; guesses, repeated guesses, winning and voluntary reveal have distinct acknowledged states."
+    },
+    {
+      "source": "Stanford GloVe",
+      "url": "https://nlp.stanford.edu/projects/glove/",
+      "observed": "Word vectors model semantic relations through co-occurrence; vector similarity supports nearest-neighbor comparisons, while a single similarity score does not capture all semantic relationships.",
+      "applied": "The bundled vectors are normalized once for cosine ranking. The exact secret always receives rank one, including tied vectors. UI copy explains meaning rather than spelling without presenting rank as a probability."
+    },
+    {
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+      "observed": "Information should not depend on color alone; larger text, legible contrast and meaningful VoiceOver descriptions are required.",
+      "applied": "Numerical ranks and verbal proximity bands accompany color. The dial has a complete VoiceOver summary, controls use at least 44-point targets, larger text stacks input/actions, and reduced motion removes rank animation."
+    }
+  ],
+  "validation": {
+    "python_tests": "51 passed: brain/tests/test_contexto.py and brain/tests/test_contexto_batch.py",
+    "swift_syntax": "xcrun swiftc -frontend -parse tessera/Tessera/ContextoBoard.swift",
+    "wall_states_inspected": ["empty", "far", "near", "won", "revealed"],
+    "wall_sizes": [64, 192, 512],
+    "small_wall_adaptation": "Short proximity labels and omitted RANK microcaption preserve the dial and keep the 64-pixel display readable; long guess labels scroll within a mask."
+  }
+}

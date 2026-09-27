@@ -1,0 +1,84 @@
+{
+  "task_intent": "Refine five Tessera games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "reviewed_at": "2026-09-27",
+  "features": [
+    {
+      "id": "G09",
+      "feature": "Sliding puzzle",
+      "mobbin_query": "Sliding tile picture puzzle with album artwork, numbered tiles, move counter and shuffle state",
+      "references": [
+        {
+          "kind": "Mobbin",
+          "app": "Nibble",
+          "url": "https://mobbin.com/screens/61e2a0be-afb6-4cc0-be46-b9affb586b45",
+          "image_inspected": true,
+          "applied_idea": "Artwork remains the dominant object; an unmistakable missing piece teaches the action. Applied a calm gap marker, directly adjacent legal tile outlines and full-square artwork."
+        },
+        {
+          "kind": "Mobbin",
+          "app": "Google Arts & Culture",
+          "url": "https://mobbin.com/screens/9414f65f-fef5-41e7-88aa-cbc55f64816c",
+          "image_inspected": true,
+          "applied_idea": "Art is presented as an object worth looking at, with concise difficulty context. Applied a small3\u00d73/4\u00d74 label and unobscured finished sleeve rather than a banner covering it."
+        },
+        {
+          "kind": "Mobbin",
+          "app": "Chick-fil-A",
+          "url": "https://mobbin.com/screens/762cf8d6-7e9d-4aad-9722-bf16c3160aa0",
+          "image_inspected": true,
+          "applied_idea": "The play area dominates while brief timer/progress feedback stays peripheral. Kept move count and tiles-home progress outside the shared composition."
+        },
+        {
+          "kind": "Primary technical source",
+          "url": "https://coursera.cs.princeton.edu/algs4/assignments/8puzzle/specification.php",
+          "title": "Princeton: Slider Puzzle",
+          "applied_idea": "Tiles move orthogonally into the gap; legal walks preserve solvability. Retained seeded legal scrambling, added strict tile validation and tests for adjacent moves, reversal and final whole-image restoration."
+        }
+      ],
+      "limitations": "Mobbin returned related picture puzzle and casual-game interfaces rather than a dedicated album-art sliding screen."
+    },
+    {
+      "id": "G10",
+      "feature": "Cover reveal",
+      "mobbin_query": "Music guessing game revealing an album cover with answer input, time progress and completed result",
+      "references": [
+        {
+          "kind": "Mobbin",
+          "app": "Deezer",
+          "url": "https://mobbin.com/screens/c3dbe857-56e2-4391-a937-ddf595924290",
+          "image_inspected": true,
+          "applied_idea": "A large remaining-time figure and directly reachable answer controls make a timed music question easy to understand. Applied a restrained countdown beside the header and inline guess/send control under the artwork."
+        },
+        {
+          "kind": "Mobbin",
+          "app": "Google Arts & Culture",
+          "url": "https://mobbin.com/screens/dbdd422f-cc23-4c8f-803c-a96abe6d2e84",
+          "image_inspected": true,
+          "applied_idea": "Music and artwork are paired through recognition. Kept the sleeve central and its identity hidden until the round completes."
+        },
+        {
+          "kind": "Mobbin",
+          "app": "Yubo",
+          "url": "https://mobbin.com/screens/0df53845-1879-4027-8e20-60ecef3f669c",
+          "image_inspected": true,
+          "applied_idea": "A clear correctness state above content separates the outcome from the input. Applied a compact recognized-time/artist/album result outside the image and retained recent guesses."
+        },
+        {
+          "kind": "Apple primary documentation",
+          "url": "https://developer.apple.com/documentation/uikit/asynchronously-loading-images-into-table-and-collection-views",
+          "title": "Asynchronously loading images into table and collection views",
+          "applied_idea": "Load image data asynchronously, avoid repeating large image payloads in status snapshots, and retain usable content while loading. Integrated the shared session-pinned high-resolution production-frame canvas."
+        },
+        {
+          "kind": "Apple Support",
+          "url": "https://support.apple.com/en-us/111781",
+          "title": "Reduce screen motion on your iPhone, iPad, or iPod touch",
+          "applied_idea": "Respect Reduce Motion for transitions. Removed the old completion flash and gate native transitions with the accessibility environment."
+        }
+      ],
+      "limitations": "Mobbin references are adjacent recognition/timed-music interfaces, not a matching album-cover reveal implementation."
+    }
+  ]
+}

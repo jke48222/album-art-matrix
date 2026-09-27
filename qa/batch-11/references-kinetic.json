@@ -1,0 +1,88 @@
+{
+  "units": ["G11", "G12"],
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine five Tessera games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "mobbin_queries": [
+    "Reaction time test game showing milliseconds and a large tap target",
+    "Arcade game with character, score and touch controls"
+  ],
+  "mobbin": [
+    {
+      "unit": "G11",
+      "app": "Box Box Club",
+      "screen_id": "4b41238c-eb26-44f5-9994-e33e21c7cca4",
+      "mobbin_url": "https://mobbin.com/screens/4b41238c-eb26-44f5-9994-e33e21c7cca4",
+      "image_inspected": true,
+      "observed": "A dark racing reaction screen groups four signal lights above a very large timing readout, a quiet ready label and a bright play button.",
+      "applied": "Give the signal and timing their own uninterrupted square stage. Distinguish open-circle ready, pause-bar wait and solid-target go states, with stable trial markers below. Keep results outside the active target."
+    },
+    {
+      "unit": "G11",
+      "app": "pushr",
+      "screen_id": "1e4dd6e2-2e83-4fda-8069-51c74faf0cd9",
+      "mobbin_url": "https://mobbin.com/screens/1e4dd6e2-2e83-4fda-8069-51c74faf0cd9",
+      "image_inspected": true,
+      "observed": "A generous single central countdown number dominates the workout screen, while the current set and timing controls remain small and peripheral.",
+      "applied": "Use an expressive oversized reaction time with separate unit, calm surrounding instructions and a compact best/average ledger."
+    },
+    {
+      "unit": "G12",
+      "app": "Burger King",
+      "screen_id": "7f1a8a9b-b517-4472-8c29-787143ecf9c8",
+      "mobbin_url": "https://mobbin.com/screens/7f1a8a9b-b517-4472-8c29-787143ecf9c8",
+      "image_inspected": true,
+      "observed": "An illustrated sky is the continuous playfield; a score badge sits near the top, with a clear small foreground character and ample space around the action.",
+      "applied": "Draw one continuous midnight flight scene with a warm gold bird, moon, quiet stars and mint obstacles. Keep score separate from the bird and place steering controls outside the flight scene."
+    },
+    {
+      "unit": "G12",
+      "app": "Chick-fil-A",
+      "screen_id": "762cf8d6-7e9d-4aad-9722-bf16c3160aa0",
+      "mobbin_url": "https://mobbin.com/screens/762cf8d6-7e9d-4aad-9722-bf16c3160aa0",
+      "image_inspected": true,
+      "observed": "An illustrated mini-game announces its start with a large countdown and keeps the score and timer distinct from the game objects.",
+      "applied": "Give flight a deliberate safe ready phase and a separate stationary whistle-calibration phase. Begin movement only after input, and keep ready/result labels away from the bird and obstacle opening."
+    }
+  ],
+  "primary_web": [
+    {
+      "unit": "G11",
+      "url": "https://humanbenchmark.com/tests/reactiontime/statistics",
+      "title": "Human Benchmark — Reaction Time Statistics",
+      "applied": "Explain that phone taps include display, input and network delay. Use the wall detector timestamp for direct knocks, even when its event arrives before the green frame is rendered."
+    },
+    {
+      "units": ["G11", "G12"],
+      "url": "https://developer.apple.com/design/human-interface-guidelines/designing-for-games/",
+      "title": "Apple Human Interface Guidelines — Designing for games",
+      "applied": "Use familiar large native controls alongside direct game interactions, legible out-of-scene instructions, and explicit state/result feedback."
+    },
+    {
+      "unit": "G12",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+      "title": "Apple Human Interface Guidelines — Game controls",
+      "applied": "Support direct drag steering, a flight-height slider, large Climb and Descend buttons, and VoiceOver adjustable actions with an announced next opening."
+    },
+    {
+      "units": ["G11", "G12"],
+      "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+      "title": "Apple Human Interface Guidelines — Accessibility",
+      "applied": "Provide non-colour signal shapes and written phase names, responsive Dynamic Type controls, 44-point minimum touch targets, spoken start/end feedback and accessible alternate steering."
+    },
+    {
+      "unit": "G12",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/motion",
+      "title": "Apple Human Interface Guidelines — Motion",
+      "applied": "Interpolate only between received authoritative poses for at most 120ms, then hold. Reduce Motion disables interpolation. A long wall physics stall pauses instead of advancing unseen action."
+    }
+  ],
+  "assets": "Original native vector scenes and matching production Python RGB geometry. No third-party reference images are included in application assets.",
+  "validation": {
+    "targeted_test_command": "python -m pytest brain/tests/test_reaction.py brain/tests/test_kinetic_batch.py -q",
+    "targeted_tests_passed": 103,
+    "render_sizes": [64, 192, 512],
+    "scope": "Timing, finite payloads, calibration, touch steering, collision extents and sweep, pause/resume, scoring, complete receipts and RGB geometry. Root integration owns native builds, captures, deployment and physical hardware review."
+  }
+}

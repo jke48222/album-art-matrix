@@ -59,11 +59,12 @@ def test_reaction_frames(tmp_path):
         g._clock = lambda: clock[0]
         g.begin()
         red = host.frame_at(size)
-        assert red[..., 0].mean() > 100 and red[..., 1].mean() < 40
+        assert (red == reaction.COLOURS["red"]).all(axis=2).mean() > 0.70
         clock[0] = g.t_go + 0.01
         green = host.frame_at(size)
         assert green[..., 1].mean() > 100
-        host.event("knock", {"t": g.t_go + 0.187})
+        clock[0] = g.t_go + 0.187
+        host.event("knock", {"t": clock[0]})
         shown = host.frame_at(size)
         assert ((shown[..., 0] > 200) & (shown[..., 1] > 200)).sum() > 30      # the digits
         if OUT:
@@ -88,6 +89,10 @@ def test_whistle_bird_flies_and_dies(tmp_path):
     assert g.target == 0.5
     clock[0] = 0.1
     g.step()
+    assert g.phase == "calibrating" and g.y == 0.5
+    clock[0] = 2.1
+    g.step()
+    assert g.phase == "flying" and g.y == 0.5
     y0 = g.y
     for k in range(6):                                                     # silence: it sinks
         clock[0] += 0.1
@@ -96,7 +101,7 @@ def test_whistle_bird_flies_and_dies(tmp_path):
     # steer with the phone, fly a while, count pipes
     for k in range(400):
         clock[0] += 0.05
-        nxt = next((p for p in g.pipes if p[0] > 0.2), None)
+        nxt = next((p for p in g.pipes if p[0] + whistlebird.PIPE_WIDTH + whistlebird.PIPE_CAP > whistlebird.BIRD_X - whistlebird.BIRD_LEFT), None)
         host.move(None, {"y": nxt[1] if nxt else 0.5})
         g.step()
         if g.dead:

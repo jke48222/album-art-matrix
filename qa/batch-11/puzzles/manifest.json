@@ -1,0 +1,947 @@
+{
+  "baseline": "02bc2e9 + qa/batch-11/baseline-wall.patch (actual deployed files)",
+  "sizes": [
+    64,
+    192,
+    512
+  ],
+  "options": {
+    "contexto": {
+      "word": "guitar"
+    },
+    "sliding": {
+      "seed": 11,
+      "grid": 3
+    },
+    "reveal": {
+      "seconds": 30
+    },
+    "reaction": {
+      "seed": 11,
+      "rounds": 5
+    },
+    "whistlebird": {
+      "seed": 11
+    }
+  },
+  "frames": [
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "contexto-playing-before-64.png",
+      "rgb_sha256": "78f00734008910ca3bee38f928053255e09449d28dc5028165fa05476f030766"
+    },
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "contexto-playing-before-192.png",
+      "rgb_sha256": "1b37f7348a212ab6901c2c9e683d4904e00025c70c7caaf0c33c22408ec3b036"
+    },
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "contexto-playing-before-512.png",
+      "rgb_sha256": "b26c0621f7077a2070c01fce9f4706b7fe9055cc4e59761db73d8e3a98db297b"
+    },
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "contexto-playing-after-64.png",
+      "rgb_sha256": "a35cfb403b99c25d274152bf88403acd227d4b053ea2278cb2f600e85f3dbbab"
+    },
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "contexto-playing-after-192.png",
+      "rgb_sha256": "0e6816dfc51519fb9830e128bf082d2878183ff25537ca0811fb3d1dfe1c2c74"
+    },
+    {
+      "game": "contexto",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "contexto-playing-after-512.png",
+      "rgb_sha256": "7948fc08d9454571058cf9e805f4e982092cfc5030050f47f20e4015d6cdc875"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "contexto-won-before-64.png",
+      "rgb_sha256": "112711bc600bfe615fcb1732f0122a28adf8e0e3b501a61c013b939b9e20f845"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "contexto-won-before-192.png",
+      "rgb_sha256": "82d5c2a22af5cced0f4a68c21c782e42c0eed9587ff9766b89973b890c6629b6"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "contexto-won-before-512.png",
+      "rgb_sha256": "cf287d3a56a023a5b990ad214a4c71ef5b4dfb3b0faa5b7f901c8fa2e124a9d0"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "contexto-won-after-64.png",
+      "rgb_sha256": "ad34159635c138f630637b26e9a7517af27ce2a67405ef1c9f48b8e1ab763194"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "contexto-won-after-192.png",
+      "rgb_sha256": "c45f94d1171133f4c19929c11686650c365cf73035429823fb5ac80f0fd4f9c6"
+    },
+    {
+      "game": "contexto",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "contexto-won-after-512.png",
+      "rgb_sha256": "94c985efb1690e669ec3c18bdd91382b201df29a00e8964d9cd70e4b9ea6c1b2"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "contexto-ready-before-64.png",
+      "rgb_sha256": "984f1856e9856dee89b771f7877bf19d5b59ded5f61da2efe790665520fe5b8d"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "contexto-ready-before-192.png",
+      "rgb_sha256": "1565abe17d968f5f74bac19afb8cc4a737866756b06ae885247f6cf9bba751aa"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "contexto-ready-before-512.png",
+      "rgb_sha256": "9c3a1a776df3506a95b8bbb906e2d94b88702eee2345a01a2fbff233ba8db600"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "contexto-ready-after-64.png",
+      "rgb_sha256": "f98840a6d58c46b4f2f09a1cc0d5a83c6ffe2a767833255358df64fa6989acc0"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "contexto-ready-after-192.png",
+      "rgb_sha256": "0256322d8d59c6e3722e74df0fa1d672df3609f2d62d6bdf9441c39c18328221"
+    },
+    {
+      "game": "contexto",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "contexto-ready-after-512.png",
+      "rgb_sha256": "3b6884fc9b0207c77b4da6b22b135bbe1d7de08165a3a96d249337e649d9f9ee"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "before",
+      "side": 64,
+      "file": "contexto-lost-before-64.png",
+      "rgb_sha256": "bfcabc567bab0690cd51b617e3fc69e003aa5481454940d7488598447db832f2"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "before",
+      "side": 192,
+      "file": "contexto-lost-before-192.png",
+      "rgb_sha256": "e204b70237c762c2cd69a851330a05213731417362c7166a9d0b643802205d38"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "before",
+      "side": 512,
+      "file": "contexto-lost-before-512.png",
+      "rgb_sha256": "712b7cf06e8f8155b46dcc9439e3cf1298f6c1904c8396887a2a452cf3b02784"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "after",
+      "side": 64,
+      "file": "contexto-lost-after-64.png",
+      "rgb_sha256": "3bd4387d9b18df41d0f5b3a723f62219f7ab7ce957245cb2d8a0f7e5ee179d5d"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "after",
+      "side": 192,
+      "file": "contexto-lost-after-192.png",
+      "rgb_sha256": "d69ac6dd530b9801a892850cc157db7782f54db0740f30516f772bf5eb6911ae"
+    },
+    {
+      "game": "contexto",
+      "state": "lost",
+      "version": "after",
+      "side": 512,
+      "file": "contexto-lost-after-512.png",
+      "rgb_sha256": "dfe08e626b178276199e595a768d4404dcb593226a04481d1fc54256b4bf2b6f"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "sliding-playing-before-64.png",
+      "rgb_sha256": "57d0f6eebb53cf9b9eafa0720c43219fd4024be9cb847a4b875b9c9662d14131"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "sliding-playing-before-192.png",
+      "rgb_sha256": "499046bbf016db88b5bbb3c9f7d0b32dbe0e559a6bd4eca8d20f05ff7f4cc7f5"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "sliding-playing-before-512.png",
+      "rgb_sha256": "a07e7528f73b614fa8d14be2fec8fe017765da24a36ef79bfb211c5853112e75"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "sliding-playing-after-64.png",
+      "rgb_sha256": "c7239e0ffd99de95c4acce7979a8654abc93f5fb19b02fdc3149e345402ba43b"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "sliding-playing-after-192.png",
+      "rgb_sha256": "c8553a619ec253eea1d12f6d58a8e4ec7711a3603266168e68fe25fe20d7f312"
+    },
+    {
+      "game": "sliding",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "sliding-playing-after-512.png",
+      "rgb_sha256": "267f9aaa5d31d389564ffc0251c689eda7f724c7e00f29e53b8d1099cb5e2abf"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "sliding-won-before-64.png",
+      "rgb_sha256": "700d00d74c8488e906c9a74a66e3ceb6bbf0b13ddf311b937a81d5a0464812bb"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "sliding-won-before-192.png",
+      "rgb_sha256": "e5295c6f56926b40d1fcc7aae33c6ae88b5a78cfff840c024aabc4df868f9aa2"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "sliding-won-before-512.png",
+      "rgb_sha256": "4abe4243add53b765b25cd387065652a309d31671ba14e69b48e2dbbf8755b0b"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "sliding-won-after-64.png",
+      "rgb_sha256": "5100ca262caf2b5571de3266c8d2ed447292e12617de80f194b270de7a4e8616"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "sliding-won-after-192.png",
+      "rgb_sha256": "fe163f6a7196f7580dc20a72b5f7c418c8d83c366904bce1c9f924a17c58f3f7"
+    },
+    {
+      "game": "sliding",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "sliding-won-after-512.png",
+      "rgb_sha256": "ecd9ea705f985d8e3775f84de1a2a0adec652136b2b715c856b0534cd75ba7f0"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "reveal-playing-before-64.png",
+      "rgb_sha256": "db9fe91c5e1371d1683731ca27eb67071e67d9a33b8cca438e62c43edc6399c4"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "reveal-playing-before-192.png",
+      "rgb_sha256": "53c043315a9abe8a8bae937fb6619df6785c331ec0534fdd8cdd9301a050b746"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "reveal-playing-before-512.png",
+      "rgb_sha256": "4821a2204b9448d8c16190a79ad85c92d64762b2b3ab403ef6d1f8207f45e872"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "reveal-playing-after-64.png",
+      "rgb_sha256": "a8493ee06233c227ae9c1d3b063a980f10576a537153a71926c5758564b61c92"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "reveal-playing-after-192.png",
+      "rgb_sha256": "8cf2d5ac3d08650482eb430ee281aede07bbfdc74551fc808e2cbd4a722bf136"
+    },
+    {
+      "game": "reveal",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "reveal-playing-after-512.png",
+      "rgb_sha256": "7d16a527eced0e7f55fd1e2210cf749e989d917bdcca873f3ead53b794bfbe65"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "reveal-won-before-64.png",
+      "rgb_sha256": "4e3a1bb8d73f6e1a164d5ae73fe28c0a5e6ce1dd321946e88634921db02b86c5"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "reveal-won-before-192.png",
+      "rgb_sha256": "821f65fd877eaefb04b6e226153be205893ac828279b53989165498b558ecc93"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "reveal-won-before-512.png",
+      "rgb_sha256": "5af6e4a54acaa8a662b01e38f592dfa7fb47bee6532442924e8c51ecef6a4a28"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "reveal-won-after-64.png",
+      "rgb_sha256": "5100ca262caf2b5571de3266c8d2ed447292e12617de80f194b270de7a4e8616"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "reveal-won-after-192.png",
+      "rgb_sha256": "fe163f6a7196f7580dc20a72b5f7c418c8d83c366904bce1c9f924a17c58f3f7"
+    },
+    {
+      "game": "reveal",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "reveal-won-after-512.png",
+      "rgb_sha256": "ecd9ea705f985d8e3775f84de1a2a0adec652136b2b715c856b0534cd75ba7f0"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "reveal-ready-before-64.png",
+      "rgb_sha256": "49638c03495f06a0de6102acfde6db5840dde5a234b5f1d87397293aba731fc1"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "reveal-ready-before-192.png",
+      "rgb_sha256": "efdd0abf496d209e438f3c09c1a459e63dae751260c0794e53fd20fec44a106d"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "reveal-ready-before-512.png",
+      "rgb_sha256": "9a10cdd9a7ba68077e05aacb709b336ef33605d272acf1c1fe9520b1e476b550"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "reveal-ready-after-64.png",
+      "rgb_sha256": "0439c628e25165e4684d6f86a0d8389cd8c1ea3aa3e0c661aca0f88e1d02dc05"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "reveal-ready-after-192.png",
+      "rgb_sha256": "cd19134778bf5f5a534e7f8285c92b3757b99f70202f8198b649a632c873cb0a"
+    },
+    {
+      "game": "reveal",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "reveal-ready-after-512.png",
+      "rgb_sha256": "40dda5f30614f7e31e1d2b7f916c64ee924bfc230b340704ebd13f406c10f828"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "before",
+      "side": 64,
+      "file": "reveal-lost-before-64.png",
+      "rgb_sha256": "554825cc1ef1724f3aafd56023ba317e8890251b76bed806d0b9d367e6fcec9f"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "before",
+      "side": 192,
+      "file": "reveal-lost-before-192.png",
+      "rgb_sha256": "72d17832842b6be7828bd4a1e710506670b5e88b614df1c327b5afb1ac98e0ab"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "before",
+      "side": 512,
+      "file": "reveal-lost-before-512.png",
+      "rgb_sha256": "d50820a5ceb0893692d4ee197b3c43288ec97fc319253697fc784a8dcf9de300"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "after",
+      "side": 64,
+      "file": "reveal-lost-after-64.png",
+      "rgb_sha256": "5100ca262caf2b5571de3266c8d2ed447292e12617de80f194b270de7a4e8616"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "after",
+      "side": 192,
+      "file": "reveal-lost-after-192.png",
+      "rgb_sha256": "fe163f6a7196f7580dc20a72b5f7c418c8d83c366904bce1c9f924a17c58f3f7"
+    },
+    {
+      "game": "reveal",
+      "state": "lost",
+      "version": "after",
+      "side": 512,
+      "file": "reveal-lost-after-512.png",
+      "rgb_sha256": "ecd9ea705f985d8e3775f84de1a2a0adec652136b2b715c856b0534cd75ba7f0"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-playing-before-64.png",
+      "rgb_sha256": "11604a7bf4c8e681f5aafe1a00253f48b0f607ff3a654caac9d2a31b63111790"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-playing-before-192.png",
+      "rgb_sha256": "703ece40490820022cc7b126d3eb05a37734ddedc16027b154a05094fc52a3b5"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-playing-before-512.png",
+      "rgb_sha256": "ea98df85aa4d949762e6b20d21a48b9783d90d6c51e20ff14d6fed4fd0efaa9a"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-playing-after-64.png",
+      "rgb_sha256": "63db113086cca24a26be56807760a92fcbeb83ef81b55154aee112dba51c7dc0"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-playing-after-192.png",
+      "rgb_sha256": "6867cd60936179f1022cbc0ca36b76cd49dafe9195ffb30f8f8e14d67a8e4a0d"
+    },
+    {
+      "game": "reaction",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-playing-after-512.png",
+      "rgb_sha256": "e33c7dcd5b0f900f03ec27d026588384fbbed7b2d52eb418fcaa612a8753d8a1"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-won-before-64.png",
+      "rgb_sha256": "0c000b93087bf1b3b6f9472c0b34d6650c61fb6b65f50d2cd2d4d99fde383fd6"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-won-before-192.png",
+      "rgb_sha256": "233231c470415d2cb2abe6e811cc5c7a282cacb7981ff94deefa1c2a51171ca7"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-won-before-512.png",
+      "rgb_sha256": "933679a759b1b7878d63a4410eb1154ace74de8178155317c74750befde3813b"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-won-after-64.png",
+      "rgb_sha256": "a6631f33f684b62b2b6c43bc777702034f05a03adb9e29b4007ed505d534cdbe"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-won-after-192.png",
+      "rgb_sha256": "4020089957769137d713ccbda30277b9b4547f49d1518acc72bce4270c6aec84"
+    },
+    {
+      "game": "reaction",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-won-after-512.png",
+      "rgb_sha256": "308b5376ad7a6090a675f508eb0f10ebe657e40359f5c89d0a0c8fee85e672d5"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-ready-before-64.png",
+      "rgb_sha256": "082b94167993a1b68f0fd2d1e1ee242c60169a33b3173931f2e86942ef314577"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-ready-before-192.png",
+      "rgb_sha256": "3a4ea601a08167d542dffa2b0c0ccc519ccf731b1b8ac43821901e56b1afc984"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-ready-before-512.png",
+      "rgb_sha256": "ab1122dc5110ceba4a4f5b231a6a3bf7eff67a37333c83a5a82f93fec53215eb"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-ready-after-64.png",
+      "rgb_sha256": "e963f1f62b2214cb5f4fb33f7cb3a87e04b414e4053f6f1c10ca3d857a8288ff"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-ready-after-192.png",
+      "rgb_sha256": "c7de7d691415aeeaf246a5bdbab5d7a4aaa269ea81a7fa1543564a486781a776"
+    },
+    {
+      "game": "reaction",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-ready-after-512.png",
+      "rgb_sha256": "fe57d0d9206bffd413e0b0ca73f0d6797ea2fec1bea6fe5d75fa31d19d2c8377"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-red-before-64.png",
+      "rgb_sha256": "9a9995d851d5624edbe9a5057b50e1ccd15a56befa8e0a2ec32d3cb3cc1873a6"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-red-before-192.png",
+      "rgb_sha256": "b48249cea9e97c80c1d08ee2e8f802c25cd4115654adba8bd477d32542228ad1"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-red-before-512.png",
+      "rgb_sha256": "4d5150d2e40b8c23389b5abeabb3b9c23167d1ff081eb01c59f86e68cba726f2"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-red-after-64.png",
+      "rgb_sha256": "6e9ff5b18426aa23f8672e0ae7bc7023b6b59ef586381424691cf9c49f2a9b99"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-red-after-192.png",
+      "rgb_sha256": "cf7347c1c177e08678b8a910185902276de0f264e3bec205441646465c211f10"
+    },
+    {
+      "game": "reaction",
+      "state": "red",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-red-after-512.png",
+      "rgb_sha256": "652211ae8da9a00d986863e68d8a1f7d1d9969fbba486176a8d7551a6ab4bee2"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-green-before-64.png",
+      "rgb_sha256": "5661a375986d6401fdfac43337b907de79d1d22e72b29d86cf8aafcb495268b3"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-green-before-192.png",
+      "rgb_sha256": "57376154b22960a8f12f8072cf7d99544fe2fc164740fbfc68bfc866739737bc"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-green-before-512.png",
+      "rgb_sha256": "0a61f0d9f29702e7208d4ac034afcbe476d68bab12e244078da4f1bedbbbd1b7"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-green-after-64.png",
+      "rgb_sha256": "b4933e17652364df3ce999bc3043de203c945da7a8aa2f4c29e395e06b626618"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-green-after-192.png",
+      "rgb_sha256": "409cfca6394695ebd1637b05e84798d5805a04da09eb80a00069876dc6bd92e6"
+    },
+    {
+      "game": "reaction",
+      "state": "green",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-green-after-512.png",
+      "rgb_sha256": "d04cdef8f1bdcc9e0a64376894eb59ef6aaa9dd0ac0860fc113dc5e71d0abadf"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "before",
+      "side": 64,
+      "file": "reaction-error-before-64.png",
+      "rgb_sha256": "34e392baec557ce92f5b95b90dfa35bb5fe05336f728567f83e6bac23c4e32c3"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "before",
+      "side": 192,
+      "file": "reaction-error-before-192.png",
+      "rgb_sha256": "69c496898674ebdc7e020bac87b219c9372322be1f9ca756ada448088fdac934"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "before",
+      "side": 512,
+      "file": "reaction-error-before-512.png",
+      "rgb_sha256": "1034ce343b6081ce4bb31afe1bf51349bb76fe9951c06bcb0046dd338a85840e"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "after",
+      "side": 64,
+      "file": "reaction-error-after-64.png",
+      "rgb_sha256": "4d90de3990c8330ee2a4531df75daa5d0c6ca6e5b7e65555cca08fa216afffde"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "after",
+      "side": 192,
+      "file": "reaction-error-after-192.png",
+      "rgb_sha256": "969e4110fa55be8f402826bdf2e6c9e770eb190302a0ff6197c8bc7a9655027e"
+    },
+    {
+      "game": "reaction",
+      "state": "error",
+      "version": "after",
+      "side": 512,
+      "file": "reaction-error-after-512.png",
+      "rgb_sha256": "1765ccfdc3638610d6c9166be2575901b7b9095e7b4283bfb33fb87b33fc5653"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "whistlebird-playing-before-64.png",
+      "rgb_sha256": "a5c98884061802248ad99411936cb3f839411b98da397f7a4aee8256b33414d9"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "whistlebird-playing-before-192.png",
+      "rgb_sha256": "41235dacc955df0e994ced8f1a24c26405668cf4ebcd990288dbe357f0cba5e2"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "whistlebird-playing-before-512.png",
+      "rgb_sha256": "5f38b7a0ebeaa987717511f396c85b8218c9b306fc1ac6938afcab1857189771"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "whistlebird-playing-after-64.png",
+      "rgb_sha256": "32b67eeb5521c87ed36323767c542c804f2afecfee8942e52f00ccac2372a31d"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "whistlebird-playing-after-192.png",
+      "rgb_sha256": "0dfcb6f70a6b2714c7d6a1cfba07aaf105a6960aed2b4530fe805be459341b75"
+    },
+    {
+      "game": "whistlebird",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "whistlebird-playing-after-512.png",
+      "rgb_sha256": "5535e1da0e25a63bbd9fbac38d61dd9ff987724a8675d27260709825b8cdaef5"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "whistlebird-won-before-64.png",
+      "rgb_sha256": "168b31fc3cf8f4c9b83d0340e7da79e17ca6037e3287de96dbed0b1fa1d51ab2"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "whistlebird-won-before-192.png",
+      "rgb_sha256": "21f07f3aa6921ba01335683a78d84116875ee5d3ed4a10a355c9396ca833bf4c"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "whistlebird-won-before-512.png",
+      "rgb_sha256": "76cc245fb249bd7b475e0c3b1e748003ccadcf4847b93508ce8ec2e4993fa3a3"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "whistlebird-won-after-64.png",
+      "rgb_sha256": "77cb380a92419a014bdc0c4faa050a4a161e44c9af603adda3867759103300b7"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "whistlebird-won-after-192.png",
+      "rgb_sha256": "2a33a8f0c6da134a5d0e3fbf8a5a491f633f2571ed1aa0269b74362618821157"
+    },
+    {
+      "game": "whistlebird",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "whistlebird-won-after-512.png",
+      "rgb_sha256": "88d69c123e18560f9acaa92a29a1678f51a57cee36c5ca5115bdbf52b28b1c85"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "whistlebird-ready-before-64.png",
+      "rgb_sha256": "6ab3409d2a1fe137cd83af3550f654974b9b91ef1022a3a916edde4730dd1771"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "whistlebird-ready-before-192.png",
+      "rgb_sha256": "dc60d7b023c97303392d1f23abe75f2c6d158207d4de042d1bf145ebb21af20a"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "whistlebird-ready-before-512.png",
+      "rgb_sha256": "33b9e47dfeb1d35e8b6de015ccddd8403599fdfd36e4fbbac8cfe8e2db313496"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "whistlebird-ready-after-64.png",
+      "rgb_sha256": "de9b510a391e285231b5b1346c223e7e16cdf6d3d82d4921b1285a4f01bc02bb"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "whistlebird-ready-after-192.png",
+      "rgb_sha256": "a6e00c6aed8312540c1b6e7166a2c92bc79410bfa9654a0f1835f2cff8f8ee9b"
+    },
+    {
+      "game": "whistlebird",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "whistlebird-ready-after-512.png",
+      "rgb_sha256": "c48954ed3fb2a8850af9ad37329851e9dcd86760e8e6dd4b89cf071347a77f03"
+    }
+  ],
+  "cases": 19,
+  "notes": [
+    "Actual production renderers; deterministic data/time; original authored sleeve.",
+    "Before baseline uses the actual deployed wall files, including their prior source detail limit.",
+    "The phone places input controls outside the shared board."
+  ]
+}

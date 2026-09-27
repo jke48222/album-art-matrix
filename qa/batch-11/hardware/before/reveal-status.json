@@ -1,0 +1,43 @@
+{
+  "running": true,
+  "seq": 17,
+  "game": {
+    "name": "reveal",
+    "title": "Cover reveal",
+    "players": [
+      "Tessera QA Batch 11"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Not Night Window.",
+    "started": 1790488276,
+    "finished": null,
+    "seq": 1,
+    "voice": true,
+    "elapsed": 0.1,
+    "seconds": 30.0,
+    "guesses": [
+      {
+        "text": "Night Window",
+        "who": "Tessera QA Batch 11"
+      }
+    ],
+    "answer": null
+  },
+  "session_id": "a2a46b2313454607bde6e5f122504336",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 2,
+      "won": 1,
+      "streak": 1,
+      "best": 1,
+      "last": 1789509517
+    }
+  },
+  "last": null,
+  "voice_words": [],
+  "hit": false
+}

@@ -1,0 +1,70 @@
+{
+  "running": true,
+  "seq": 25,
+  "game": {
+    "name": "reaction",
+    "title": "Reaction knock",
+    "players": [
+      "Tessera QA Batch 11"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Tessera QA Batch 11: 128 ms.",
+    "started": 1790489568,
+    "finished": null,
+    "seq": 3,
+    "voice": true,
+    "phase": "shown",
+    "turn": "Tessera QA Batch 11",
+    "round": 2,
+    "rounds": 5,
+    "last_ms": 128,
+    "last_kind": "hit",
+    "last_how": "tap",
+    "last_player": "Tessera QA Batch 11",
+    "last_round": 1,
+    "times": {
+      "Tessera QA Batch 11": [
+        128
+      ]
+    },
+    "trials": {
+      "Tessera QA Batch 11": [
+        {
+          "ms": 128,
+          "kind": "hit",
+          "how": "tap"
+        }
+      ]
+    },
+    "best": {
+      "Tessera QA Batch 11": 128
+    },
+    "average": {
+      "Tessera QA Batch 11": 128
+    },
+    "completed": 1,
+    "total": 5,
+    "phone_latency": "Phone taps include display, input and network delay. Watch the wall and knock for direct wall timing."
+  },
+  "session_id": "8dd9a2c1900742099ee14bcf1bf90a17",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 2,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "go",
+    "start",
+    "ready"
+  ],
+  "ms": 128,
+  "how": "tap"
+}

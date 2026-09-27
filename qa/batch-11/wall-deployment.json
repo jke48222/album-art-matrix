@@ -1,0 +1,70 @@
+{
+  "status": "deployed",
+  "dependency_review": "Compared all changed runtime files and their shared renderer dependencies with the deployed source. All new game modules import before managed restart; backups retained.",
+  "base": "02bc2e9",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "9c8b702c5e9436699cdb423ee7ebd067a575bef142348de41ac83f46715a8570",
+      "after_sha256": "b63f538975b18d283d2eddf024dbdb5c24beb58c67bcca9d5661efeb16fb6fd0"
+    },
+    {
+      "path": "brain/games/__init__.py",
+      "before_sha256": "82e24ea38417c53c161472b7949b3cd7dde62d8a9658bb351c29e782df62a939",
+      "after_sha256": "0a7235fe498002bffda96abb13094f1682b44a896856f91029616837e0221c33"
+    },
+    {
+      "path": "brain/games/contexto.py",
+      "before_sha256": "e94f301fc0e334ace86697e1a19a2275ac25327ec99eb5465bfad4fefcb5f981",
+      "after_sha256": "23d1b5dec4946e59ddca807f1c66fd2f9e579bd8d8b8fb7d702228824ec3da0f"
+    },
+    {
+      "path": "brain/games/host.py",
+      "before_sha256": "bda16d8bc38d15c201be9af0e54e5f8ac09688f602978a028d96090c825a6f15",
+      "after_sha256": "12ed7a146e688d04ec5f9607f08a593b95867ed210b4f34600a95a7e80c54603"
+    },
+    {
+      "path": "brain/games/pictures.py",
+      "before_sha256": "18f810f57c3c961ff642f8bd8b3c478ed3219561a023568631252ccb234787e0",
+      "after_sha256": "54b5ef72e243e5ea61eff7b9b30b3975655af5737245272f8e72e1518192c36a"
+    },
+    {
+      "path": "brain/games/reaction.py",
+      "before_sha256": "0507fd730a4b3cdd35e8a3bb4991241ae7c7e7e2ac93fe43fefa0bfd0cf4b1c6",
+      "after_sha256": "3ea616c326f457af220fe601519c84e9e3467dd4323ac3df4a86eb4f4eacbbb0"
+    },
+    {
+      "path": "brain/games/whistlebird.py",
+      "before_sha256": "9b699fd5c902f0cd2d157874d64f1d1d71a3804382bec3fef6c8b2b9413c4ce4",
+      "after_sha256": "f8cd25f24e8f16520577acc0acad718832c43e9fb3821b0e70af83bbe619bc13"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2234075",
+  "current_pid": "2346486",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 68,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 56.8,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 4,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}

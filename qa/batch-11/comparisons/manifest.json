@@ -1,0 +1,924 @@
+{
+  "base": "02bc2e9",
+  "generated_at": "2026-09-27T06:19:09.692184+00:00",
+  "units": [
+    "G08",
+    "G09",
+    "G10",
+    "G11",
+    "G12"
+  ],
+  "processing": "Complete native screenshots scaled equally, not retouched. Before left, after right.",
+  "scope": "Rendering and fixture API states. Separate native-interactions and native-recovery receipts verify simulator touch input. No spoken-recognition or physical LED certification.",
+  "comparisons": [
+    {
+      "unit": "G08",
+      "title": "Contexto",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-11/before/contexto/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-11/after/contexto/room-live.png",
+      "before_sha256": "fe6736bd2b23d7b26ef8d995c9a9895e72b77b2193d1846a092b2131f8be7fb6",
+      "after_sha256": "50f0a8fd3c95e1d53545f738a5ad9ce07c1f0133d664a3838acd4c99bf2a9448",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-11/comparisons/contexto.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5f96eb976536b4d83538c73ebc7ef27ef758c05d1c9d1e4b2eb3b23984333e3c"
+    },
+    {
+      "unit": "G09",
+      "title": "Sliding Puzzle",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-11/before/sliding/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-11/after/sliding/room-live.png",
+      "before_sha256": "21fac451398b2da6326ebfe10ad429bff625b6bd9bbbc5c3f45bf91b018c289e",
+      "after_sha256": "0a6f379d80c2e1c75eee3746c4ff9ea01ce8a3f65b2b25d3057e873a65c54cb7",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-11/comparisons/sliding.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "04887ceac76cd856a313d4a61722c038c321dee6bba783924fcea844145efc59"
+    },
+    {
+      "unit": "G10",
+      "title": "Cover Reveal",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-11/before/reveal/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-11/after/reveal/room-live.png",
+      "before_sha256": "c30fa06b1cdd6da1541cea2de7bfda2c73724e21c761810af908ff8923ee68f3",
+      "after_sha256": "3662eb1bb71fa382e3f07ba61edfd4e6b8a1644d351445c6f49e2772154dfd84",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-11/comparisons/reveal.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "ac141f1352187d39df9a090dc00d49ab32498a17a18b17ffe67c7738935314ee"
+    },
+    {
+      "unit": "G11",
+      "title": "Reaction Knock",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-11/before/reaction/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-11/after/reaction/room-live.png",
+      "before_sha256": "869f91ce240fa1fada5e9fbcccfd48dfc4ac6139d20b621975c4292aa614db22",
+      "after_sha256": "b9e254cddaf7a08e0c1c0bb7729b735ce91b4b870637eccd25937953beb34c91",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-11/comparisons/reaction.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "7452a5c1b627577332c5def13596369b384289e236081c62b1a4b5786758cae7"
+    },
+    {
+      "unit": "G12",
+      "title": "Whistle Bird",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-11/before/whistlebird/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-11/after/whistlebird/room-live.png",
+      "before_sha256": "93a09294d5d3288c08e8f79361a46a091ae4d0663bf4d4b8e390142a16b9d764",
+      "after_sha256": "d8ce07fd19d8501e2ccec4f43e9a8c0c8c76ede1da124d33beb0f3aa36ef6dc3",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-11/comparisons/whistlebird.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "e0a67f748c71c1720ce836b228ac94606a5a39142fc0f460c15949d51b46bccf"
+    }
+  ],
+  "pixel_comparisons": [
+    {
+      "case": "contexto-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-playing-before-64.png",
+      "after": "contexto-playing-after-64.png",
+      "before_sha256": "c23c12e16e88f60962884fd7e80a447ed091aa3089852c6564dd3432bc554236",
+      "after_sha256": "4fe1bb1199259b95561a334ba667bfc940445a4cb252adf99342d8709e7d3e11",
+      "output": "contexto-playing-64-comparison.png",
+      "output_sha256": "8fbd60087dfb6fc87a53ad9ed461cc2cc574652cb3e0e9810573848a0f3a43e5"
+    },
+    {
+      "case": "contexto-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-playing-before-192.png",
+      "after": "contexto-playing-after-192.png",
+      "before_sha256": "fc432604dfa0eaccc7e36d13dfdda300b6f009f19ab81fa916f5b1af62078e98",
+      "after_sha256": "e9b5d05f0f953600ffe67b6e18b269b6e3122b298bd4c651ee74bfc945351a13",
+      "output": "contexto-playing-192-comparison.png",
+      "output_sha256": "9660cd64dd36cf88a495e6c2334c8a78f8b3002ba68a68b1b64300206ce9367a"
+    },
+    {
+      "case": "contexto-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-playing-before-512.png",
+      "after": "contexto-playing-after-512.png",
+      "before_sha256": "fc1d7803b6c404ed0192bb0ed4d1256eefba3dd3403562aa5a072afaadff01af",
+      "after_sha256": "9573b09fa39e92976d82ca7c86cd75d88bd4720350e291f982724972acfa9db5",
+      "output": "contexto-playing-512-comparison.png",
+      "output_sha256": "247bcae285827a7d961065366df39dcf1549d6cfd42fcc2d5bc35f85e94b1c21"
+    },
+    {
+      "case": "contexto-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-won-before-64.png",
+      "after": "contexto-won-after-64.png",
+      "before_sha256": "b0333a09f2c100651e9f6b5b6c81a76771af5a7763df9d38ae97f4fcb71858af",
+      "after_sha256": "3c065c287e16b72c70d841b73219ee084c788230eed0d6c2f90fa57502e6e365",
+      "output": "contexto-won-64-comparison.png",
+      "output_sha256": "19641f1e93de3a71dc53eef9b5ce948f0c6f8540162ce3a3241586e591fba73f"
+    },
+    {
+      "case": "contexto-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-won-before-192.png",
+      "after": "contexto-won-after-192.png",
+      "before_sha256": "18b7c4a5290de0325c7bd758035f8f5f93a0bccff051b8939e12e18fe17b1e73",
+      "after_sha256": "a5c6b1a14de4a63af3bed8fb0085fb5e4e38233c02e70faf7b83a662e53f355a",
+      "output": "contexto-won-192-comparison.png",
+      "output_sha256": "6e679095e2f7e7eb49debc476ef2ded002b5c535b4594da5af0d2c139687f889"
+    },
+    {
+      "case": "contexto-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-won-before-512.png",
+      "after": "contexto-won-after-512.png",
+      "before_sha256": "efee8c669bc74a1c5e4bbd644368d4de71db607bed67dfb2a65e7a4edf76acf0",
+      "after_sha256": "6836d6485b31dcabd9db70ce6777c802a2d2d04c63136214ee32283049f82ed8",
+      "output": "contexto-won-512-comparison.png",
+      "output_sha256": "2264eb84a70bcfc9034f5bd597834ef7e0813f1ac55ddd1697468b8c1dec22a6"
+    },
+    {
+      "case": "contexto-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-ready-before-64.png",
+      "after": "contexto-ready-after-64.png",
+      "before_sha256": "b9badf1ac0bf60ef724db3a844451e76fc2feb256039a71c43565464e963f1c1",
+      "after_sha256": "48cd195ac5d8c0dcccaf856c566b0bed820e5742f664ddd2fc549c43df956e05",
+      "output": "contexto-ready-64-comparison.png",
+      "output_sha256": "d00baaabc6e0348291fd8cc3d5f2c19aaa4cc06016932aeb90cb620ae2438887"
+    },
+    {
+      "case": "contexto-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-ready-before-192.png",
+      "after": "contexto-ready-after-192.png",
+      "before_sha256": "b90d86fe9d4618213018eda014055a4cff2767d9f61fc4d4ef5d32adff2a7fe0",
+      "after_sha256": "12ca04f182849868dd60d1e2cd41ae210a563a5c6dd7ddbf2c7032a4a55f7c0d",
+      "output": "contexto-ready-192-comparison.png",
+      "output_sha256": "33be74faf78af7fef123324573152fc07a562f87e906194aae4bd305a9e422ba"
+    },
+    {
+      "case": "contexto-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-ready-before-512.png",
+      "after": "contexto-ready-after-512.png",
+      "before_sha256": "632072c23c5a2708831ed559887509030384646e296a43ce3c225db84d71b3ad",
+      "after_sha256": "d2c9778a0168bd2775faa9102491774c34f96ddaf0f6e871691e0456e179c5d5",
+      "output": "contexto-ready-512-comparison.png",
+      "output_sha256": "63cb9bec832b2a5f8bc32ec41dee90dcc9bd90b37b91469ccb6832b92bbb2d5f"
+    },
+    {
+      "case": "contexto-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-lost-before-64.png",
+      "after": "contexto-lost-after-64.png",
+      "before_sha256": "39e479399ea919af63fac983b753e0c297d8289fb81bcd6e2e7ed052381348f8",
+      "after_sha256": "04c6645ef0603c7582789c20f898b30fa5023c70c1a2f0f4969598a32eb3c89a",
+      "output": "contexto-lost-64-comparison.png",
+      "output_sha256": "03f49092ad2d10612ad1516cc0f8d21c7f24a0b846c6e6403e1c641254200f06"
+    },
+    {
+      "case": "contexto-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-lost-before-192.png",
+      "after": "contexto-lost-after-192.png",
+      "before_sha256": "bb6e22d8345a14f48db0f04a11d2e543663a6bdb35ba1f757cc109ea488708bc",
+      "after_sha256": "da0527999ec1e685c80d31a8a0f277842e5b9380228c116bc583b41b59635a67",
+      "output": "contexto-lost-192-comparison.png",
+      "output_sha256": "27ae4d8e6d3937352252cee0d34e38e7a1802c1af4dc9cfd5a7e4c30d2bc6850"
+    },
+    {
+      "case": "contexto-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "contexto-lost-before-512.png",
+      "after": "contexto-lost-after-512.png",
+      "before_sha256": "672dd9f028492aa258244b2599bb81cc46d4ad884320dd6e7ab9bc72ec070cb2",
+      "after_sha256": "b1c53b2776f5a23662b064e569c92bfee5c60313be72f39353f6952703e48d57",
+      "output": "contexto-lost-512-comparison.png",
+      "output_sha256": "e2c05d01462fdaeb21204768b5a89609dd94cc5608ea964e08b39aac63825cb0"
+    },
+    {
+      "case": "sliding-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-playing-before-64.png",
+      "after": "sliding-playing-after-64.png",
+      "before_sha256": "d18959474f78cd2585e615c77155f06c65e0480f32b7d666a4e0b73ceb959acd",
+      "after_sha256": "5f29f2f23dcb9400a596534d2f4827065b5982866f53133a0fc1efda54d13f66",
+      "output": "sliding-playing-64-comparison.png",
+      "output_sha256": "48ef1ecf0ad1bdb03d23e98b5b901a5cd692fc50aa6b06936cda47477880ed0b"
+    },
+    {
+      "case": "sliding-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-playing-before-192.png",
+      "after": "sliding-playing-after-192.png",
+      "before_sha256": "2ceae82ac010112091de87e499c1fa59c5bb8914afa7cd6477692128316abfe7",
+      "after_sha256": "67d4c3b2237f0d173921beefbce79e6b89d30cd65c7fac5978f7787a7bccdbe3",
+      "output": "sliding-playing-192-comparison.png",
+      "output_sha256": "fbb17e788417ff75afd5c4b1bac56926781af5e51001d3e2af284f65054e41ac"
+    },
+    {
+      "case": "sliding-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-playing-before-512.png",
+      "after": "sliding-playing-after-512.png",
+      "before_sha256": "ce2b0c5f58f07cdb9f3a5b2bbab611242883c5f2285903fefe31edb1911d07ea",
+      "after_sha256": "2637f7b84f731f4c4e8d4b688c833fc830ff930e196a0a80f1090f8aba634fb8",
+      "output": "sliding-playing-512-comparison.png",
+      "output_sha256": "0983b9bc72d5ccf38bf2dab42bafd5cd11167d6f47997fe4aa6f860c1a231842"
+    },
+    {
+      "case": "sliding-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-won-before-64.png",
+      "after": "sliding-won-after-64.png",
+      "before_sha256": "076b4bec032c4af829cecbe8b5ba8fa87b5a7c9895b2b358ee0be498970d4b01",
+      "after_sha256": "2d08b943a6db90419e3c90289e7ba456d54ff9e235ac61fc0ca59bf5b903631d",
+      "output": "sliding-won-64-comparison.png",
+      "output_sha256": "f770ef743ca1a40d87865f147b25954a3e1c551fd4d7c4046da225eba41691c0"
+    },
+    {
+      "case": "sliding-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-won-before-192.png",
+      "after": "sliding-won-after-192.png",
+      "before_sha256": "16fb27aad97f717ca64c51d251e9728ecd367981f8bdbea4203055b185bef894",
+      "after_sha256": "9ec90548b42c42f149ec7659f0ec095e4f339796d2b1cc2c37cb5f359903cf04",
+      "output": "sliding-won-192-comparison.png",
+      "output_sha256": "6ddff30b8d2aa4074ab2c350b1c5b853c2e75b023371f813b022d127022fd71e"
+    },
+    {
+      "case": "sliding-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "sliding-won-before-512.png",
+      "after": "sliding-won-after-512.png",
+      "before_sha256": "d58b0f054627e08350ffb9c1298733da5654585cc7f75f89633a2b8c2a4394bf",
+      "after_sha256": "93e706d25df48ca9234ec616f79b5a3b7c63b480cbd2f35b2441a707ce8b04e7",
+      "output": "sliding-won-512-comparison.png",
+      "output_sha256": "e430d8efa7cdf0c41f90ecc4ba1da65e6896f1925f8bccb07091482477ad8a1c"
+    },
+    {
+      "case": "reveal-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-playing-before-64.png",
+      "after": "reveal-playing-after-64.png",
+      "before_sha256": "c662b16b2d5709490a52aee41761f654c06f8a8d10065f97ad1a9ca8462497c3",
+      "after_sha256": "a873fcbf2d0a43a00d322316b4b36b8d64463fcdf0418b89c596f961888673e3",
+      "output": "reveal-playing-64-comparison.png",
+      "output_sha256": "d67807ba1e1a406ffc873c5b02223136b2dcb15b2eae4a94873775e2065ea107"
+    },
+    {
+      "case": "reveal-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-playing-before-192.png",
+      "after": "reveal-playing-after-192.png",
+      "before_sha256": "7fd21ee32cef98b692a79a3eddaec67f69ff0d6dfc9cc6a7dc909cdce9a8c263",
+      "after_sha256": "ae8ec2482212e7838150e3d923cc7a65c9d68d9c543fe56caa58dcb8f9afdd67",
+      "output": "reveal-playing-192-comparison.png",
+      "output_sha256": "94a48828378aa153463176ef49beea44dfb569d5b4764dee37baec4403d9658f"
+    },
+    {
+      "case": "reveal-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-playing-before-512.png",
+      "after": "reveal-playing-after-512.png",
+      "before_sha256": "e086f8d4dd6a534f849edcf23879f76f69b72f7b72336c19535a8cae15679434",
+      "after_sha256": "852d93fee50643e9f3651a7edc8f49f5eaa967206470f615c88119d0abbc01f1",
+      "output": "reveal-playing-512-comparison.png",
+      "output_sha256": "28fce6830d16c27504c0aca23b0895506a29df5b60f39191731e7afb712b9e29"
+    },
+    {
+      "case": "reveal-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-won-before-64.png",
+      "after": "reveal-won-after-64.png",
+      "before_sha256": "819dcbcc3de7445fef22978f25b8e2ca328dd6857c90b7bae2d813eef1336199",
+      "after_sha256": "2d08b943a6db90419e3c90289e7ba456d54ff9e235ac61fc0ca59bf5b903631d",
+      "output": "reveal-won-64-comparison.png",
+      "output_sha256": "95102d4638811b8affd89d6551f0b0277f2e738b5944d795e4afd7eb3c44236b"
+    },
+    {
+      "case": "reveal-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-won-before-192.png",
+      "after": "reveal-won-after-192.png",
+      "before_sha256": "d520e391f2ebaf70671c90ccf9bfc208c92eafc55d708ad437b59d2520947dcd",
+      "after_sha256": "9ec90548b42c42f149ec7659f0ec095e4f339796d2b1cc2c37cb5f359903cf04",
+      "output": "reveal-won-192-comparison.png",
+      "output_sha256": "1c7f617d154e11944efd42a95f1d271b0cdec329cf80cdc9a73443316e979007"
+    },
+    {
+      "case": "reveal-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-won-before-512.png",
+      "after": "reveal-won-after-512.png",
+      "before_sha256": "c776abb7bf131c5c91c4d2c94fc7a468e61f9d085f80cbeaa54f259d082773ce",
+      "after_sha256": "93e706d25df48ca9234ec616f79b5a3b7c63b480cbd2f35b2441a707ce8b04e7",
+      "output": "reveal-won-512-comparison.png",
+      "output_sha256": "4f9a999221ac5d16620e05ba7175a3483891daa555a83637b47a1e9b7cde6d9f"
+    },
+    {
+      "case": "reveal-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-ready-before-64.png",
+      "after": "reveal-ready-after-64.png",
+      "before_sha256": "08c8ec5536a715392b31c38a4ad8a1b2c85bf43ac09b716247b49a401c948fc4",
+      "after_sha256": "0f35c13be76ed5c520bc8fd497e7c0711d2dfde47bb5823c97d2d7d36f984915",
+      "output": "reveal-ready-64-comparison.png",
+      "output_sha256": "7b928391746abb03498aa9060f0b30d1c5e6cc2ec7f92d6048a11dc3eaf8c5da"
+    },
+    {
+      "case": "reveal-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-ready-before-192.png",
+      "after": "reveal-ready-after-192.png",
+      "before_sha256": "836f93195de7a54596a4b4a22b37f6c918c3345352e693a1e9ca22f6c5aca07b",
+      "after_sha256": "cbeecfe198254e1e54720b9381a75bed823ab83b5d14f09ee22aced3a4f484ef",
+      "output": "reveal-ready-192-comparison.png",
+      "output_sha256": "c1ac03da3e4b582668b0fc7e2791611b09fca4d3ea61b550afa63ff983d329ca"
+    },
+    {
+      "case": "reveal-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-ready-before-512.png",
+      "after": "reveal-ready-after-512.png",
+      "before_sha256": "2a085dc211fca07160383e33f34f3e39dec429b644a8c29667be3d8f1e4210b5",
+      "after_sha256": "a12d7b8ac6c6f1a5d8893c7aa49cbe22cf0640c32ae06e59452747cb3aec79f2",
+      "output": "reveal-ready-512-comparison.png",
+      "output_sha256": "a182af444b742b53f82c46a266ab9cbf45411a27f78fee817a5ff5a590fcf933"
+    },
+    {
+      "case": "reveal-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-lost-before-64.png",
+      "after": "reveal-lost-after-64.png",
+      "before_sha256": "0becd08a8f7a9bd8ce4e603e937c6738b03839269ab2ff3bece002439f6431a3",
+      "after_sha256": "2d08b943a6db90419e3c90289e7ba456d54ff9e235ac61fc0ca59bf5b903631d",
+      "output": "reveal-lost-64-comparison.png",
+      "output_sha256": "55259279895a953141fc933fac2a72d993a52071abbafa95e6f88c07eaceb07a"
+    },
+    {
+      "case": "reveal-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-lost-before-192.png",
+      "after": "reveal-lost-after-192.png",
+      "before_sha256": "fd71c2aced2196b537203251a21c5f95e70b0f4a3f8dc282257a75b3f689813e",
+      "after_sha256": "9ec90548b42c42f149ec7659f0ec095e4f339796d2b1cc2c37cb5f359903cf04",
+      "output": "reveal-lost-192-comparison.png",
+      "output_sha256": "bb85ab52aacca7355407fd23f50654cadf275fd2466aeee6699d331b43754ca5"
+    },
+    {
+      "case": "reveal-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reveal-lost-before-512.png",
+      "after": "reveal-lost-after-512.png",
+      "before_sha256": "2d9a1575569c90587c3d337e89dc3654a3e337cec581bcb1c10641d6edee5c0e",
+      "after_sha256": "93e706d25df48ca9234ec616f79b5a3b7c63b480cbd2f35b2441a707ce8b04e7",
+      "output": "reveal-lost-512-comparison.png",
+      "output_sha256": "9f5605379eb2d30b77fda9ee5860292b814a8eef4e5f7f45de9d6b2208991213"
+    },
+    {
+      "case": "reaction-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-playing-before-64.png",
+      "after": "reaction-playing-after-64.png",
+      "before_sha256": "807e85543e060343dba284914475f794529148c7ebbb5ea57856b55db84fc194",
+      "after_sha256": "46e8ef4ff223328118705aecaf3037557e84e622511dd1cc50b242aa54f137fb",
+      "output": "reaction-playing-64-comparison.png",
+      "output_sha256": "6e6cce1ed4d9d57b1609eedf7a063b28bb8b145b0f7ac05275bbabc4864f566b"
+    },
+    {
+      "case": "reaction-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-playing-before-192.png",
+      "after": "reaction-playing-after-192.png",
+      "before_sha256": "0305ffca26bb20e5c54f53177f0df95609f0fa8ac568da7d82f218b15bd86eff",
+      "after_sha256": "776ff61d36343d36da690e49686cdaa2135f366d0e2a1231160e50e22a6c50df",
+      "output": "reaction-playing-192-comparison.png",
+      "output_sha256": "0d7093e4611d7614d1f8563f99d1972e1f7468613d55b01007d9ba789d43d12d"
+    },
+    {
+      "case": "reaction-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-playing-before-512.png",
+      "after": "reaction-playing-after-512.png",
+      "before_sha256": "62a0c8ab8c9024b43faf2e734024f41401631902581d37fbbb091670905e23c0",
+      "after_sha256": "03296fad02c492797a82195687e6c37393d56720bcb7f3b33f35c0227ce95c36",
+      "output": "reaction-playing-512-comparison.png",
+      "output_sha256": "59f2159396972fd5abbdf98d6560fac36570eea275e59b16bbb2688dea1c5cf1"
+    },
+    {
+      "case": "reaction-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-won-before-64.png",
+      "after": "reaction-won-after-64.png",
+      "before_sha256": "72db2e856631f053a2c712ed9a5413841f3fefe5922ef837cfb0b632b5836c8d",
+      "after_sha256": "b86a7aa66b88e042605231f6b98effc4871958409c6e7d186c4745f61cd9d453",
+      "output": "reaction-won-64-comparison.png",
+      "output_sha256": "2bae2ccd3fd95dce428a427404e6d2f7cf3e9037f195edab36df38e898594809"
+    },
+    {
+      "case": "reaction-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-won-before-192.png",
+      "after": "reaction-won-after-192.png",
+      "before_sha256": "d8539092e5a78a8c97817793c9496cf111c1605450d412943c3d63f1dce353c7",
+      "after_sha256": "cf212a2941fa921fa485304e827d2c3978c1214da460dfe79770ec997eea468b",
+      "output": "reaction-won-192-comparison.png",
+      "output_sha256": "2923be33d595650ad0fc31682630e19f661a59738fa4f012c08b4acae74c7528"
+    },
+    {
+      "case": "reaction-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-won-before-512.png",
+      "after": "reaction-won-after-512.png",
+      "before_sha256": "978948d5a6dcaca8854a324fdc2939e76c4d55e24c8f74f3fc5cf68dc72f514a",
+      "after_sha256": "9766154a42234d07a5e53f22bd67aa6824b732a13646f5341f4e05d4afeee189",
+      "output": "reaction-won-512-comparison.png",
+      "output_sha256": "02ef4d42ebc067836b6832440fd3fdddfdfca9d971281b759ac29ba812745cc0"
+    },
+    {
+      "case": "reaction-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-ready-before-64.png",
+      "after": "reaction-ready-after-64.png",
+      "before_sha256": "ecc58683dda20138e5de87975112d703b0c1d96d6979501bd6d022c2d446a256",
+      "after_sha256": "5d010d4f2bf4ee671905f0889c0231b3c1020e229abec0dd29e8d7a498e96ed7",
+      "output": "reaction-ready-64-comparison.png",
+      "output_sha256": "1c0f06b7b1da3dd1d9ccd1591262eacca0ba70d64c8b464ab476f0e5b9c9251a"
+    },
+    {
+      "case": "reaction-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-ready-before-192.png",
+      "after": "reaction-ready-after-192.png",
+      "before_sha256": "073f5a5c107a08bd397a434a33bdcbecf368798a841c34fe256e0ba89491d930",
+      "after_sha256": "4fc5622dfef1b6ff14a4f463bc2379d00d57abe86008062cb5558919087f4ed0",
+      "output": "reaction-ready-192-comparison.png",
+      "output_sha256": "b366e27236ac9a7af5cff2f29013c2f7a05dc0ac717e577e54491f08ea261c3b"
+    },
+    {
+      "case": "reaction-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-ready-before-512.png",
+      "after": "reaction-ready-after-512.png",
+      "before_sha256": "9c139db79a9991171a8c32f09d76641000e534f6cca4d87092bb0128a58b738b",
+      "after_sha256": "5b3e6fdb5d4e46f986836320cf1d273b4dbbcf941820dc5513f984406dbe4210",
+      "output": "reaction-ready-512-comparison.png",
+      "output_sha256": "aa288023eae1d1ffd5ec7807d8f08c7fb6113666ec9d7ffd4879ecad25611441"
+    },
+    {
+      "case": "reaction-red",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-red-before-64.png",
+      "after": "reaction-red-after-64.png",
+      "before_sha256": "2167fc57c205c354853f4050605d91138def9c2ae5c15e9e376baa256b0f4a9f",
+      "after_sha256": "d223f0d205653d020c9bef6446b0a8ccc5842a37b37e9426c4db164fc0cdca64",
+      "output": "reaction-red-64-comparison.png",
+      "output_sha256": "37ac6ead931bf7b9dc4a204af81d277964438ae9e96c0591c6117a5d19436c50"
+    },
+    {
+      "case": "reaction-red",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-red-before-192.png",
+      "after": "reaction-red-after-192.png",
+      "before_sha256": "34daa2c0f5c3c62c21c8fb61525b602f339cc481d1179a702d9c50f8762a2a33",
+      "after_sha256": "c23fb24779a06606e18d18f6ef1c3500c7b935a2f68852521d2081eea71a08e8",
+      "output": "reaction-red-192-comparison.png",
+      "output_sha256": "1aa929c94a323ec27686b4d6f6815390fffe84e9793a9082e44cd6518135ad8d"
+    },
+    {
+      "case": "reaction-red",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-red-before-512.png",
+      "after": "reaction-red-after-512.png",
+      "before_sha256": "a836a6d6e2d1d3120c06b25507143532c27b75723613ada1020b719cf1ddcdb9",
+      "after_sha256": "1362fadb82c62170b1be1a4daa842b951a1325acd3b40f65ad4f4bfdf8a9d77c",
+      "output": "reaction-red-512-comparison.png",
+      "output_sha256": "4c57709af90ea0bfa7833ed6d979b33f42199a15ac184dc4fd07eaeb5dfb17c4"
+    },
+    {
+      "case": "reaction-green",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-green-before-64.png",
+      "after": "reaction-green-after-64.png",
+      "before_sha256": "61c64cff5b8ea5dfd4ad62c66a4227512da53993ed0fbcf1fd81ac04f1b5ff12",
+      "after_sha256": "46609ca869dc0c75e15e1e8512995bda91ff0e6618f80bdc4228b76c4ca3f9d3",
+      "output": "reaction-green-64-comparison.png",
+      "output_sha256": "2a2b88f3dc242064cbc3dc6eb5deef559fc40989c7f047dd16655348bb3ee791"
+    },
+    {
+      "case": "reaction-green",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-green-before-192.png",
+      "after": "reaction-green-after-192.png",
+      "before_sha256": "f9e08465f9f735366e70d173f3fa90e4badae431f3ef4bf2e13cd2fd166e9463",
+      "after_sha256": "90fd17b85adad08db3b9bbbbddb44f957782076b558007cd6c22180b79c3ca7a",
+      "output": "reaction-green-192-comparison.png",
+      "output_sha256": "d207164664b938d16a944526361784b3d2097bd5c41e20ae975c73b53d0a19f8"
+    },
+    {
+      "case": "reaction-green",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-green-before-512.png",
+      "after": "reaction-green-after-512.png",
+      "before_sha256": "371fa8f3c46617586dec095857a01b5083523c0050981e11b3bbeea71a26bf91",
+      "after_sha256": "d2993f3a419c3754d24f163ef9c81ed7f8f5cd20601b29f8a11797c252677cc4",
+      "output": "reaction-green-512-comparison.png",
+      "output_sha256": "85fb83043b03729b7071d49ae26d0a45b8fefb89c17fa43062acd0a7503fe868"
+    },
+    {
+      "case": "reaction-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-error-before-64.png",
+      "after": "reaction-error-after-64.png",
+      "before_sha256": "0f96447981dc9eff9ba1f8ea7d195ac3de06bb98fcd46a4017ad5ef9482a040f",
+      "after_sha256": "da94aa2f13d1bea216729977c489505b97e069be772d2f675248f919745f2361",
+      "output": "reaction-error-64-comparison.png",
+      "output_sha256": "7a0f51b951f738301c979f0310c549732b85ee4e82301a0cf1a67fd630081c5d"
+    },
+    {
+      "case": "reaction-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-error-before-192.png",
+      "after": "reaction-error-after-192.png",
+      "before_sha256": "6d0c57ebcde2c4bde7bc43f8ac73bd5d854ea5d81f9af711f840d5fb9d2c643f",
+      "after_sha256": "6660eceb7d7eda9239bfd0c5a7b022c3b5e09487efe77ed8bc7650bda484cf4b",
+      "output": "reaction-error-192-comparison.png",
+      "output_sha256": "8f10a6576249e2435f126e63606b6c9b8a38b11f3f79d09450829d51b27091cb"
+    },
+    {
+      "case": "reaction-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "reaction-error-before-512.png",
+      "after": "reaction-error-after-512.png",
+      "before_sha256": "62f0f3a6f9e6fd2e368f6f4e46655b0af953d96d05bfedaf789b142b02973804",
+      "after_sha256": "ec873d0dcd222e68facafa903bdef7fb0b1ad9c29509660a3421f6a751f98e31",
+      "output": "reaction-error-512-comparison.png",
+      "output_sha256": "f2484faf2f2c1b26c7a789559755c84b049ed857873f9be5bce69fd389115dda"
+    },
+    {
+      "case": "whistlebird-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-playing-before-64.png",
+      "after": "whistlebird-playing-after-64.png",
+      "before_sha256": "cc0ecf989fad5b5f3b63ce18e69f53be16f7839deaedc2c999f41727f4efb0be",
+      "after_sha256": "b8adbb01cec8688ac5ad87670f43cc5f716887cb096fd8eef2903b53a1df166d",
+      "output": "whistlebird-playing-64-comparison.png",
+      "output_sha256": "84eaecccf91c32ee523ea2663df66a86b97a547733cbe2ab27419a7f21b6c5ed"
+    },
+    {
+      "case": "whistlebird-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-playing-before-192.png",
+      "after": "whistlebird-playing-after-192.png",
+      "before_sha256": "8da086a902fe629bdd929a11a0b5278017b8ab78fb0c3d2e6720644ba05f201e",
+      "after_sha256": "89e20993ee22a5c3585dfb2aa38f6d40507bc5400d92c322d1960a12728237df",
+      "output": "whistlebird-playing-192-comparison.png",
+      "output_sha256": "1dac3c9de1d6d1a5af1a798cd8b7801f5f109e72191865ad9d3e79078c2a1ab1"
+    },
+    {
+      "case": "whistlebird-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-playing-before-512.png",
+      "after": "whistlebird-playing-after-512.png",
+      "before_sha256": "479848aaf7009585299edac510f2d612d9172d19f16a02f6cb9ce9bb3b03e714",
+      "after_sha256": "2d3dccbed0d3bfd751f9f56de1ca9ef7bd35e2adb93e046cc09ffcdb0c433a95",
+      "output": "whistlebird-playing-512-comparison.png",
+      "output_sha256": "4a4a8b0ed9206dda24457b236b5e6265fc371009fe27179e7b1363dc9a57335f"
+    },
+    {
+      "case": "whistlebird-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-won-before-64.png",
+      "after": "whistlebird-won-after-64.png",
+      "before_sha256": "f32361ff1c24c7e736f07faef2691c111b40414abdb9b24fe2057d12286eb239",
+      "after_sha256": "9c067359765fed7ced230f0e5bccbdce11fef4f18ce91c2a27fe2ed0ce7faa09",
+      "output": "whistlebird-won-64-comparison.png",
+      "output_sha256": "ce99bfe86d4a3b1356dd0a1a2b3a172c7c36e890b22a8cc19b7352d4018c519b"
+    },
+    {
+      "case": "whistlebird-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-won-before-192.png",
+      "after": "whistlebird-won-after-192.png",
+      "before_sha256": "bf4cc9788cb0086ff1743dacd5437dbe7c975c0bcd30f8b3028a46fba0cf61ef",
+      "after_sha256": "cbea5beeef69df6a65fce4f3759f264ffb156f4d08fb21f22398b89ed537ca31",
+      "output": "whistlebird-won-192-comparison.png",
+      "output_sha256": "3c48badca6ed0ff57ef84ec4ef9cd2a4cda7c2d7d645c4093a49e912a3e6e566"
+    },
+    {
+      "case": "whistlebird-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-won-before-512.png",
+      "after": "whistlebird-won-after-512.png",
+      "before_sha256": "2233745efb1491b07293936cd7eaa5a8b6cb7ce5cb1c4dfca5b5cf8249166f39",
+      "after_sha256": "083f18b7dc46f5dd4ff52953727c988dc637359297cff64a1fc640482d4d6c18",
+      "output": "whistlebird-won-512-comparison.png",
+      "output_sha256": "1c6b358c49f793e8007337c59381fce95169ebd7b38406df18fa1833287907eb"
+    },
+    {
+      "case": "whistlebird-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-ready-before-64.png",
+      "after": "whistlebird-ready-after-64.png",
+      "before_sha256": "467617a9b5881c54f65d1ae5a97ded41a12997da121c62d0c715c145461a6a2f",
+      "after_sha256": "3c1515d2386767fd3e8e32b1ae91797e25c72d808e69a4180ea166a8a0d20eee",
+      "output": "whistlebird-ready-64-comparison.png",
+      "output_sha256": "9bc1a2a37484d8e5cc1899bef82d062044647829f8b79579b5a89902c6bed96d"
+    },
+    {
+      "case": "whistlebird-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-ready-before-192.png",
+      "after": "whistlebird-ready-after-192.png",
+      "before_sha256": "9c43bd2925dd6e85ffe8840d5e738755df3908118818db2bee453af0451c5842",
+      "after_sha256": "e29c8b8f450d7c9c81329376fc290af833d63500df0121690777f3fc9d438fea",
+      "output": "whistlebird-ready-192-comparison.png",
+      "output_sha256": "11eb861bc5fa2821c1ae0047c12581411f928e29f1300d3624d2df48e1b2959a"
+    },
+    {
+      "case": "whistlebird-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "whistlebird-ready-before-512.png",
+      "after": "whistlebird-ready-after-512.png",
+      "before_sha256": "f54a5c265e7b40899e2f0151ce0c48b9f17c08d3962a0f4eacf6eabb82c436fd",
+      "after_sha256": "a861f4c00d45955a704d0e00c9ee88af57b33d5409a70910f67230d34367334c",
+      "output": "whistlebird-ready-512-comparison.png",
+      "output_sha256": "d290cbdccae3ca6c3164bfa88fad5d076d8821f4d07d97267412d53847b2f5b4"
+    }
+  ],
+  "puzzle_manifest": "../puzzles/manifest.json",
+  "motion": null,
+  "extra_native_states": 13,
+  "deployment_note": "Deployed and verified on the managed wall; Off restored. Signed iPhone 18 Pro Max build is ready, but installation is pending a reachable device.",
+  "validation_present": true,
+  "references": [
+    "https://contexto.me/",
+    "https://coursera.cs.princeton.edu/algs4/assignments/8puzzle/specification.php",
+    "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+    "https://developer.apple.com/design/human-interface-guidelines/designing-for-games/",
+    "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+    "https://developer.apple.com/design/human-interface-guidelines/motion",
+    "https://developer.apple.com/documentation/uikit/asynchronously-loading-images-into-table-and-collection-views",
+    "https://humanbenchmark.com/tests/reactiontime/statistics",
+    "https://mobbin.com/screens/03958157-6ab8-4046-9a49-ebf639baa348",
+    "https://mobbin.com/screens/0df53845-1879-4027-8e20-60ecef3f669c",
+    "https://mobbin.com/screens/1e4dd6e2-2e83-4fda-8069-51c74faf0cd9",
+    "https://mobbin.com/screens/4b41238c-eb26-44f5-9994-e33e21c7cca4",
+    "https://mobbin.com/screens/61e2a0be-afb6-4cc0-be46-b9affb586b45",
+    "https://mobbin.com/screens/762cf8d6-7e9d-4aad-9722-bf16c3160aa0",
+    "https://mobbin.com/screens/7f1a8a9b-b517-4472-8c29-787143ecf9c8",
+    "https://mobbin.com/screens/9414f65f-fef5-41e7-88aa-cbc55f64816c",
+    "https://mobbin.com/screens/aba0560d-220a-4b2c-9700-d603272c67f7",
+    "https://mobbin.com/screens/c3dbe857-56e2-4391-a937-ddf595924290",
+    "https://mobbin.com/screens/dbdd422f-cc23-4c8f-803c-a96abe6d2e84",
+    "https://nlp.stanford.edu/projects/glove/",
+    "https://support.apple.com/en-us/111781"
+  ]
+}

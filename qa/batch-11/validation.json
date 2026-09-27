@@ -1,0 +1,82 @@
+{
+  "batch": 11,
+  "base": "02bc2e997856401e1b4bc2e9d04895dc1560dd02",
+  "finished_ids": [
+    "G08",
+    "G09",
+    "G10",
+    "G11",
+    "G12"
+  ],
+  "python": {
+    "full_suite": 1212,
+    "passed": 1212,
+    "failed": 0,
+    "final_scoped": 90,
+    "final_game_host_and_api": 87,
+    "added_restart_regressions": 3
+  },
+  "native": {
+    "interaction_cases": 7,
+    "passed": true,
+    "app_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+    "game_models_and_http": 52,
+    "playback_regressions": 99,
+    "settings_catalog": 32,
+    "symbols": 88,
+    "final_binary_captures_verified": 28
+  },
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_iphone_debug": "passed",
+    "iphone_release": "passed",
+    "codesign_verification": "passed"
+  },
+  "wall": {
+    "deployed": true,
+    "live_games_verified": 5,
+    "detail_artwork_endpoint_verified": [
+      "sliding",
+      "reveal"
+    ],
+    "restored_mode": "off",
+    "services": [
+      "active",
+      "active"
+    ],
+    "temporary_qa_scores_removed": true
+  },
+  "phone": {
+    "installed": false,
+    "device": "iPhone 18 Pro Max",
+    "reason": "CoreDevice4016: device unavailable; signed build is ready."
+  },
+  "deployment_summary": "Deployed and verified on the managed wall; Off restored. Signed iPhone 18 Pro Max build is ready, but installation is pending a reachable device.",
+  "bugs_fixed": [
+    "Reaction accepts valid post-signal knocks before the next redraw.",
+    "Cover Reveal rejects late and partial-name wins; result clock freezes.",
+    "Sliding retains high-resolution artwork, covers the entire image and pins controls to image sequence.",
+    "Whistle Bird waits for start, calibrates safely, rejects invalid samples and uses swept collision checks.",
+    "Timed completion and score are published in one receipt.",
+    "Artwork reads retry and coalesce without cancelling every timed reveal.",
+    "Phone steering coalesces targets and never replays stale session input.",
+    "Largest accessibility text uses compact game layouts.",
+    "Completed games require an explicit boolean restart, rejecting malformed or mixed moves."
+  ],
+  "limitations": [
+    "Physical LED colour and room whistle/knock detector latency require in-room review.",
+    "iPhone installation remains pending because the device is unavailable.",
+    "Native touch checks run in Simulator using real Python rules with controlled fixture clocks."
+  ],
+  "gallery": {
+    "native_comparisons": 5,
+    "additional_states": 13,
+    "wall_sizes": [
+      64,
+      192,
+      512
+    ],
+    "pixel_cases": 19,
+    "links_validated": 214
+  }
+}

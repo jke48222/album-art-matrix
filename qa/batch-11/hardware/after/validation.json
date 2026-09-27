@@ -1,0 +1,48 @@
+{
+  "contexto": {
+    "side": 64,
+    "sha256": "a35cfb403b99c25d274152bf88403acd227d4b053ea2278cb2f600e85f3dbbab",
+    "file": "contexto-live.png",
+    "nonblack": true
+  },
+  "sliding": {
+    "side": 64,
+    "sha256": "c7239e0ffd99de95c4acce7979a8654abc93f5fb19b02fdc3149e345402ba43b",
+    "file": "sliding-live.png",
+    "nonblack": true,
+    "detail_endpoint": {
+      "side": 512,
+      "png_sha256": "d1c5d0592690a5b5730611042b4298a4b1e3644f633e70e13b3f610d1827ee38"
+    }
+  },
+  "reveal": {
+    "side": 64,
+    "sha256": "0439c628e25165e4684d6f86a0d8389cd8c1ea3aa3e0c661aca0f88e1d02dc05",
+    "file": "reveal-live.png",
+    "nonblack": true,
+    "detail_endpoint": {
+      "side": 512,
+      "png_sha256": "151fc50a1ea04e770861532c7ff5fd1a3f2c29361ee3bf27eaad49fde09e8786"
+    }
+  },
+  "reaction": {
+    "side": 64,
+    "sha256": "500b46df5a05f010ddb93cefdee3b0a85c9e1b48dbb7e0af98ce4bb0636a9a72",
+    "file": "reaction-live.png",
+    "nonblack": true
+  },
+  "whistlebird": {
+    "side": 64,
+    "sha256": "5aabba4fa7a71fe669a79ede20ab793c2567a1fc8b0a55e39e2f5a77a7488695",
+    "file": "whistlebird-live.png",
+    "nonblack": true
+  },
+  "resume_and_off_restoration_all_five": true,
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "limitations": "Captured live managed-runtime RGB frames and exercised real APIs. Not physical LED colour or phone touch/speech certification."
+}

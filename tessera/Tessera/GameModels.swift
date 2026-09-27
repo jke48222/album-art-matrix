@@ -124,11 +124,11 @@ enum GameLink {
         case message(String)
         var errorDescription: String? { if case .message(let text) = self { return text }; return nil }
     }
-    static func request(host: String, action: String, body: [String: Any]? = nil) async throws -> Data {
+    static func request(host: String, action: String, body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/game\(action)") else {
             throw Failure.message("Connect to your wall to play.")
         }
-        var req = URLRequest(url: url); req.timeoutInterval = body == nil ? 6 : 30
+        var req = URLRequest(url: url); req.timeoutInterval = timeout ?? (body == nil ? 6 : 30)
         req.cachePolicy = .reloadIgnoringLocalCacheData
         if let body {
             req.httpMethod = "POST"
@@ -156,12 +156,28 @@ enum GameLink {
         guard let data = try? await request(host: host, action: "") else { return nil }
         return try? JSONDecoder().decode(GameStatus.self, from: data)
     }
-    static func perform(host: String, _ action: String, _ body: [String: Any]) async throws -> GameStatus {
-        let result = try JSONDecoder().decode(GameStatus.self, from: await request(host: host, action: "/" + action, body: body))
+    static func perform(host: String, _ action: String, _ body: [String: Any], timeout: TimeInterval = 30) async throws -> GameStatus {
+        let result = try JSONDecoder().decode(GameStatus.self, from: await request(host: host, action: "/" + action, body: body, timeout: timeout))
         if let error = result.error { throw Failure.message(error) }
         return result
     }
     static func post(host: String, _ action: String, _ body: [String: Any]) async -> GameStatus? {
         try? await perform(host: host, action, body)
+    }
+}
+
+/// Coalesces continuous controls while one network acknowledgement is pending.
+struct GameSteeringBuffer {
+    private var latest: (y: Double, at: TimeInterval, session: String?)?
+    mutating func offer(_ y: Double, session: String?, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+        guard y.isFinite else { return }
+        latest = (max(0, min(1, y)), now, session)
+    }
+    mutating func clear() { latest = nil }
+    mutating func take(session: String?, now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Double? {
+        defer { latest = nil }
+        guard let latest, latest.session == session,
+              now >= latest.at, now - latest.at < 0.35 else { return nil }
+        return latest.y
     }
 }

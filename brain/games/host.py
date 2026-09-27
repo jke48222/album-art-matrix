@@ -147,7 +147,7 @@ class GameHost:
             if not isinstance(move, dict):
                 return {**self.status(), "error": "A move must be an object.", "code": 400}
             if g.over:
-                if move.get("again"):
+                if set(move) == {"again"} and move["again"] is True:
                     # Provider setup must not inherit this outer RLock. Pin the
                     # observed session even for a legacy caller without an ID.
                     restart = (g.name, dict(g.options), list(g.players), self.session_id)
@@ -305,12 +305,27 @@ class GameHost:
     def status(self) -> dict:
         with self._lock:
             g = self.game
+            public = g.public() if g else None
             if g is not None and g.over:
                 self._record(g)
-            return {"running": g is not None, "seq": self.seq, "game": g.public() if g else None,
+            return {"running": g is not None, "seq": self.seq, "game": public,
                     "session_id": self.session_id, "on_wall": g is not None and self.ctrl.get()["mode"] == "game",
                     "starting": self._starting, "scores": self.scores(g.name) if g else {}, "last": self.last,
                     "voice_words": (g.voice_words() if g else [])[:3000]}
+
+    def artwork(self, size: int, session_id: str, sequence: int, frame_step: int | None = None):
+        """A detailed rendering of this exact session, without changing faces."""
+        with self._lock:
+            if not session_id or session_id != self.session_id or self.game is None:
+                return None
+            game = self.game
+            def matches():
+                state = game.state()
+                return game.seq == sequence and (frame_step is None or state.get("frame_step") == frame_step)
+            if not matches():
+                return None
+            frame = self.frame_at(size).copy()
+            return frame if matches() else None
 
     def frame_at(self, size: int, now: float | None = None):
         with self._lock:

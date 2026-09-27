@@ -1,0 +1,59 @@
+{
+  "units": [
+    "G11",
+    "G12"
+  ],
+  "reviewed_at": "2026-09-27T06:16:00Z",
+  "scope": "Visual inspection of final simulator fixture screenshots and production RGB renders. No physical LED colour certification. Native interaction checks are recorded separately by integration.",
+  "native_captures": [
+    {
+      "image": "qa/batch-11/after/reaction/room-live.png",
+      "image_sha256": "b9e254cddaf7a08e0c1c0bb7729b735ce91b4b870637eccd25937953beb34c91",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    },
+    {
+      "image": "qa/batch-11/after/reaction/room-large.png",
+      "image_sha256": "2be9f396b472e52aafefedd3c4fd58ea1ab567d4e26eafa6fe428f54459f4b82",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    },
+    {
+      "image": "qa/batch-11/after/reaction/room-offline.png",
+      "image_sha256": "56fffab5a6bcfe74d1f4e0370dbbb53945b1256a2febd2d0fdc2faa5cc0314ac",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    },
+    {
+      "image": "qa/batch-11/after/whistlebird/room-live.png",
+      "image_sha256": "d8ce07fd19d8501e2ccec4f43e9a8c0c8c76ede1da124d33beb0f3aa36ef6dc3",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    },
+    {
+      "image": "qa/batch-11/after/whistlebird/room-large.png",
+      "image_sha256": "f4de9d85720d63152954cdf48b7f0a44d2eb8af18f9956205aa25210f78861aa",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    },
+    {
+      "image": "qa/batch-11/after/whistlebird/room-offline.png",
+      "image_sha256": "3912e704cc45bcd579d3357031c6b3e6d53e4f53a2bf6c10c7fefce55f0ee0c8",
+      "installed_code_sha256": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+      "visually_inspected": true
+    }
+  ],
+  "resolved_findings": [
+    "Reaction solo-player copy uses natural pronouns.",
+    "Reaction largest-text result uses ms visually with the full spoken label; no broken final character.",
+    "Read-only reaction results remain bright offline and are no longer exposed as tap targets.",
+    "Whistle Bird largest-text layout shows both steering buttons and the height slider directly below its smaller scene."
+  ],
+  "remaining_observed_issues": [],
+  "wall_captures_inspected": [
+    "puzzles/reaction-green-after-512.png",
+    "puzzles/reaction-error-after-64.png",
+    "puzzles/whistlebird-playing-after-512.png",
+    "puzzles/whistlebird-ready-after-64.png"
+  ]
+}

@@ -1,0 +1,35 @@
+diff --git a/brain/games/contexto.py b/brain/games/contexto.py
+index 9f1a9f5..43eeabc 100644
+--- a/brain/games/contexto.py
++++ b/brain/games/contexto.py
+@@ -21 +21 @@ from . import Game, register
+-from .board import (BLACK, DIM, GREEN, INK, RED, YELLOW, WHITE, banner, blank, ease_out, fill, header,
++from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, YELLOW, WHITE, banner, blank, ease_out, fill, header,
+diff --git a/brain/games/pictures.py b/brain/games/pictures.py
+index 2ea852c..c50e1b0 100644
+--- a/brain/games/pictures.py
++++ b/brain/games/pictures.py
+@@ -29,2 +29,2 @@ from . import Game, register
+-from .board import (BLACK, FAINT, INK, SLATE, WHITE, banner, blank, ease_out, fill, mix, progress,
+-                    scale_for, shade)
++from .board import (BLACK, DIM, FAINT, INK, SLATE, WHITE, banner, blank, ease_out, fill, header, mix, progress,
++                    scale_for, shade, text, text_centred, fit_text)
+@@ -261,0 +262 @@ class Reveal(Game):
++            who = self.winner or (self.players[0] if self.won else "")
+diff --git a/brain/games/reaction.py b/brain/games/reaction.py
+index 3255301..98c7923 100644
+--- a/brain/games/reaction.py
++++ b/brain/games/reaction.py
+@@ -20,2 +20,2 @@ from . import Game, register
+-from .board import (DIM, GREEN, INK, RED, WHITE, YELLOW, banner, blank, breathe, glow, header, mix,
+-                    text_centred, scale_for)
++from .board import (BLACK, DIM, GREEN, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, glow, header, mix,
++                    text_centred, scale_for, text_width)
+diff --git a/brain/games/whistlebird.py b/brain/games/whistlebird.py
+index 860dc2c..a7bdf66 100644
+--- a/brain/games/whistlebird.py
++++ b/brain/games/whistlebird.py
+@@ -21 +21,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, GREEN, INK, ORANGE, WHITE, YELLOW, banner, blank, ease_out, fill, mix, rounded, scale_for, text_centred)
++from .board import (BLACK, DIM, GREEN, INK, ORANGE, WHITE, YELLOW, banner, blank, disc, ease_out, fill, header,
++                    mix, rounded, scale_for, text, text_centred)

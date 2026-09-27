@@ -1,0 +1,50 @@
+{
+  "passed": true,
+  "cases": [
+    "Test Case '-[GameInteractionTests.GameInteractionTests testSlidingRecoversAfterRepeatedArtworkFailures]' passed (9.071 seconds)."
+  ],
+  "app": "/private/tmp/tessera-batch11-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "app_sha256": {
+    "Tessera.debug.dylib": "49637269c009d27a2ce4550bee3b81b4620d83360ea5cf7488259695e834b655",
+    "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87"
+  },
+  "scope": "Real XCUITest taps/type input on production Swift; local HTTP fixture uses production Python game rules. No physical phone or microphone claim.",
+  "xcode_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "9108AFCE-E437-42FF-A946-C41349BE6540",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 7,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "GameInteractionTests \u00b7 Built with macOS 27.0",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1790489628.738,
+    "passedTests": 7,
+    "result": "Passed",
+    "runtimeWarnings": [],
+    "skippedTests": 0,
+    "startTime": 1790489571.561,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - GameInteractionTests",
+    "topInsights": [],
+    "totalTestCount": 7
+  },
+  "source_log": "native-interactions.log"
+}

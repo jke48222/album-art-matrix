@@ -1,0 +1,50 @@
+{
+  "running": true,
+  "seq": 25,
+  "game": {
+    "name": "reaction",
+    "title": "Reaction knock",
+    "players": [
+      "Tessera QA Batch 11"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Tessera QA Batch 11: 83 ms.",
+    "started": 1790488276,
+    "finished": null,
+    "seq": 3,
+    "voice": true,
+    "phase": "shown",
+    "turn": "Tessera QA Batch 11",
+    "round": 2,
+    "rounds": 5,
+    "last_ms": 83,
+    "times": {
+      "Tessera QA Batch 11": [
+        83
+      ]
+    },
+    "best": {
+      "Tessera QA Batch 11": 83
+    }
+  },
+  "session_id": "7ab7632581c14d268000c19c2e427d1b",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 2,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "go",
+    "again"
+  ],
+  "ms": 83,
+  "how": "tap"
+}

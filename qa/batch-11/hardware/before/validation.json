@@ -1,0 +1,40 @@
+{
+  "contexto": {
+    "side": 64,
+    "sha256": "78f00734008910ca3bee38f928053255e09449d28dc5028165fa05476f030766",
+    "file": "contexto-live.png",
+    "nonblack": true
+  },
+  "sliding": {
+    "side": 64,
+    "sha256": "57d0f6eebb53cf9b9eafa0720c43219fd4024be9cb847a4b875b9c9662d14131",
+    "file": "sliding-live.png",
+    "nonblack": true
+  },
+  "reveal": {
+    "side": 64,
+    "sha256": "76eb45053b2f0156bcb41bac70e9ed743dd897a08ee42a7b72d027e8650bae0c",
+    "file": "reveal-live.png",
+    "nonblack": true
+  },
+  "reaction": {
+    "side": 64,
+    "sha256": "eabf0e1ba4999c206530d26ac452251b91fe5d3486801ea8fd5d4ac1e4e9b5e1",
+    "file": "reaction-live.png",
+    "nonblack": true
+  },
+  "whistlebird": {
+    "side": 64,
+    "sha256": "16ce358ba22c2d1ffc069a1b4b2ad145565e4528481b701d9f49c819ba5ca5b3",
+    "file": "whistlebird-live.png",
+    "nonblack": true
+  },
+  "resume_and_off_restoration_all_five": true,
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "limitations": "Captured live managed-runtime RGB frames and exercised real APIs. Not physical LED colour or phone touch/speech certification."
+}

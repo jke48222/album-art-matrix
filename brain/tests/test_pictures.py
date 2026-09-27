@@ -61,11 +61,11 @@ def test_sliding(tmp_path):
         # solve it: undo the scramble by search is overkill; walk the tiles home with a solver
         solve(host)
         assert g.over and g.won and g.message.startswith("Back in")
-        g.changed_at -= 2.0                                   # past the wash of light
+        # The detailed master is resized with the production filter, and the
+        # completed image includes the final row and column without a flash.
         sharp = host.frame_at(size)
-        cell = size // 3
-        want = np.asarray(g.sleeve.resize((size, size)) if g.sleeve.size[0] != size else g.sleeve)
-        assert np.array_equal(sharp[:cell * 3, :cell * 3], want[:cell * 3, :cell * 3])
+        want = np.asarray(g.sleeve.resize((size, size), Image.Resampling.LANCZOS))
+        assert np.array_equal(sharp, want)
 
 
 def solve(host):

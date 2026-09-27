@@ -1187,6 +1187,35 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 w = getattr(ctrl, "weather", None)
                 self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
                 return
+            if u.path == "/game/frame.png":
+                query = parse_qs(u.query)
+                side = query.get("side", ["512"])
+                session = query.get("session_id", [])
+                sequence = query.get("seq", [])
+                step = query.get("frame_step", [])
+                valid_sequence = len(sequence) == 1 and sequence[0].isascii() and sequence[0].isdigit() and len(sequence[0]) <= 16
+                valid_step = not step or (len(step) == 1 and step[0].isascii() and step[0].isdigit() and len(step[0]) <= 2 and int(step[0]) <= 20)
+                if len(side) != 1 or side[0] not in ("64", "192", "512") or len(session) != 1 or not session[0] or not valid_sequence or not valid_step:
+                    self._json(400, {"error": "A game session, sequence and side of 64, 192 or 512 are required."})
+                    return
+                gh = getattr(ctrl, "games", None)
+                frame = gh.artwork(int(side[0]), session[0], int(sequence[0]), int(step[0]) if step else None) if gh else None
+                if frame is None:
+                    self._json(409, {"error": "The game changed. Refresh its board."})
+                    return
+                from io import BytesIO
+                from PIL import Image
+                output = BytesIO()
+                Image.fromarray(frame).save(output, format="PNG")
+                payload = output.getvalue()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/png")
+                self.send_header("Content-Length", str(len(payload)))
+                self.send_header("Cache-Control", "no-store")
+                self.send_header("Access-Control-Allow-Origin", "*")
+                self.end_headers()
+                self.wfile.write(payload)
+                return
             if u.path in ("/game", "/game/list"):
                 gh = getattr(ctrl, "games", None)
                 if gh is None:

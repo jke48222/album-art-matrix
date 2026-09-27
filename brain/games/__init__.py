@@ -85,10 +85,13 @@ class Game:
 
     # ---- shared ------------------------------------------------------------------------
     def public(self) -> dict:
+        # Timed games can finish while collecting state. Publish the resulting
+        # metadata in the same receipt, not the pre-tick flags from a moment ago.
+        state = self.state()
         return {"name": self.name, "title": self.title, "players": self.players, "over": self.over,
                 "won": self.won, "winner": self.winner, "message": self.message,
                 "started": int(self.started), "finished": int(self.finished) if self.finished else None,
-                "seq": self.seq, "voice": self.by_voice, **self.state()}
+                "seq": self.seq, "voice": self.by_voice, **state}
 
     def finish(self, won: bool = False, winner: str | None = None, message: str | None = None):
         self.over, self.won, self.winner = True, won, winner

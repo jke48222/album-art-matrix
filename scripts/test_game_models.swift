@@ -41,6 +41,23 @@ import Foundation
         check("missing key is safe", JSONValue.object([:])["absent"].isNull)
         check("booleans are not numeric moves", JSONValue.bool(true).int == nil)
 
+        var steering = GameSteeringBuffer()
+        steering.offer(0.2, session: "A", now: 100)
+        steering.offer(0.8, session: "A", now: 100.1)
+        check("steering coalesces to the latest position", steering.take(session: "A", now: 100.2) == 0.8)
+        check("steering is consumed exactly once", steering.take(session: "A", now: 100.2) == nil)
+        steering.offer(0.4, session: "A", now: 100)
+        check("old steering cannot enter a new session", steering.take(session: "B", now: 100.1) == nil)
+        steering.offer(0.4, session: "A", now: 100)
+        check("stalled steering expires", steering.take(session: "A", now: 101) == nil)
+        steering.offer(0.4, session: "A", now: 100)
+        steering.clear()
+        check("leaving the screen clears steering", steering.take(session: "A", now: 100.1) == nil)
+        steering.offer(.nan, session: "A", now: 100)
+        check("nonfinite steering never queues", steering.take(session: "A", now: 100.1) == nil)
+        steering.offer(2, session: "A", now: 100)
+        check("steering stays in the flight area", steering.take(session: "A", now: 100.1) == 1)
+
         let host = CommandLine.arguments[1]
         let catalogue = try await GameLink.catalogue(host: host)
         check("catalogue preserves all cards", catalogue.count == 3)

@@ -1,0 +1,31 @@
+{
+  "running": true,
+  "seq": 29,
+  "game": {
+    "name": "whistlebird",
+    "title": "Whistle bird",
+    "players": [
+      "Tessera QA Batch 11"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Whistle to fly.",
+    "started": 1790488280,
+    "finished": null,
+    "seq": 0,
+    "voice": false,
+    "y": 0.496,
+    "score": 0,
+    "dead": false,
+    "pipes": [],
+    "range": null
+  },
+  "session_id": "fd662514bdf547edb1b52954eb5ac4ab",
+  "on_wall": true,
+  "starting": null,
+  "scores": {},
+  "last": null,
+  "voice_words": [],
+  "y": 0.4
+}

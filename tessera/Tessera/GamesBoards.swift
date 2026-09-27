@@ -20,39 +20,3 @@ func groupColour(_ name: String?) -> Color {
     default: return Ink.plaster
     }
 }
-
-// MARK: - Contexto: the ranked guesses
-
-struct ContextoBoard: View {
-    let game: GameStatus.Game
-    let accent: Color
-
-    private func colour(_ r: Int) -> Color { r <= 300 ? tileGreen : r <= 1500 ? tileYellow : tileRed }
-
-    var body: some View {
-        VStack(spacing: 8) {
-            if let last = game.state["last"].object["word"]?.string, let r = game.state["last"]["rank"].int {
-                HStack {
-                    Text(last.uppercased()).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(Ink.ink)
-                    Spacer()
-                    Text(String(r)).font(.system(size: 22, weight: .bold, design: .rounded)).foregroundStyle(colour(r))
-                }
-                .padding(.horizontal, 14).frame(minHeight: 52)
-                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(colour(r).opacity(0.2)))
-            }
-            ForEach(Array(game.state["guesses"].array.prefix(12).enumerated()), id: \.offset) { _, g in
-                let r = g["rank"].int ?? 0
-                HStack {
-                    Text(g["word"].string ?? "").font(.ui(15)).foregroundStyle(Ink.ink)
-                    Spacer()
-                    Text(String(r)).font(.machine(13)).foregroundStyle(colour(r))
-                }
-                .padding(.horizontal, 14).frame(minHeight: 36)
-                .background(RoundedRectangle(cornerRadius: Round.control, style: .continuous).fill(Ink.plaster))
-            }
-            if let secret = game.state["secret"].string {
-                Text("It was \(secret.uppercased()).").font(.ui(15, .semibold)).foregroundStyle(Ink.ink)
-            }
-        }
-    }
-}

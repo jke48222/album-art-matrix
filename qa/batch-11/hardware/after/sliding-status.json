@@ -1,0 +1,74 @@
+{
+  "running": true,
+  "seq": 12,
+  "game": {
+    "name": "sliding",
+    "title": "Sliding puzzle",
+    "players": [
+      "Tessera QA Batch 11"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "1 move.",
+    "started": 1790489566,
+    "finished": null,
+    "seq": 1,
+    "voice": true,
+    "n": 3,
+    "tiles": [
+      6,
+      8,
+      1,
+      2,
+      4,
+      0,
+      7,
+      3,
+      5
+    ],
+    "gap": 1,
+    "moves": 1,
+    "legal": [
+      4,
+      0,
+      2
+    ],
+    "placed": 1,
+    "numbers": true,
+    "can_undo": true,
+    "undos": 0,
+    "sleeve": null
+  },
+  "session_id": "5e5dae9e28a8464d94ac9aa07c221064",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 2,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "up",
+    "down",
+    "left",
+    "right",
+    "undo"
+  ],
+  "tiles": [
+    6,
+    8,
+    1,
+    2,
+    4,
+    0,
+    7,
+    3,
+    5
+  ],
+  "moves": 1
+}

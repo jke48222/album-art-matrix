@@ -1,0 +1,38 @@
+{
+  "status": "pending_device_connection",
+  "device": "iPhone 18 Pro Max",
+  "identifier": "1BED2E47-0A74-5F9E-A99A-61408BF6382C",
+  "signed_build_succeeded": true,
+  "app": "/tmp/tessera-batch11-phone/Build/Products/Debug-iphoneos/Tessera.app",
+  "installed": false,
+  "launch": "User will open the app; no launch attempted.",
+  "attempt_error": {
+    "code": 4016,
+    "domain": "com.apple.dt.CoreDeviceError",
+    "userInfo": {
+      "CurrentlyAssertableStates": {
+        "array": []
+      },
+      "NSLocalizedDescription": {
+        "string": "The device is not able to fulfill the requested usage assertion requirements."
+      },
+      "RequestedDeviceStates": {
+        "array": [
+          {
+            "string": "com.apple.coredevice.coreDeviceServicesLoaded"
+          },
+          {
+            "string": "com.apple.coredevice.remoteServiceDiscoveryTrustedConnectivityAvailable"
+          },
+          {
+            "string": "com.apple.coredevice.powerAssertionTaken"
+          }
+        ]
+      }
+    }
+  },
+  "app_sha256": {
+    "Tessera.debug.dylib": "0768097cd152b98c42a1083907d8a1b4646c2931b9717eb92b5267bf7a22d3b2",
+    "Tessera": "87679e8f960f5d891305304007454a2045db6c01d05eb6487c57699befd8d72a"
+  }
+}

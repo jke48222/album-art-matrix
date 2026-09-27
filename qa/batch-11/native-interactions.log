@@ -1,0 +1,608 @@
+Command line invocation:
+    /Applications/Xcode-beta.app/Contents/Developer/usr/bin/xcodebuild -project /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj -scheme GameInteractionTests -destination id=9108AFCE-E437-42FF-A946-C41349BE6540 -derivedDataPath /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build -resultBundlePath /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/run.xcresult test
+
+Writing result bundle at path:
+	/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/run.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'GameInteractionTests' in project 'TesseraInteractions' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: db3ad5c59ffb3ecaea479127a9a2ea6e
+Build description path: /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/XCBuildData/db3ad5c59ffb3ecaea479127a9a2ea6e.xcbuilddata
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/CompilationCache.noindex
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/CompilationCache.noindex
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products
+
+ClangStatCache /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKStatCaches.noindex/iphonesimulator27.0-24A5408c-be13878bbdcd767c5c3aec63d1bf53923243818bda632a4370e1cc7a9fd181c5.sdkstatcache
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -o /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKStatCaches.noindex/iphonesimulator27.0-24A5408c-be13878bbdcd767c5c3aec63d1bf53923243818bda632a4370e1cc7a9fd181c5.sdkstatcache
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/PrecompiledHeaders
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/PrecompiledHeaders
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+CreateBuildDirectory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    builtin-create-build-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/TesseraInteractions-38e5303e7335c4f66eba96000e6c6e20-VFS-iphonesimulator/all-product-headers.yaml
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project/TesseraInteractions.xcodeproj
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/TesseraInteractions-38e5303e7335c4f66eba96000e6c6e20-VFS-iphonesimulator/all-product-headers.yaml
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.hmap
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyStaticMetadataFileList (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyStaticMetadataFileList
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyMetadataFileList (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyMetadataFileList
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/ProductTypeInfoPlistAdditions.plist (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/ProductTypeInfoPlistAdditions.plist
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-project-headers.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-project-headers.hmap
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-own-target-headers.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-own-target-headers.hmap
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-generated-files.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-generated-files.hmap
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/empty-GameInteractionTests.plist (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/empty-GameInteractionTests.plist
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-target-headers.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-target-headers.hmap
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftConstValuesFileList (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftConstValuesFileList
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_const_extract_protocols.json (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_const_extract_protocols.json
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.LinkFileList (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.LinkFileList
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-OutputFileMap.json (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-OutputFileMap.json
+
+WriteAuxiliaryFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-non-framework-target-headers.hmap (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    write-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-non-framework-target-headers.hmap
+
+MkDir /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /bin/mkdir -p /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest
+
+ProcessInfoPlistFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Info.plist /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/empty-GameInteractionTests.plist (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-infoPlistUtility /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/empty-GameInteractionTests.plist -producttype com.apple.product-type.bundle.ui-testing -expandbuildsettings -format binary -platform iphonesimulator -additionalcontentfile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/ProductTypeInfoPlistAdditions.plist -o /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Info.plist
+
+SwiftDriver GameInteractionTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-SwiftDriver -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GameInteractionTests -Onone @/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList -DDEBUG -module-alias Testing\=_Testing_Unavailable -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk/Developer/Library/Frameworks -parse-as-library -c -j15 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKStatCaches.noindex/iphonesimulator27.0-24A5408c-be13878bbdcd767c5c3aec63d1bf53923243818bda632a4370e1cc7a9fd181c5.sdkstatcache -output-file-map /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -sdk-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_const_extract_protocols.json -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-generated-files.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-own-target-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-target-headers.hmap -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-project-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources-normal/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-Swift.h -working-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project -experimental-emit-module-separately -disable-cmo
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/ptrauth-89YD4BL8ECXAE1C6S3WXPB8HU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_stdarg-8PQQ9RQY8TKI2KBSGIKT75QHO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_AvailabilityInternal-EOSNYIS9OZ6BUMIEYSTZGY5TC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_float-F5GMEN91VPK2TE34CDP3DBP4S.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/ptrcheck-8VC9GWIWYH3HK56H4P0UO90B2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_stddef-AYRY8QAVDYO35KCKOVZ6JZPQU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/DeveloperToolsSupport-BRICPH42ZZDQZCUZ9RWFO6H7D.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/SwiftShims-B9NO0MKCT3K1BFT8UBQ56PJGS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_SwiftConcurrencyShims-2E4SEFBRUHBESPLD7YCGAL425.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_stdbool-5VX0NRJTIOAHU5TY7S3IYI2BU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_DarwinFoundation1-8WKJS6ZSHNWZGQB3HB7YXAVVC.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_DarwinFoundation2-2QOHRGTJ5FE4G2SW0ZUVPKYIV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_limits-AJMB6N3WYU03MU4TZ721YNOG6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/sys_types-D23COFA83G1OHXCOZRDT1NG3T.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/string_h-DFGU07A6OCLVT5JJDRIZV00U6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_tgmath-91JNJOC007Y56ZYTFKIHDYMZX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_stdint-931UDNA43581B431IMR5P5EF7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_stdatomic-1W6ABQSQHQ5M6GPZDMEURIREU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_intrinsics-6C36FC8FIUQGC9D7TW38LDF6G.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_DarwinFoundation3-2SXDULHPTCMQVFKPK08L9ZD8L.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_Builtin_inttypes-57P4PDHOH527ND3AYT4JT45DV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Darwin-AT30NIDF26EDJNG9DU84MN82U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/simd-ETE404SF458OXZYAGMKLWJ241.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/MachO-AEG6GSIISRTE6EQIORSFL3SPO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/ObjectiveC-BP4TJFCHBH3HBTT5VUU01USNV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/os_object-12CRSW5XH3BV2ERHJCWU0SUFK.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Spatial-DK0P9UGC4Q7Z84ODMIY1PPRRT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/os_workgroup-1PMGT23K0H0CIZWOJR5Z5KIM0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Dispatch-1BLXZZ1QWP4NGYTMTVU1RZPA6.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/XPC-55CQB5SYQZ52LEAB10GLC7RRX.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreFoundation-4GAGULM5OWWMKP8B87A44G3U2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/os-7UWDB3MQ30NTHQ5Q9DZE34Q4O.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CFNetwork-1OKAX52X0C66BD82EZ5TQOFQG.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Security-D4E62KETGXQR8UCJU55PH2DAT.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreGraphics-8ZEETI2VSO8KG2GPUNVG7I7U.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Foundation-3Q4WDLYNXZANV829ZXOZ5SFIM.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreText-4UESQAHEVN2YNAT1Y8HQPQZWO.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/ImageIO-5KGQOCNCAFAOV27ST86R1HET2.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/IOSurface-7V6HLTO5H0EDJJ2VJ30NMWKE4.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Symbols-C1I3Q16H95JHLIVU9PTBBZIDU.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Accessibility-EQT0FJ5D6TT008BVW81W346KD.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/OpenGLES-AR10KY2760JJKFOEWC4FJRGE7.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/UserNotifications-468CRBARONH2QKD6AFXAE84NR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/FileProvider-EGSLS94BM3HXTMPGDL574Y1W0.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/UniformTypeIdentifiers-D0Y92JEYUJC47EPKG6ALFY9HW.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/DataDetection-3A33P1J5I790Z14NQRGKLOPP9.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/UIUtilities-14FF3WDCFMUSYSLGB76SG8SFV.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/OSLog-6B6H2JX9IHNTL6HIS8SO89VPS.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreTransferable-2RD5GGR14GJ6H1MWB7JOTUAP1.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/_LocationEssentials-CSIS0N34VOUJF94YECMPNCVFQ.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreLocation-5EAMEODBCDROFWYL3SULGCX03.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/Metal-7QT3IPU7R8N10TIDEGEEST4HI.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreMotion-DI46CY8T2H9BMX947SXSXTJ2B.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreVideo-61BPOYSLBWXN6D9HEROL2XOAA.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/CoreImage-6T93L2LS62J99SE3VTG2CEG7X.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/QuartzCore-3FWFLO1IN719Z298ONZ50KGNR.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/SwiftUICore-EYGJBXMA0MH5JSI997J1E1Z1B.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules/UIKit-EJRVM9T4LI2A9H01P2Y8D3R93.pcm
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-7OPC1016XYFYTOCTDFJ1FV1VK.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCUIAutomation-12N2FUVMAAFD6.swiftmodule
+
+SwiftExplicitDependencyGeneratePcm arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-8V1UWD1O4R6CJOFCLFZ8QGBA4.pcm
+
+SwiftExplicitDependencyCompileModuleFromInterface arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules/XCTest-2BITWOE3BSQ6M.swiftmodule
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ GameInteractionTests (in target 'GameInteractionTests' from project 'TesseraInteractions')
+
+SwiftCompile normal arm64 (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+
+
+SwiftCompile normal arm64 Compiling\ GameInteractionTests.swift /tmp/tessera-weather-release-source/scripts/qa/uitests/GameInteractionTests.swift (in target 'GameInteractionTests' from project 'TesseraInteractions')
+
+SwiftCompile normal arm64 /tmp/tessera-weather-release-source/scripts/qa/uitests/GameInteractionTests.swift (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-SwiftPerFileCompile GameInteractionTests.swift
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for GameInteractionTests (in target 'GameInteractionTests' from project 'TesseraInteractions')
+
+SwiftDriver\ Compilation\ Requirements GameInteractionTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GameInteractionTests -Onone @/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList -DDEBUG -module-alias Testing\=_Testing_Unavailable -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk/Developer/Library/Frameworks -parse-as-library -c -j15 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKStatCaches.noindex/iphonesimulator27.0-24A5408c-be13878bbdcd767c5c3aec63d1bf53923243818bda632a4370e1cc7a9fd181c5.sdkstatcache -output-file-map /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -sdk-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_const_extract_protocols.json -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-generated-files.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-own-target-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-target-headers.hmap -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-project-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources-normal/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-Swift.h -working-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project -experimental-emit-module-separately -disable-cmo
+
+SwiftMergeGeneratedHeaders /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources/GameInteractionTests-Swift.h /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-Swift.h (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-swiftHeaderTool -arch arm64 /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-Swift.h -o /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources/GameInteractionTests-Swift.h
+
+Copy /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.swiftmodule /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.swiftmodule
+
+Copy /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.swiftdoc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftdoc (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftdoc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.swiftdoc
+
+Copy /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.abi.json /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.abi.json (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.abi.json /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/arm64-apple-ios-simulator.abi.json
+
+Copy /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftsourceinfo (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftsourceinfo /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests.swiftmodule/Project/arm64-apple-ios-simulator.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling GameInteractionTests.swift (in target 'GameInteractionTests' from project 'TesseraInteractions')
+
+SwiftDriver\ Compilation GameInteractionTests normal arm64 com.apple.xcode.tools.swift.compiler (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-Swift-Compilation -- /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name GameInteractionTests -Onone @/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList -DDEBUG -module-alias Testing\=_Testing_Unavailable -plugin-path /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/plugins/testing -enable-bare-slash-regex -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -target arm64-apple-ios18.0-simulator -g -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -Xfrontend -serialize-debugging-options -enable-testing -index-store-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -Isystem /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -F /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk/Developer/Library/Frameworks -parse-as-library -c -j15 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKStatCaches.noindex/iphonesimulator27.0-24A5408c-be13878bbdcd767c5c3aec63d1bf53923243818bda632a4370e1cc7a9fd181c5.sdkstatcache -output-file-map /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-OutputFileMap.json -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex -sdk-module-cache-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules -emit-dependencies -emit-module -emit-module-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule -serialize-diagnostics -dependency-scan-serialize-diagnostics-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-dependency-scan.dia -validate-clang-modules-once -clang-build-session-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/ModuleCache.noindex/Session.modulevalidation -Xcc -fmodules-prune-interval\=86400 -Xcc -fmodules-prune-after\=345600 -emit-const-values -const-gather-protocols-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_const_extract_protocols.json -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-generated-files.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-own-target-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-all-target-headers.hmap -Xcc -iquote -Xcc /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests-project-headers.hmap -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/include -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources-normal/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources/arm64 -Xcc -I/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests-Swift.h -working-directory /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project -experimental-emit-module-separately -disable-cmo
+
+Ld /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/GameInteractionTests normal (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -Xlinker -reproducible -target arm64-apple-ios18.0-simulator -bundle -isysroot /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk -O0 -Xlinker -no_warn_duplicate_libraries -L/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -L/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -L/Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib -F/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/EagerLinkingTBDs/Debug-iphonesimulator -F/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator -iframework /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks -iframework /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk/Developer/Library/Frameworks -filelist /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.LinkFileList -Xlinker -rpath -Xlinker /usr/lib/swift -Xlinker -rpath -Xlinker @loader_path/Frameworks -Xlinker -rpath -Xlinker @executable_path/Frameworks -Xlinker -dead_strip -Xlinker -object_path_lto -Xlinker /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_lto.o -rdynamic -Xlinker -no_deduplicate -Xlinker -objc_abi_version -Xlinker 2 -Xlinker -dependency_info -Xlinker /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_dependency_info.dat -fobjc-link-runtime -L/Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/iphonesimulator -L/usr/lib/swift -Xlinker -add_ast_path -Xlinker /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.swiftmodule -Xlinker -needed_framework -Xlinker XCTest -framework XCTest -Xlinker -needed-lXCTestSwiftSupport -lXCTestSwiftSupport -o /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/GameInteractionTests
+
+CopySwiftLibs /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-swiftStdLibTool --copy --verbose --scan-executable /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/GameInteractionTests --scan-folder /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Frameworks --scan-folder /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/PlugIns --scan-folder /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/SystemExtensions --scan-folder /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Extensions --platform iphonesimulator --toolchain /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.5237.12.5oW8SR/Metal.xctoolchain --toolchain /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+Ignoring --strip-bitcode because --sign was not passed
+
+ExtractAppIntentsMetadata (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsmetadataprocessor --toolchain-dir /var/run/com.apple.security.cryptexd/mnt/com.apple.MobileAsset.MetalToolchain-v27.1.5237.12.5oW8SR/Metal.xctoolchain --module-name GameInteractionTests --sdk-root /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator27.0.sdk --xcode-version 27A5237l --platform-family iOS --deployment-target 18.0 --bundle-identifier com.jalenedusei.qa.games --output /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest --target-triple arm64-apple-ios18.0-simulator --binary-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/GameInteractionTests --dependency-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests_dependency_info.dat --stringsdata-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/ExtractedAppShortcutsMetadata.stringsdata --source-file-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftFileList --metadata-file-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyMetadataFileList --static-metadata-file-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyStaticMetadataFileList --swift-const-vals-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/Objects-normal/arm64/GameInteractionTests.SwiftConstValuesFileList --compile-time-extraction --deployment-aware-processing --no-app-shortcuts-localization
+2026-09-27 02:12:56.388 appintentsmetadataprocessor[83317:25211345] Starting appintentsmetadataprocessor export
+2026-09-27 02:12:56.389 appintentsmetadataprocessor[83317:25211345] warning: Metadata extraction skipped, no AppIntents.framework dependency found
+
+AppIntentsSSUTraining (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/appintentsnltrainingprocessor --infoplist-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Info.plist --temp-dir-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/ssu --bundle-id com.jalenedusei.qa.games --product-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest --extracted-metadata-path /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Metadata.appintents --metadata-file-list /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/TesseraInteractions.build/Debug-iphonesimulator/GameInteractionTests.build/GameInteractionTests.DependencyMetadataFileList --source-file /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Info.plist --archive-ssu-assets
+2026-09-27 02:12:56.409 appintentsnltrainingprocessor[83318:25211346] Parsing options for appintentsnltrainingprocessor
+2026-09-27 02:12:56.409 appintentsnltrainingprocessor[83318:25211346] Starting AppIntents SSU YAML Generation
+2026-09-27 02:12:56.411 appintentsnltrainingprocessor[83318:25211346] No AppShortcuts found - Skipping.
+
+CopyAndPreserveArchs /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/GameInteractionTests-Runner (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /Applications/Xcode-beta.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/lipo /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/XCTRunner -output /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/GameInteractionTests-Runner -extract arm64
+
+CopyPlistFile /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/Info.plist /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/Info.plist (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copyPlist --validate --convert xml1 --macro-expansion WRAPPEDPRODUCTNAME GameInteractionTests-Runner --macro-expansion WRAPPEDPRODUCTBUNDLEIDENTIFIER com.jalenedusei.qa.games.xctrunner --macro-expansion TESTPRODUCTNAME GameInteractionTests --macro-expansion TESTPRODUCTBUNDLEIDENTIFIER com.jalenedusei.qa.games --copy-value UIDeviceFamily /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest/Info.plist --outdir /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app -- /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/Info.plist
+
+MkDir /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /bin/mkdir -p /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app
+
+Copy /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PkgInfo /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/PkgInfo (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /Applications/Xcode-beta.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Xcode/Agents/XCTRunner.app/PkgInfo /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app
+
+RegisterExecutionPolicyException /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    builtin-RegisterExecutionPolicyException /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest
+
+Touch /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest (in target 'GameInteractionTests' from project 'TesseraInteractions')
+    cd /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/project
+    /usr/bin/touch -c /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Products/Debug-iphonesimulator/GameInteractionTests-Runner.app/PlugIns/GameInteractionTests.xctest
+
+PruneExplicitPrecompiledModules /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/SDKExplicitPrecompiledModules
+
+PruneExplicitPrecompiledModules /var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/build/Build/Intermediates.noindex/ExplicitPrecompiledModules
+
+2026-09-27 02:12:57.443332-0400 GameInteractionTests-Runner[83323:25211442] [Default] Running tests...
+    t =      nans Interface orientation changed to Portrait
+Test Suite 'All tests' started at 2026-09-27 02:12:58.483.
+Test Suite 'GameInteractionTests.xctest' started at 2026-09-27 02:12:58.483.
+Test Suite 'GameInteractionTests' started at 2026-09-27 02:12:58.483.
+Test Case '-[GameInteractionTests.GameInteractionTests testContextoRetainsRejectedDraftAndWinsOnRetry]' started.
+    t =     0.00s Start Test at 2026-09-27 02:12:58.484
+    t =     0.12s Set Up
+objc[83323]: Class UIAccessibilityLoaderWebShared is implemented in both /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebCore.axbundle/WebCore (0x1096c8310) and /Library/Developer/CoreSimulator/Volumes/iOS_23F77/Library/Developer/CoreSimulator/Profiles/Runtimes/iOS 26.5.simruntime/Contents/Resources/RuntimeRoot/System/Library/AccessibilityBundles/WebKit.axbundle/WebKit (0x109764398). This may cause spurious casting failures and mysterious crashes. One of the duplicates must be removed or renamed.
+    t =     0.24s Open com.jalenedusei.tessera
+    t =     0.25s     Launch com.jalenedusei.tessera
+    t =     0.34s         Setting up automation session
+    t =     0.83s         Wait for com.jalenedusei.tessera to idle
+    t =     3.36s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.36s Waiting 10.0s for "Your Contexto guess" Any to exist
+    t =     4.39s     Checking `Expect predicate `existsNoRetry == 1` for object "Your Contexto guess" Any`
+    t =     4.39s         Checking existence of `"Your Contexto guess" Any`
+    t =     4.46s Find the "Your Contexto guess" Any
+    t =     4.55s Tap "A word, any word" TextField
+    t =     4.55s     Wait for com.jalenedusei.tessera to idle
+    t =     4.55s     Find the "A word, any word" TextField
+    t =     4.58s     Check for interrupting elements affecting "A word, any word" TextField
+    t =     4.63s     Synthesize event
+    t =     5.02s     Wait for com.jalenedusei.tessera to idle
+    t =     5.36s Type 'guitar' into "A word, any word" TextField
+    t =     5.36s     Wait for com.jalenedusei.tessera to idle
+    t =     5.74s     Find the "A word, any word" TextField
+    t =     5.81s     Check for interrupting elements affecting "A word, any word" TextField
+    t =     5.88s     Synthesize event
+    t =     6.18s     Wait for com.jalenedusei.tessera to idle
+    t =     6.35s Find the "Enter" Button
+    t =     6.40s Tap "Enter" Button
+    t =     6.40s     Wait for com.jalenedusei.tessera to idle
+    t =     6.40s     Find the "Enter" Button
+    t =     6.43s     Check for interrupting elements affecting "Enter" Button
+    t =     6.46s     Synthesize event
+    t =     6.75s     Wait for com.jalenedusei.tessera to idle
+    t =     7.13s Waiting 5.0s for "The wall refused this test move. Try again." StaticText to exist
+    t =     8.16s     Checking `Expect predicate `existsNoRetry == 1` for object "The wall refused this test move. Try again." StaticText`
+    t =     8.16s         Checking existence of `"The wall refused this test move. Try again." StaticText`
+    t =     8.20s Find the "A word, any word" TextField
+    t =     8.26s Tap "Enter" Button
+    t =     8.26s     Wait for com.jalenedusei.tessera to idle
+    t =     8.26s     Find the "Enter" Button
+    t =     8.28s     Check for interrupting elements affecting "Enter" Button
+    t =     8.30s     Synthesize event
+    t =     8.59s     Wait for com.jalenedusei.tessera to idle
+    t =     8.60s Waiting 5.0s for "Nicely played." StaticText to exist
+    t =     9.61s     Checking `Expect predicate `existsNoRetry == 1` for object "Nicely played." StaticText`
+    t =     9.61s         Checking existence of `"Nicely played." StaticText`
+    t =     9.64s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testContextoRetainsRejectedDraftAndWinsOnRetry]' passed (9.956 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testReactionEarlyTapIsDistinctFromAHit]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:08.441
+    t =     0.02s Set Up
+    t =     0.02s Open com.jalenedusei.tessera
+    t =     0.02s     Launch com.jalenedusei.tessera
+    t =     0.02s         Terminate com.jalenedusei.tessera:83336
+    t =     1.17s         Setting up automation session
+    t =     1.53s         Wait for com.jalenedusei.tessera to idle
+    t =     3.37s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.37s Waiting 10.0s for "Wait. Tapping now is an early start" Button to exist
+    t =     4.40s     Checking `Expect predicate `existsNoRetry == 1` for object "Wait. Tapping now is an early start" Button`
+    t =     4.40s         Checking existence of `"Wait. Tapping now is an early start" Button`
+    t =     4.48s Tap "Wait. Tapping now is an early start" Button
+    t =     4.48s     Wait for com.jalenedusei.tessera to idle
+    t =     4.49s     Find the "Wait. Tapping now is an early start" Button
+    t =     4.52s     Check for interrupting elements affecting "Wait. Tapping now is an early start" Button
+    t =     4.54s     Synthesize event
+    t =     4.83s     Wait for com.jalenedusei.tessera to idle
+    t =     4.86s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testReactionEarlyTapIsDistinctFromAHit]' passed (5.105 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testReactionGreenTapRecordsTime]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:13.546
+    t =     0.01s Set Up
+    t =     0.02s Open com.jalenedusei.tessera
+    t =     0.02s     Launch com.jalenedusei.tessera
+    t =     0.02s         Terminate com.jalenedusei.tessera:83373
+    t =     1.16s         Setting up automation session
+    t =     1.51s         Wait for com.jalenedusei.tessera to idle
+    t =     3.38s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.38s Waiting 10.0s for "Now. Tap the target" Button to exist
+    t =     4.42s     Checking `Expect predicate `existsNoRetry == 1` for object "Now. Tap the target" Button`
+    t =     4.42s         Checking existence of `"Now. Tap the target" Button`
+    t =     4.52s Find the "Now. Tap the target" Button
+    t =     4.56s Tap "Now. Tap the target" Button
+    t =     4.56s     Wait for com.jalenedusei.tessera to idle
+    t =     4.56s     Find the "Now. Tap the target" Button
+    t =     4.58s     Check for interrupting elements affecting "Now. Tap the target" Button
+    t =     4.61s     Synthesize event
+    t =     4.90s     Wait for com.jalenedusei.tessera to idle
+    t =     4.91s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testReactionGreenTapRecordsTime]' passed (5.133 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testRevealInputIsReachableAndFindsArtwork]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:18.679
+    t =     0.01s Set Up
+    t =     0.11s Open com.jalenedusei.tessera
+    t =     0.11s     Launch com.jalenedusei.tessera
+    t =     0.11s         Terminate com.jalenedusei.tessera:83385
+    t =     1.26s         Setting up automation session
+    t =     1.62s         Wait for com.jalenedusei.tessera to idle
+    t =     3.46s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.46s Waiting 10.0s for "Your guess" Any to exist
+    t =     4.50s     Checking `Expect predicate `existsNoRetry == 1` for object "Your guess" Any`
+    t =     4.50s         Checking existence of `"Your guess" Any`
+    t =     4.57s Find the "Your guess" Any
+    t =     4.66s Tap "Album, artist or song" TextField
+    t =     4.66s     Wait for com.jalenedusei.tessera to idle
+    t =     4.66s     Find the "Album, artist or song" TextField
+    t =     4.70s     Check for interrupting elements affecting "Album, artist or song" TextField
+    t =     4.74s     Synthesize event
+    t =     5.03s     Wait for com.jalenedusei.tessera to idle
+    t =     5.41s Type 'Prism Studies' into "Album, artist or song" TextField
+    t =     5.41s     Wait for com.jalenedusei.tessera to idle
+    t =     5.41s     Find the "Album, artist or song" TextField
+    t =     5.49s     Check for interrupting elements affecting "Album, artist or song" TextField
+    t =     5.53s     Synthesize event
+    t =     5.95s     Wait for com.jalenedusei.tessera to idle
+    t =     6.53s Find the "Send guess" Button
+    t =     6.59s Tap "arrow.up" Button
+    t =     6.59s     Wait for com.jalenedusei.tessera to idle
+    t =     6.59s     Find the "arrow.up" Button
+    t =     6.62s     Check for interrupting elements affecting "arrow.up" Button
+    t =     6.66s     Synthesize event
+    t =     6.94s     Wait for com.jalenedusei.tessera to idle
+    t =     7.64s Waiting 5.0s for "You knew it." StaticText to exist
+    t =     8.67s     Checking `Expect predicate `existsNoRetry == 1` for object "You knew it." StaticText`
+    t =     8.67s         Checking existence of `"You knew it." StaticText`
+    t =     8.71s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testRevealInputIsReachableAndFindsArtwork]' passed (8.983 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testSlidingLegalTileSendsRealMove]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:27.663
+    t =     0.03s Set Up
+    t =     0.03s Open com.jalenedusei.tessera
+    t =     0.03s     Launch com.jalenedusei.tessera
+    t =     0.03s         Terminate com.jalenedusei.tessera:83397
+    t =     1.18s         Setting up automation session
+    t =     1.55s         Wait for com.jalenedusei.tessera to idle
+    t =     3.37s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.37s Waiting 10.0s for Button (First Match) to exist
+    t =     4.40s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     4.40s         Checking existence of `Button (First Match)`
+    t =     4.46s Get all elements bound by index for: Elements matching predicate 'label BEGINSWITH "Tile "'
+    t =     4.51s Find the Button (Element at index 0)
+    t =     4.54s Find the "Tile 7, row 1, column 1" Button
+    t =     4.57s Tap "Tile 7, row 1, column 1" Button
+    t =     4.57s     Wait for com.jalenedusei.tessera to idle
+    t =     4.58s     Find the "Tile 7, row 1, column 1" Button
+    t =     4.59s     Check for interrupting elements affecting "Tile 7, row 1, column 1" Button
+    t =     4.61s     Synthesize event
+    t =     4.90s     Wait for com.jalenedusei.tessera to idle
+    t =     4.91s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testSlidingLegalTileSendsRealMove]' passed (5.161 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testSlidingRecoversAfterRepeatedArtworkFailures]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:32.824
+    t =     0.01s Set Up
+    t =     0.02s Open com.jalenedusei.tessera
+    t =     0.02s     Launch com.jalenedusei.tessera
+    t =     0.02s         Terminate com.jalenedusei.tessera:83450
+    t =     1.15s         Setting up automation session
+    t =     1.51s         Wait for com.jalenedusei.tessera to idle
+    t =     3.34s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.34s Waiting 15.0s for Button (First Match) to exist
+    t =     4.37s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     4.37s         Checking existence of `Button (First Match)`
+    t =     4.43s         Capturing element debug description
+    t =     5.35s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     5.35s         Checking existence of `Button (First Match)`
+    t =     5.38s         Capturing element debug description
+    t =     6.41s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     6.41s         Checking existence of `Button (First Match)`
+    t =     6.43s         Capturing element debug description
+    t =     7.35s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     7.35s         Checking existence of `Button (First Match)`
+    t =     7.37s         Capturing element debug description
+    t =     8.41s     Checking `Expect predicate `existsNoRetry == 1` for object Button (First Match)`
+    t =     8.41s         Checking existence of `Button (First Match)`
+    t =     8.42s Get all elements bound by index for: Elements matching predicate 'label BEGINSWITH "Tile "'
+    t =     8.45s Find the Button (Element at index 0)
+    t =     8.47s Find the "Tile 7, row 1, column 1" Button
+    t =     8.49s Tap "Tile 7, row 1, column 1" Button
+    t =     8.49s     Wait for com.jalenedusei.tessera to idle
+    t =     8.49s     Find the "Tile 7, row 1, column 1" Button
+    t =     8.51s     Check for interrupting elements affecting "Tile 7, row 1, column 1" Button
+    t =     8.53s     Synthesize event
+    t =     8.82s     Wait for com.jalenedusei.tessera to idle
+    t =     8.83s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testSlidingRecoversAfterRepeatedArtworkFailures]' passed (9.071 seconds).
+Test Case '-[GameInteractionTests.GameInteractionTests testWhistleBirdStartsAndSteersWithTouch]' started.
+    t =     0.00s Start Test at 2026-09-27 02:13:41.895
+    t =     0.01s Set Up
+    t =     0.02s Open com.jalenedusei.tessera
+    t =     0.02s     Launch com.jalenedusei.tessera
+    t =     0.02s         Terminate com.jalenedusei.tessera:83474
+    t =     1.15s         Setting up automation session
+    t =     1.53s         Wait for com.jalenedusei.tessera to idle
+    t =     3.32s Wait for com.jalenedusei.tessera to become Running Foreground
+    t =     3.32s Waiting 10.0s for "Start with touch" Button to exist
+    t =     4.36s     Checking `Expect predicate `existsNoRetry == 1` for object "Start with touch" Button`
+    t =     4.36s         Checking existence of `"Start with touch" Button`
+    t =     4.42s Find the "Start with touch" Button
+    t =     4.48s Tap "Start with touch" Button
+    t =     4.48s     Wait for com.jalenedusei.tessera to idle
+    t =     4.48s     Find the "Start with touch" Button
+    t =     4.50s     Check for interrupting elements affecting "Start with touch" Button
+    t =     4.51s     Synthesize event
+    t =     4.80s     Wait for com.jalenedusei.tessera to idle
+    t =     4.81s Waiting 5.0s for "Climb" Button to exist
+    t =     5.83s     Checking `Expect predicate `existsNoRetry == 1` for object "Climb" Button`
+    t =     5.83s         Checking existence of `"Climb" Button`
+    t =     5.86s Find the "Climb" Button
+    t =     5.89s Tap "Climb" Button
+    t =     5.89s     Wait for com.jalenedusei.tessera to idle
+    t =     5.90s     Find the "Climb" Button
+    t =     5.92s     Check for interrupting elements affecting "Climb" Button
+    t =     5.93s     Synthesize event
+    t =     6.22s     Wait for com.jalenedusei.tessera to idle
+    t =     6.23s Tear Down
+Test Case '-[GameInteractionTests.GameInteractionTests testWhistleBirdStartsAndSteersWithTouch]' passed (6.480 seconds).
+Test Suite 'GameInteractionTests' passed at 2026-09-27 02:13:48.375.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 49.889 (49.892) seconds
+Test Suite 'GameInteractionTests.xctest' passed at 2026-09-27 02:13:48.376.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 49.889 (49.892) seconds
+Test Suite 'All tests' passed at 2026-09-27 02:13:48.376.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 49.889 (49.893) seconds
+2026-09-27 02:13:48.735 xcodebuild[83191:25210366] [MT] IDETestOperationsObserverDebug: 52.299 elapsed -- Testing started completed.
+2026-09-27 02:13:48.735 xcodebuild[83191:25210366] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-09-27 02:13:48.735 xcodebuild[83191:25210366] [MT] IDETestOperationsObserverDebug: 52.299 sec, +52.299 sec -- end
+
+Test session results, code coverage, and logs:
+	/var/folders/42/c0cl6_w541l5dyv2jjnh0f0w0000gn/T/tessera-native-games-xahrtdd8/run.xcresult
+
+** TEST SUCCEEDED **
+
+Testing started
