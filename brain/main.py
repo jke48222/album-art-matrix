@@ -217,17 +217,25 @@ def _is_shown(now, last_track, showing) -> bool:
         and plain(now.artist) == plain(showing.get("artist"))
 
 
-def _refresh_shelf_sleeve(base, shelf, shown, mark_enabled):
+def _refresh_shelf_sleeve(base, shelf, shown, mark_enabled, marked=None):
     """Refresh membership on the displayed sleeve, without recording a new play.
 
     `base` is the prepared, unmarked artwork; this also removes a mark after
     a collection deletion or account switch and works while Archive holds it.
+    `marked` is whether the sleeve on the wall carries the mark now: when
+    given and nothing would change, this returns None and the caller keeps
+    what it has (None too when there is no sleeve).
     """
     owned = (shelf.note_playing((shown or {}).get("album", ""), (shown or {}).get("artist", ""))
              if shelf is not None else None)
     if base is None:
         return None
-    return owned_mark(base, base.shape[0]) if owned and mark_enabled else base.copy()
+    mark = bool(owned) and bool(mark_enabled)
+    if marked is not None and mark == bool(marked):
+        return None
+    # No size argument: the loop's sleeve is a PIL image, which has no
+    # .shape, and owned_mark reads the size from either kind itself.
+    return owned_mark(base) if mark else base.copy()
 
 
 class _Poller(threading.Thread):
@@ -440,11 +448,15 @@ def main():
                            workspace=ctrl.services_store.get("claude", "workspace"))
         print("[main] ask: " + ("key set" if ctrl.asker.ready
                                 else "no Claude key yet; set one from the phone"))
-    # show me, play me, and the earworm finder: by voice or from the phone
+    # show me, play me, and the earworm finder: by voice or from the phone.
+    # One cheap object serves three switches (show and play are "show"), so
+    # it is built when any of them is on and each route asks its own switch
+    # (control.SHOWER_SWITCH). Built only for "show", earworm died with Show
+    # me switched off.
     ctrl.shower = Shower(ctrl, asker=ctrl.asker,
                          google_key=ctrl.services_store.get("google", "api_key"),
                          google_cx=ctrl.services_store.get("google", "cx")) \
-        if ctrl.features.on("show") else None
+        if any(ctrl.features.on(name) for name in ("show", "earworm", "imagine")) else None
     # games: one at a time, the wall the board and the phone the hand
     ctrl.games = GameHost(ctrl) if ctrl.features.on("games") else None
     if ctrl.games is not None:
@@ -524,7 +536,11 @@ def main():
         threading.Thread(target=boot_sting, name="sting", daemon=True).start()
 
     last_track, last_pre = None, None
+    # The last song written to the journal. Restoring the same song after an
+    # Archive replay re-shows its sleeve but is not another play of it.
+    journaled_track = None
     sleeve_base = None                # prepared artwork before its ownership mark
+    sleeve_marked = False             # whether the sleeve up carries the shelf's mark
     animator, t0 = None, time.monotonic()
     ambient, amb_key, amb_t0 = None, None, time.monotonic()
     blacked, need_show = False, False
@@ -557,14 +573,15 @@ def main():
         the disc animator, extract colours. Callers add their bookkeeping.
         `owned` stamps the shelf's mark into the corner: you have this on
         vinyl, and every face that shows the sleeve shows it."""
-        nonlocal last_pre, sleeve_base, animator, t0, need_show
+        nonlocal last_pre, sleeve_base, sleeve_marked, animator, t0, need_show
         pre = prepare(
             fetch_art(art_url), size,
             unsharp_radius=tune.get("unsharp_radius"),
             unsharp_percent=tune.get("unsharp_percent"),
         )
         sleeve_base = pre.copy()
-        if owned and tune.get("shelf_mark"):
+        sleeve_marked = bool(owned and tune.get("shelf_mark"))
+        if sleeve_marked:
             pre = owned_mark(pre, size)
         last_pre = pre
         animator = build_disc(pre)
@@ -718,9 +735,13 @@ def main():
         next_shelf_revision = (getattr(ctrl.shelf, "revision", 0), bool(tune.get("shelf_mark")))
         if next_shelf_revision != shelf_revision:
             shelf_revision = next_shelf_revision
+            # Every read of the shelf bumps its revision (the six-hourly one
+            # too). Only a change in the sleeve's mark rebuilds the record,
+            # or the spin face restarted on every read.
             refreshed = _refresh_shelf_sleeve(sleeve_base, ctrl.shelf, ctrl.now_showing,
-                                             next_shelf_revision[1])
+                                             next_shelf_revision[1], marked=sleeve_marked)
             if refreshed is not None:
+                sleeve_marked = not sleeve_marked
                 last_pre = refreshed
                 animator = build_disc(last_pre)
                 ctrl.finish_base = last_pre
@@ -751,12 +772,17 @@ def main():
                                         "artist": now.artist,
                                         "album": now.album}
                     ctrl.shown_seq += 1
-                    ctrl.journal_append({
-                        "ts": int(time.time()),
-                        "title": now.title, "artist": now.artist,
-                        "album": now.album, "art_url": now.art_url,
-                        **({"kind": "show"} if now.track_id.startswith("show:") else {}),
-                    })
+                    # One row per play: the music coming back after an
+                    # Archive replay re-shows this song, it does not play it
+                    # again, and Archive, the stats and the Nine read rows.
+                    if now.track_id != journaled_track:
+                        journaled_track = now.track_id
+                        ctrl.journal_append({
+                            "ts": int(time.time()),
+                            "title": now.title, "artist": now.artist,
+                            "album": now.album, "art_url": now.art_url,
+                            **({"kind": "show"} if now.track_id.startswith("show:") else {}),
+                        })
                     print(f"[main] {now.artist} — {now.title}  ({now.album})")
                 except Exception as exc:
                     print(f"[main] art pipeline failed: {exc}")
@@ -847,13 +873,22 @@ def main():
                         if (age := getattr(sc, "phone_age", None)) is not None]
                 if ctrl.last_client is not None:
                     ages.append(max(0.0, rest_tick - ctrl.last_client))
+                # A knock that lit a dark wall, or a wake-up that just ended,
+                # is someone in the room: Away and the idle face wait.
+                held = ctrl.rest_hold_until is not None and rest_tick < ctrl.rest_hold_until
+                # Weather idle holds the cover until there is a forecast for
+                # the saved place; current() is None with no place, data for
+                # another place, or data too old to show. Only asked when it
+                # can matter, not on every frame of every face.
+                weather_ready = (s.get("idle") == "weather" and ctrl.weather is not None
+                                 and ctrl.weather.current() is not None)
                 rest = resolve_rest(mode, idle=s.get("idle", "black"),
-                                    quiet_for=None if quiet_since is None else rest_tick - quiet_since,
+                                    quiet_for=None if quiet_since is None or held else rest_tick - quiet_since,
                                     away=s.get("away", "stay"),
-                                    presence_age=min(ages) if ages else None,
+                                    presence_age=0.0 if held else (min(ages) if ages else None),
                                     playing=bool(now and now.is_playing),
                                     waking=waking, sleeping=sl is not None,
-                                    weather_available=ctrl.weather is not None)
+                                    weather_available=weather_ready)
                 mode = rest.mode
                 eff = tuple(g * rest.brightness for g in eff)
                 ctrl.idle_now, ctrl.away_now = rest.idle, rest.away
@@ -930,26 +965,36 @@ def main():
 
                 if mode == "ticker":
                     style = s.get("ticker_style", "across")
-                    key = (s["ticker_text"], ink, s["speed"],
+                    # The ticker's own pace, and its own ink when the message
+                    # came with one. A note, the remote's Info key and a
+                    # spoken message come with none and keep `ink`, so Match
+                    # Art still inks them with the album. The Lamp keeps
+                    # color, speed and match_art.
+                    tink = ctrl.ticker_own_ink() or ink
+                    tspeed = s.get("ticker_speed", s["speed"])
+                    key = (s["ticker_text"], tink, tspeed,
                            s["ticker_loop"], style,
                            tuple(s["ticker_colors"]),
                            getattr(ctrl, "ticker_revision", 0))
                     if ticker is None or key != ticker_key:
                         if style == "across":
-                            ticker = Ticker(size, s["ticker_text"], color=ink,
-                                            speed=s["speed"],
+                            ticker = Ticker(size, s["ticker_text"], color=tink,
+                                            speed=tspeed,
                                             loop=s["ticker_loop"],
                                             colors=s["ticker_colors"])
                         else:
-                            ticker = Crawl(size, s["ticker_text"], color=ink,
-                                           speed=s["speed"],
+                            ticker = Crawl(size, s["ticker_text"], color=tink,
+                                           speed=tspeed,
                                            loop=s["ticker_loop"],
                                            tilt=(style == "tilt"),
                                            colors=s["ticker_colors"])
                         ticker_key, ticker_t0 = key, time.monotonic()
                     tick = time.monotonic()
                     if ticker.done(tick - ticker_t0):
-                        ctrl.apply({"mode": "art"})
+                        # Back to art only if this message is still the one
+                        # up: a note or a new message that landed after this
+                        # pass read the state must not be replaced unseen.
+                        ctrl.ticker_finished(ticker_key[-1])
                         # The app can select Ticker again before the next mode
                         # snapshot; retire this completed run immediately.
                         ticker, ticker_key = None, None

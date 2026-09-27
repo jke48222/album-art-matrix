@@ -188,14 +188,14 @@ class Voice:
         capture thread unless `wait`."""
         name = str(name or "").strip()
         if not name:
-            return {"error": "which wake word?"}
+            return {"error": "Choose a wake word."}
         known = {c["name"] for c in wake_mod.choices(self.wake_dir)}
         if name not in known and not name.endswith(".onnx"):
-            return {"error": f"no wake word called {name}"}
+            return {"error": f"There is no wake word called {name}."}
 
         with self._lock:
             if self._wake_loading is not None:
-                return {"error": "a wake word is already loading; wait for it to finish"}
+                return {"error": "A wake word is already loading. Wait for it to finish."}
             self._wake_loading = name
 
         def load() -> bool:
@@ -238,9 +238,9 @@ class Voice:
     def forget_wake(self, name: str) -> dict:
         name = str(name or "")
         if not name.startswith("own:"):
-            return {"error": "only a wake word of your own can be forgotten"}
+            return {"error": "Only a wake word of your own can be forgotten."}
         if self.wake is not None and self.wake.name == name:
-            return {"error": "that one is in use; choose another first"}
+            return {"error": "That wake word is in use. Choose another first."}
         gone = enroll_mod.forget(name[4:], self.wake_dir)
         if gone:
             wake_mod.forget_threshold(name)
@@ -249,13 +249,13 @@ class Voice:
     def enroll_start(self, phrase: str, samples: int = enroll_mod.SAMPLES) -> dict:
         phrase = " ".join((phrase or "").split())[:40]
         if len(phrase) < 3:
-            return {"error": "a phrase of a word or two, please"}
+            return {"error": "Use a phrase of a word or two."}
         if len(phrase.split()) > 5:
-            return {"error": "a short phrase works best: two or three words"}
+            return {"error": "A short phrase works best: two or three words."}
         now = time.monotonic()
         with self._lock:
             if self.state != "idle":
-                return {"error": "the wall is busy listening; try again in a moment"}
+                return {"error": "The wall is listening. Try again in a moment."}
             self.enroller = enroll_mod.Enroller(phrase, samples)
             self.picture = self._as_picture(getattr(self.ctrl, "last_frame", None))
             self.ink = ink_of(self.picture)
@@ -508,8 +508,10 @@ class Voice:
 
     # Spoken commands whose feature owns no object of its own, so nothing
     # else would refuse them: note acts straight on ctrl, and earworm shares
-    # the shower with show and play. Everything else here is already gated by
-    # main.py never building the thing it needs.
+    # the shower with show and play. Show and play are the "show" switch and
+    # are asked in _do: main.py builds the shower when show, earworm or
+    # imagine is on. Everything else here is already gated by main.py never
+    # building the thing it needs.
     _SWITCHED = {"note": "Notes are off on this wall.",
                  "earworm": "Naming a song from its words is off on this wall.",
                  "imagine": "Drawing from words is off on this wall."}
@@ -537,6 +539,10 @@ class Voice:
         feats = getattr(ctrl, "features", None)
         if name in self._SWITCHED and feats is not None and not feats.on(name):
             self._answer(self._SWITCHED[name])
+            return
+        if name in ("show", "play") and feats is not None and not feats.on("show"):
+            # The shower is there for earworm or imagine; Show me is not.
+            self._answer("Show me is off on this wall.")
             return
         if name == "cancel":
             self._missed(time.monotonic(), "cancelled")
@@ -583,7 +589,9 @@ class Voice:
             self._answer("Listening.")
             return
         if name == "note":
-            ctrl.apply({"ticker_text": cmd.args["text"][:120], "ticker_loop": False,
+            # No per-letter colours: the last phone message's colours belong
+            # to its words, not to these.
+            ctrl.apply({"ticker_text": cmd.args["text"][:120], "ticker_colors": [], "ticker_loop": False,
                         "ticker_style": "across", "mode": "ticker"})
             self._open()
             return
@@ -591,11 +599,32 @@ class Voice:
             if self.teacher is None:
                 self._answer("I have no song library on this wall.")
                 return
-            song = self.teacher.learn_named(cmd.args["title"], cmd.args["artist"])
+            try:
+                song = self.teacher.learn_named(cmd.args["title"], cmd.args["artist"])
+            except (ValueError, RuntimeError) as exc:
+                # Busy, too little sound in the preview, no catalogue: each
+                # already says why in a sentence worth reading out.
+                self._answer(str(exc))
+                return
             self._answer(f"Learnt {song['title']} by {song['artist']}." if song
                          else f"I could not find {cmd.args['title']} by {cmd.args['artist']} to learn.")
             return
-        if name in ("show", "play", "imagine", "earworm"):
+        if name == "imagine":
+            # A drawing streams for up to five minutes. The voice starts it
+            # and opens straight away, so the imagine face (not the thinking
+            # bead) shows the sketch as it forms and the wake word is free.
+            # The Imagine page and GET /imagine carry its progress and result.
+            imaginer = getattr(ctrl, "imaginer", None)
+            if imaginer is None or not hasattr(imaginer, "begin"):
+                self._answer("Drawing from words is off on this wall.")
+                return
+            result = imaginer.begin(cmd.args.get("prompt") or "")
+            if isinstance(result, dict) and result.get("error"):
+                self._answer(result["error"])
+            else:
+                self._open()
+            return
+        if name in ("show", "play", "earworm"):
             if self.shower is None or not hasattr(self.shower, name):
                 self._answer("That is not built yet.")
                 return

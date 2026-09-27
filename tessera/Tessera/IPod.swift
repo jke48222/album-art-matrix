@@ -223,7 +223,7 @@ struct IPodView: View {
         switch scrub {
         case .light:
             let v = dragLight ?? wall.state.brightness
-            return ((v - 0.05) / 0.95, "\(Int(v * 100))%")
+            return ((v - 0.05) / 0.95, "\(Int((v * 100).rounded()))%")
         case .speed:
             let v = scrubbing ?? wall.state.rpm
             return (min(1, (v - 0.5) / 44.5), String(format: "%.1f rpm", v))
@@ -326,7 +326,7 @@ struct IPodView: View {
     }
 
     private var wheelHint: String {
-        if page != nil { return "Turn to browse · press centre to choose" }
+        if page != nil { return "Turn to browse, press the centre to choose" }
         if wall.state.mode == "off" { return "Hold play to wake the wall" }
         return scrub == .speed ? "Turn the wheel to change the speed" : "Turn the wheel to change the light"
     }
@@ -379,7 +379,9 @@ struct IPodView: View {
             var change: [String: Any] = [target == .first ? "color" : "color2": colour.wallHex,
                                           "match_art": false]
             if wall.state.effect == "rainbow" { change["effect"] = "solid" }
-            wall.send(change)
+            // one colour POST at a time, newest next: a drag's steps sent
+            // side by side could land out of order and leave a middle colour
+            wall.sendColour(change)
         })
     }
 
@@ -422,7 +424,7 @@ struct IPodView: View {
             out.append(IPodItem(id: "settings", title: "Settings", kind: .action { onSetup() }))
             return out
         case .speed:
-            return [("33⅓ rpm", 33.333), ("45 rpm", 45.0), ("Slow · 7½ rpm", 7.5)].enumerated().map { i, option in
+            return [("33⅓ rpm", 33.333), ("45 rpm", 45.0), ("Slow, 7½ rpm", 7.5)].enumerated().map { i, option in
                 IPodItem(id: "sp\(i)", title: option.0,
                          kind: .pick(!beatOn && abs(s.rpm - option.1) < 0.2) {
                     beatOn = false

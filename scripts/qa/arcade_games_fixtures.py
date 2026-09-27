@@ -51,7 +51,10 @@ def build(name, phase='playing'):
     if phase in ('finished', 'lost', 'won'):
         if name == 'snake':
             # The preserved final pose is the last in-bounds step at the edge.
-            game.body = [(x + 11, y) for x, y in game.body]
+            # Shift by the board's own size so the head lands on the last
+            # column whatever N is (26 now, it was 32 when this said x + 11).
+            shift = game.N - 1 - max(x for x, _ in game.body)
+            game.body = [(x + shift, y) for x, y in game.body]
         else:
             # A supported stack of square pieces reaches the spawn area.
             for row in range(18):

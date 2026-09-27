@@ -44,7 +44,8 @@ struct SpellingBeeBoard: View {
                     }
                 }.frame(height: 5).accessibilityHidden(true)
                 if !game.over {
-                    Text("\(max(0, nextPoints - points)) points to \(nextRank)").font(.ui(12)).foregroundStyle(Ink.dim)
+                    let needed = max(0, nextPoints - points)
+                    Text("\(needed) \(needed == 1 ? "point" : "points") to \(nextRank)").font(.ui(12)).foregroundStyle(Ink.dim)
                 }
             }
             hive
@@ -56,7 +57,7 @@ struct SpellingBeeBoard: View {
                     Image(systemName: last["pangram"].bool == true ? "sparkle" : "checkmark.circle.fill").foregroundStyle(honey)
                     VStack(alignment: .leading, spacing: 3) {
                         Text(latest.uppercased()).font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
-                        Text(last["pangram"].bool == true ? "Pangram · all seven letters" : "Added to your words").font(.ui(12)).foregroundStyle(Ink.dim)
+                        Text(last["pangram"].bool == true ? "Pangram, all seven letters" : "Added to your words").font(.ui(12)).foregroundStyle(Ink.dim)
                     }
                     Spacer(minLength: 0)
                     if let earned = last["points"].int { Text("+\(earned)").font(.machine(13)).foregroundStyle(honey) }
@@ -188,7 +189,7 @@ struct SpellingBeeBoard: View {
                 VStack(alignment: .leading, spacing: 8) { ledgerTitle; orderButton }
             }
             if found.isEmpty {
-                Text("Your first word starts the collection. Four-letter words earn one point; longer words earn their length.")
+                Text("Your first word starts the collection. Four-letter words earn one point. Longer words earn one point per letter.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             } else {
                 if found.count > 6 {
@@ -212,11 +213,11 @@ struct SpellingBeeBoard: View {
         }.padding(.top, 6)
     }
     private var ledgerTitle: some View {
-        Text("Your words · \(found.count)").font(.ui(17, .semibold)).foregroundStyle(Ink.ink)
+        Text("Your words (\(found.count))").font(.ui(17, .semibold)).foregroundStyle(Ink.ink)
     }
     private var orderButton: some View {
         Button { alphabetical.toggle() } label: {
-            Label(alphabetical ? "A–Z" : "Recent", systemImage: "arrow.up.arrow.down").font(.ui(12)).frame(minHeight: 44)
+            Label(alphabetical ? "A to Z" : "Recent", systemImage: "arrow.up.arrow.down").font(.ui(12)).frame(minHeight: 44)
         }.buttonStyle(.plain).foregroundStyle(honey).accessibilityLabel("Order found words: \(alphabetical ? "alphabetical" : "most recent")")
     }
     private func submit() {

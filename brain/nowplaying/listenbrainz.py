@@ -16,6 +16,7 @@ API = "https://api.listenbrainz.org/1/user/{user}/playing-now"
 UA = "album-art-matrix/1.0 (github.com/jke48222/album-art-matrix)"
 CACHE_S = 5.0
 FRESH_PLAYING_S = 30.0
+MISSING_USER_S = 300.0         # a username ListenBrainz does not know is asked again this late
 
 
 class ListenBrainzSource(NowPlayingSource):
@@ -52,12 +53,17 @@ class ListenBrainzSource(NowPlayingSource):
             self._problem = self._checked_at = None
 
     def retry(self):
-        """A user check also works when a higher-priority source is playing."""
+        """A user check also works when a higher-priority source is playing.
+        Only a rate limit is honoured here: ListenBrainz asked for the wait.
+        Any other pause (a username not found, the network away) is the
+        wall's own, and someone asking to check again ends it."""
         with self._lock:
-            if self._retrying or not self.user or time.monotonic() < self._backoff_until:
+            if self._retrying or not self.user:
+                return False
+            if self._state == "rate_limited" and time.monotonic() < self._backoff_until:
                 return False
             self._retrying = True
-            self._asked_at = 0.0
+            self._asked_at = self._backoff_until = 0.0
             self._state = "checking"
         def check():
             try:
@@ -65,7 +71,14 @@ class ListenBrainzSource(NowPlayingSource):
             finally:
                 with self._lock:
                     self._retrying = False
-        threading.Thread(target=check, name="listenbrainz-check", daemon=True).start()
+        try:
+            threading.Thread(target=check, name="listenbrainz-check", daemon=True).start()
+        except RuntimeError:
+            # The Pi can refuse a thread when memory is short: settle it here
+            # so a later check is not refused as already running.
+            with self._lock:
+                self._retrying = False
+            return False
         return True
 
     def _expire_playing(self, now):
@@ -74,12 +87,22 @@ class ListenBrainzSource(NowPlayingSource):
         if self._last is not None and (self._fresh_at is None or now - self._fresh_at >= FRESH_PLAYING_S):
             self._last = None
             if self._state == "playing":
-                self._state = "checking" if self.user else "unlinked"
+                # The playing report already proved the username exists. It
+                # is only the song that is no longer known, so this is not a
+                # fresh check waiting to happen.
+                self._state = "ready" if self.user else "unlinked"
                 self._problem = None
 
     def status(self):
         with self._lock:
             self._expire_playing(time.monotonic())
+            # The source chain asks this reader only when nothing before it
+            # plays, so a username saved (or loaded at boot) while the phone
+            # or AirPlay plays was never checked and the page waited on
+            # "checking" for good. Reading the status starts that one check.
+            # retry() only starts a thread, so this never waits on the network.
+            if self._state == "checking" and self.user and not self._retrying:
+                self.retry()
             p = self._last
             return {"user": self.user, "read_state": self._state,
                     "read_problem": self._problem, "read_checked_at": self._checked_at,
@@ -158,7 +181,9 @@ class ListenBrainzSource(NowPlayingSource):
                     wait = 30.0
                 return None, "rate_limited", "ListenBrainz asked the wall to wait before checking again.", wait
             if resp.status_code == 404:
-                return None, "refused", "This ListenBrainz username was not found.", 0.0
+                # Not asked again every few seconds: a mistyped name stays
+                # missing until it is changed or someone checks again.
+                return None, "refused", "This ListenBrainz username was not found.", MISSING_USER_S
             if resp.status_code in (401, 403):
                 return None, "refused", "ListenBrainz did not allow this request.", 30.0
             resp.raise_for_status()

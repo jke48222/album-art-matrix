@@ -15,6 +15,7 @@ and an honest one: it is how people read.
 """
 import re
 import threading
+import time
 
 import numpy as np
 from PIL import Image
@@ -175,13 +176,20 @@ def fetch_sheet(artist: str, title: str, album: str,
 
 class LyricBook:
     """The fetch, made non-blocking: ask() starts a thread once per track and
-    the render loop reads whatever state exists this frame."""
+    the render loop reads whatever state exists this frame. A lookup that
+    failed (the service, not a song with no words) is tried again a minute
+    later, so a network hiccup at the start of a song is not kept for the
+    whole of it."""
 
-    def __init__(self):
+    RETRY_S = 60.0
+
+    def __init__(self, clock=time.monotonic):
         self.track = None
         self.sheet = None
         self.state = "idle"          # idle | loading | done | none | error
         self._generation = 0
+        self._clock = clock
+        self._failed_at = None       # when the last lookup failed, on _clock
 
     def snapshot(self):
         sheet, track, state = self.sheet, self.track, self.state
@@ -191,7 +199,9 @@ class LyricBook:
                           for row in (sheet.lines if sheet else [])]}
 
     def ask(self, track_id, artist, title, album, duration_s):
-        if track_id == self.track:
+        if track_id == self.track and not (
+                self.state == "error" and self._failed_at is not None
+                and self._clock() - self._failed_at >= self.RETRY_S):
             return
         self._generation += 1
         generation = self._generation
@@ -205,6 +215,7 @@ class LyricBook:
             except Exception:
                 if self.track == track_id and self._generation == generation:
                     self.sheet = None
+                    self._failed_at = self._clock()
                     self.state = "error"
                 return
             # a slow answer for a track we already left is nobody's news

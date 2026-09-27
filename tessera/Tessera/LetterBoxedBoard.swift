@@ -21,13 +21,18 @@ struct LetterBoxedBoard: View {
     private var next: String { game.over ? "" : words.last.map { String($0.suffix(1)) } ?? "" }
     private var hint: String { game.state["hint"].string ?? "" }
     private var progress: Int { min(12, used.count) }
+    private var status: String {
+        let count = "\(words.count) \(words.count == 1 ? "word" : "words")"
+        if game.over { return game.won ? "Solved in \(count)" : "Round over" }
+        return words.isEmpty ? "No words yet" : "\(count) so far"
+    }
     private var canSubmit: Bool { !game.over && word.count >= 3 && word.count <= 12 && (next.isEmpty || word.hasPrefix(next)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(game.over ? "Every letter connected." : "One word leads to another.")
+                    Text(status)
                         .font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
                     Text("Use all 12 letters. Try it in \(game.state["par"].int ?? 2) words.")
                         .font(.ui(13)).foregroundStyle(Ink.dim)

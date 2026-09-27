@@ -66,8 +66,8 @@ struct PlaybackIdentity: Equatable {
         case .lastPlayed: "Last played"
         case .preview: "Phone preview"
         case .offline: hasSong ? "Last known track" : "Wall offline"
-        case .searching: "Finding your wall"
-        case .empty: "Room for music"
+        case .searching: "Finding the wall"
+        case .empty: "Connected"
         }
     }
 
@@ -89,7 +89,7 @@ struct PlaybackIdentity: Equatable {
         case .offline: "Playback will update when your wall reconnects."
         case .searching: "Your wall and its music will appear here."
         case .preview: hasSong ? (advances ? "Playing on this phone." : "On this phone.") : "Play music to preview it here."
-        default: hasSong ? "" : "Play something you love."
+        default: hasSong ? "" : "Play a song to show it here."
         }
     }
 
@@ -98,7 +98,7 @@ struct PlaybackIdentity: Equatable {
     }
 
     static func clock(_ seconds: Double?) -> String {
-        guard let seconds = validSeconds(seconds) else { return "—:—" }
+        guard let seconds = validSeconds(seconds) else { return "-:--" }
         let total = Int(seconds.rounded(.down))
         if total >= 3600 { return String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60) }
         return String(format: "%d:%02d", total / 60, total % 60)
@@ -110,16 +110,16 @@ struct PlaybackIdentity: Equatable {
     }
 
     private static func emptyTitle(mode: String, link: LinkState) -> String {
-        if case .offline = link { return "Your room, on hold." }
-        if case .searching = link { return "Finding your wall." }
+        if case .offline = link { return "Nothing playing" }
+        if case .searching = link { return "Connecting" }
         switch mode {
-        case "off": return "The wall is asleep."
-        case "weather": return "A window to the weather."
-        case "ambient": return "A little atmosphere."
-        case "clock", "timer": return "Take your time."
-        case "frame", "clip", "video", "imagine": return "Your wall, your canvas."
-        case "game": return "Ready to play."
-        default: return "A quiet moment."
+        case "off": return "Wall is off"
+        case "weather": return "Showing the weather"
+        case "ambient": return "Showing the lamp"
+        case "clock", "timer": return "Showing the clock"
+        case "frame", "clip", "video", "imagine": return "Showing a creation"
+        case "game": return "Showing a game"
+        default: return "Nothing playing"
         }
     }
 }
@@ -181,6 +181,11 @@ struct NowPlayingIdentity: View {
             VStack(alignment: .leading, spacing: compact ? 3 : 6) {
                 Text(song.title)
                     .font(.display(compact ? 26 : 34))
+                    // The display face grows about 3x at AX5, wider than the
+                    // Room dock, and a long word then broke mid-word. Capped
+                    // here, on the title alone, status, artist and progress
+                    // still grow with the rest of the text.
+                    .dynamicTypeSize(...DynamicTypeSize.accessibility1)
                     .tracking(-0.7)
                     .foregroundStyle(ink)
                     .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
@@ -299,7 +304,7 @@ struct ReturnToMusicButton: View {
             busy = true; failed = false
             Task { failed = !(await wall.returnToMusic()); busy = false }
         } label: {
-            Label(busy ? "Returning to music…" : failed ? "Try returning to music again" : "Archive on wall · Return to music", systemImage: "arrow.uturn.backward")
+            Label(busy ? "Returning to music…" : failed ? "Try returning to music again" : "Archive on wall. Return to music", systemImage: "arrow.uturn.backward")
                 .font(.ui(13, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
         }.buttonStyle(PressStyle()).disabled(busy || !wall.link.isLive)
     }

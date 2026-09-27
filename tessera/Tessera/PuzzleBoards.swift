@@ -251,7 +251,7 @@ struct SudokuBoard: View {
             HStack(alignment: .firstTextBaseline) {
                 Text((game.state["rating"].string ?? "Sudoku").uppercased()).font(.machine(10)).tracking(0.8).foregroundStyle(PuzzleInk.blue)
                 Spacer()
-                Text(game.over ? "81 IN HARMONY" : "\(remaining) TO SOLVE").font(.machine(10)).foregroundStyle(Ink.dim)
+                Text(game.over ? "SOLVED" : "\(remaining) TO SOLVE").font(.machine(10)).foregroundStyle(Ink.dim)
             }
             board
             selection
@@ -259,7 +259,7 @@ struct SudokuBoard: View {
                 tools
                 keypad
             }
-            Text("Each row, column and outlined box needs 1–9, once each.")
+            Text("Each row, column and outlined box needs 1 to 9, once each.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -354,9 +354,9 @@ struct SudokuBoard: View {
     }
 
     private var selectionTitle: String {
-        if game.over { return "A complete picture." }
+        if game.over { return "Puzzle complete." }
         guard let chosen else { return "Find your first number." }
-        return "Row \(chosen / 9 + 1) · Column \(chosen % 9 + 1)"
+        return "Row \(chosen / 9 + 1), column \(chosen % 9 + 1)"
     }
     private var selectionDetail: String {
         if game.over { return "Every row, column and box is complete." }

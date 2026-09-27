@@ -23,7 +23,7 @@ import Foundation
         check(showing.isUsable, "A complete discovery result can be accepted")
         let noMatch = try earworm(#"{"title":"Signal","artist":"North","shown":false,"confidence":0.3}"#)
         check(noMatch.confidenceLabel == "A possibility to explore", "Low confidence is presented as a possibility")
-        check(noMatch.shareText == "Signal — North", "Sharing uses song metadata only")
+        check(noMatch.shareText == "Signal by North", "Sharing uses song metadata only")
         check(noMatch.isUsable, "An identified song remains useful when its cover could not be displayed")
         check(try !earworm(#"{"title":"Signal"}"#).isUsable, "Missing artist cannot masquerade as a song identification")
         check(try earworm(#"{"confidence":0.7}"#).confidenceLabel == "A likely match", "Moderate confidence avoids certainty claims")

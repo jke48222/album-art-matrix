@@ -120,8 +120,8 @@ struct QuizBoard: View {
     }
     private var roundResult: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label("ROUND COMPLETE", systemImage: "flag.checkered").font(.machine(11)).tracking(1).foregroundStyle(honey)
-            Text(game.state["tied"].bool == true ? "Honours shared." : game.winner.map { "\($0) takes it." } ?? "Good round.")
+            Label("FINAL RESULT", systemImage: "flag.checkered").font(.machine(11)).tracking(1).foregroundStyle(honey)
+            Text(game.state["tied"].bool == true ? "Tied" : game.winner.map { "\($0) won" } ?? "Round complete")
                 .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .display(34)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             Text(game.state["theme"].string ?? "").font(.ui(15)).foregroundStyle(Ink.dim)
             if game.state["tied"].bool == true {

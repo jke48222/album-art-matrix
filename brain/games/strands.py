@@ -27,6 +27,7 @@ from .words import common_set
 
 ROWS, COLS = 8, 6
 NEIGH = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+HINT_TILE = (104, 96, 80)          # a hinted letter's tile on a 64 or 96 panel
 
 # theme, spangram, words (letters total 48 with the spangram)
 BUNDLED = [
@@ -127,7 +128,7 @@ def build(theme: str, spangram: str, words: list[str], rng: random.Random, budge
 class Strands(Game):
     name = "strands"
     title = "Strands"
-    blurb = "A grid of letters hiding a themed set. Say a word; the wall lights its path."
+    blurb = "A grid of letters hiding a themed set. Say or trace a word and the wall lights its path."
     min_players = 1
     max_players = 4
 
@@ -240,9 +241,8 @@ class Strands(Game):
             return {"error": "already counted toward a hint"}
         if word in common_set() and self._in_grid(word):
             self.extra.append(word)
-            self.message = f"Not a theme word. {3 - len(self.extra) % 3 if len(self.extra) % 3 else 'Hint ready'}."
-            if len(self.extra) % 3 == 0:
-                self.message = "Hint earned. Say hint."
+            left = 3 - len(self.extra) % 3
+            self.message = "Hint ready." if left == 3 else f"Not a theme word. {left} more for a hint."
             self.changed()
             return {"word": word, "theme_word": False, "extras": len(self.extra)}
         return {"error": "not in the grid"}
@@ -301,9 +301,9 @@ class Strands(Game):
 
     @staticmethod
     def geometry(size: int):
-        # An 8×6 field centred in square artwork, shared with the phone.
+        # An 8x6 field centred in square artwork, shared with the phone.
         if size <= 96:
-            # Align the eight 5×7 letter rows to whole LED cells. At 64 this
+            # Align the eight 5x7 letter rows to whole LED cells. At 64 this
             # gives each glyph seven rows plus one clear row of separation.
             step = size / 8
             return (size - 5 * step) / 2, step / 2, step
@@ -330,12 +330,12 @@ class Strands(Game):
             for a, b in zip(path, path[1:]):
                 line(canvas, centre(*a), centre(*b), tuple(int(v * .45) for v in colour), width)
         hinted = self.path_of(self.hinted) if self.hinted else []
-        if self.hint_ordered:
+        order = {tuple(cell): i for i, cell in enumerate(hinted)}
+        if self.hint_ordered and size > 96:
             for a, b in zip(hinted, hinted[1:]):
                 ax, ay = centre(*a); bx, by = centre(*b)
                 for k in range(1, 6, 2):
                     disc(canvas, ax + (bx - ax) * k / 6, ay + (by - ay) * k / 6, max(.6, size * .005), paper)
-        hinted = set(tuple(cell) for cell in hinted)
         scale = max(1, int(size * .083 / 7))
         # A full pixel-font rectangle has wider corners than a typographic
         # cap-height. Keep even N/M corner pixels inside the bright disc.
@@ -344,7 +344,7 @@ class Strands(Game):
             for c in range(COLS):
                 x, y = centre(r, c)
                 back = colours.get((r, c))
-                if (r, c) in hinted:
+                if (r, c) in order and size > 96:
                     disc(canvas, x, y, radius + max(1, size * .008), paper)
                 disc(canvas, x, y, radius, back or (26, 30, 31))
                 ink = dark if back and size > 96 else back or paper
@@ -354,6 +354,13 @@ class Strands(Game):
                     # glyph; neighbouring cells cannot overwrite its last row.
                     tx, ty = int(x) - 2, int(y) - 3
                     background = tuple(int(v * .20) for v in back) if back else (26, 30, 31)
+                    if (r, c) in order:
+                        # The outline ring and the path dots are drawn in the
+                        # 1-LED gaps here, where they read as slivers. A hinted
+                        # letter sits on a lit tile instead, and an ordered
+                        # hint steps the tile down from its first letter.
+                        fade = .5 * order[(r, c)] / max(1, len(order) - 1) if self.hint_ordered else 0
+                        background = tuple(int(v * (1 - fade)) for v in HINT_TILE)
                     fill(canvas, tx - 1, ty, 7, 7, background)
                 else:
                     tx, ty = round(x - 2.5 * scale), round(y - 3.5 * scale)

@@ -140,7 +140,7 @@ def test_the_best_model_first_then_the_next(tmp_path):
     def refusing(url, headers, body):
         raise RuntimeError("400: Your request was rejected by the safety system")
     im2 = Imaginer(Ctrl(), api_key="k" * 24, path=str(tmp_path / "im2"), post=refusing, clock=lambda: 9e9)
-    assert "said no" in im2.imagine("x")["error"]
+    assert im2.imagine("x")["error"].startswith("The image request wasn't accepted.")
     im.configure(quality="medium", model="gpt-image-1.5")
     assert im.quality == "medium" and im.openai_model == "gpt-image-1.5"
     im.configure(quality="ultra")                                       # not a quality: ignored
@@ -200,7 +200,10 @@ def test_no_key_and_a_refusal(tmp_path):
         raise RuntimeError("400: Your request was rejected by the safety system")
     im2 = Imaginer(Ctrl(), api_key="k" * 24, path=str(tmp_path / "im2"), post=refusing)
     res = im2.imagine("something")
-    assert "said no" in res["error"] and im2.status()["problem"].startswith("RuntimeError")
+    # A plain sentence for the phone: no class name, no provider text.
+    assert res["error"] == im2.status()["problem"] == im2.status()["live"]["problem"]
+    assert res["error"].startswith("The image request wasn't accepted.")
+    assert "RuntimeError" not in res["error"] and "safety system" not in res["error"]
     assert im2.imagine("")["error"] == "Describe the picture."
 
 

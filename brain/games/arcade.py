@@ -6,7 +6,7 @@ be ({"paddle": 0..1}) many times a second. One player plays the wall,
 which returns the ball with a little error. The court is the panel.
 
 Snake: the wall runs it; the phone is the remote ({"dir": "up" | "down"
-| "left" | "right"}, or the same words said). A 32-cell grid, so every
+| "left" | "right"}, or the same words said). A 26-cell grid, so every
 segment is two LEDs at 64 and six at 192; food; the score; walls kill.
 
 Tetris: a ten-by-twenty well, three LEDs a cell at 64 and nine at 192;
@@ -182,14 +182,14 @@ class Pong(Game):
         if self.score[scorer] >= self.to:
             self.phase = "finished"
             winner = self.players[scorer] if len(self.players) == 2 else None
-            who = self.players[scorer] if scorer < len(self.players) else "The wall"
+            who = self.players[scorer] if scorer < len(self.players) else "the wall"
             self.finish(won=scorer == 0 if len(self.players) == 1 else True, winner=winner,
-                        message=f"Match to {who}. {max(self.score)}–{min(self.score)}.")
+                        message=f"Match to {who}, {max(self.score)} to {min(self.score)}.")
         else:
             self.phase = "point"
             self.wait_until = (self._now() or self.last_t) + 1.2
-            who = self.players[scorer] if scorer < len(self.players) else "The wall"
-            self.message = f"Point to {who}. {self.score[0]}–{self.score[1]}."
+            who = self.players[scorer] if scorer < len(self.players) else "the wall"
+            self.message = f"Point to {who}, {self.score[0]} to {self.score[1]}."
             self.changed()
 
     def _advance(self, duration):
@@ -324,6 +324,12 @@ class Pong(Game):
 class _ArcadeClock:
     """A stopped display never consumes an unseen round."""
     MAX_DELAY = 0.75
+    # The phone polls every 0.1 s during play. If it drops off Wi-Fi or is
+    # killed before its own pause request lands, nothing else would stop the
+    # render loop from running the round into a wall while the phone says
+    # the board is kept. Voice-only play also pauses after this long.
+    CONTACT_TIMEOUT = 3.0
+    last_contact = None
 
     @staticmethod
     def _finite(value):
@@ -336,6 +342,11 @@ class _ArcadeClock:
     def _now(self):
         value = self._clock()
         return float(value) if self._finite(value) and value >= 0 else None
+
+    def _heard_from_phone(self):
+        now = self._now()
+        if now is not None:
+            self.last_contact = now
 
     def _wall_active(self):
         ctrl = getattr(self.host, "ctrl", None)
@@ -392,6 +403,9 @@ class _ArcadeClock:
         if now is None or now < previous or now - previous > self.MAX_DELAY:
             self._pause("Your board paused while the wall caught up. Resume when you’re ready.")
             return None
+        if self.last_contact is not None and now - self.last_contact > self.CONTACT_TIMEOUT:
+            self._pause("Paused while your phone reconnects.")
+            return None
         return now
 
 
@@ -399,9 +413,11 @@ class _ArcadeClock:
 class Snake(_ArcadeClock, Game):
     name = "snake"
     title = "Snake"
-    blurb = "Follow the fruit. Find your rhythm. Leave yourself a way out."
+    blurb = "Steer the snake to the fruit. Avoid the edges and your trail."
     min_players = max_players = 1
-    N = 32
+    # 26 cells over 52 of 64 LEDs: exactly two LEDs a cell at 64 and six at
+    # 192. A 32-cell grid gave uneven one- and two-LED cells at 64.
+    N = 26
     GRID = (6 / 64, 11 / 64, 52 / 64)
     COLOURS = {"ground": (13, 24, 20), "board": (20, 37, 28), "checker": (24, 42, 32),
                "edge": (68, 92, 65), "tail": (77, 124, 75), "body": (153, 207, 133),
@@ -426,7 +442,7 @@ class Snake(_ArcadeClock, Game):
         self.food = self._food()
         self.score = 0
         self.step_s = float(pace)
-        self.last_step = self.last_sample = now
+        self.last_step = self.last_sample = self.last_contact = now
         self.message = "Start when you’re ready. Swipe or use the arrows."
 
     def _reset_timing(self, now):
@@ -441,11 +457,12 @@ class Snake(_ArcadeClock, Game):
 
     def _end(self, reason):
         self.phase, self.reason = "finished", reason
-        message = ("Every square. A perfect garden." if reason == "filled" else
+        message = ("The board is full. You win." if reason == "filled" else
                    f"{self.score} fruit collected. " + ("The trail crossed itself." if reason == "self" else "The trail reached the edge."))
         self.finish(won=reason == "filled", message=message)
 
     def apply(self, move, player):
+        self._heard_from_phone()
         result = self._control(move)
         if result is not None:
             return result
@@ -454,6 +471,10 @@ class Snake(_ArcadeClock, Game):
         if key not in ("dir", "direction") or not isinstance(value, str) or value.lower() not in DIRS:
             return {"error": "Choose up, down, left or right."}
         self.step()
+        if self.over:
+            # A turn that lands just as the round ends is not a mistake. An
+            # error here stayed on the phone's results screen.
+            return {"over": True}
         if self.phase != "playing":
             return {"error": "Start or resume the round before turning."}
         d = DIRS[value.lower()]
@@ -513,6 +534,7 @@ class Snake(_ArcadeClock, Game):
             self.changed()
 
     def state(self):
+        self._heard_from_phone()
         self.step()
         return {"body": [list(p) for p in self.body], "food": list(self.food) if self.food else None,
                 "score": self.score, "n": self.N, "phase": self.phase, "reason": self.reason,
@@ -595,7 +617,7 @@ _ARCADE_GLYPHS = {
     "A": ("010", "101", "111", "101", "101"), "D": ("110", "101", "101", "101", "110"),
     "E": ("111", "100", "110", "100", "111"), "F": ("111", "100", "110", "100", "100"),
     "I": ("111", "010", "010", "010", "111"), "L": ("100", "100", "100", "100", "111"),
-    "M": ("101", "111", "111", "101", "101"), "N": ("101", "111", "111", "111", "101"),
+    "M": ("101", "111", "111", "101", "101"), "N": ("110", "101", "101", "101", "101"),
     "P": ("110", "101", "110", "100", "100"), "R": ("110", "101", "110", "101", "101"),
     "S": ("111", "100", "111", "001", "111"), "T": ("111", "010", "010", "010", "010"),
     "U": ("101", "101", "101", "101", "111"), "V": ("101", "101", "101", "101", "010"),
@@ -622,7 +644,7 @@ def _arcade_value(value):
 class Tetris(_ArcadeClock, Game):
     name = "tetris"
     title = "Tetris"
-    blurb = "Seven shapes. One clear thought. Make room for what comes next."
+    blurb = "Fit falling pieces into full rows."
     min_players = max_players = 1
     W, H = 10, 20
     LOCK_DELAY = 0.5
@@ -652,7 +674,7 @@ class Tetris(_ArcadeClock, Game):
         self.bag = []
         self.score = self.lines = self.last_clear = self.pieces_placed = 0
         self.level = 1
-        self.last_fall = self.last_sample = now
+        self.last_fall = self.last_sample = self.last_contact = now
         self.piece = self.cleared = None
         self.grounded_since = None
         self.lock_resets = 0
@@ -762,6 +784,7 @@ class Tetris(_ArcadeClock, Game):
             self._lock(now)
 
     def apply(self, move, player):
+        self._heard_from_phone()
         result = self._control(move)
         if result is not None:
             return result
@@ -770,6 +793,9 @@ class Tetris(_ArcadeClock, Game):
         if key not in ("move", "dir") or not isinstance(value, str) or value.lower() not in ("left", "right", "rotate", "down", "drop"):
             return {"error": "Choose left, right, rotate, down or drop."}
         self.step()
+        if self.over:
+            # A move that lands just as the stack tops out is not a mistake.
+            return {"over": True}
         if self.phase != "playing":
             return {"error": "Start or resume the round before moving."}
         now = self._now()
@@ -825,6 +851,7 @@ class Tetris(_ArcadeClock, Game):
         return piece["y"]
 
     def state(self):
+        self._heard_from_phone()
         self.step()
         next_kind = self.bag[-1]
         return {"well": [[cell or "" for cell in row] for row in self.well],

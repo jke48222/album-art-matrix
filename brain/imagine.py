@@ -27,6 +27,7 @@ again by POST /imagine/show {id}. One picture every ten seconds at most.
 from __future__ import annotations
 
 import base64
+import hashlib
 import io
 import json
 import os
@@ -408,12 +409,17 @@ class Imaginer:
         self.last: dict | None = None
         self.problem: str | None = None
         self.model_used: str | None = None
+        # Whether this key has drawn a picture. Kept in index.json as a short
+        # fingerprint of the provider and key (never the key), so a restart
+        # does not forget a key that drew yesterday.
+        self._verified_print: str | None = None
         self.verified = False
         self._last_at = float("-inf")
         self.busy = False
         self.live = LiveDrawing()
         self._ret: str | None = None
         self._load()
+        self.verified = self._verified_print is not None and self._verified_print == self._fingerprint()
 
     # ---- settings -----------------------------------------------------------------------
     @property
@@ -423,6 +429,19 @@ class Imaginer:
     @property
     def model(self) -> str:
         return self.openai_model if self.provider == "openai" else self.google_model
+
+    def _fingerprint(self) -> str | None:
+        if not self.api_key:
+            return None
+        return hashlib.sha256(f"{self.provider}\0{self.api_key}".encode()).hexdigest()[:16]
+
+    def _mark_verified(self):
+        """A picture came back: this key works. Saved only when it is news."""
+        self.verified = True
+        fingerprint = self._fingerprint()
+        if fingerprint != self._verified_print:
+            self._verified_print = fingerprint
+            self._save()
 
     def configure(self, provider=None, api_key=None, quality=None, model=None):
         # A provider/key edit must not change a paid request halfway through a
@@ -439,7 +458,8 @@ class Imaginer:
                 if api_key is None:
                     self.api_key = ""
                 self.model_used = None
-                self.verified = False
+                fingerprint = self._fingerprint()
+                self.verified = fingerprint is not None and fingerprint == self._verified_print
                 if model is None or not str(model).strip():
                     if provider == "openai":
                         self.openai_model = "gpt-image-2"
@@ -448,7 +468,9 @@ class Imaginer:
             if isinstance(api_key, str) and api_key.strip() != self.api_key:
                 self.api_key, self.problem = api_key.strip(), None
                 self.model_used = None
-                self.verified = False
+                # A key that drew before is still known to work.
+                fingerprint = self._fingerprint()
+                self.verified = fingerprint is not None and fingerprint == self._verified_print
             if quality in QUALITIES:
                 self.quality = quality
             if isinstance(model, str) and model.strip():
@@ -497,6 +519,8 @@ class Imaginer:
             self.count = int(d.get("count", len(self.index)))
             self.cost_usd = float(d.get("cost_usd", 0.0))
             self.last = d.get("last")
+            verified = d.get("verified_key")
+            self._verified_print = verified if isinstance(verified, str) else None
         except (OSError, ValueError, TypeError):
             self.index = []
 
@@ -506,7 +530,7 @@ class Imaginer:
             tmp = self._index_path() + ".tmp"
             with open(tmp, "w") as fh:
                 json.dump({"images": self.index, "count": self.count, "cost_usd": self.cost_usd,
-                           "last": self.last}, fh)
+                           "last": self.last, "verified_key": self._verified_print}, fh)
             os.replace(tmp, self._index_path())
         except OSError as exc:
             print(f"[imagine] could not save: {exc}", flush=True)
@@ -554,15 +578,43 @@ class Imaginer:
             return RuntimeError(f"{code}: model not supported for this key")
         return RuntimeError(f"{code}: The image request wasn't accepted. Try a different description or check the provider settings.")
 
-    def _safe_failure(self, exc: Exception) -> str:
+    def _redacted(self, exc: Exception) -> str:
+        """The failure for the log: its class and words, never a key, a URL
+        or a header. Tests and custom providers can bypass the HTTP adapter,
+        so their strings are redacted too."""
         message = str(exc)
-        # Tests and custom providers can bypass the HTTP adapter. Redact their
-        # strings too; no URL/header/token belongs in public status or logs.
         if self.api_key:
             message = message.replace(self.api_key, "[private]")
         if any(word in message.lower() for word in ("https://", "http://", "authorization", "api_key", "sk-", "aiza")):
-            message = "The image provider couldn't complete this request. Check your key and connection."
+            message = "details withheld"
         return f"{type(exc).__name__}: {message[:160]}"
+
+    def _safe_failure(self, exc: Exception) -> str:
+        """One plain sentence for the phone and the wall, by kind of failure.
+        Class names and provider text stay in the log (_redacted)."""
+        message = str(exc)
+        lower = message.lower()
+        head = re.match(r"(\d{3}):", message)
+        code = int(head.group(1)) if head else getattr(exc, "status_code", None)
+        if code in (401, 403):
+            return "The image provider couldn't accept this key or its permissions. Check the key in Services."
+        if code == 429:
+            return "The image provider's usage limit was reached. Check billing or try later."
+        if self._missing_model(exc) or "no model answered" in lower:
+            return "This image model isn't available to this key. Choose another model in Services."
+        if isinstance(code, int) and code >= 500:
+            return "The image provider is temporarily unavailable. Try again later."
+        if code == 400:
+            return "The image request wasn't accepted. Try a different description or check the provider settings."
+        if "took too long" in lower or isinstance(exc, (TimeoutError, requests.Timeout)):
+            return "Image creation took too long. Try again later."
+        if isinstance(exc, requests.RequestException):
+            return "The wall couldn't reach the image provider. Check its connection and try again."
+        if lower.startswith("stream:") or "stream ended" in lower:
+            return "The image provider stopped before the picture was finished. Try again."
+        if "no image in the answer" in lower:
+            return "The image provider sent no picture. It may have declined the description. Try other words."
+        return "The image provider couldn't complete this request. Check your key and connection."
 
     def _http_post(self, url: str, headers: dict, body: dict) -> dict:
         with requests.post(url, headers=headers, json=body, timeout=300) as response:
@@ -675,8 +727,10 @@ class Imaginer:
         return img
 
     # ---- the deed ------------------------------------------------------------------------------
-    def _take(self, prompt: str) -> str | None:
-        """The pace and the one-at-a-time rule; the reason when refused."""
+    def _take(self, prompt: str, studio: bool = True) -> str | None:
+        """The pace and the one-at-a-time rule; the reason when refused.
+        studio=False is a game's drawing, which must not clear the studio's
+        own last failure."""
         if not isinstance(prompt, str):
             return "the prompt must be text"
         prompt = " ".join(prompt.split())
@@ -694,7 +748,8 @@ class Imaginer:
                 return f"one picture every {int(MIN_GAP_S)} seconds"
             self._last_at = now
             self.busy = True
-            self.problem = None
+            if studio:
+                self.problem = None
             self.model_used = None
             self._job_id = uuid.uuid4().hex
         return None
@@ -703,7 +758,7 @@ class Imaginer:
         """The picture for a prompt, in hand, not shown and not kept: the
         games' way in (AI pictionary). `on_partial(img)` gets each partial
         as the model streams it. Raises with the reason when it cannot."""
-        why = self._take(prompt)
+        why = self._take(prompt, studio=False)
         if why:
             raise RuntimeError(why)
         try:
@@ -712,23 +767,24 @@ class Imaginer:
             def partial(raw, idx):
                 if on_partial is not None:
                     on_partial(self._decode(raw))
+            # A game's failure is the game's to show. The studio's problem is
+            # left alone, so the Imagine page never reports a game's drawing.
             try:
                 raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
-                self.problem = self._safe_failure(exc)
-                print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
-                raise RuntimeError(f"the image model said no: {self.problem}") from exc
+                why = self._safe_failure(exc)
+                print(f"[imagine] {self.provider} {self.model}: {self._redacted(exc)}", flush=True)
+                raise RuntimeError(why) from exc
             try:
                 img = self._decode(raw)
             except Exception as exc:
-                self.problem = f"bad image: {exc}"
-                raise RuntimeError("the image came back unreadable") from exc
+                raise RuntimeError("The picture came back unreadable. Try again.") from exc
             usd = self._cost()
             with self._lock:
                 self.count += 1
-                self.verified = True
                 if usd:
                     self.cost_usd += usd
+                self._mark_verified()
             return img
         finally:
             self._finished()
@@ -784,18 +840,20 @@ class Imaginer:
             try:
                 raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
+                # The phone shows this sentence as it is. The log keeps the detail.
                 self.problem = self._safe_failure(exc)
-                print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
+                print(f"[imagine] {self.provider} {self.model}: {self._redacted(exc)}", flush=True)
                 self.live.fail(self.problem)
                 self._nudge()
-                return {"error": f"The image model said no: {self.problem}"}
+                return {"error": self.problem}
             try:
                 img = self._decode(raw)
             except Exception as exc:
-                self.problem = f"bad image: {exc}"
+                print(f"[imagine] unreadable picture: {type(exc).__name__}", flush=True)
+                self.problem = "The picture came back unreadable. Try again."
                 self.live.fail(self.problem)
                 self._nudge()
-                return {"error": "The image came back unreadable."}
+                return {"error": self.problem}
             usd = self._cost()
             image_id = f"{int(self._clock())}-{uuid.uuid4().hex[:8]}-{_slug(prompt)}"
             os.makedirs(self.path, exist_ok=True)
@@ -817,6 +875,7 @@ class Imaginer:
                 self.index = self.index[:KEEP]
                 self.count += 1
                 self.verified = True
+                self._verified_print = self._fingerprint()
                 if usd:
                     self.cost_usd += usd
                 self.last = {"id": image_id, "prompt": prompt, "usd": usd, "ts": entry["ts"]}
@@ -831,7 +890,8 @@ class Imaginer:
                     "expanded": expanded, "usd": usd, "seconds": SHOW_S, "took_s": entry["took_s"],
                     "said": "Drawn."}
         except Exception as exc:
-            self.problem = f"The wall could not save this picture: {str(exc)[:120]}"
+            print(f"[imagine] could not finish: {self._redacted(exc)}", flush=True)
+            self.problem = "The wall could not save this picture. Try again."
             self.live.fail(self.problem)
             self._nudge()
             return {"error": self.problem, "code": "unavailable"}
@@ -845,9 +905,14 @@ class Imaginer:
         self._showing_id = None
         ctrl = self.ctrl
         try:
+            # The face a note up now will return to, not the note's "ticker":
+            # a note that came back after the picture would have no expiry
+            # and no Take down. A note over this face returns to "imagine",
+            # which keeps the return face this one already has.
             here = ctrl.get()["mode"]
-            if here != "imagine":
-                self._ret = here if here not in ("frame", "clip", "timer", "video", "game") else "art"
+            face = ctrl.resting_face() if hasattr(ctrl, "resting_face") else here
+            if here != "imagine" and face != "imagine":
+                self._ret = face if face not in ("frame", "clip", "timer", "video", "game") else "art"
             ctrl.apply({"mode": "imagine"})
             ctrl.shown_seq += 1
         except Exception as exc:

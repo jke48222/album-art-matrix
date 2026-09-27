@@ -19,8 +19,19 @@ struct ServicesPage: View {
     private let mint = Color(hex: 0xADD2C5)
     private var available: Bool { wall.link.isLive && checked && !failed }
     private var spotifyReady: Bool { services?.spotify.linked == true && !["expired", "refused", "unavailable", "rate_limited", "checking"].contains(services?.spotify.state ?? "") }
-    private var lastfmReady: Bool { ["idle", "playing"].contains(services?.lastfm.state ?? "") }
-    private var listenbrainzReady: Bool { ["ready", "playing"].contains(services?.listenbrainz?.read_state ?? "") }
+    /// A configured account stays ready while another source plays: the wall
+    /// stops re-checking a reader that is out of the chain, and its state
+    /// falls back to "ready" or "checking". Only a real error is not ready.
+    private var lastfmReady: Bool {
+        guard let lastfm = services?.lastfm else { return false }
+        return lastfm.key_set == true && !lastfm.user.isEmpty
+            && !["refused", "not_found", "needs_key", "unlinked", "unconfigured", "unavailable", "rate_limited"].contains(lastfm.state ?? "")
+    }
+    private var listenbrainzReady: Bool {
+        !(services?.listenbrainz?.user ?? "").isEmpty
+            && !["refused", "unlinked", "offline", "unavailable", "rate_limited"].contains(services?.listenbrainz?.read_state ?? "")
+    }
+    private static let troubled = ["refused", "not_found", "unavailable", "offline", "rate_limited"]
     private var readyCount: Int {
         [musicConnected, available && spotifyReady,
          available && lastfmReady, available && listenbrainzReady,
@@ -31,13 +42,17 @@ struct ServicesPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("SERVICES / CONNECT YOUR WORLD").font(.machine(9)).tracking(1.2).foregroundStyle(mint)
-                    Text("Good music.\nEverywhere.").font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(42)).foregroundStyle(Ink.ink)
+                    Text("SERVICES").font(.machine(9)).tracking(1.2).foregroundStyle(mint)
+                    // At accessibility sizes the headline is capped, so a word never splits across lines.
+                    Text("Connect where your music plays").font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(42)).foregroundStyle(Ink.ink)
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+                        .fixedSize(horizontal: false, vertical: true)
                         .accessibilityAddTraits(.isHeader)
                     Text("Choose where you listen. Tessera brings it to the wall.").font(.ui(15)).foregroundStyle(Ink.dim)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 connectionSummary
+                recommendation
                 featuredLayout {
                     NavigationLink {
                         AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused)
@@ -48,10 +63,10 @@ struct ServicesPage: View {
                         featured(.spotify, detail: "Across your devices", state: spotifyStatus, ready: available && spotifyReady, tint: mint)
                     }.buttonStyle(PressStyle(scale: 0.985)).accessibilityIdentifier("services.spotify")
                 }
-                section("More ways to listen", subtitle: "A player, a record, a room full of sound.") {
-                    destination("Last.fm", detail: available && lastfmReady ? services?.lastfm.user ?? "Connected" : "Listening from linked music players", status: state(lastfmReady), service: .lastfm) { LastfmPage(accent: accent, services: $services) }
+                section("More ways to listen", subtitle: "Other music sources, players and the room.") {
+                    destination("Last.fm", detail: available && lastfmReady ? services?.lastfm.user ?? "Connected" : "Listening from linked music players", status: journalStatus(lastfmReady, services?.lastfm.state), service: .lastfm) { LastfmPage(accent: accent, services: $services) }
                     Rule()
-                    destination("ListenBrainz", detail: "Your listening journal and scrobbles", status: state(listenbrainzReady), symbol: "waveform") { ListenBrainzPage(accent: accent, services: $services) }
+                    destination("ListenBrainz", detail: "Your listening journal and scrobbles", status: journalStatus(listenbrainzReady, services?.listenbrainz?.read_state), symbol: "waveform") { ListenBrainzPage(accent: accent, services: $services) }
                     Rule()
                     destination("Other music players", detail: "Tidal, Deezer, SoundCloud and more", status: "Find a path", symbol: "point.3.connected.trianglepath.dotted") { OtherPlayersPage(accent: accent, services: $services) }
                         .accessibilityIdentifier("services.otherPlayers")
@@ -79,14 +94,14 @@ struct ServicesPage: View {
                     }.padding(.top, 14)
                 } label: { Label("How the wall chooses", systemImage: "arrow.triangle.branch").font(.ui(15, .medium)).foregroundStyle(Ink.ink) }
                 .tint(mint).padding(18).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 18))
-                section("A little more possibility", subtitle: "Art, answers and your record collection.") {
-                    destination("Claude", detail: "Questions and conversations", status: available && services?.claude?.problem != nil ? "Needs attention" : state(services?.claude?.isReady == true), symbol: "text.bubble") { ClaudePage(accent: accent, services: $services) }
+                section("Other connections", subtitle: "Questions, records, pictures and posters.") {
+                    destination("Claude", detail: "Questions and conversations", status: available && services?.claude?.isOff == true ? "Off" : available && services?.claude?.problem != nil ? "Needs attention" : state(services?.claude?.isReady == true), symbol: "text.bubble") { ClaudePage(accent: accent, services: $services) }
                     Rule()
-                    destination("Discogs", detail: "Bring your record shelf along", status: available && services?.discogs?.syncing == true ? "Reading collection" : available && services?.discogs?.problem != nil ? "Needs attention" : state(services?.discogs?.token_set == true && !(services?.discogs?.user ?? "").isEmpty), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
+                    destination("Discogs", detail: "Your Discogs collection", status: available && services?.discogs?.syncing == true ? "Reading collection" : available && services?.discogs?.problem != nil ? "Needs attention" : state(services?.discogs?.token_set == true && !(services?.discogs?.user ?? "").isEmpty), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Images", detail: "Draw from your imagination", status: !available ? "Not checked" : services?.images?.busy == true ? "Drawing" : services?.images?.problem != nil ? "Needs attention" : services?.images?.ready != true ? "Set up" : services?.images?.verified == true ? "Ready" : "Key saved", symbol: "paintbrush") { ImagesPage(accent: accent, services: $services) }
+                    destination("Images", detail: "Pictures from a description", status: !available ? "Not checked" : services?.images?.busy == true ? "Drawing" : services?.images?.problem != nil ? "Needs attention" : services?.images?.ready != true ? "Set up" : services?.images?.verified == true ? "Ready" : "Key saved", symbol: "paintbrush") { ImagesPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Posters", detail: "The films and shows you love", status: !available ? "Not checked" : services?.tmdb?.checking == true ? "Checking" : services?.tmdb?.problem != nil ? "Needs attention" : services?.tmdb?.key_set != true ? "Set up" : services?.tmdb?.verified == true ? "Ready" : "Key saved", symbol: "tv") { PostersPage(accent: accent, services: $services) }
+                    destination("Posters", detail: "Film and TV posters", status: !available ? "Not checked" : services?.tmdb?.checking == true ? "Checking" : services?.tmdb?.problem != nil ? "Needs attention" : services?.tmdb?.key_set != true ? "Set up" : services?.tmdb?.verified == true ? "Ready" : "Key saved", symbol: "tv") { PostersPage(accent: accent, services: $services) }
                     Rule()
                     destination("Pictures", detail: "Search the web or your Google provider", status: picturesStatus, symbol: "photo") { PicturesPage(accent: accent, services: $services) }
                 }
@@ -159,6 +174,61 @@ struct ServicesPage: View {
         return google?.verified == true ? "Google checked" : "Saved"
     }
     private func state(_ ready: Bool) -> String { available ? (ready ? "Ready" : "Set up") : "Not checked" }
+    /// An account in an error state needs attention, not setup.
+    private func journalStatus(_ ready: Bool, _ reported: String?) -> String {
+        if available, Self.troubled.contains(reported ?? "") { return "Needs attention" }
+        return state(ready)
+    }
+    /// One next step, from state already on this page. Refused phone access
+    /// comes first because nothing on the wall can fix it.
+    private enum NextStep { case settings, spotifyReconnect, spotifyCheck, appleMusic }
+    private var nextStep: NextStep? {
+        if musicRefused { return .settings }
+        guard available else { return nil }
+        switch services?.spotify.state ?? "" {
+        case "expired", "refused": return .spotifyReconnect
+        case "unavailable", "rate_limited": return .spotifyCheck
+        default: break
+        }
+        return readyCount == 0 && !musicConnected ? .appleMusic : nil
+    }
+    @ViewBuilder private var recommendation: some View {
+        if let step = nextStep {
+            NavigationLink {
+                switch step {
+                case .settings, .appleMusic: AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused)
+                case .spotifyReconnect, .spotifyCheck: SpotifyPage(accent: accent, services: $services)
+                }
+            } label: {
+                HStack(alignment: .center, spacing: 13) {
+                    VStack(alignment: .leading, spacing: 5) {
+                        Text("Next step").font(.ui(12, .medium)).foregroundStyle(mint)
+                        Text(Self.title(step)).font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
+                        Text(Self.detail(step)).font(.ui(12)).foregroundStyle(Ink.dim)
+                    }.fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 2); Chevron()
+                }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Ink.plaster, in: RoundedRectangle(cornerRadius: 18)).contentShape(RoundedRectangle(cornerRadius: 18))
+            }.buttonStyle(PressStyle(scale: 0.99)).accessibilityElement(children: .combine)
+                .accessibilityIdentifier("services.nextStep")
+        }
+    }
+    private static func title(_ step: NextStep) -> String {
+        switch step {
+        case .settings: "Allow Apple Music in Settings"
+        case .spotifyReconnect: "Reconnect Spotify"
+        case .spotifyCheck: "Check Spotify"
+        case .appleMusic: "Allow Apple Music on this iPhone"
+        }
+    }
+    private static func detail(_ step: NextStep) -> String {
+        switch step {
+        case .settings: "Music access is off for Tessera on this iPhone."
+        case .spotifyReconnect: "The wall can no longer read your Spotify account."
+        case .spotifyCheck: "The wall cannot reach Spotify right now."
+        case .appleMusic: "No listening source is ready yet. Start with the music on this iPhone."
+        }
+    }
     private func featured(_ service: Service, detail: String, state: String, ready: Bool, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .top) {
@@ -211,6 +281,6 @@ struct ServicesPage: View {
         if let result { services = result }
     }
     private static func sourceName(_ name: String) -> String {
-        ["phone": "This iPhone", "airplay": "AirPlay", "applemusic": "Apple Music / Mac reporter", "mac": "Mac reporter", "spotify": "Spotify", "lastfm": "Last.fm", "listenbrainz": "ListenBrainz", "ears": "The wall’s ears", "posters": "Film and TV recognition"][name] ?? name
+        ["phone": "This iPhone", "airplay": "AirPlay", "applemusic": "Apple Music / Mac reporter", "mac": "Mac reporter", "spotify": "Spotify", "lastfm": "Last.fm", "listenbrainz": "ListenBrainz", "ears": "The wall’s ears", "posters": "Film and TV recognition", "applemusic-account": "Apple Music account"][name] ?? name
     }
 }

@@ -161,7 +161,7 @@ struct PongBoard: View {
             return "Point to \(scorer < game.players.count ? game.players[scorer] : "the wall"). Next serve coming."
         case "paused": return "Your court is saved. Resume when you’re ready."
         case "finished": return "Match complete. Longest rally: \(game.state["longest_rally"].int ?? 0) returns."
-        default: return "\(scene.rally) \(scene.rally == 1 ? "return" : "returns") this rally · First to \(game.state["to"].int ?? 7)"
+        default: return "\(scene.rally) \(scene.rally == 1 ? "return" : "returns") this rally. First to \(game.state["to"].int ?? 7)."
         }
     }
 
@@ -300,7 +300,9 @@ struct PongBoard: View {
         let now = Date()
         if final || now.timeIntervalSince(lastSent) >= 0.05 {
             lastSent = now
-            send(["paddle": position])
+            // The final flag keeps GameScreen from dropping this position when
+            // it has to wait behind a slow reply: localTarget stays on it.
+            send(final ? ["paddle": position, GameSteeringBuffer.finalKey: true] : ["paddle": position])
         }
     }
 }

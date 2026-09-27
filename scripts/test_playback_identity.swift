@@ -81,18 +81,18 @@ struct PlaybackIdentityTests {
         state.title = " \n "
         identity = PlaybackIdentity(state: state, link: .live, at: stamp)
         check("blank title means empty identity", !identity.hasSong && identity.status == .empty)
-        check("empty weather title describes current mode", identity.title == "A window to the weather.")
+        check("empty weather title describes current mode", identity.title == "Showing the weather")
         check("empty identity has no progress", identity.elapsed == nil && identity.duration == nil && !identity.advances)
         state.mode = "off"
         identity = PlaybackIdentity(state: state, link: .live, at: stamp)
-        check("off mode reads asleep", identity.title == "The wall is asleep.")
+        check("off mode reads plainly", identity.title == "Wall is off")
 
         check("clock formats elapsed minutes", PlaybackIdentity.clock(125.9) == "2:05")
         check("clock supports long recordings", PlaybackIdentity.clock(3661) == "1:01:01")
-        check("clock rejects NaN", PlaybackIdentity.clock(.nan) == "—:—")
-        check("clock rejects infinity", PlaybackIdentity.clock(.infinity) == "—:—")
-        check("clock rejects negative time", PlaybackIdentity.clock(-1) == "—:—")
-        check("clock rejects overflow", PlaybackIdentity.clock(Double.greatestFiniteMagnitude) == "—:—")
+        check("clock rejects NaN", PlaybackIdentity.clock(.nan) == "-:--")
+        check("clock rejects infinity", PlaybackIdentity.clock(.infinity) == "-:--")
+        check("clock rejects negative time", PlaybackIdentity.clock(-1) == "-:--")
+        check("clock rejects overflow", PlaybackIdentity.clock(Double.greatestFiniteMagnitude) == "-:--")
 
         var local = WallState(json: ["now_showing": ["title":"Song", "artist":"ADÉLA"], "progress":["at":45000.0,"of":240000.0,"playing":true,"stamped":stamp.timeIntervalSince1970]])
         let pause = LocalPlaybackSample(title:"Song", artist:"ADÉLA", position:46, duration:240, playing:false, observed:stamp)

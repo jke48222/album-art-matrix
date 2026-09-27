@@ -34,7 +34,7 @@ struct ShelfList: Decodable {
         var copyCount: Int { max(1, copies ?? 1) }
         var artistLine: String { artists.joined(separator: ", ") }
         var formatLine: String {
-            ((formats ?? []) + (descriptions ?? [])).filter { !$0.isEmpty }.joined(separator: " · ")
+            ((formats ?? []) + (descriptions ?? [])).filter { !$0.isEmpty }.joined(separator: ", ")
         }
         var discogsURL: URL? {
             guard release_id > 0 else { return nil }
@@ -58,6 +58,9 @@ struct ShelfList: Decodable {
     var completed_sync_id: String?
 
     var configured: Bool { token_set == true && !(user?.isEmpty ?? true) }
+    /// A wall with the shelf feature off answers {"releases": [], "problem": ...}
+    /// only. A running shelf always reports token_set, true or false.
+    var available: Bool { token_set != nil }
     var uniqueReleases: [Release] {
         var seen = Set<Int>()
         return releases.filter { $0.id > 0 && seen.insert($0.id).inserted }

@@ -26,7 +26,7 @@ import Foundation
         check(!shelf.isStale(at: Date(timeIntervalSince1970: 1001)), "Fresh collection is not called stale")
         check(shelf.isStale(at: Date(timeIntervalSince1970: 23000)), "Collection overdue for its six hour read is stale")
         check(!shelf.isStale(at: Date(timeIntervalSince1970: 900)), "Clock skew does not falsely age collection")
-        check(shelf.releases[0].formatLine == "Vinyl · LP", "Pressing formats preserve descriptions")
+        check(shelf.releases[0].formatLine == "Vinyl, LP", "Pressing formats preserve descriptions")
         check(shelf.releases[0].discogsURL?.absoluteString == "https://www.discogs.com/release/1", "Pressing link is pinned to trusted Discogs identity")
         check(shelf.releases[0].coverURL?.scheme == "https", "HTTPS artwork is supported")
         check(shelf.releases[1].copyCount == 1, "Legacy release defaults to one copy")

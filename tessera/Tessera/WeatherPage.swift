@@ -21,7 +21,11 @@ struct WeatherPage: View {
     @State private var previewUnits = "f"
     @State private var showingWallPixels = false
     @State private var requestGeneration = 0
-    @State private var isRefreshing = false
+    /// Counted, not flagged: a read discarded by a newer request (a place
+    /// search bumps the generation) returned before clearing a flag, and a
+    /// failed search then left Try again disabled until the next poll.
+    @State private var refreshesInFlight = 0
+    private var isRefreshing: Bool { refreshesInFlight > 0 }
     @FocusState private var placeFocused: Bool
 
     private var data: WallWeather? { report ?? preview }
@@ -29,7 +33,7 @@ struct WeatherPage: View {
     private var isF: Bool { (isPreview ? previewUnits : wall.state.weatherUnits) == "f" }
     private var place: String {
         let value = data?.place ?? wall.state.place
-        return value.isEmpty ? "Your weather" : value
+        return value.isEmpty ? "Choose a place" : value
     }
     private var hour: WallWeather.Hour? { data?.hours?.first { $0.t == selectedHour && selectedHour != nil } }
     private var nowDate: Date { referenceDate ?? .now }
@@ -40,12 +44,30 @@ struct WeatherPage: View {
             .contains { abs(date.timeIntervalSince1970 - $0) < 4500 }
         return WeatherMood(code: hour?.code ?? data?.now?.code, day: day, golden: day && nearSun)
     }
-    private var unavailable: Bool { problem != nil || (data?.problem != nil && data?.problem != "no place set") }
+    /// Weather switched off on the wall. Its answer still carries a
+    /// problem line, so this is kept out of `unavailable`: a retry, a pull
+    /// or a new place cannot bring back a feature the wall does not run.
+    /// A phone that cannot reach the wall at all shows that instead.
+    private var off: Bool { problem == nil && data?.off == true }
+    private var unavailable: Bool { problem != nil || (!off && data?.problem != nil && data?.problem != "no place set") }
     private var stale: Bool {
         (data?.stale ?? false) || forecastAge > 3600
     }
+    /// The heading follows the same rule as the wall's own face: the data is
+    /// "last known" once it is over an hour old, or when this phone cannot
+    /// reach the wall at all. One failed upstream refresh while the forecast
+    /// is minutes old shows only in the footer. The wall does not mark it.
+    private var lastKnown: Bool { stale || problem != nil }
+    /// Plain words for the wall's problem. Its own text is an exception
+    /// string ("no weather: HTTPSConnectionPool(...)") that belongs in the
+    /// Pi's log, not on this page.
+    private var problemMessage: String? {
+        if let problem { return problem }
+        guard let raw = data?.problem, raw != "no place set" else { return nil }
+        return data?.now == nil ? "The wall could not reach the forecast." : "The wall could not reach the forecast. Showing the last one."
+    }
     private var forecastAge: Int { max(0, (data?.age_s ?? 0) + Int(lastReceived.map { nowDate.timeIntervalSince($0) } ?? 0)) }
-    private var waitingForForecast: Bool { loading || data?.refreshing == true || (data?.now == nil && !unavailable && !(data?.place ?? wall.state.place).isEmpty) }
+    private var waitingForForecast: Bool { loading || data?.refreshing == true || (data?.now == nil && !unavailable && !off && !(data?.place ?? wall.state.place).isEmpty) }
     private var shownOnWall: Bool { wall.link.isLive && wall.state.mode == "weather" }
     private var typed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
 
@@ -62,7 +84,7 @@ struct WeatherPage: View {
                     source
                 } else {
                     emptyState
-                    placeEditor
+                    if !off { placeEditor }
                 }
             }
             .padding(.horizontal, 20)
@@ -82,13 +104,13 @@ struct WeatherPage: View {
         .toolbarBackground(.hidden, for: .navigationBar)
         .navigationBarTitleDisplayMode(.inline)
         .tint(mood.accent)
-        .refreshable { await refresh(force: true) }
+        .modifier(WeatherPull(enabled: !off) { await refresh(force: true) })
         .sheet(isPresented: $showingWallPixels) { wallPixels }
         .sheet(isPresented: $editingPlace) {
             NavigationStack {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("Choose your sky").font(.display(30)).foregroundStyle(Ink.ink)
+                        Text("Choose a place").font(.display(30)).foregroundStyle(Ink.ink)
                         Text("Name a town or city. The forecast and your wall will follow it.")
                             .font(.ui(16)).foregroundStyle(Ink.dim)
                         placeEditor
@@ -182,8 +204,8 @@ struct WeatherPage: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 6) {
-                Circle().fill(stale || unavailable ? Ink.tile : mood.accent).frame(width: 5, height: 5)
-                Text(hour == nil ? (stale || unavailable ? "LAST KNOWN WEATHER" : "CURRENT CONDITIONS") : "FORECAST · \(time(hour?.t, format: "h a"))")
+                Circle().fill(lastKnown ? Ink.tile : mood.accent).frame(width: 5, height: 5)
+                Text(hour == nil ? (lastKnown ? "LAST KNOWN WEATHER" : "CURRENT CONDITIONS") : "FORECAST AT \(time(hour?.t, format: "h a"))")
                     .font(.machine(9)).kerning(1.1)
                 Spacer(minLength: 0)
                 Image(systemName: hour == nil ? "location.fill" : "clock").font(.system(size: 11))
@@ -223,9 +245,9 @@ struct WeatherPage: View {
                 Image(systemName: mood.symbol).symbolRenderingMode(.hierarchical)
                     .font(.system(size: 20)).foregroundStyle(mood.accent)
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(hour == nil ? "The sky, in motion." : "A look ahead.")
+                    Text(hour == nil ? "Current weather" : "Forecast")
                         .font(.ui(13, .semibold)).foregroundStyle(Color(hex: 0xF4F0E5))
-                    Text(hour == nil ? "Drawn from your local forecast" : "\(time(hour?.t, format: "h:mm a")) · \(mood.words)")
+                    Text(hour == nil ? "From the local forecast" : "\(time(hour?.t, format: "h:mm a")), \(mood.words)")
                         .font(.ui(11)).foregroundStyle(Color(hex: 0xB5C3BC))
                 }
                 Spacer(minLength: 0)
@@ -293,7 +315,7 @@ struct WeatherPage: View {
                 }
                 .scrollIndicators(.hidden)
                 if hour != nil {
-                    Label("Forecast preview · your wall stays with current conditions", systemImage: "clock")
+                    Label("Forecast preview. The wall keeps showing current conditions.", systemImage: "clock")
                         .font(.ui(11)).foregroundStyle(Ink.dim)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -317,9 +339,9 @@ struct WeatherPage: View {
                     }
                 }.frame(width: 48, height: 48)
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(shownOnWall ? "Weather is on the wall" : "Put the sky on your wall")
+                    Text(shownOnWall ? "Weather is on the wall" : "Show weather on the wall")
                         .font(.ui(15, .semibold)).foregroundStyle(Ink.ink)
-                    Text(isPreview ? "Connect your wall to display the weather" : shownOnWall ? "Current conditions · tap to inspect the live pixels" : wall.link.isLive ? "Show the current weather face" : "Connect your wall to show the weather")
+                    Text(isPreview ? "Connect your wall to display the weather" : shownOnWall ? "Current conditions. Tap to see the live pixels." : wall.link.isLive ? "Show the current weather face" : "Connect your wall to show the weather")
                         .font(.ui(12)).foregroundStyle(Ink.dim)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -338,18 +360,18 @@ struct WeatherPage: View {
     private var wallPixels: some View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 20) {
-                Text("The sky, in light.").font(.display(30)).foregroundStyle(Ink.ink)
+                Text("Live wall pixels").font(.display(30)).foregroundStyle(Ink.ink)
                 if shownOnWall, let frame = wall.frame, let side = Panel.square(frame.count) {
                     PanelCanvas(px: [UInt8](frame), duty: 1)
                         .aspectRatio(1, contentMode: .fit)
                         .accessibilityLabel("Live weather artwork from your wall")
-                    Text("LIVE · \(side) × \(side)")
+                    Text("LIVE, \(side) x \(side)")
                         .font(.machine(11)).kerning(1).foregroundStyle(mood.accent)
-                    Text("\(place) · current conditions\n\(degrees(data?.now?.temp)) \(isF ? "Fahrenheit" : "Celsius")")
+                    Text("\(place), current conditions\n\(degrees(data?.now?.temp)) \(isF ? "Fahrenheit" : "Celsius")")
                         .font(.ui(16)).foregroundStyle(Ink.ink)
                 } else {
                     ContentUnavailableView("The wall has changed", systemImage: "square.grid.3x3",
-                                           description: Text(wall.link.isLive ? "Choose Weather to bring the sky back." : "Reconnect to see its live pixels."))
+                                           description: Text(wall.link.isLive ? "Choose Weather to show it again." : "Reconnect to see its live pixels."))
                         .foregroundStyle(Ink.ink)
                 }
                 Spacer(minLength: 0)
@@ -367,7 +389,7 @@ struct WeatherPage: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 10) {
                 instrument("Feels like", symbol: "thermometer.medium", value: degrees(data?.now?.feels), note: "Apparent temperature", kind: 0)
                 instrument("Wind", symbol: "wind", value: windLabel, note: isF ? "Miles per hour" : "Kilometres per hour", kind: 1)
-                instrument("Cloud cover", symbol: "cloud", value: data?.now?.cloud.map { "\(Int($0.rounded()))%" } ?? "—", note: "Of the sky covered", kind: 2)
+                instrument("Cloud cover", symbol: "cloud", value: data?.now?.cloud.map { "\(Int($0.rounded()))%" } ?? "No data", note: "Of the sky covered", kind: 2)
                 instrument("Precipitation", symbol: "drop", value: rainLabel, note: "In the current hour", kind: 3)
             }
         }
@@ -433,14 +455,14 @@ struct WeatherPage: View {
 
     private var source: some View {
         VStack(alignment: .leading, spacing: 10) {
-            if unavailable, let message = problem ?? data?.problem {
+            if unavailable, let message = problemMessage {
                 Label(message, systemImage: "wifi.exclamationmark")
                     .font(.ui(12)).foregroundStyle(Ink.tile)
             }
             HStack(spacing: 6) {
                 if isRefreshing || data?.refreshing == true { ProgressView().controlSize(.mini).tint(mood.accent) }
                 Circle().fill(stale || unavailable ? Ink.tile : Ink.moss).frame(width: 5, height: 5)
-                Text(isPreview ? "Sample forecast for design preview" : stale || unavailable ? "Last known forecast · pull to retry" : freshness)
+                Text(isPreview ? "Sample forecast for design preview" : stale || unavailable ? "Last known forecast. Pull to retry." : freshness)
                     .font(.ui(11)).foregroundStyle(Ink.dim)
             }
             if unavailable && !isPreview {
@@ -466,9 +488,9 @@ struct WeatherPage: View {
         VStack(alignment: .leading, spacing: 12) {
             Spacer(minLength: 180)
             if waitingForForecast { ProgressView().tint(Ink.ink).accessibilityLabel("Loading forecast") }
-            Text(waitingForForecast ? "Finding your sky…" : unavailable ? "The sky will be back." : "A window to outside.")
+            Text(waitingForForecast ? "Loading forecast" : off ? "Weather is off" : unavailable ? "Weather unavailable" : "No place set")
                 .font(.displayMid(30)).foregroundStyle(Ink.ink)
-            Text(waitingForForecast ? "Reading the forecast for \(place)." : unavailable ? "Your wall couldn't get the latest weather. Your place is still saved." : "Choose a place to bring its changing sky into your room.")
+            Text(waitingForForecast ? ((data?.place ?? wall.state.place).isEmpty ? "Reading the forecast." : "Reading the forecast for \(place).") : off ? "Weather is off on this wall." : unavailable ? "Your wall couldn't get the latest weather. Your place is still saved." : "Choose a place to see its forecast here and on the wall.")
                 .font(.ui(15)).foregroundStyle(Ink.ink.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             if unavailable && !isPreview {
@@ -521,19 +543,20 @@ struct WeatherPage: View {
         Taps.detent(intensity: 0.35)
     }
     private func degrees(_ c: Double?) -> String {
-        guard let c, c.isFinite else { return "—" }
+        // The wall draws a missing temperature as "--°". Say the same here.
+        guard let c, c.isFinite else { return "--°" }
         return "\(Int((isF ? c * 9 / 5 + 32 : c).rounded()))°"
     }
     private var windLabel: String {
-        guard let kmh = data?.now?.wind_kmh, kmh.isFinite else { return "—" }
+        guard let kmh = data?.now?.wind_kmh, kmh.isFinite else { return "No data" }
         return "\(Int((isF ? kmh / 1.609344 : kmh).rounded()))"
     }
     private var rainLabel: String {
-        guard let mm = data?.now?.precip_mm, mm.isFinite else { return "—" }
+        guard let mm = data?.now?.precip_mm, mm.isFinite else { return "No data" }
         return isF ? String(format: "%.2f in", mm / 25.4) : String(format: "%.1f mm", mm)
     }
     private func time(_ timestamp: Double?, format: String) -> String {
-        guard let timestamp, timestamp.isFinite else { return "—" }
+        guard let timestamp, timestamp.isFinite else { return "--" }
         let f = DateFormatter(); f.dateFormat = format
         if let offset = data?.utc_offset_s { f.timeZone = TimeZone(secondsFromGMT: offset) }
         return f.string(from: Date(timeIntervalSince1970: timestamp))
@@ -554,10 +577,15 @@ struct WeatherPage: View {
         requestGeneration += 1
         let generation = requestGeneration
         let host = wall.host
-        isRefreshing = true
+        refreshesInFlight += 1
         let result = await WallWeather.read(host: host, refresh: force)
-        guard !Task.isCancelled, wall.host == host, generation == requestGeneration else { return }
-        isRefreshing = false
+        refreshesInFlight -= 1
+        guard !Task.isCancelled, wall.host == host, generation == requestGeneration else {
+            // Discarded, and nothing newer is on its way (a failed place
+            // search never starts one): stop showing the spinner.
+            if refreshesInFlight == 0 { loading = false }
+            return
+        }
         loading = false
         if let result {
             report = result; lastReceived = .now; problem = nil
@@ -580,6 +608,16 @@ struct WeatherPage: View {
                 editingPlace = false; Taps.commit(); await refresh()
             } else { placeProblem = why }
         }
+    }
+}
+
+/// Pull to refresh only while a refresh can help. With weather switched off
+/// on the wall there is nothing to fetch, so the gesture is not offered.
+private struct WeatherPull: ViewModifier {
+    let enabled: Bool
+    let action: @Sendable () async -> Void
+    @ViewBuilder func body(content: Content) -> some View {
+        if enabled { content.refreshable { [action] in await action() } } else { content }
     }
 }
 

@@ -23,6 +23,10 @@ struct ClassicWallScreen: View {
     @AppStorage("spin.beat") private var beatOn = false
     @State private var beats = BeatBook()
     @State private var preparingVideo = false
+    /// The ticker composer stays up on the phone's own choice. Keyed on the
+    /// wall's mode alone, a once-only message that finished and handed back
+    /// to art unmounted the composer, and the draft with it, mid-typing.
+    @State private var composingTicker = false
     @State private var showArtwork = false
     @Environment(\.scenePhase) private var scenePhase
     var onSetup: () -> Void
@@ -71,6 +75,7 @@ struct ClassicWallScreen: View {
                 if !isOff {
                     Group {
                         if preparingVideo { VideoWorkbench(accent: accent) }
+                        else if composingTicker || wall.state.mode == "ticker" { TickerWorkbench(accent: accent) }
                         else { contextRow }
                     }.padding(.horizontal, 24).transition(.opacity)
                 }
@@ -78,6 +83,11 @@ struct ClassicWallScreen: View {
             }
             .padding(.top, 4)
             .animation(Motion.settle, value: isOff)
+        }
+        .onChange(of: wall.state.mode) { _, mode in
+            // A finished message hands back to art, which keeps the composer.
+            // Any other face chosen from elsewhere (Siri, a widget) takes over.
+            if mode != "ticker" && mode != "art" { composingTicker = false }
         }
         .sheet(isPresented: $showArtwork) { ArtworkPage(spin: wall.state.mode == "cd", accent: accent).environment(wall) }
         .scrollIndicators(.hidden)
@@ -123,7 +133,7 @@ struct ClassicWallScreen: View {
             Text(connectionTitle).font(.ui(13, .medium)).foregroundStyle(Ink.dim)
             Spacer()
             if !typeSize.isAccessibilitySize, let count = reading.px?.count, let side = Panel.square(count) {
-                Text("\(side) × \(side)").font(.machine(10)).foregroundStyle(Ink.dim)
+                Text("\(side) x \(side)").font(.machine(10)).foregroundStyle(Ink.dim)
                     .accessibilityLabel("\(side) by \(side) lights")
             }
         }
@@ -135,7 +145,10 @@ struct ClassicWallScreen: View {
                      confirmed: isOff ? 0.05 : wall.state.brightness,
                      dragging: $dragLight, link: wall.link, arrivalKey: wall.arrivalKey,
                      touching: $onPanel,
-                     onCommit: { wall.send(["brightness": $0]) },
+                     // Asleep, the panel starts from a stand-in 5%, so a drag
+                     // or a VoiceOver step would save a near-black brightness
+                     // for the next wake. Only a lit wall takes one.
+                     onCommit: { if !isOff { wall.send(["brightness": $0]) } },
                      onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
                      onFlickPrev: { skipMusic(previous: true) },
                      onFlickNext: { skipMusic(previous: false) })
@@ -144,7 +157,7 @@ struct ClassicWallScreen: View {
                 VStack(spacing: 10) {
                     Image(systemName: isOff ? "moon" : "square.grid.3x3")
                         .font(.system(size: 28, weight: .ultraLight)).foregroundStyle(accent)
-                    Text(isOff ? "A little quiet." : wall.link.isLive ? "Waiting for the first frame" : "Your wall, right here.")
+                    Text(isOff ? "Wall is off" : wall.link.isLive ? "Waiting for the first frame" : "Waiting for the wall")
                         .font(.displayMid(24)).foregroundStyle(Ink.ink)
                     Text(isOff ? "Hold the panel to wake it" : wall.link.isLive ? "Play a song or make something in Studio" : "Finding the wall on your network")
                         .font(.ui(13)).foregroundStyle(Ink.dim)
@@ -179,7 +192,7 @@ struct ClassicWallScreen: View {
         case .standIn:
             Text("Preview on this phone").font(.ui(12)).foregroundStyle(Ink.dim)
         case .live:
-            Text(dragLight == nil ? "Drag the artwork to dim" : "Release to set the light")
+            Text(isOff ? "Hold the panel to wake it" : dragLight == nil ? "Drag the artwork to dim" : "Release to set the light")
                 .font(.ui(12)).foregroundStyle(Ink.dim)
         }
     }
@@ -190,7 +203,7 @@ struct ClassicWallScreen: View {
             Taps.detent()
         } label: {
             HStack(spacing: 7) {
-                Text(isOff ? "Wake wall" : "\(Int((dragLight ?? duty) * 100))%")
+                Text(isOff ? "Wake wall" : "\(Int(((dragLight ?? duty) * 100).rounded()))%")
                     .font(.machine(11)).monospacedDigit().contentTransition(.numericText())
                 Image(systemName: "power").font(.system(size: 13, weight: .medium))
             }
@@ -199,7 +212,7 @@ struct ClassicWallScreen: View {
         }
         .buttonStyle(PressStyle(scale: 0.96))
         .accessibilityLabel(isOff ? "Turn wall on" : "Turn wall off")
-        .accessibilityValue("Brightness \(Int((dragLight ?? duty) * 100)) percent")
+        .accessibilityValue("Brightness \(Int(((dragLight ?? duty) * 100).rounded())) percent")
     }
 
     private var connectionTitle: String {
@@ -265,6 +278,7 @@ struct ClassicWallScreen: View {
             lit: roomLight
         ) {
             preparingVideo = false
+            composingTicker = mode == "ticker"
             wall.send(["mode": mode])
         }
         .frame(maxWidth: .infinity)
@@ -288,11 +302,21 @@ struct ClassicWallScreen: View {
                 Picker("Record face", selection: Binding(get: { wall.state.spinFace }, set: { wall.send(["spin_face": $0]) })) {
                     Text("Pressing").tag("pressing"); Text("Album art").tag("art")
                 }.pickerStyle(.segmented)
+                // Only the Room design makes and sends a pressing. Without one
+                // for this song the wall turns the album art, so say so rather
+                // than let "Pressing" read as what the wall shows. Only with
+                // a song up: with none there is no album art to speak of.
+                if let title = wall.state.title, !title.isEmpty, wall.state.spinFace == "pressing",
+                   wall.state.pressingFor != SleeveMatch.key(title: title, artist: wall.state.artist ?? "") {
+                    Text("Album art is showing. Open the record in the Room design to make a pressing.")
+                        .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                }
                 DisplayPage(detail: .finishes, accent: accent, embedded: true)
             }
 
         case "ambient": DisplayPage(detail: .lamp, accent: accent, embedded: true)
-        case "ticker": TickerWorkbench(accent: accent)
+        // "ticker" is mounted above, on composingTicker, so it survives the
+        // message finishing.
         case "video": VideoWorkbench(accent: accent)
         case "clock", "timer": TimeWorkbench(accent: accent, showsPreview: false)
 

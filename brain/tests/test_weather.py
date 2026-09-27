@@ -198,7 +198,7 @@ def test_hero_temperature_stays_above_conditions_and_fits_signed_three_digits():
     for size in (64, 192):
         for celsius in (-100, -40, 22.8, 100):
             data = dict(temp=celsius, code=3, is_day=False, high=celsius+5, low=celsius-5)
-            f = WeatherFace(size).frame_at(0, data, units="c", place="Douglasville, Georgia")
+            f = WeatherFace(size).frame_at(0, data, units="c", place="Philadelphia, Pennsylvania")
             bright = (f.min(axis=2) > 150)
             # The dominant text is above the condition and range, not at the bottom.
             hero = bright[int(size*.30):int(size*.64)]
@@ -212,7 +212,7 @@ def test_place_range_staleness_and_missing_values_are_visible():
     data = dict(temp=22.8, code=3, is_day=False, high=24.4, low=17.2)
     for size in (64, 192):
         face = WeatherFace(size)
-        a = face.frame_at(0, data, place="Douglasville, Georgia")
+        a = face.frame_at(0, data, place="Philadelphia, Pennsylvania")
         b = face.frame_at(0, data, place="London")
         assert (a[:int(size*.25)] != b[:int(size*.25)]).any()
         stale = face.frame_at(0, data, place="London", stale=True)
@@ -220,7 +220,12 @@ def test_place_range_staleness_and_missing_values_are_visible():
         missing = face.frame_at(0, dict(code=None), place="London")
         assert (missing != b).any()
         changed = face.frame_at(0, dict(data, high=30, low=-5), place="London")
-        assert (changed[int(size*.75):] != b[int(size*.75):]).any()
+        if size == 64:
+            # The high/low row is left out at 64: four LEDs tall, it was
+            # smeared digits rather than numbers (art/weather.py).
+            assert np.array_equal(changed, b)
+        else:
+            assert (changed[int(size*.75):] != b[int(size*.75):]).any()
 
 
 def test_manual_refresh_fetches_immediately_even_when_the_cache_is_young():

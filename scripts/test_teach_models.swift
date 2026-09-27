@@ -17,7 +17,7 @@ import Foundation
         check("all search words must match", !song.matches("beyonce ocean"))
         check("album included in search", song.matches("Day"))
         check("whitespace-only search includes all", song.matches("   \n  "))
-        check("provenance distinct", song.sources == "Preview · This room")
+        check("provenance distinct", song.sources == "Preview, This room")
         check("artwork identity preserved", song.art_url == "https://example.com/cover.jpg")
         check("actual score preserved", list.last_match?.score == 44)
         check("threshold separate from confidence", list.min_score == 15)

@@ -102,9 +102,22 @@ def test_retry_coalesces_without_waiting_for_network(monkeypatch):
 
 
 def test_reporter_status_expires_cached_song(monkeypatch):
+    release=threading.Event();calls=[]
+    def get(*a,**k):calls.append(1);release.wait(2);return response()
     source=AppleMusicSource('http://mac:8787');monkeypatch.setattr(requests,'get',lambda *a,**k:response());source.get_current()
+    monkeypatch.setattr(requests,'get',get)
     source._remote_checked-=31
-    assert source.status()['state']=='stale' and source.status()['current'] is None
+    first=source.status()
+    # The old song is not claimed, the last answer stands, and exactly one
+    # background check asks the Mac again.
+    assert first['state']=='checking' and first['current'] is None and first['answering'] is True
+    second=source.status()
+    assert second['state']=='checking'
+    release.set()
+    for _ in range(200):
+        if source._remote_busy is None:break
+        threading.Event().wait(0.01)
+    assert calls==[1] and source.status()['state']=='playing' and source.status()['current']['title']=='Quiet'
 
 
 @pytest.mark.parametrize('path',['/mac/retry','/posters/check'])

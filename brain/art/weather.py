@@ -2,8 +2,10 @@
 
 The layout follows WeatherPage and the sky follows WeatherAtmosphere: place,
 large Technor temperature, condition, high/low, and engraved hills. The 64-pixel
-panel uses the city without its region and omits the micro heading. Typography
-and clouds are supersampled; it is not a separate pixel-font weather face.
+panel uses the city without its region and omits the micro heading and the
+high/low row, which came out at four LEDs tall with one-LED arrows: smeared
+digits rather than numbers. Typography and clouds are supersampled; it is not a
+separate pixel-font weather face.
 """
 from __future__ import annotations
 
@@ -168,45 +170,53 @@ class WeatherFace:
             face = _font(font, pixels)
         draw.text((round(x * s), round(y * s)), text, font=face, fill=fill, anchor="lt")
 
-    def _labels(self, data, units, place, stale):
+    def _labels(self, data, units, place, stale, located=False):
         data = data or {}
         temp, high, low = (self._temp(data.get(k), units) for k in ("temp", "high", "low"))
         code, day = data.get("code"), bool(data.get("is_day", True))
-        key = temp, high, low, code, day, place, stale, bool(data)
+        key = temp, high, low, code, day, place, stale, bool(data), located
         if key == self._text_key:
             return self._text
         self._text_key = key
         img = Image.new("RGBA", (self.res, self.res))
         draw = ImageDraw.Draw(img)
         small = self.size <= 64
-        degrees = lambda v: "—" if v is None else f"{v}°"
+        # No em dash on the LEDs: two hyphens read the same and are plain.
+        degrees = lambda v: "--°" if v is None else f"{v}°"
         if not small:
             heading = "LAST KNOWN WEATHER" if stale else "CURRENT CONDITIONS" if data else "WEATHER"
             self._label(draw, heading, .055, .06, .027, "MartianMono-Regular.ttf", (227, 232, 220, 255))
         city = place.split(",")[0].strip() if small else place
-        self._label(draw, city or "Choose a place", .055, .15 if not small else .12,
-                    .066 if not small else .109)
+        # Coordinates without a name (Routines' "Use this location" saves
+        # place "") are still a place: the phone calls that "Your weather",
+        # and "Choose a place" over a real forecast told the wall otherwise.
+        self._label(draw, city or ("Your weather" if data or located else "Choose a place"),
+                    .055, .15 if not small else .12, .066 if not small else .109)
         self._label(draw, degrees(temp), .045, .35 if not small else .31,
                     .34 if not small else .43, "Technor-Medium.otf")
-        condition = _words(code, day) if data else "No weather yet" if place else "Set in Tessera"
+        condition = (_words(code, day) if data else
+                     "No weather yet" if place or located else "Set in Tessera")
         self._label(draw, condition, .055, .67, .05 if not small else .10)
+        if stale and small:
+            draw.ellipse((self.res * .89, self.res * .06, self.res * .95, self.res * .12), fill=(240, 195, 132, 255))
+        if small:
+            # The high/low row is left out at 64 (see the module note).
+            self._text = img
+            return img
         # Switzer has no arrow glyphs; draw the same simple up/down marks as SF Symbols.
-        y = .76 if not small else .79
-        for value, x, up in ((high, .055, True), (low, .39 if small else .25, False)):
-            length = .047 if small else .028
+        y = .76
+        for value, x, up in ((high, .055, True), (low, .25, False)):
+            length = .028
             cx = (x + length / 2) * self.res
             y0, y1 = y * self.res, (y + length) * self.res
             end, tail = (y0, y1) if up else (y1, y0)
             tip = length * self.res * .42
             colour = (225, 228, 219, 255)
-            width = max(1, round(self.res * (.012 if small else .003)))
+            width = max(1, round(self.res * .003))
             draw.line((cx, tail, cx, end), fill=colour, width=width)
             draw.line((cx - tip, end + (tip if up else -tip), cx, end,
                        cx + tip, end + (tip if up else -tip)), fill=colour, width=width)
-            self._label(draw, degrees(value), x + length + .018, y,
-                        .075 if small else .038, fill=colour, max_width=.25)
-        if stale and small:
-            draw.ellipse((self.res * .89, self.res * .06, self.res * .95, self.res * .12), fill=(240, 195, 132, 255))
+            self._label(draw, degrees(value), x + length + .018, y, .038, fill=colour, max_width=.25)
         self._text = img
         return img
 
@@ -276,5 +286,6 @@ class WeatherFace:
             atmosphere = Image.alpha_composite(atmosphere, glow)
         frame = Image.alpha_composite(frame, atmosphere)
         frame = Image.alpha_composite(frame, self._scrim)
-        frame = Image.alpha_composite(frame, self._labels(data, units, place, stale))
+        frame = Image.alpha_composite(frame, self._labels(data, units, place, stale,
+                                                          located=lat is not None and lon is not None))
         return np.asarray(frame.convert("RGB").resize((self.size, self.size), Image.Resampling.LANCZOS))

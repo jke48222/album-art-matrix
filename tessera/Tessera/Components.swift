@@ -401,8 +401,8 @@ struct LampInks: View {
     }
 
     private var label: String {
-        if ignoresColour { return "colour · rainbow makes its own" }
-        return matchArt ? "colour · from the album" : "colour"
+        if ignoresColour { return "colour, rainbow makes its own" }
+        return matchArt ? "colour, from the album" : "colour"
     }
 
     private func dot(_ c: Color) -> some View {
@@ -449,6 +449,13 @@ struct LetterInker: View {
     let colors: [String]
     let accent: Color
     var base = "#eae4d8"
+    /// One ink per code point rather than per Character. The wall's Ticker
+    /// and Crawl ink code points, so a flag, a skin tone or an accent that
+    /// does not compose is one Character but two boxes there, and every
+    /// colour after it landed one letter late. The ticker composer sets
+    /// this. The Studio letters on the phone, which inks whole Characters,
+    /// so it leaves it off.
+    var inksCodePoints = false
     var onChange: ([String]) -> Void
 
     @State private var brush = "#e8b04b"
@@ -457,7 +464,11 @@ struct LetterInker: View {
     static let well = ["#eae4d8", "#e8b04b", "#e0491f", "#7fa87a",
                        "#31c3d4", "#8b7fd4", "#d44a8b"]
 
-    private var glyphs: [Character] { Array(PixelFont.normalize(text).filter { !$0.isWhitespace }) }
+    private var glyphs: [Character] {
+        let visible = PixelFont.normalize(text)
+        guard inksCodePoints else { return Array(visible.filter { !$0.isWhitespace }) }
+        return visible.unicodeScalars.filter { !$0.properties.isWhitespace }.map { Character($0) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -511,6 +522,14 @@ struct LetterInker: View {
                     }
                     .buttonStyle(PressStyle(scale: 0.88))
                 }
+            }
+            .onChange(of: base) { old, new in
+                // Painting pads every letter to an explicit ink, so letters
+                // left in the base ink would keep the old one when the base
+                // changes. They follow it instead.
+                let from = old.lowercased()
+                guard from != new.lowercased(), colors.contains(where: { $0.lowercased() == from }) else { return }
+                onChange(colors.map { $0.lowercased() == from ? new : $0 })
             }
 
             HStack(spacing: 18) {

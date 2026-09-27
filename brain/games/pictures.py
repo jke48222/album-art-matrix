@@ -32,6 +32,7 @@ from . import Game, register
 from .board import blank, fill, rect, line, text, progress
 from ..art.fetch import fetch_art
 from ..art.pipeline import prepare
+from .parking import ParkedClock
 
 
 def _fold(s: str) -> str:
@@ -78,7 +79,7 @@ def pick_sleeve(host, rng: random.Random, size: int, options: dict) -> tuple[Ima
             return prepare(img, size, unsharp_percent=0), _metadata(e)
         except Exception as exc:
             print(f"[games] sleeve {e.get('title')}: {exc}", flush=True)
-    raise RuntimeError("no sleeve in the journal yet; play something first")
+    raise RuntimeError("No sleeve in the journal yet. Play something first.")
 
 
 def _size_of(host) -> int:
@@ -259,9 +260,10 @@ class Reveal(Game):
         self.sleeve, self.entry = pick_sleeve(self.host, rng, self.size, self.options)
         self.answers = {_fold(self.entry.get(key, "")) for key in ("album", "artist", "title")} - {""}
         if not self.answers:
-            raise RuntimeError("this sleeve needs an album, artist or song name")
+            raise RuntimeError("This sleeve needs an album, artist or song name.")
         self.t0 = time.monotonic()
         self._clock = time.monotonic
+        self._park = ParkedClock()
         self.finished_elapsed: float | None = None
         self.guesses: list[tuple[str, str]] = []
         self.guess_count = 0
@@ -272,7 +274,11 @@ class Reveal(Game):
     def elapsed(self) -> float:
         if self.finished_elapsed is not None:
             return self.finished_elapsed
-        return min(self.seconds, max(0.0, self._clock() - self.t0))
+        # The countdown stands still while the game is parked off the wall:
+        # the phone locks guessing then, and the phone's polls would
+        # otherwise run the round out and record it as lost.
+        now = self._park.read(self, self._clock())
+        return min(self.seconds, max(0.0, now - self.t0))
 
     def finish(self, won=False, winner=None, message=None):
         if self.over:

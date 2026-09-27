@@ -162,7 +162,7 @@ class Contexto(Game):
             self.finish(won=True, winner=player if len(self.players) > 1 else None,
                         message=f"{word.upper()} in {len(self.guesses)}.")
         else:
-            self.message = f"{word.upper()} · rank {rank}. Lower is closer."
+            self.message = f"{word.upper()}, rank {rank}. Lower is closer."
             self.changed()
         return {"word": word, "rank": rank, "best": self.best,
                 "guesses": len(self.guesses), "receipt": self.receipt}

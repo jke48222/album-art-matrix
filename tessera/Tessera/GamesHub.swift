@@ -22,6 +22,9 @@ struct GamesSheetBody: View {
     @State private var query = ""
     @State private var category = "All"
     @State private var loaded = false
+    /// True once the wall has answered with its games list, even an empty one.
+    @State private var catalogueRead = false
+    @State private var gamesOff = false
     @State private var problem: String?
     private let mint = Color(hex: 0xBDD6B4)
     private var visible: [GameCard] {
@@ -33,7 +36,7 @@ struct GamesSheetBody: View {
     private var remaining: [GameCard] { visible.filter { !["wordle", "sudoku"].contains($0.name) } }
 
     var body: some View {
-        MessagePage(title: "Games", eyebrow: "A LITTLE FRIENDLY COMPETITION", tint: mint) {
+        MessagePage(title: "Games", eyebrow: "GAMES", tint: mint) {
             hero
             if let game = status?.game {
                 Button { selection = game.name } label: { activeGame(game) }
@@ -43,11 +46,17 @@ struct GamesSheetBody: View {
                 MessageNotice(title: "Your wall is offline", detail: "Reconnect to start or return to a game. Your current board stays on the wall.", symbol: "wifi.slash", tint: mint)
             }
             if let problem { MessageProblem(text: problem) }
-            if !loaded && problem == nil {
+            if gamesOff {
+                MessageNotice(title: "Games are off on this wall", detail: "Turn games on in the wall's feature settings, then pull to refresh.", symbol: "square.grid.2x2", tint: mint)
+            } else if !loaded && problem == nil {
                 HStack(spacing: 12) { ProgressView(); Text("Finding your games…").font(.ui(14)).foregroundStyle(Ink.dim) }
                     .padding(.vertical, 30)
             } else if cards.isEmpty {
-                MessageNotice(title: "No games available", detail: "Pull to refresh when games are enabled on your wall.", symbol: "square.grid.2x2", tint: mint)
+                // Only a list the wall actually sent can be empty. A failed read
+                // already shows its own problem above.
+                if catalogueRead {
+                    MessageNotice(title: "No games available", detail: "Pull to refresh to check again.", symbol: "square.grid.2x2", tint: mint)
+                }
             } else {
                 catalogueControls
                 if visible.isEmpty {
@@ -94,15 +103,13 @@ struct GamesSheetBody: View {
                 if selection == nil, let next = await GameLink.status(host: host), host == wall.host, !Task.isCancelled, selection == nil { status = next }
             }
         }
-        .onChange(of: wall.host) { _, _ in selection = nil; cards = []; status = nil; loaded = false; problem = nil }
+        .onChange(of: wall.host) { _, _ in selection = nil; cards = []; status = nil; loaded = false; catalogueRead = false; gamesOff = false; problem = nil }
     }
     private var hero: some View {
         HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 15) {
-                Text("Make room\nfor play.").font(typeSize.isAccessibilitySize ? .ui(29, .semibold) : .display(42))
+                Text("Choose a game").font(typeSize.isAccessibilitySize ? .ui(29, .semibold) : .display(42))
                     .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
-                Text("A small challenge.\nA good reason to stay a while.").font(.ui(15)).foregroundStyle(Ink.dim)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
             if !typeSize.isAccessibilitySize {
@@ -139,7 +146,7 @@ struct GamesSheetBody: View {
         return VStack(alignment: .leading, spacing: 19) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(card.name == "wordle" ? "FIVE LETTERS. SIX CHANCES." : "A MOMENT OF CLARITY.")
+                    Text(card.name == "wordle" ? "SIX GUESSES AT A FIVE-LETTER WORD" : "FILL THE GRID")
                         .font(.machine(9)).tracking(0.6).foregroundStyle(colour).fixedSize(horizontal: false, vertical: true)
                     Text(card.title).font(.display(33)).foregroundStyle(Ink.ink)
                 }
@@ -150,7 +157,7 @@ struct GamesSheetBody: View {
             HStack {
                 Text(card.playerLabel).font(.ui(12)).foregroundStyle(Ink.dim)
                 Spacer()
-                HStack(spacing: 7) { Text("Let's play").font(.ui(14, .semibold)); Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .semibold)) }
+                HStack(spacing: 7) { Text("Open").font(.ui(14, .semibold)); Image(systemName: "arrow.up.right").font(.system(size: 12, weight: .semibold)) }
                     .foregroundStyle(colour)
             }
         }.padding(22).frame(maxWidth: .infinity, alignment: .leading)
@@ -190,10 +197,18 @@ struct GamesSheetBody: View {
             let result = try await GameLink.catalogue(host: host)
             let next = await GameLink.status(host: host)
             guard !Task.isCancelled, host == wall.host else { return }
-            cards = result; if selection == nil, let next { status = next }; loaded = true; problem = next == nil ? "Couldn’t read the current game. Pull to refresh." : nil
+            cards = result; if selection == nil, let next { status = next }; loaded = true; catalogueRead = true; gamesOff = false
+            problem = next == nil ? "Couldn’t read the current game. Pull to refresh." : nil
+        } catch GameLink.Failure.gamesOff {
+            // The wall answered: nothing to retry, and no current game to read.
+            guard !Task.isCancelled, host == wall.host else { return }
+            cards = []; status = nil; loaded = true; catalogueRead = true; gamesOff = true; problem = nil
         } catch {
             guard !Task.isCancelled, host == wall.host else { return }
-            loaded = true; problem = "Couldn't read games from the wall. Pull to refresh."
+            // A failed read cannot confirm an earlier "games are off" or empty
+            // answer, so only the problem shows. A list already read stays.
+            gamesOff = false; if cards.isEmpty { catalogueRead = false }
+            loaded = true; problem = "Couldn’t read games from the wall. Pull to refresh."
         }
     }
 }
@@ -204,6 +219,7 @@ private struct GameDestination: View {
     let card: GameCard
     @Binding var status: GameStatus?
     @AppStorage("games.player") private var player = ""
+    @AppStorage("games.sudoku.difficulty") private var sudokuDifficulty = "medium"
     @State private var names: [String] = []
     @State private var starting = false
     @State private var problem: String?
@@ -240,6 +256,14 @@ private struct GameDestination: View {
                         if names.count < card.maximumPlayers { Button("Add another player", systemImage: "plus") { names.append("") }.font(.ui(14, .semibold)).frame(minHeight: 44) }
                         if !valid { Text("Give each player a different name.").font(.ui(13)).foregroundStyle(Ink.dim) }
                     }.disabled(starting)
+                    if card.name == "sudoku" {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Difficulty").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
+                            Picker("Difficulty", selection: $sudokuDifficulty) {
+                                Text("Easy").tag("easy"); Text("Medium").tag("medium"); Text("Hard").tag("hard")
+                            }.pickerStyle(.segmented)
+                        }.disabled(starting)
+                    }
                     if let existing = status?.game, !existing.over {
                         MessageNotice(title: "A game is already open", detail: "Starting \(card.title) will end \(existing.title) and count it as played.", symbol: "arrow.triangle.2.circlepath", tint: tint)
                     }
@@ -261,6 +285,11 @@ private struct GameDestination: View {
         let host = wall.host, token = UUID(), players = cleanNames
         generation = token; starting = true; problem = nil
         var body: [String: Any] = ["name": card.name, "players": players]
+        // sudoku.py reads options.difficulty. A stored value from an older
+        // build falls back to medium rather than reaching the wall.
+        if card.name == "sudoku" {
+            body["options"] = ["difficulty": ["easy", "medium", "hard"].contains(sudokuDifficulty) ? sudokuDifficulty : "medium"]
+        }
         if let session = status?.session_id { body["session_id"] = session }
         Task {
             do {

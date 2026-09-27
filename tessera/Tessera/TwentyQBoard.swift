@@ -37,7 +37,7 @@ struct TwentyQBoard: View {
                     } else {
                         HStack(spacing: 9) { answerButtons }
                     }
-                    Text("Or knock once for yes; whistle for no.").font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text("Or knock once for yes, whistle for no.").font(.ui(12)).foregroundStyle(Ink.dim)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if thinking {
                     HStack(spacing: 10) {

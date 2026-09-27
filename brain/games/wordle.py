@@ -90,6 +90,12 @@ class Wordle(Game):
             self.message = f"{guess.upper()} is not a word."
             self.changed()
             return {"error": self.message, "not_a_word": guess}
+        if len(self.players) > 1:
+            # The board says whose turn it is, so the row and any win belong
+            # to that player. The wall's ears have no identity and a shared
+            # phone sends whichever name was picked, so the sender cannot
+            # decide it, and refusing them would block voice play.
+            player = self.players[self.turn]
         marks = mark(guess, self.answer)
         self.rows.append((guess, marks))
         import time as _time
@@ -101,7 +107,7 @@ class Wordle(Game):
         if guess == self.answer:
             n = len(self.rows)
             self.finish(won=True, winner=player if len(self.players) > 1 else None,
-                        message=["Genius.", "Magnificent.", "Impressive.", "Splendid.", "Great.", "Phew."][n - 1])
+                        message=f"Solved in {n} {'guess' if n == 1 else 'guesses'}.")
         elif len(self.rows) >= ROWS:
             self.finish(won=False, message=f"It was {self.answer.upper()}.")
         else:
@@ -116,7 +122,10 @@ class Wordle(Game):
                 "answer": self.answer if self.over else None}
 
     def voice_words(self) -> list[str]:
-        return list(answers5())
+        # Priming the phone's recogniser with the answer pool sent 17 KB on
+        # every poll and only ever used its first entries. The grammar word
+        # is enough; any five-letter word is still heard.
+        return ["guess"]
 
     # ---- the wall --------------------------------------------------------------------------------
     FLIP_STEP, FLIP_S = 0.14, 0.42

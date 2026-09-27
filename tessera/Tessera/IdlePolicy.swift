@@ -8,9 +8,9 @@ enum IdlePolicy: String, CaseIterable, Identifiable {
         switch self {
         case .black: "Go dark"
         case .hold: "Hold the cover"
-        case .dim: "A softer glow"
-        case .ambient: "Let colour drift"
-        case .weather: "Watch the weather"
+        case .dim: "Dim the cover"
+        case .ambient: "Show the Lamp"
+        case .weather: "Show the weather"
         }
     }
     var shortTitle: String {
@@ -24,7 +24,7 @@ enum IdlePolicy: String, CaseIterable, Identifiable {
     }
     var detail: String {
         switch self {
-        case .black: "Rest in darkness until the next song."
+        case .black: "Stay dark until the next song."
         case .hold: "Keep the last cover at your chosen brightness."
         case .dim: "Keep the cover at 30% of your chosen brightness."
         case .ambient: "Your current Lamp effect, colours and pace."

@@ -76,6 +76,16 @@ final class ArchiveStore {
         retryAfter.removeAll(); unavailableTiles.removeAll()
     }
 
+    /// A tile with no picture yet is either on its way or not coming: no art
+    /// URL, one that cannot be read, or a fetch that failed. Reading the
+    /// observed set here is also what redraws the cell when a fetch fails.
+    func tileUnavailable(_ entry: JournalEntry) -> Bool {
+        // a local tile renders synchronously, so missing now means missing
+        if entry.local { return true }
+        guard let key = entry.artURL, URL(string: key) != nil else { return true }
+        return unavailableTiles.contains(key)
+    }
+
     /// The tile for an entry, rendered as emitters. Nil until it arrives;
     /// the cell shows an unlit lattice until then, which is what a panel with
     /// nothing on it actually looks like.
@@ -268,6 +278,7 @@ struct ArchiveScreen: View {
     @State private var opened: WornRun?
     @State private var query = ""
     @State private var showStats = false
+    @State private var missedLive = false
     let accent: Color
 
     private var visible: [WornRun] { ArchiveIndex.matching(store.runs, query: query) }
@@ -284,6 +295,7 @@ struct ArchiveScreen: View {
                     statistics
                 }
                 if let problem = store.failed { connectionNotice(problem) }
+                else if !wall.link.isLive && !wall.link.isStandIn && !store.runs.isEmpty { offlineNotice }
                 if store.runs.isEmpty { empty }
                 else if visible.isEmpty {
                     ContentUnavailableView.search(text: query).foregroundStyle(Ink.ink)
@@ -291,17 +303,19 @@ struct ArchiveScreen: View {
                     ForEach(days, id: \.self) { day in
                         VStack(alignment: .leading, spacing: 14) {
                             HStack(alignment: .firstTextBaseline) {
-                                Text(dayTitle(day)).font(.displayMid(21)).foregroundStyle(Ink.ink)
+                                Text(dayTitle(day)).font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(21)).foregroundStyle(Ink.ink)
                                 Spacer(minLength: 8)
                                 Text(day.formatted(.dateTime.month(.abbreviated).day())).font(.machine(9)).foregroundStyle(Ink.dim)
                             }
                             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 16), count: typeSize.isAccessibilitySize ? 1 : 2), alignment: .leading, spacing: 22) {
                                 ForEach(visible.filter { Calendar.current.isDate($0.entry.date, inSameDayAs: day) }) { run in
+                                    let image = store.tile(run.entry)
+                                    let unavailable = image == nil && store.tileUnavailable(run.entry)
                                     Button { opened = run; Taps.detent() } label: {
-                                        ArchiveTile(run: run, image: store.tile(run.entry), accent: accent)
+                                        ArchiveTile(run: run, image: image, unavailable: unavailable, accent: accent)
                                     }
                                     .buttonStyle(PressStyle(scale: 0.98))
-                                    .accessibilityLabel("\(run.entry.title), \(run.entry.artist), \(run.count) recorded appearance\(run.count == 1 ? "" : "s")")
+                                    .accessibilityLabel("\(run.entry.title), \(run.entry.artist), \(run.count) recorded appearance\(run.count == 1 ? "" : "s")\(unavailable ? ", artwork unavailable" : "")")
                                     .accessibilityHint("Show artwork and put it back on the wall")
                                 }
                             }
@@ -317,6 +331,15 @@ struct ArchiveScreen: View {
         .background(Ink.ground.opacity(0.96).ignoresSafeArea())
         .refreshable { store.retryImages(); await store.load(host: wall.host) }
         .task(id: wall.host) { await store.load(host: wall.host) }
+        .onChange(of: wall.link.isLive) { _, live in
+            if !live { missedLive = true; return }
+            // Back from offline: the history the notice called the last read
+            // is behind the wall's, so read it again.
+            if missedLive || store.failed != nil {
+                missedLive = false
+                Task { await store.load(host: wall.host) }
+            }
+        }
         .sheet(item: $opened) { run in WornDetail(run: run, accent: accent).environment(wall).environment(store) }
         .sheet(isPresented: $showStats) { ListeningStatsPage(runs: store.runs, accent: accent) }
         .onChange(of: store.runs) { _, runs in
@@ -334,12 +357,12 @@ struct ArchiveScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("YOUR COLLECTION OF MOMENTS").font(.machine(8)).tracking(1.1).foregroundStyle(accent.toned(forDark: true))
+                Text("HISTORY").font(.machine(8)).tracking(1.1).foregroundStyle(accent.toned(forDark: true))
                 Spacer()
                 if store.loading { ProgressView().tint(accent).accessibilityLabel("Refreshing history") }
             }
             Text("Archive").font(.display(typeSize.isAccessibilitySize ? 20 : 38)).foregroundStyle(Ink.ink)
-            Text(store.localOnly ? "Saved on this phone." : "Every sleeve leaves a trace.")
+            Text(store.localOnly ? "Saved on this phone." : "What the wall has shown.")
                 .font(.ui(14)).foregroundStyle(Ink.dim)
         }
     }
@@ -365,7 +388,7 @@ struct ArchiveScreen: View {
             if typeSize.isAccessibilitySize {
                 VStack(alignment: .leading, spacing: 12) {
                     Label("Insights", systemImage: "chart.bar.xaxis").font(.ui(16, .semibold)).foregroundStyle(accent.toned(forDark: true))
-                    Text("\(stats.sleeves) sleeves · \(stats.artists) artists").font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text("\(stats.sleeves) sleeves, \(stats.artists) artists").font(.ui(12)).foregroundStyle(Ink.dim)
                 }
             } else {
             HStack(spacing: 16) {
@@ -399,13 +422,20 @@ struct ArchiveScreen: View {
         }
     }
 
+    /// The grid stays readable offline, but it must not pass for live.
+    private var offlineNotice: some View {
+        Label(store.lastLoaded.map { "Wall offline. Showing history from \($0.formatted(date: .omitted, time: .shortened))." }
+              ?? "Wall offline. Showing the last history read.", systemImage: "wifi.slash")
+            .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+    }
+
     private var empty: some View {
         VStack(alignment: .leading, spacing: 18) {
             Image(systemName: store.loading ? "square.stack" : "square.stack.3d.up")
                 .font(.system(size: 52, weight: .ultraLight)).foregroundStyle(accent.toned(forDark: true)).padding(.vertical, 24)
-            Text(store.loading ? "Opening the archive" : store.failed == nil ? "Your first sleeve awaits." : "History is out of reach.")
+            Text(store.loading ? "Loading history" : store.failed == nil ? "Nothing yet" : "History unavailable")
                 .font(.displayMid(29)).foregroundStyle(Ink.ink)
-            Text(store.loading ? "Gathering the things your wall has worn." : store.failed == nil ? "Play something on the wall. Its artwork will find a home here." : "Reconnect to your wall, then pull down to refresh.")
+            Text(store.loading ? "Reading the wall’s history." : store.failed == nil ? "Play something on the wall and it appears here." : "Reconnect to your wall, then pull down to refresh.")
                 .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }.frame(maxWidth: .infinity, minHeight: 260, alignment: .topLeading)
     }
@@ -420,13 +450,14 @@ struct ArchiveScreen: View {
 private struct ArchiveTile: View {
     let run: WornRun
     let image: UIImage?
+    var unavailable = false
     let accent: Color
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
-            ArchiveArtwork(image: image)
+            ArchiveArtwork(image: image, unavailable: unavailable)
                 .overlay(alignment: .bottomTrailing) {
                     if run.count > 1 {
-                        Text("×\(run.count)").font(.machine(10)).foregroundStyle(Ink.ink)
+                        Text("x\(run.count)").font(.machine(10)).foregroundStyle(Ink.ink)
                             .padding(7).background(Ink.ground.opacity(0.92), in: RoundedRectangle(cornerRadius: 7)).padding(8)
                     }
                 }
@@ -439,16 +470,26 @@ private struct ArchiveTile: View {
 
 struct ArchiveArtwork: View {
     let image: UIImage?
+    /// With no image: true when it is not coming (no art, or the fetch
+    /// failed), false while it is still on its way. They used to share one
+    /// glyph, so a failed cover looked like it was loading forever.
+    var unavailable = false
     var body: some View {
         ZStack {
             Ink.plaster
             if let image { Image(uiImage: image).resizable().interpolation(.none).scaledToFit() }
-            else { Image(systemName: "photo").font(.system(size: 32, weight: .light)).foregroundStyle(Ink.dim) }
+            else if unavailable {
+                Image(systemName: "photo.badge.exclamationmark").font(.system(size: 30, weight: .light)).foregroundStyle(Ink.dim)
+            } else {
+                ProgressView().tint(Ink.dim)
+            }
         }
         .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 8))
         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Ink.ink.opacity(0.09), lineWidth: 1))
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Artwork unavailable")
+        .accessibilityHidden(image != nil || !unavailable)
     }
 }
 
@@ -456,6 +497,7 @@ private struct WornDetail: View {
     @Environment(WallSession.self) private var wall
     @Environment(ArchiveStore.self) private var store
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     let run: WornRun
     let accent: Color
     @State private var sending = false
@@ -467,9 +509,10 @@ private struct WornDetail: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
-                    ArchiveArtwork(image: store.tile(run.entry))
+                    let image = store.tile(run.entry)
+                    ArchiveArtwork(image: image, unavailable: image == nil && store.tileUnavailable(run.entry))
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(run.entry.title).font(.display(32)).foregroundStyle(Ink.ink)
+                        Text(run.entry.title).font(typeSize.isAccessibilitySize ? .ui(24, .semibold) : .display(32)).foregroundStyle(Ink.ink)
                         Text(run.entry.artist).font(.ui(18, .medium)).foregroundStyle(Ink.dim)
                         if !run.entry.album.isEmpty { Text(run.entry.album).font(.ui(14)).foregroundStyle(Ink.dim) }
                     }
@@ -486,7 +529,7 @@ private struct WornDetail: View {
                             let ok = await wall.replay(entry: run.entry)
                             guard !Task.isCancelled else { return }
                             sending = false; sent = ok
-                            if !ok { problem = "Couldn’t put this sleeve on the wall. Reconnect and try again." }
+                            if !ok { problem = "Couldn’t show this sleeve on the wall. Check the connection. The artwork may also no longer be available." }
                         }
                     } label: {
                         HStack(spacing: 10) {

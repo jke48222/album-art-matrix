@@ -332,9 +332,9 @@ def test_rejected_timer_transaction_cannot_dismiss_preview_through_an_ignored_mo
 def test_nonvisual_state_edit_keeps_display_session(clock):
     ctrl = ControlState()
     ctrl.display_session.begin(request(purpose="calibration"))
-    assert ctrl.apply({"place": "Douglasville, Georgia"}) == {}
+    assert ctrl.apply({"place": "Philadelphia, Pennsylvania"}) == {}
     assert ctrl.display_session.status()["active"]
-    assert ctrl.get()["place"] == "Douglasville, Georgia"
+    assert ctrl.get()["place"] == "Philadelphia, Pennsylvania"
 
 
 # ---- the guest code never leaves the wall -----------------------------------

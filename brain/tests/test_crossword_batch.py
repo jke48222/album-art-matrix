@@ -202,7 +202,7 @@ def test_partial_remote_clues_fall_back_to_a_complete_authored_puzzle(monkeypatc
     host = SimpleNamespace(ctrl=SimpleNamespace(asker=SimpleNamespace(ready=True, crossword_clues=lambda words: {"puff": "Only one clue"})))
     game = Crossword(host, {"seed": 7})
     game.setup()
-    assert game.clues == fallback.clues
+    assert game.bundled is not None and game.clues == BUNDLED[game.bundled][2]
     assert all(slot["clue"] for slot in game.state()["slots"])
 
 

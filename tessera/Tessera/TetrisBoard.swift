@@ -65,7 +65,7 @@ struct TetrisBoard: View {
         switch scene.phase {
         case "ready": return "Fill a row to clear it. The outline shows where your piece will land."
         case "paused": return game.message.isEmpty ? "Your stack is saved. Resume when you’re ready." : game.message
-        case "finished": return "\(scene.lines) lines cleared · Level \(scene.level)"
+        case "finished": return "\(scene.lines) lines cleared. Level \(scene.level)."
         default: return "Swipe to move or lower. Tap to rotate. Hard drop places the piece immediately."
         }
     }

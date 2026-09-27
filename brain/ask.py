@@ -58,6 +58,17 @@ TOOLS = [
 
 FACES = ("art", "cd", "ambient", "clock", "lyrics", "nine", "off")
 
+# Problems the phone acts on. It keys on the code, never on the words: a 403
+# also mentions a workspace, but only the 400 below needs the workspace field.
+REFUSED = "Claude rejected the key. Replace it in Services."
+FORBIDDEN = "This key cannot use the configured model or workspace. Check access in Claude Console."
+LIMITED = "Claude is limiting requests. Try again in a moment."
+NEEDS_WORKSPACE = "This key needs a workspace ID. Add it in Services, Claude."
+TIMED_OUT = "Claude took too long to respond. Try again."
+OFFLINE = "The wall could not reach Claude. Check its network."
+PROBLEM_CODES = {REFUSED: "refused", FORBIDDEN: "forbidden", LIMITED: "rate_limited",
+                 NEEDS_WORKSPACE: "needs_workspace", TIMED_OUT: "timeout", OFFLINE: "offline"}
+
 
 def system_prompt(size: int) -> str:
     _, chars, lines, _ = layout(size)
@@ -87,7 +98,13 @@ class Asker:
         self._generation = 0
         self._ask_lock = threading.Lock()
         self.pending = False
+        # The Claude connection's problem, which the Claude page shows as
+        # "needs attention". Only failures the owner must fix (the key, its
+        # access, its workspace) or a question's own failure set it.
         self.problem = None
+        # The last song guess's miss, for the earworm page only: a line that
+        # names no song is not a broken connection.
+        self.earworm_problem = None
         self.answers = 0
         self.cost_usd = 0.0
         self.last = None                    # {"q", "a", "s", "usd", "tools"}
@@ -102,6 +119,7 @@ class Asker:
             self._generation += 1
             self._client = None
             self.problem = None
+            self.earworm_problem = None
 
     @property
     def ready(self) -> bool:
@@ -123,21 +141,43 @@ class Asker:
         """Provider exception bodies and URLs can contain secrets; never publish them."""
         code = getattr(exc, "status_code", None)
         if code == 401:
-            return "Claude rejected the key. Replace it in Services."
+            return REFUSED
         if code == 403:
-            return "This key cannot use the configured model or workspace. Check access in Claude Console."
+            return FORBIDDEN
         if code == 429:
-            return "Claude is limiting requests. Try again in a moment."
+            return LIMITED
         if code == 400 and "workspace" in str(exc).lower():
-            return "This key needs a workspace ID. Add it in Services, Claude."
+            return NEEDS_WORKSPACE
         if isinstance(exc, TimeoutError):
-            return "Claude took too long to respond. Try again."
+            return TIMED_OUT
         return "Claude could not complete the request. Check the connection and try again."
 
-    def _problem_for(self, generation: int, message: str):
+    def _problem_for(self, generation: int, message: str | None):
         with self._lock:
             if generation == self._generation:
                 self.problem = message
+
+    @staticmethod
+    def _needs_owner(exc: Exception) -> bool:
+        """A failure only the owner can fix: the key refused, no access to the
+        model or workspace, or a workspace ID missing. A timeout, a busy
+        service or a dropped network passes on its own."""
+        code = getattr(exc, "status_code", None)
+        return code in (401, 403) or (code == 400 and "workspace" in str(exc).lower())
+
+    def _helper_failed(self, generation: int, what: str, exc: Exception):
+        """A game's or a drawing's call to Claude failed. The caller already
+        falls back or says so, so only an owner-level failure is kept as the
+        connection's problem."""
+        why = self._safe_problem(exc)
+        print(f"[ask] {what}: {why}", flush=True)
+        if self._needs_owner(exc):
+            self._problem_for(generation, why)
+
+    def _worked(self, generation: int):
+        """Claude answered, so the key and workspace work: a problem from an
+        earlier call no longer describes this connection."""
+        self._problem_for(generation, None)
 
     # ---- the tools ------------------------------------------------------------------------
     def _run_tool(self, name: str, args: dict):
@@ -195,22 +235,26 @@ class Asker:
                 return {"answer": None, "error": "Add your Claude key in Services to begin.", "busy": False}
             self.problem = None
             try:
-                answer = self._ask_answer(question, size)
+                answer, ok = self._ask_answer(question, size)
             except Exception as exc:
                 # Client construction and optional dependencies can fail before
                 # the request itself. Never strand a phone's pending state.
                 self._problem_for(generation, self._safe_problem(exc))
-                answer = "The wall couldn't reach Claude. Check Services and try again."
+                answer, ok = "The wall couldn't reach Claude. Check Services and try again.", False
             if generation != self._generation:
                 return {"answer": None, "error": "The Claude connection changed. Try the question again.", "busy": False}
-            if self.problem:
+            # Success is what _ask_answer says, never self.problem: the
+            # earworm and the games write that from other threads, and a
+            # paid answer must not come back as an error because of them.
+            if not ok:
                 return {"answer": None, "error": answer, "busy": False}
             return {"answer": answer, "error": None, "busy": False}
         finally:
             self.pending = False
             self._ask_lock.release()
 
-    def _ask_answer(self, question: str, size: int = 64) -> str:
+    def _ask_answer(self, question: str, size: int = 64) -> tuple[str, bool]:
+        """(words, answered): the answer, or the words that say why not."""
         import anthropic
         t0 = time.monotonic()
         generation = self._generation
@@ -221,7 +265,7 @@ class Asker:
         try:
             for _ in range(MAX_TOOL_ROUNDS):
                 if generation != self._generation:
-                    return "The Claude connection changed. Try the question again."
+                    return "The Claude connection changed. Try the question again.", False
                 remaining = 75.0 - (time.monotonic() - t0)
                 if remaining <= 0:
                     raise TimeoutError("Question exceeded its response window")
@@ -231,7 +275,7 @@ class Asker:
                     output_config={"effort": "low"}, timeout=remaining,
                 )
                 if generation != self._generation:
-                    return "The Claude connection changed. Try the question again."
+                    return "The Claude connection changed. Try the question again.", False
                 usage_in += getattr(resp.usage, "input_tokens", 0) or 0
                 usage_out += getattr(resp.usage, "output_tokens", 0) or 0
                 if resp.stop_reason == "refusal":
@@ -245,7 +289,7 @@ class Asker:
                             used.append(block.name)
                             with self._lock:
                                 if generation != self._generation:
-                                    return "The Claude connection changed. Try the question again."
+                                    return "The Claude connection changed. Try the question again.", False
                                 out = self._run_tool(block.name, dict(block.input or {}))
                             results.append({"type": "tool_result", "tool_use_id": block.id,
                                             "content": json.dumps(out)})
@@ -254,30 +298,30 @@ class Asker:
                 answer = " ".join(b.text for b in resp.content if b.type == "text").strip()
                 break
             else:
-                answer = "That took too many steps; ask me again more simply."
+                answer = "That took too many steps. Ask me again more simply."
         except TimeoutError:
-            self._problem_for(generation, "answer timed out")
-            return "That took too long. Try a shorter question."
+            self._problem_for(generation, TIMED_OUT)
+            return "That took too long. Try a shorter question.", False
         except anthropic.AuthenticationError:
-            self._problem_for(generation, "Claude rejected the key")
-            return "Claude rejected the key on this wall."
+            self._problem_for(generation, REFUSED)
+            return "Claude rejected the key on this wall.", False
         except anthropic.RateLimitError:
-            self._problem_for(generation, "rate limited")
-            return "Claude is busy; ask again in a moment."
+            self._problem_for(generation, LIMITED)
+            return "Claude is busy. Ask again in a moment.", False
         except anthropic.APIConnectionError:
-            self._problem_for(generation, "no network")
-            return "No answer right now: the network is away."
+            self._problem_for(generation, OFFLINE)
+            return "No answer right now: the network is away.", False
         except anthropic.APIStatusError as exc:
             self._problem_for(generation, self._safe_problem(exc))
-            return "Claude could not answer just now."
+            return "Claude could not answer just now.", False
         except Exception as exc:
             self._problem_for(generation, self._safe_problem(exc))
-            return "Something went wrong asking."
+            return "Something went wrong asking.", False
         answer = answer or "I have nothing to say to that."
         usd = usage_in * PRICE_IN + usage_out * PRICE_OUT
         with self._lock:
             if generation != self._generation:
-                return "The Claude connection changed. Try the question again."
+                return "The Claude connection changed. Try the question again.", False
             self.cost_usd += usd
             self.answers += 1
             self.problem = None
@@ -287,21 +331,21 @@ class Asker:
             del self.history[12:]
             print(f"[ask] {question!r} -> {answer!r} in {self.last['s']} s, "
                   f"{usage_in}+{usage_out} tokens, ${usd:.4f}, tools {used}", flush=True)
-        return answer or "I have nothing to say to that."
+        return answer, True
 
     def earworm(self, words: str) -> dict | None:
         """{title, artist, confidence, alternatives:[{title, artist}]} from
         the words someone remembers, or None."""
         if not self.ready:
-            self.problem = "Connect Claude in Services to identify a song."
+            self.earworm_problem = "Connect Claude in Services to identify a song."
             return None
         if not isinstance(words, str) or not words.strip() or len(words) > 2000:
-            self.problem = "Add a lyric or a description, up to 2,000 characters."
+            self.earworm_problem = "Add a lyric or a description, up to 2,000 characters."
             return None
         try:
             from pydantic import BaseModel, Field
         except ImportError:
-            self.problem = "Song identification needs the Claude service dependencies installed on this wall."
+            self.earworm_problem = "Song identification needs the Claude service dependencies installed on this wall."
             return None
         class Guess(BaseModel):
             title: str
@@ -312,9 +356,9 @@ class Asker:
             confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
             alternatives: list[Guess]
         if not self._ask_lock.acquire(blocking=False):
-            self.problem = "Claude is finishing another request. Try again in a moment."
+            self.earworm_problem = "Claude is finishing another request. Try again in a moment."
             return None
-        self.pending, self.problem = True, None
+        self.pending, self.earworm_problem = True, None
         generation = self._generation
         try:
             resp = self._client_().messages.parse(
@@ -328,10 +372,11 @@ class Asker:
             )
             if generation != self._generation:
                 return None
+            self._worked(generation)
             self.answers += 1
             got = resp.parsed_output
             if got is None or not got.title.strip() or not got.artist.strip():
-                self.problem = "No confident match yet. Add another line, an artist, or the decade."
+                self.earworm_problem = "No confident match yet. Add another line, an artist, or the decade."
                 return None
             title, artist = got.title.strip()[:300], got.artist.strip()[:300]
             alternatives, seen = [], {(title.casefold(), artist.casefold())}
@@ -347,7 +392,12 @@ class Asker:
                     "alternatives": alternatives}
         except Exception as exc:
             print(f"[ask] earworm: {type(exc).__name__}", flush=True)
-            self._problem_for(generation, "Song identification could not finish. Check Claude in Services, then try again.")
+            # The page shows why this guess failed. Only a failure the owner
+            # must fix also marks the Claude connection.
+            self.earworm_problem = (self._safe_problem(exc) if self._needs_owner(exc) else
+                                    "Song identification could not finish. Check Claude in Services, then try again.")
+            if self._needs_owner(exc):
+                self._problem_for(generation, self.earworm_problem)
             return None
         finally:
             self.pending = False
@@ -364,6 +414,7 @@ class Asker:
             words: list[str]
         class Puzzle(BaseModel):
             groups: list[Group]
+        generation = self._generation
         try:
             resp = self._client_().messages.parse(
                 model=self.model, max_tokens=600,
@@ -376,6 +427,7 @@ class Asker:
                 messages=[{"role": "user", "content": f"A fresh puzzle, please (variation {salt:.3f})."}],
                 output_format=Puzzle, output_config={"effort": "low"},
             )
+            self._worked(generation)
             usage = getattr(resp, "usage", None)
             if usage is not None:
                 self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
@@ -383,8 +435,7 @@ class Asker:
             got = resp.parsed_output
             return [(g.theme, [w.strip().lower() for w in g.words]) for g in got.groups]
         except Exception as exc:
-            self.problem = self._safe_problem(exc)
-            print(f"[ask] connections: {self.problem}", flush=True)
+            self._helper_failed(generation, "connections", exc)
             return None
 
     def strands_set(self, salt: float = 0.0) -> tuple[str, str, list[str]] | None:
@@ -398,6 +449,7 @@ class Asker:
             theme: str
             spangram: str
             words: list[str]
+        generation = self._generation
         for attempt in range(2):
             try:
                 resp = self._client_().messages.parse(
@@ -410,6 +462,7 @@ class Asker:
                     messages=[{"role": "user", "content": f"A fresh set, please (variation {salt:.3f}, try {attempt + 1})."}],
                     output_format=StrandsSet, output_config={"effort": "low"},
                 )
+                self._worked(generation)
                 usage = getattr(resp, "usage", None)
                 if usage is not None:
                     self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
@@ -422,8 +475,7 @@ class Asker:
                         and len(set(words + [span])) == len(words) + 1:
                     return got.theme.strip(), span, words
             except Exception as exc:
-                self.problem = self._safe_problem(exc)
-                print(f"[ask] strands: {self.problem}", flush=True)
+                self._helper_failed(generation, "strands", exc)
                 return None
         return None
 
@@ -439,6 +491,7 @@ class Asker:
         class Round(BaseModel):
             theme: str
             questions: list[Q]
+        generation = self._generation
         try:
             resp = self._client_().messages.parse(
                 model=self.model, max_tokens=1500,
@@ -450,6 +503,7 @@ class Asker:
                 messages=[{"role": "user", "content": f"A round, please (variation {salt:.3f})."}],
                 output_format=Round, output_config={"effort": "low"},
             )
+            self._worked(generation)
             usage = getattr(resp, "usage", None)
             if usage is not None:
                 self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
@@ -459,8 +513,7 @@ class Asker:
             qs = [q for q in qs if q[0] and q[1]][:n]
             return (got.theme.strip(), qs) if len(qs) >= 5 else None
         except Exception as exc:
-            self.problem = self._safe_problem(exc)
-            print(f"[ask] quiz: {self.problem}", flush=True)
+            self._helper_failed(generation, "quiz", exc)
             return None
 
     def crossword_clues(self, words: list[str]) -> dict[str, str] | None:
@@ -473,6 +526,7 @@ class Asker:
             clue: str
         class Clues(BaseModel):
             clues: list[Clue]
+        generation = self._generation
         try:
             resp = self._client_().messages.parse(
                 model=self.model, max_tokens=600,
@@ -481,6 +535,7 @@ class Asker:
                 messages=[{"role": "user", "content": ", ".join(words)}],
                 output_format=Clues, output_config={"effort": "low"},
             )
+            self._worked(generation)
             usage = getattr(resp, "usage", None)
             if usage is not None:
                 self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
@@ -488,8 +543,7 @@ class Asker:
             out = {c.word.strip().lower(): c.clue.strip() for c in resp.parsed_output.clues}
             return out if all(w in out for w in words) else None
         except Exception as exc:
-            self.problem = self._safe_problem(exc)
-            print(f"[ask] clues: {self.problem}", flush=True)
+            self._helper_failed(generation, "clues", exc)
             return None
 
     def image_prompt(self, prompt: str, size: int = 64) -> str | None:
@@ -498,6 +552,7 @@ class Asker:
         if not self.ready:
             return None
         from .imagine import IMAGE_SYSTEM
+        generation = self._generation
         try:
             resp = self._client_().messages.create(
                 model=self.model, max_tokens=200,
@@ -506,18 +561,20 @@ class Asker:
                 output_config={"effort": "low"},
             )
             text = " ".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
+            self._worked(generation)
             usage = getattr(resp, "usage", None)
             if usage is not None:
                 self.cost_usd += (getattr(usage, "input_tokens", 0) or 0) * PRICE_IN \
                     + (getattr(usage, "output_tokens", 0) or 0) * PRICE_OUT
             return text or None
         except Exception as exc:
-            self.problem = self._safe_problem(exc)
-            print(f"[ask] image prompt: {self.problem}", flush=True)
+            self._helper_failed(generation, "image prompt", exc)
             return None
 
     def status(self) -> dict:
         with self._lock:
             return {"ready": self.ready, "pending": self.pending, "model": self.model, "answers": self.answers,
                     "cost_usd": round(self.cost_usd, 4), "last": dict(self.last) if self.last else None, "problem": self.problem,
+                    # None for any other problem, so the phone never guesses from the words
+                    "problem_code": PROBLEM_CODES.get(self.problem),
                     "workspace_set": bool(self.workspace), "history": [dict(item) for item in self.history]}

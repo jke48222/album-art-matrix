@@ -71,10 +71,11 @@ def test_snake(tmp_path):
     assert host.move(None, {"start": True})["started"]
     assert host.hear("left") and g.next_dir == (1, 0)                    # no reversing
     assert host.hear("up")["dir"] == (0, -1)
+    mid = g.N // 2
     clock[0] = 0.25
     g.step()
-    assert g.body[0] == (16, 14) and len(g.body) == 3
-    g.food = (16, 13)
+    assert g.body[0] == (mid, mid - 2) and len(g.body) == 3
+    g.food = (mid, mid - 3)
     clock[0] = 0.35
     g.step()
     assert g.score == 1 and len(g.body) == 4

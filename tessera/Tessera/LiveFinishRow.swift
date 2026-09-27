@@ -1,11 +1,13 @@
 import SwiftUI
 
 struct LiveFinishRow: View {
+    @Environment(WallSession.self) private var wall
     let host: String
     let mode: String
     let current: String
     let accent: Color
     let ink: GlassInk
+    /// A fallback source for the swatches in phone preview, where no wall renders them.
     var sleeve: UIImage? = nil
     var pick: (String) -> Void
     @State private var images = WallImages()
@@ -21,7 +23,7 @@ struct LiveFinishRow: View {
                                 ink.fill
                                 if let image = images.shots[finish] { Image(uiImage: image).resizable().interpolation(.none).scaledToFit() }
                                 else if images.loading { ProgressView().tint(accent) }
-                                else { Image(systemName: "photo").foregroundStyle(ink.dim) }
+                                else { Image(systemName: images.phoneOnly ? "square.dashed" : "photo").foregroundStyle(ink.dim) }
                             }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(current == finish ? accent : ink.ink.opacity(0.1), lineWidth: current == finish ? 2 : 1))
                             Label(finish.capitalized, systemImage: current == finish ? "checkmark.circle.fill" : "circle")
@@ -31,8 +33,18 @@ struct LiveFinishRow: View {
                 }
             }
             Text(images.problem ?? "Rendered by your wall").font(.ui(11)).foregroundStyle(ink.dim)
-        }.task(id: "\(host)|\(mode)|\(scenePhase)") {
-            if scenePhase == .active { await images.watch(host: host, path: "/finishes", interval: 0.6) }
+        }.task(id: "\(host)|\(mode)|\(scenePhase)|\(wall.link.isStandIn)") {
+            guard scenePhase == .active else { return }
+            if wall.link.isStandIn {
+                // No wall answers at `host` in phone preview: draw the swatches here.
+                await images.standIn(every: 2) {
+                    // read live each pass: the captured `sleeve` is the one from when the task began
+                    WallImages.localFinishes(sleeve: WallImages.phoneSleeve ?? sleeve, frame: wall.frame,
+                                             frameIsCleanArt: wall.state.mode == "art" && wall.state.finish == "clean")
+                }
+            } else {
+                await images.watch(host: host, path: "/finishes", interval: 0.6)
+            }
         }
     }
 }

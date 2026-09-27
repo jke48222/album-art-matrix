@@ -17,7 +17,10 @@ final class SpotifyLink: NSObject {
     @ObservationIgnored private var operation = UUID()
     @ObservationIgnored private var pending: Receipt?
 
-    static let scopes = "user-read-currently-playing user-read-playback-state user-modify-playback-state"
+    /// Read-only, matching the wall's own SCOPES (brain/nowplaying/spotify.py).
+    /// The wall keeps this token behind its LAN API, so it must not be able
+    /// to control playback.
+    static let scopes = "user-read-currently-playing user-read-playback-state"
     static let redirect = "tessera://spotify"
     var canRetryDelivery: Bool { pending != nil && !busy }
 

@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from brain.games.host import GameHost                  # noqa: E402
 from brain.games import quiz                           # noqa: E402,F401
 from brain.games.quiz import BUNDLED, SHOW_ANSWER_S    # noqa: E402
-from brain.tests.test_games import FakeCtrl            # noqa: E402
+from brain.tests.test_games import FakeCtrl, shown_for  # noqa: E402
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")
 
@@ -37,10 +37,10 @@ def test_a_round(tmp_path):
     r = host.hear("Sydney", "Sam")
     assert r["right"] is False and g.phase == "answer"                        # everyone answered: reveal
     assert host.status()["game"]["answer"] == "canberra"
-    clock[0] += SHOW_ANSWER_S + 0.1
+    shown_for(host, clock, SHOW_ANSWER_S + 0.1)
     st = host.status()["game"]
     assert st["number"] == 2 and st["phase"] == "question"
-    clock[0] += 25.0                                                          # nobody answers: time moves on
+    shown_for(host, clock, 21.0)                                              # nobody answers: time moves on
     st = host.status()["game"]
     assert st["phase"] == "answer" and st["answer"] == "6"
     host.move(None, {"next": True})

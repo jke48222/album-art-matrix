@@ -22,6 +22,7 @@ from PIL import Image
 from . import Game, register
 from .board import blank, disc, line, progress, text_centred
 from ..art.pipeline import prepare
+from .parking import ParkedClock, parked
 from .pictures import _fold
 
 WORDS = ["elephant", "lighthouse", "bicycle", "umbrella", "cactus", "penguin", "rocket", "snowman", "guitar",
@@ -65,7 +66,7 @@ class Pictionary(Game):
         requested = self.options.get("word")
         if requested is not None and (not isinstance(requested, str) or not 2 <= len(requested.strip()) <= 48
                                       or not re.fullmatch(r"[a-z]+(?: [a-z]+){0,4}", requested.strip().lower())):
-            raise ValueError("choose a short word or phrase using letters A–Z")
+            raise ValueError("Choose a short word or phrase using letters A to Z.")
         seed = self.options.get("seed")
         if seed is not None and (isinstance(seed, bool) or not isinstance(seed, (int, str))):
             raise ValueError("seed must be an integer or text")
@@ -84,6 +85,7 @@ class Pictionary(Game):
         self.t0: float | None = None
         self.finished_elapsed: float | None = None
         self._clock = time.monotonic
+        self._park = ParkedClock()
         self.guesses: list[tuple[str, str]] = []
         self._tried: set[tuple[str, str]] = set()
         self.receipt = self.drawing_revision = 0
@@ -127,7 +129,7 @@ class Pictionary(Game):
             self.faces = {}
             self.drawing_revision += 1
             if self.t0 is None:
-                self.t0 = self._clock()
+                self.t0 = self._now()
             self.drawing = not final
             if final:
                 self._request += 1  # Late partial callbacks cannot replace the final picture.
@@ -151,16 +153,22 @@ class Pictionary(Game):
                     return
                 self.drawing = False
                 self.problem = ("The drawing stopped early. Keep guessing from this sketch." if self.picture else
-                                "The picture couldn't be drawn. Try drawing it again; your timer has not started.")
+                                "The picture couldn't be drawn. Try drawing it again. Your timer has not started.")
                 self.message = "Keep guessing from the sketch." if self.picture else "Try the drawing again."
                 self.changed()
+
+    def _now(self):
+        """The round's own time, which stands still while the game is parked
+        off the wall: the phone locks guessing then, so the minute must not
+        run out with nobody able to answer."""
+        return self._park.read(self, self._clock())
 
     def elapsed(self) -> float:
         if self.finished_elapsed is not None:
             return self.finished_elapsed
         if self.t0 is None:
             return 0.0
-        return min(self.seconds, max(0.0, self._clock() - self.t0))
+        return min(self.seconds, max(0.0, self._now() - self.t0))
 
     def finish(self, won=False, winner=None, message=None):
         with self._lock:
@@ -205,6 +213,8 @@ class Pictionary(Game):
                 return {"error": "the game is over"}
             if self.t0 is None:
                 return {"error": "wait for the first lines of the drawing"}
+            if parked(self):
+                return {"error": "Return the picture to the wall to guess."}
             if not isinstance(text, str) or not 1 <= len(text.strip()) <= 120:
                 return {"error": "enter a complete name up to 120 characters"}
             text = text.strip()
@@ -235,6 +245,7 @@ class Pictionary(Game):
             return {"drawing": self.drawing, "elapsed": round(elapsed, 1), "seconds": self.seconds,
                     "remaining": round(max(0, self.seconds - elapsed), 1), "picture_ready": self.picture is not None,
                     "phase": "finished" if self.over else "playing" if self.picture else "drawing" if self.drawing else "error",
+                    "paused": self._park.since is not None and not self.over,
                     "drawing_revision": self.drawing_revision, "frame_step": int(elapsed),
                     "guesses": [{"text": guess, "who": who} for guess, who in self.guesses[-12:]],
                     "guess_count": self.receipt, "receipt": self.receipt,

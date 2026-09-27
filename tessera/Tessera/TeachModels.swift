@@ -16,7 +16,7 @@ struct TaughtList: Decodable {
 
         var sources: String {
             how.map { switch $0 { case "ear": "This room"; case "preview": "Preview"; case "told": "By name"; default: "Learned" } }
-                .joined(separator: " · ")
+                .joined(separator: ", ")
         }
         func matches(_ query: String) -> Bool {
             let haystack = "\(title) \(artist) \(album ?? "")".folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
@@ -41,6 +41,9 @@ struct TaughtList: Decodable {
     }
     var enabled: Bool?
     var landmarks: Int?
+    /// A wall with no library (teach off, or no ears) answers only
+    /// {"enabled": false, "songs": []}. A real library always reports min_score.
+    var available: Bool { min_score != nil }
     var min_score: Int?
     var songs: [Song]
     var last_match: Recognition?
@@ -79,7 +82,7 @@ struct TaughtList: Decodable {
             let confirmed = path.hasSuffix("/forget") ? json?["forgot"] as? Bool == true : json?["learnt"] is [String: Any]
             return (confirmed, confirmed ? nil : "The wall hasn't confirmed this change. Refresh before trying again.")
         } catch {
-            return (false, "The reply didn't arrive. Refresh the library before trying again; the wall may have finished.")
+            return (false, "The reply didn't arrive. The wall may have finished, so refresh before trying again.")
         }
     }
 }

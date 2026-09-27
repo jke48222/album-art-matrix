@@ -30,7 +30,7 @@ struct VoicePage: View {
     private var typed: String { said.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        VoicePageLayout(title: "Voice", eyebrow: "A VOICE IN THE ROOM", tint: violet) {
+        VoicePageLayout(title: "Voice", eyebrow: "VOICE CONTROL", tint: violet) {
             hero
             if let problem { VoiceProblem(text: problem) }
             if let issue = status?.problem ?? status?.wake_problem ?? status?.wake?.problem ?? status?.speech?.problem {
@@ -56,7 +56,7 @@ struct VoicePage: View {
             commandComposer
             wakeWord
             recent
-            VoiceNotice(title: "The microphone is on your wall", detail: "Wake-word matching and speech recognition happen on the wall. Questions use your connected Claude account; searches use their connected services.", symbol: "waveform", tint: Ink.dim)
+            VoiceNotice(title: "The microphone is on your wall", detail: "Wake-word matching and speech recognition happen on the wall. Questions use your connected Claude account. Searches use their connected services.", symbol: "waveform", tint: Ink.dim)
         }
         .navigationDestination(isPresented: $enrollDestination) { WakeEnrollPage(accent: violet) }
         .onAppear {
@@ -94,18 +94,18 @@ struct VoicePage: View {
     }
 
     private var stateTitle: String {
-        if !wall.link.isLive { return "A quiet connection." }
-        if !loaded { return "Finding your voice." }
-        if stale { return "One moment." }
-        if status?.on != true { return "Voice is resting." }
-        if state == "idle" && meter?.mic_available == false { return "A quiet microphone." }
+        if !wall.link.isLive { return "Offline" }
+        if !loaded { return "Loading" }
+        if stale { return "Reconnecting" }
+        if status?.on != true { return "Voice is off" }
+        if state == "idle" && meter?.mic_available == false { return "No microphone signal" }
         switch state {
-        case "listening": return "I’m listening."
-        case "thinking": return "A little thought."
-        case "answering": return "On your wall."
-        case "enrolling": return "Learning your voice."
-        case "missed": return "Say that again?"
-        default: return "Just say the word."
+        case "listening": return "Listening"
+        case "thinking": return "Thinking"
+        case "answering": return "Answering"
+        case "enrolling": return "Learning your phrase"
+        case "missed": return "Did not catch that"
+        default: return "Ready"
         }
     }
 
@@ -442,8 +442,8 @@ struct WakeEnrollPage: View {
     private var active: Bool { ["takes", "talk", "building"].contains(enroll?.stage ?? "") }
 
     var body: some View {
-        VoicePageLayout(title: "Your wake word", eyebrow: "MADE FOR YOUR VOICE", tint: accent) {
-            Text(active ? "Make it yours." : enroll?.stage == "done" ? "A familiar voice." : "A phrase\nonly you choose.")
+        VoicePageLayout(title: "Your wake word", eyebrow: "WAKE WORD", tint: accent) {
+            Text(active ? "Recording your phrase" : enroll?.stage == "done" ? "Wake word ready" : "Choose a\nwake phrase")
                 .font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(42)).foregroundStyle(Ink.ink)
                 .fixedSize(horizontal: false, vertical: true)
             if !loaded && wall.link.isLive { ProgressView("Checking for an existing session…").font(.ui(14)).tint(accent) }
@@ -459,7 +459,7 @@ struct WakeEnrollPage: View {
             }
             if !active && enroll?.stage != "done" {
                 VStack(alignment: .leading, spacing: 22) {
-                    instruction("01", title: "Choose a little phrase", detail: "Two or three words that you wouldn’t say by accident.")
+                    instruction("01", title: "Choose a phrase", detail: "Two or three words that you wouldn’t say by accident.")
                     instruction("02", title: "Say it six times", detail: "Stand where you usually talk to the wall. Pause after each take.")
                     instruction("03", title: "Let the room sound normal", detail: "Talk naturally for ten seconds. This helps the wall avoid accidental wakes.")
                 }
@@ -534,7 +534,7 @@ struct WakeEnrollPage: View {
                 let left = max(0, min(total, value.talk_left ?? total))
                 ProgressView(value: total - left, total: total).tint(accent)
                     .accessibilityLabel("Room sound recording").accessibilityValue("\(Int(left.rounded(.up))) seconds remaining")
-                Text("\(Int(left.rounded(.up))) seconds · talk about anything else").font(.ui(14)).foregroundStyle(Ink.dim)
+                Text("\(Int(left.rounded(.up))) seconds left. Talk about anything else.").font(.ui(14)).foregroundStyle(Ink.dim)
             } else {
                 HStack(spacing: 12) { ProgressView().tint(accent); Text("Finding what makes your phrase distinct.").font(.ui(14)).foregroundStyle(Ink.dim) }
             }

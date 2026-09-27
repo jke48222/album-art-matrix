@@ -47,7 +47,7 @@ struct ContextoBoard: View {
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
             if guesses.isEmpty {
-                Text(game.over ? "This round ended before your first guess." : "Start with any familiar idea. Follow the meaning of your closest words; spelling does not determine the rank.")
+                Text(game.over ? "This round ended before your first guess." : "Start with any familiar idea. Follow the meaning of your closest words. Spelling does not determine the rank.")
                     .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             } else { wordHistory }
             if !game.over { revealControl }
@@ -107,7 +107,7 @@ struct ContextoBoard: View {
         if game.over {
             return "\(game.won ? "Found" : "Revealed"), \(displayedWord). Rank one. \(count) unique guesses."
         }
-        guard let rank else { return "Find the secret word by meaning. Lower ranks are closer; rank one is the answer." }
+        guard let rank else { return "Find the secret word by meaning. Lower ranks are closer. Rank one is the answer." }
         return "\(displayedWord), rank \(rank), \(dialBand). Best rank \(best ?? rank). \(count) unique guesses. Lower is closer."
     }
     private var composer: some View {
@@ -118,7 +118,7 @@ struct ContextoBoard: View {
             } else {
                 HStack(spacing: 9) { wordField; enterButton.frame(width: 86) }
             }
-            Text(!word.isEmpty && !validDraft ? "Use one word with letters A–Z." : "Lower is closer. Rank 1 is the word.")
+            Text(!word.isEmpty && !validDraft ? "Use one word with letters A to Z." : "Lower is closer. Rank 1 is the word.")
                 .font(.ui(12)).foregroundStyle(!word.isEmpty && !validDraft ? near : Ink.dim)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -157,7 +157,7 @@ struct ContextoBoard: View {
             }
         }.padding(.top, 3)
     }
-    private var historyTitle: some View { Text("Your trail · \(count)").font(.ui(19, .semibold)).foregroundStyle(paper) }
+    private var historyTitle: some View { Text("Guesses (\(count))").font(.ui(19, .semibold)).foregroundStyle(paper) }
     private var orderButton: some View {
         Button { recentFirst.toggle() } label: {
             Label(recentFirst ? "Recent first" : "Closest first", systemImage: "arrow.up.arrow.down")
@@ -217,7 +217,7 @@ struct ContextoBoard: View {
             Text("Keep guessing").font(.ui(14, .semibold)).frame(minHeight: 44)
         }.buttonStyle(.plain).foregroundStyle(close)
         Button { send(["give_up": true]) } label: {
-            Text("Reveal & end round").font(.ui(14, .semibold)).frame(minHeight: 44)
+            Text("Reveal and end round").font(.ui(14, .semibold)).frame(minHeight: 44)
         }.buttonStyle(.plain).foregroundStyle(near)
     }
     private func submit() {

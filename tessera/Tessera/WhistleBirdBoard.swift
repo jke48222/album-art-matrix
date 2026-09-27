@@ -93,10 +93,10 @@ struct WhistleBirdBoard: View {
     }
     private var title: String {
         switch phase {
-        case "ready": "A little night flight."
-        case "calibrating": "Finding your range."
-        case "paused": "Your place is saved."
-        case "finished": "A soft landing."
+        case "ready": "Ready"
+        case "calibrating": "Setting your range"
+        case "paused": "Paused"
+        case "finished": "Flight over"
         default: "Find the opening."
         }
     }
@@ -105,15 +105,18 @@ struct WhistleBirdBoard: View {
         case "ready": "Whistle low, then high. Or start with touch and slide to set your height. The bird will wait for you."
         case "calibrating": "Try a low whistle, then a high one. The world stays still while your range is set."
         case "paused": "The flight paused while the wall caught up. Continue when you’re ready."
-        case "finished": game.state["reason"].string == "ground" ? "The bird reached the ground. \(scene.score) openings cleared this flight." : "The bird caught an edge. \(scene.score) openings cleared this flight."
+        case "finished": game.state["reason"].string == "ground" ? "The bird reached the ground. \(cleared) this flight." : "The bird caught an edge. \(cleared) this flight."
         default: game.state["source"].string == "phone" ? "Slide on the sky to choose a height. Touch holds it steady until you move again." : "Whistle high to climb, low to descend. Between whistles, the bird glides down."
         }
     }
 
+    /// "1 opening cleared", "2 openings cleared".
+    private var cleared: String { "\(scene.score) \(scene.score == 1 ? "opening" : "openings") cleared" }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack(alignment: .firstTextBaseline) {
-                Text(phase == "finished" ? "FLIGHT COMPLETE" : "THE NIGHT IS YOURS")
+                Text(phase == "finished" ? "FLIGHT COMPLETE" : "WHISTLE BIRD")
                     .font(.machine(10)).foregroundStyle(FlightInk.pipeLight)
                 Spacer(minLength: 5)
                 if let best = game.state["best"].int, best > 0 {
@@ -159,7 +162,7 @@ struct WhistleBirdBoard: View {
             if !typeSize.isAccessibilitySize { launchControls }
             if phase == "flying" && !typeSize.isAccessibilitySize { steeringControls }
             if !game.over {
-                Label("The wall runs the flight. This view follows its latest position; network delay can affect touch steering.", systemImage: "wifi")
+                Label("The wall runs the flight. This view follows its latest position. Network delay can affect touch steering.", systemImage: "wifi")
                     .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -176,7 +179,7 @@ struct WhistleBirdBoard: View {
                 self.touchHeight = nil
             }
             if justFinished {
-                UIAccessibility.post(notification: .announcement, argument: "Flight finished. \(scene.score) openings cleared.")
+                UIAccessibility.post(notification: .announcement, argument: "Flight finished. \(cleared).")
             }
         }
     }
@@ -218,7 +221,7 @@ struct WhistleBirdBoard: View {
     private var accessibilityStatus: String {
         let next = scene.pipes.filter { $0.x + 6 / 64 > 0.25 }.min { $0.x < $1.x }
         let gap = next.map { "Next opening is \(Int((1 - $0.gap) * 100)) percent high." } ?? "Open sky ahead."
-        return "\(scene.score) openings cleared. Bird is \(Int((1 - scene.y) * 100)) percent high. \(gap)"
+        return "\(cleared). Bird is \(Int((1 - scene.y) * 100)) percent high. \(gap)"
     }
     private func presentation(at date: Date) -> FlightScene {
         let latest = current ?? scene
@@ -240,7 +243,9 @@ struct WhistleBirdBoard: View {
         let now = Date()
         if final || now.timeIntervalSince(lastSent) >= 0.06 {
             lastSent = now
-            send(["y": next])
+            // The final flag keeps GameScreen from dropping this position when
+            // it has to wait behind a slow reply: touchHeight stays on it.
+            send(final ? ["y": next, GameSteeringBuffer.finalKey: true] : ["y": next])
         }
     }
 }

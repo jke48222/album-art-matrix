@@ -59,7 +59,10 @@ final class PressingStore {
         folder = base.appendingPathComponent("Pressings", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         file = folder.appendingPathComponent("pressings.json")
-        load()
+        photoCache.countLimit = 8
+        // Pruned only against a list that was actually read: an unreadable
+        // file must not cost every photo it names.
+        if load() { prunePhotos() }
     }
 
     func choice(for song: String) -> PressingChoice? { overrides[song] }
@@ -96,22 +99,39 @@ final class PressingStore {
         do { try data.write(to: folder.appendingPathComponent(name), options: .atomic); saveError = nil; return name } catch { saveError = "The photo couldn’t be saved."; return nil }
     }
 
-    private var photoCache: [String: UIImage] = [:]
+    /// Decoded 1024 px photos are about 4 MB each. A dictionary kept every
+    /// one ever opened for the life of the app. A few is all a screen shows.
+    private let photoCache = NSCache<NSString, UIImage>()
     func photo(_ name: String?) -> UIImage? {
         guard let name, (name as NSString).lastPathComponent == name else { return nil }
-        if let c = photoCache[name] { return c }
+        if let c = photoCache.object(forKey: name as NSString) { return c }
         guard let img = UIImage(contentsOfFile: folder.appendingPathComponent(name).path) else { return nil }
-        photoCache[name] = img
+        photoCache.setObject(img, forKey: name as NSString)
         return img
+    }
+
+    /// Every pick writes a new photo, and nothing removed one: not Reset,
+    /// Use sleeve, a replaced choice, a deleted saved pressing or a preview
+    /// that was never kept. At launch nothing is mid-edit, so any photo no
+    /// kept choice names can go.
+    private func prunePhotos() {
+        let kept = Set(overrides.values.compactMap(\.photo) + library.compactMap(\.choice.photo))
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: folder.path) else { return }
+        for name in names where name.hasSuffix(".jpg") && !kept.contains(name) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+        }
     }
 
     // MARK: On disk
 
     private struct Disk: Codable { var overrides: [String: PressingChoice]; var library: [SavedPressing] }
 
-    private func load() {
-        guard let data = try? Data(contentsOf: file), let d = try? JSONDecoder().decode(Disk.self, from: data) else { return }
+    /// True when the saved choices are known: read, or never written.
+    @discardableResult private func load() -> Bool {
+        guard FileManager.default.fileExists(atPath: file.path) else { return true }
+        guard let data = try? Data(contentsOf: file), let d = try? JSONDecoder().decode(Disk.self, from: data) else { return false }
         overrides = d.overrides.mapValues { $0.sanitized }; library = d.library.map { var item = $0; item.choice = item.choice.sanitized; return item }
+        return true
     }
 
     private func save() -> Bool {

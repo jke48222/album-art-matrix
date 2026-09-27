@@ -19,6 +19,9 @@ struct ImaginePage: View {
     @State private var readVersion = 0
     @State private var requestID = UUID()
     @State private var removal: WallImagined.Item?
+    /// The wall's last failure, once the user has moved on from it. The wall
+    /// keeps it (games' drawings set it too), so every poll put it back.
+    @State private var dismissedProblem: String?
     @State private var serviceState: WallServices?
     @State private var musicConnected = Service.appleMusicAuthorized
     @State private var musicRefused = Service.appleMusicRefused
@@ -39,15 +42,9 @@ struct ImaginePage: View {
     }
     private var canAct: Bool { connected && !readFailed && !pending && mutatingID == nil }
     private var statusTitle: String {
-        if typeSize.isAccessibilitySize {
-            if pending { return "Taking shape." }
-            if gallery?.live?.stage == "failed" { return "A fresh start." }
-            return selected != nil ? "Your creation." : "A new idea."
-        }
-        if pending { return gallery?.live?.stage == "partial" ? "Colour is arriving." : "An idea takes shape." }
-        if gallery?.live?.stage == "failed" { return "A fresh start." }
-        if selected != nil { return "Made of imagination." }
-        return "Make room for\nthe unexpected."
+        if pending { return "Creating" }
+        if gallery?.live?.stage == "failed" { return "Could not create" }
+        return selected != nil ? "Saved picture" : "Imagine a picture"
     }
 
     var body: some View {
@@ -79,7 +76,7 @@ struct ImaginePage: View {
             }
         }
         .onChange(of: wall.host) { _, _ in
-            gallery = nil; selectedID = nil; problem = nil; loaded = false; readFailed = false
+            gallery = nil; selectedID = nil; problem = nil; dismissedProblem = nil; loaded = false; readFailed = false
             submitting = false; mutatingID = nil; requestID = UUID(); readVersion += 1
         }
         .confirmationDialog("Remove this picture?", isPresented: Binding(
@@ -96,11 +93,11 @@ struct ImaginePage: View {
 
     private var heading: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("THE IMAGINATION STUDIO").font(.machine(9)).tracking(0.8).foregroundStyle(peach)
+            Text("PICTURES FROM WORDS").font(.machine(9)).tracking(0.8).foregroundStyle(peach)
                 .accessibilityHidden(true)
             Text(statusTitle).font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .display(38))
                 .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
-            Text(pending ? "The picture is being created on your wall. You can leave this page; it will be saved here." : "A few words. A whole new world for your wall.")
+            Text(pending ? "The picture is being created on your wall. You can leave this page. It will be saved here." : "Describe a picture and the wall creates it.")
                 .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -141,9 +138,9 @@ struct ImaginePage: View {
                     ImagineBlankCanvas(tint: peach)
                         .overlay(alignment: .bottomLeading) {
                             VStack(alignment: .leading, spacing: 5) {
-                                Text(pending ? "CREATING ON YOUR WALL" : "YOUR NEXT PICTURE")
+                                Text(pending ? "CREATING ON YOUR WALL" : "NO PICTURE YET")
                                     .font(.machine(9)).foregroundStyle(peach)
-                                Text(pending ? "Waiting for the first image" : "Begins with a few words")
+                                Text(pending ? "Waiting for the first image" : "Describe a picture below")
                                     .font(.ui(14)).foregroundStyle(Ink.dim)
                             }.padding(22)
                         }.accessibilityElement(children: .combine)
@@ -171,12 +168,10 @@ struct ImaginePage: View {
                     }
                 } else if let item = selected {
                     Text(item.prompt).font(.ui(18, .medium)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 7) {
-                        if let provider = item.provider { Text(provider == "google" ? "Imagen" : "OpenAI") }
-                        if let seconds = item.took_s, seconds.isFinite {
-                            Text("·"); Text("\(Int(seconds.rounded()))s to create")
-                        }
-                    }.font(.ui(12)).foregroundStyle(Ink.dim)
+                    let provider: String? = item.provider.map { $0 == "google" ? "Imagen" : "OpenAI" }
+                    let took: String? = item.took_s.flatMap { $0.isFinite ? "\(Int($0.rounded()))s to create" : nil }
+                    let facts: [String] = [provider, took].compactMap { $0 }
+                    if !facts.isEmpty { Text(facts.joined(separator: ", ")).font(.ui(12)).foregroundStyle(Ink.dim) }
                     if !showLive {
                         action(mutatingID == item.id ? "Putting it on the wall…" : "Show on the wall", symbol: "square.grid.3x3", enabled: canAct, busy: mutatingID == item.id) {
                             change(item, operation: .show)
@@ -195,7 +190,7 @@ struct ImaginePage: View {
                         }.accessibilityLabel("Remove picture from collection").disabled(!canAct).buttonStyle(.plain).foregroundStyle(Ink.dim)
                     }
                 } else {
-                    Text("Original pictures made for your room. Every finished creation is kept here.")
+                    Text("Finished pictures are saved here.")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(.top, 16)
@@ -205,7 +200,7 @@ struct ImaginePage: View {
     private var composer: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text(selected == nil ? "Start with a thought" : "Imagine something new")
+                Text(selected == nil ? "Describe a picture" : "Create another picture")
                     .font(.ui(18, .semibold)).foregroundStyle(Ink.ink)
                 Spacer(minLength: 0)
                 Image(systemName: "sparkles").foregroundStyle(peach).accessibilityHidden(true)
@@ -216,20 +211,20 @@ struct ImaginePage: View {
                 .disabled(pending).accessibilityLabel("Picture description")
                 .onChange(of: prompt) { _, value in
                     if value.count > 1200 { prompt = String(value.prefix(1200)) }
-                    problem = nil
+                    dismissProblem()
                 }
             Rectangle().fill(Ink.hairline).frame(height: 1)
             if typed.isEmpty && !pending {
                 VStack(alignment: .leading, spacing: 0) {
-                    promptRow("Something otherworldly", words: "A glass moon floating over a still ink-blue sea, luminous amber reflections", symbol: "moon.stars")
-                    promptRow("A small beautiful thing", words: "A tiny red mushroom beneath a towering fern, warm morning light on velvet moss", symbol: "leaf")
+                    promptRow("Moon over the sea", words: "A glass moon floating over a still ink-blue sea, luminous amber reflections", symbol: "moon.stars")
+                    promptRow("Mushroom under a fern", words: "A tiny red mushroom beneath a towering fern, warm morning light on velvet moss", symbol: "leaf")
                 }
             }
             action(pending ? "Creating your picture…" : "Create a picture", symbol: "sparkles",
                    enabled: canAct && gallery?.ready == true && !typed.isEmpty && (gallery?.cooldown_s ?? 0) <= 0,
                    busy: pending, perform: create)
             Text((gallery?.cooldown_s ?? 0) > 0 && !pending
-                 ? "The studio is taking a short breath. Ready again in \(Int(ceil(gallery?.cooldown_s ?? 0))) seconds."
+                 ? "Ready again in \(Int(ceil(gallery?.cooldown_s ?? 0))) seconds."
                  : "Uses your image service. Creation can take a few minutes. Finished pictures stay on the wall for ten minutes.")
                 .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }.padding(20).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 24))
@@ -259,7 +254,7 @@ struct ImaginePage: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 1 : 2), spacing: 20) {
                 ForEach(items) { item in
                     Button {
-                        selectedID = item.id; problem = nil; typing = false; Taps.detent(); scroll()
+                        selectedID = item.id; dismissProblem(); typing = false; Taps.detent(); scroll()
                     } label: {
                         VStack(alignment: .leading, spacing: 9) {
                             artwork(item).aspectRatio(1, contentMode: .fit)
@@ -318,18 +313,30 @@ struct ImaginePage: View {
         let oldStage = gallery?.live?.stage
         if result.showing_id != gallery?.showing_id, result.showing_id != nil { selectedID = result.showing_id }
         gallery = result
-        if result.live?.stage == "failed" { problem = result.live?.problem ?? result.problem ?? "This picture couldn't be created. Your words are ready to try again." }
-        else if let failure = result.problem, !result.isDrawing { problem = failure }
+        if let failure = Self.failure(in: result) {
+            if failure != dismissedProblem { problem = failure }
+        } else { dismissedProblem = nil }       // cleared on the wall: a repeat is news
         if oldStage == "waiting" || oldStage == "partial", result.live?.stage == "done" {
             Taps.commit()
             AccessibilityNotification.Announcement("Your picture is ready in Imagine.").post()
         }
     }
 
+    /// The failure the wall is reporting, if any.
+    private static func failure(in result: WallImagined) -> String? {
+        if result.live?.stage == "failed" { return result.live?.problem ?? result.problem ?? "This picture couldn't be created. Your words are ready to try again." }
+        return result.isDrawing ? nil : result.problem
+    }
+
+    private func dismissProblem() {
+        if problem != nil { dismissedProblem = gallery.flatMap(Self.failure(in:)) }
+        problem = nil
+    }
+
     private func create() {
         guard canAct, gallery?.ready == true, !typed.isEmpty else { return }
         let host = wall.host, words = typed, token = UUID()
-        requestID = token; readVersion += 1; submitting = true; problem = nil; typing = false
+        requestID = token; readVersion += 1; submitting = true; dismissProblem(); typing = false
         Task {
             let result = await WallImagined.create(host: host, prompt: words)
             guard host == wall.host, requestID == token else { return }
@@ -343,7 +350,7 @@ struct ImaginePage: View {
     private func change(_ item: WallImagined.Item, operation: WallImagined.Operation) {
         guard canAct else { return }
         let host = wall.host, token = UUID()
-        requestID = token; readVersion += 1; mutatingID = item.id; removal = nil; problem = nil
+        requestID = token; readVersion += 1; mutatingID = item.id; removal = nil; dismissProblem()
         Task {
             let result = await WallImagined.change(host: host, id: item.id, operation: operation)
             guard host == wall.host, requestID == token else { return }

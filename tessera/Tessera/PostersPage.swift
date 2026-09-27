@@ -34,7 +34,7 @@ struct PostersPage: View {
         if tmdb?.checking == true { return "Checking TMDB" }
         if tmdb?.problem != nil { return "Connection needs attention" }
         if tmdb?.verified == true { return "TMDB connected" }
-        return ready ? "Key saved · awaiting a check" : "A key opens the picture library"
+        return ready ? "Key saved, not checked yet" : "No key saved"
     }
     var body: some View {
         ScrollView {
@@ -50,7 +50,7 @@ struct PostersPage: View {
                     ProgressView("Reading poster status").tint(gold).frame(maxWidth: .infinity, minHeight: 80)
                 } else {
                     if let issue = problem ?? tmdb?.problem {
-                        CreativeConnectionNotice(title: "Let's reconnect", detail: issue, symbol: "exclamationmark.circle", tint: gold)
+                        CreativeConnectionNotice(title: "Needs attention", detail: issue, symbol: "exclamationmark.circle", tint: gold)
                             .accessibilityIdentifier("posters.problem")
                     }
                     if ready {
@@ -87,12 +87,12 @@ struct PostersPage: View {
         VStack(alignment: .leading, spacing: typeSize.isAccessibilitySize ? 12 : 20) {
             HStack(spacing: 10) {
                 Image(systemName: "film").font(.system(size: 21, weight: .medium))
-                Text(typeSize.isAccessibilitySize ? "TMDB" : "PICTURE HOUSE").font(.machine(typeSize.isAccessibilitySize ? 10 : 11)).tracking(typeSize.isAccessibilitySize ? 0 : 2)
+                Text(typeSize.isAccessibilitySize ? "TMDB" : "POSTERS").font(.machine(typeSize.isAccessibilitySize ? 10 : 11)).tracking(typeSize.isAccessibilitySize ? 0 : 2)
                 Spacer(minLength: 0)
                 if !typeSize.isAccessibilitySize { Text("TMDB").font(.machine(10)).tracking(1) }
             }.foregroundStyle(gold)
             if !typeSize.isAccessibilitySize {
-                Text("For your\nopening scene.").font(.display(40)).tracking(-1.3).fixedSize(horizontal: false, vertical: true)
+                Text("Film and TV posters").font(.display(40)).tracking(-1.3).fixedSize(horizontal: false, vertical: true)
                 PosterAperture(tint: gold).frame(height: 78).accessibilityHidden(true)
             }
             Group {
@@ -105,12 +105,14 @@ struct PostersPage: View {
             }
         }
     }
-    private func recentPoster(_ last: WallServices.Tmdb.Last) -> some View {
+    /// `lookup` is the answer to this page's Look up title, which the wall
+    /// keeps apart from the poster its Mac last found, and from the count.
+    private func recentPoster(_ last: WallServices.Tmdb.Last, lookup: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("Latest match").font(.ui(13, .medium)).foregroundStyle(gold)
+                Text(lookup ? "Lookup result" : "Latest match").font(.ui(13, .medium)).foregroundStyle(gold)
                 Spacer()
-                if !typeSize.isAccessibilitySize { Text("\(tmdb?.posters ?? 0) FOUND").font(.machine(9)).tracking(1).foregroundStyle(Ink.dim) }
+                if !lookup && !typeSize.isAccessibilitySize { Text("\(tmdb?.posters ?? 0) FOUND").font(.machine(9)).tracking(1).foregroundStyle(Ink.dim) }
             }
             let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 18)) : AnyLayout(HStackLayout(alignment: .top, spacing: 20))
             layout {
@@ -122,7 +124,7 @@ struct PostersPage: View {
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     Text(last.title).font(typeSize.isAccessibilitySize ? .ui(18, .semibold) : .display(28)).tracking(-0.5).fixedSize(horizontal: false, vertical: true)
-                    Text([last.kind == "movie" ? "Film" : "Series", last.year.map(String.init)].compactMap { $0 }.joined(separator: " · "))
+                    Text([last.kind == "movie" ? "Film" : "Series", last.year.map(String.init)].compactMap { $0 }.joined(separator: ", "))
                         .font(.ui(13, .medium)).foregroundStyle(gold)
                     if let overview = last.overview, !overview.isEmpty, !typeSize.isAccessibilitySize {
                         Text(overview).font(.ui(13)).foregroundStyle(Ink.dim).lineLimit(4)
@@ -136,11 +138,11 @@ struct PostersPage: View {
             }
             Text("A lookup result, not a live wall preview.").font(.ui(12)).foregroundStyle(Ink.dim)
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
-            .background(gold.opacity(0.055), in: RoundedRectangle(cornerRadius: 18)).accessibilityIdentifier("posters.latest")
+            .background(gold.opacity(0.055), in: RoundedRectangle(cornerRadius: 18)).accessibilityIdentifier(lookup ? "posters.lookupResult" : "posters.latest")
     }
     private var emptyHistory: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text("The first frame awaits.").font(.display(25)).fixedSize(horizontal: false, vertical: true)
+            Text("No posters yet").font(.display(25)).fixedSize(horizontal: false, vertical: true)
             Text("Try a title below, or play a film on your Mac. Its reporter passes the name to your wall.").font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }.padding(.vertical, 6)
     }
@@ -154,6 +156,9 @@ struct PostersPage: View {
             CreativeConnectionAction(title: working ? "Checking…" : "Look up title", tint: gold, busy: working, enabled: canLookup) {
                 check(title: title.trimmingCharacters(in: .whitespacesAndNewlines))
             }.accessibilityIdentifier("posters.lookup")
+            // A lookup no longer replaces the Mac's latest match, so its
+            // own answer is shown here, under the button that asked.
+            if tmdb?.state == "matched", let checked = tmdb?.checked { recentPoster(checked, lookup: true) }
             if tmdb?.state == "no_match" {
                 Text("No poster matched. Try the film or series name without an episode number.").font(.ui(14)).foregroundStyle(gold)
                     .accessibilityIdentifier("posters.noMatch")
@@ -190,7 +195,7 @@ struct PostersPage: View {
             Button { openURL(URL(string: "https://www.themoviedb.org/settings/api")!) } label: {
                 Label("Get a key from TMDB", systemImage: "arrow.up.right").font(.ui(14, .medium)).frame(minHeight: 44)
             }.foregroundStyle(gold)
-            Text("Use a 32-character API key or an API Read Access Token. Saving stores it on your wall; checking confirms whether TMDB accepts it.")
+            Text("Use a 32-character API key or an API Read Access Token. Saving stores it on your wall. Checking confirms whether TMDB accepts it.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             if ready {
                 Divider().overlay(gold.opacity(0.15))
@@ -212,7 +217,7 @@ struct PostersPage: View {
                 Image(systemName: "laptopcomputer").font(.system(size: 23)).foregroundStyle(gold)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Connect your Mac").font(.ui(16, .semibold))
-                    Text("The bridge from movie night to wall.").font(.ui(13)).foregroundStyle(Ink.dim)
+                    Text("Its reporter sends the titles of films and series.").font(.ui(13)).foregroundStyle(Ink.dim)
                 }
                 Spacer(minLength: 0)
                 Image(systemName: "chevron.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(gold)
@@ -224,7 +229,7 @@ struct PostersPage: View {
             Divider().overlay(gold.opacity(0.12))
             Image("TMDBMark").resizable().scaledToFit().frame(width: 148, height: 20).accessibilityLabel("The Movie Database")
             Text("Posters & film information by TMDB").font(.ui(12, .medium)).foregroundStyle(gold)
-            Text("This product uses the TMDB API but is not endorsed or certified by TMDB. Your key stays on the wall; titles are sent to TMDB for matching.")
+            Text("This product uses the TMDB API but is not endorsed or certified by TMDB. Your key stays on the wall. Titles are sent to TMDB for matching.")
                 .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -256,11 +261,13 @@ struct PostersPage: View {
         guard wall.link.isLive, !working, ready else { return }
         let host = wall.host, id = UUID(); revision = id; busy = true; problem = nil; feedback = nil
         Task {
-            let fresh = await WallServices.checkPosters(host: host, title: title ?? "")
+            let outcome = await WallServices.checkPosters(host: host, title: title ?? "")
             guard !Task.isCancelled, wall.host == host, revision == id else { return }
             revision = UUID(); busy = false
-            if let fresh { services = fresh; readFailed = false; Taps.commit() }
-            else { problem = "The check couldn't start. Wait a moment, then try again." }
+            if let fresh = outcome.services { services = fresh; readFailed = false; Taps.commit() }
+            // The wall's own words when it refused (a 400 says what to type
+            // instead). The generic line only when it said nothing usable.
+            else { problem = outcome.error ?? "The check couldn't start. Wait a moment, then try again." }
         }
     }
 }
@@ -301,6 +308,9 @@ extension WallServices {
         var posters: Int?
         var known: Int?
         var last: Last?
+        /// This page's own lookup. The wall keeps it apart from `last`, the
+        /// poster the Mac's reporter found. Older walls leave it out.
+        var checked: Last?
         var problem: String?
         var state: String?
         var checking: Bool?

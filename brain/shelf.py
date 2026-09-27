@@ -274,6 +274,22 @@ class Shelf:
         if due or self._requested:
             self.sync()
 
+    @staticmethod
+    def _read_problem(exc: Exception) -> str:
+        """What a failed read means for the owner. A wrong username and a
+        private collection cannot be fixed by trying again, so they say what
+        will fix them."""
+        status = getattr(getattr(exc, "response", None), "status_code", None)
+        if isinstance(exc, PermissionError) or status == 401:
+            return "Discogs rejected the token. Check your account in Discogs settings."
+        # _http_get's 404, exactly: a KeyError or IndexError is also a
+        # LookupError and means a malformed answer, not a missing user.
+        if type(exc) is LookupError or status == 404:
+            return "Discogs could not find this username. Check it in Manage Discogs account."
+        if status == 403:
+            return "This collection is private to another account. Use a token for the same username."
+        return "Discogs couldn’t finish this read. Your previous collection is safe. Try again."
+
     def sync(self) -> int:
         """Every release in folder 0, page by page. Returns how many."""
         if not self.configured or not self._sync_lock.acquire(blocking=False):
@@ -328,9 +344,7 @@ class Shelf:
         except Exception as exc:
             with self._lock:
                 if generation == self._generation:
-                    self.problem = ("Discogs rejected the token. Check your account in Discogs settings."
-                                    if isinstance(exc, PermissionError) else
-                                    "Discogs couldn’t finish this read. Your previous collection is safe; try again.")
+                    self.problem = self._read_problem(exc)
             print(f"[shelf] read failed: {type(exc).__name__}", flush=True)
             return 0
         finally:

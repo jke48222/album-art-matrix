@@ -42,7 +42,7 @@ def test_play(tmp_path):
     r = host.hear(" ".join(g.groups[2][1]), "Jalen")
     assert r["colour"] == "blue"
     r = host.move("Jalen", {"words": g.groups[3][1]})
-    assert g.over and g.won and g.message == "Great." and host.status()["game"]["groups"][3]["colour"] == "purple"
+    assert g.over and g.won and g.message == "Solved with 1 mistake." and host.status()["game"]["groups"][3]["colour"] == "purple"
 
 
 def test_four_mistakes(tmp_path):
@@ -52,7 +52,7 @@ def test_four_mistakes(tmp_path):
     a, b = g.groups[0][1], g.groups[1][1]
     for k in range(4):
         host.move(None, {"words": a[:2] + b[k:k + 2] if k < 3 else a[1:3] + b[:2]})
-    assert g.over and not g.won and g.message.startswith("Four mistakes")
+    assert g.over and not g.won and g.message == "Out of mistakes."      # the board shows the groups
 
 
 def test_the_board_at_both_sizes(tmp_path):

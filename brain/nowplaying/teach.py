@@ -182,8 +182,18 @@ def pcm_from_bytes(raw: bytes) -> np.ndarray:
 
 
 # ---- the library ---------------------------------------------------------------------
+def _pair_keys(hashes: np.ndarray, times: np.ndarray) -> np.ndarray:
+    """(hash, time) pairs as one sortable 64 bit key each."""
+    return (np.asarray(hashes).astype(np.uint64) << np.uint64(32)) | \
+        np.asarray(times).astype(np.int64).astype(np.uint64) & np.uint64(0xFFFFFFFF)
+
+
 class TeachBusy(RuntimeError):
     """A preview or room recording already owns the teacher."""
+
+
+class TeachTooShort(RuntimeError):
+    """A preview was found but held too little distinct sound to learn."""
 
 
 class Match:
@@ -244,7 +254,10 @@ class Library:
             return
         except (OSError, ValueError, KeyError, TypeError, EOFError, zipfile.BadZipFile) as exc:
             self._load_failed = True
-            self.problem = f"Could not read the song library: {exc}"
+            # The phone shows this. The exception's own words stay in the log.
+            print(f"[teach] could not read the song library: {type(exc).__name__}: {exc}", flush=True)
+            self.problem = ("The saved song library could not be read. Repair or restore it "
+                            "before adding or removing songs.")
 
     def _save(self):
         if self._load_failed:
@@ -273,8 +286,9 @@ class Library:
 
     @property
     def generation(self):
-        with self._lock:
-            return self._generation
+        # No lock: the render loop reads this every pass (Teacher.observe),
+        # and an int read is atomic. learn() holds the lock through a save.
+        return self._generation
 
     # ---- songs ----------------------------------------------------------------------
     @staticmethod
@@ -282,11 +296,13 @@ class Library:
         return f"{_plain(artist).split(',')[0]}|{_plain(title)}"
 
     def has(self, title: str, artist: str, how: str | None = None) -> bool:
-        with self._lock:
-            s = self.songs.get(self.song_id(title, artist))
-            if s is None:
-                return False
-            return True if how is None else how in s.get("how", [])
+        # No lock, for the same reason as generation: a dict get and a list
+        # membership test are atomic, and the render loop must never wait
+        # for learn() to finish writing the library to the SD card.
+        s = self.songs.get(self.song_id(title, artist))
+        if s is None:
+            return False
+        return True if how is None else how in list(s.get("how", []))
 
     def configure(self, min_score=None):
         if min_score is not None:
@@ -326,15 +342,24 @@ class Library:
                 if v and not song.get(k):
                     song[k] = v
             idx = self._ids.index(sid)
-            self._hash = np.concatenate([self._hash, hs])
-            self._song = np.concatenate([self._song, np.full(hs.size, idx, dtype=np.int32)])
-            self._time = np.concatenate([self._time, ts])
-            # Re-teaching a preview must not inflate a future match's votes.
-            rows = np.unique(np.stack([self._hash, self._song, self._time], axis=1), axis=0)
-            self._hash = rows[:, 0].astype(np.uint32)
-            self._song = rows[:, 1].astype(np.int32)
-            self._time = rows[:, 2].astype(np.int32)
-            song["landmarks"] = int(np.count_nonzero(self._song == idx))
+            # Re-teaching a preview must not inflate a future match's votes,
+            # so only this clip's new (hash, time) pairs for this song go in.
+            # They are merged into the hash-sorted arrays in place of order:
+            # one pass over the library, where sorting all of it again
+            # (np.unique over millions of rows) held this lock for a second
+            # and took hundreds of MB on a 990 MB Pi.
+            mine = self._song == idx
+            known = _pair_keys(self._hash[mine], self._time[mine])
+            new = np.unique(_pair_keys(hs, ts))
+            if known.size:
+                new = new[~np.isin(new, known)]
+            new_hash = (new >> np.uint64(32)).astype(np.uint32)
+            new_time = (new & np.uint64(0xFFFFFFFF)).astype(np.uint32).astype(np.int32)
+            at = np.searchsorted(self._hash, new_hash, side="right")
+            self._hash = np.insert(self._hash, at, new_hash).astype(np.uint32, copy=False)
+            self._song = np.insert(self._song, at, np.full(new.size, idx, dtype=np.int32)).astype(np.int32, copy=False)
+            self._time = np.insert(self._time, at, new_time).astype(np.int32, copy=False)
+            song["landmarks"] = int(np.count_nonzero(mine)) + int(new.size)
             try:
                 self._save()
             except RuntimeError:
@@ -578,22 +603,28 @@ class Teacher:
             if self._start(self._learn_ear, now):
                 self._ear_taught[sid] = self.library.generation
 
-    def _begin(self, title, artist):
+    def _begin(self, title, artist, manual=False):
         if not self._busy.acquire(blocking=False):
             return False
         self._job_generation = self.library.generation
         with self._state_lock:
-            self.learning = f"{artist} — {title}"
-            self.problem = None
+            self.learning = f"{title} by {artist}"
+            if manual:
+                self.problem = None
         return True
 
-    def _finish(self, song=None, problem=None):
+    def _finish(self, song=None, problem=None, manual=False):
+        """problem is shown on the phone only for a song someone asked the
+        wall to learn. Learning from the room happens on its own, and its
+        failures (a network blip, a preview nobody asked for) are logged,
+        not left on the page as a problem nobody made."""
         with self._state_lock:
             if song:
                 self.last_learned = {"id": Library.song_id(song["title"], song["artist"]),
                                      "title": song["title"], "artist": song["artist"],
                                      "at": int(time.time())}
-            self.problem = problem
+            if manual:
+                self.problem = problem
             self.learning = None
         self._busy.release()
 
@@ -653,7 +684,7 @@ class Teacher:
         title, artist = title.strip(), artist.strip()
         if not title or not artist or len(title) > 200 or len(artist) > 200:
             raise ValueError("Enter a song title and artist, up to 200 characters each.")
-        if not self._begin(title, artist):
+        if not self._begin(title, artist, manual=True):
             raise TeachBusy("The wall is learning another song. Try again when it finishes.")
         song, problem = None, None
         try:
@@ -667,13 +698,19 @@ class Teacher:
                                       duration_ms=meta.get("duration_ms"), how="told",
                                       expected_generation=self._job_generation)
             if song is None:
-                problem = "The preview did not contain enough distinct sound to learn."
+                # Found but unusable, which is not "no preview": its own error
+                # so the phone (a RuntimeError is a 502 with these words) and
+                # the voice say what really happened.
+                problem = "The preview did not contain enough distinct sound to learn. Try another recording."
+                raise TeachTooShort(problem)
             return song
+        except TeachTooShort:
+            raise
         except Exception as exc:
             problem = str(exc)
             raise
         finally:
-            self._finish(song, problem)
+            self._finish(song, problem, manual=True)
 
     def status(self) -> dict:
         with self._state_lock:

@@ -346,7 +346,7 @@ final class TextMover {
                     PixelDraw.text(&rgb, String(ch), x: x, y: i * lineH,
                                    rgb: ink, scale: 1,
                                    width: 64, height: maskH)
-                    gi += 1
+                    gi += Self.inks(ch)
                 }
                 x += PixelFont.advance
             }
@@ -386,6 +386,13 @@ final class TextMover {
         }
     }
 
+    /// How many inks a Character uses. The wall inks code points, so a flag
+    /// or a skin tone takes one ink per scalar there. Stepping by one here
+    /// put every later letter on the ink before its own.
+    private static func inks(_ ch: Character) -> Int {
+        max(1, ch.unicodeScalars.filter { !$0.properties.isWhitespace }.count)
+    }
+
     /// One frame at time t, and whether a non-looping run has finished.
     func frame(at t: Double) -> (px: [UInt8], done: Bool) {
         style == .across ? slide(t) : crawl(t)
@@ -407,7 +414,7 @@ final class TextMover {
                     let ink = gi < colors.count ? colors[gi] : color
                     PixelDraw.text(&px, String(ch), x: x, y: (64 - 14) / 2,
                                    rgb: ink, scale: 2)
-                    gi += 1
+                    gi += Self.inks(ch)
                 }
                 x += PixelFont.advance * 2
             }

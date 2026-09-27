@@ -62,9 +62,9 @@ struct ConnectionsBoard: View {
 
     private var heading: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(game.over ? "The full picture." : "Find the thread.")
+            Text(game.over ? "All groups" : "Connections")
                 .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .displayMid(30)).foregroundStyle(Ink.ink)
-            Text(game.over ? (game.won ? "FOUR CONNECTIONS" : "THE REVEAL") : "FOUR WORDS. ONE IDEA.")
+            Text(game.over ? (game.won ? "ALL FOUND" : "REVEALED") : "4 GROUPS OF 4")
                 .font(.machine(8)).tracking(0.6).foregroundStyle(tint).accessibilityHidden(true)
         }
     }
@@ -110,7 +110,7 @@ struct ConnectionsBoard: View {
         let difficulty = group["difficulty"].int ?? (["yellow", "green", "blue", "purple"].firstIndex(of: colorName) ?? 3) + 1
         let solved = group["solved"].bool ?? found.contains(where: { $0["theme"].string == group["theme"].string })
         let title = group["theme"].string ?? "Connection"
-        let list = group["words"].strings.joined(separator: " · ")
+        let list = group["words"].strings.joined(separator: ", ")
         return VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline, spacing: 8) {
                 Text(String(format: "%02d", difficulty)).font(.machine(9))

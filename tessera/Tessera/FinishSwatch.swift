@@ -36,7 +36,10 @@ struct FinishSwatch: View {
 
     static func render(px: [UInt8]?, sleeve: UIImage?, finish: String) -> UIImage? {
         guard var rgb = source(px: px, sleeve: sleeve) else { return nil }
-        let key = "\(finish)|\(rgb.count)|\(rgb.prefix(96).reduce(0) { $0 &+ Int($1) })"
+        // Keyed on the whole picture. A sum of the top row matched between two
+        // sleeves with the same black or white border, and the swatches kept
+        // showing the previous album.
+        let key = "\(finish)|\(rgb.count)|\(rgb.hashValue)"
         if let c = cache[key] { return c }
         switch finish {
         case "poster": posterize(&rgb)

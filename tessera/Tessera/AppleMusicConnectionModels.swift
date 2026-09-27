@@ -6,8 +6,8 @@ enum AppleMusicPermission: String, Equatable {
     var isRefused: Bool { self == .denied || self == .restricted }
     var title: String {
         switch self {
-        case .notAsked: "A little permission. A whole room of music."
-        case .authorized: "Your music, in the room."
+        case .notAsked: "Allow music access"
+        case .authorized: "Music access is on."
         case .denied: "Music access is off."
         case .restricted: "Music access is restricted."
         case .unknown: "Music access is unavailable."

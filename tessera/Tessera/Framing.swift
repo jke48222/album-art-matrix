@@ -50,7 +50,7 @@ struct Framing: View {
                 header
                 VStack(alignment: .leading, spacing: 8) {
                     viewport
-                    Text("Wall pixels · Outside the frame is dimmed")
+                    Text("Wall pixels. Outside the frame is dimmed.")
                         .font(.ui(11)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if isClip { transport }
@@ -80,10 +80,10 @@ struct Framing: View {
                 Label(isClip ? "Motion study" : "Photo study", systemImage: isClip ? "film" : "photo")
                     .font(.machine(typeSize.isAccessibilitySize ? 8 : 11)).textCase(.uppercase).tracking(1.3).foregroundStyle(accent)
                 Spacer()
-                Text("\(outputSide) × \(outputSide)").font(.machine(11)).foregroundStyle(Ink.dim)
+                Text("\(outputSide) x \(outputSide)").font(.machine(11)).foregroundStyle(Ink.dim)
             }
-            Text("Find the frame.").font(.display(typeSize.isAccessibilitySize ? 17 : 32)).foregroundStyle(Ink.ink)
-            Text("Move the picture. Keep what matters.")
+            Text("Frame your picture").font(.display(typeSize.isAccessibilitySize ? 17 : 32)).foregroundStyle(Ink.ink)
+            Text("Drag to move, pinch to zoom.")
                 .font(.ui(typeSize.isAccessibilitySize ? 12 : 15)).foregroundStyle(Ink.dim)
         }
     }
@@ -173,7 +173,7 @@ struct Framing: View {
                 Text(WallVideo.clock(Double(playhead) / Clip.fps)).font(.machine(12)).monospacedDigit()
             }
             Text(onCrop == nil
-                 ? "\(String(format: "%.1f", Double(source.count) / Clip.fps)) seconds · 12 frames/s · silent loop"
+                 ? "\(String(format: "%.1f", Double(source.count) / Clip.fps)) seconds, 12 frames/s, silent loop"
                  : "First \(String(format: "%.1f", Double(source.count) / Clip.fps)) seconds shown. This framing applies to the entire video.")
                 .font(.ui(12)).foregroundStyle(Ink.dim).frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -184,7 +184,7 @@ struct Framing: View {
             HStack {
                 Text("Zoom").font(.ui(14, .medium))
                 Spacer()
-                Text(String(format: "%.1f×", crop.zoom)).font(.machine(13)).foregroundStyle(accent)
+                Text(String(format: "%.1fx", crop.zoom)).font(.machine(13)).foregroundStyle(accent)
                 Button("Reset", action: reset).font(.ui(13, .medium)).frame(minWidth: 44, minHeight: 44)
             }
             Slider(value: Binding(get: { Double(crop.zoom) }, set: {

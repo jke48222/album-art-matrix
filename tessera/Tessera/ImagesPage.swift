@@ -36,7 +36,7 @@ struct ImagesPage: View {
         if im?.pending_change == true { return "Settings waiting for this drawing" }
         if im?.busy == true { return "Drawing with \(providerName)" }
         if im?.problem != nil { return "The last creation needs attention" }
-        if im?.verified == true { return "\(providerName) · image received" }
+        if im?.verified == true { return "\(providerName), image received" }
         return ready ? "\(providerName) key saved" : "Choose an engine, add your key"
     }
     var body: some View {
@@ -97,7 +97,7 @@ struct ImagesPage: View {
                 Spacer(minLength: 0)
             }.foregroundStyle(sage)
             if !typeSize.isAccessibilitySize {
-                Text("Make room\nfor imagination.").font(.display(39)).tracking(-1.2).fixedSize(horizontal: false, vertical: true)
+                Text("Image provider").font(.display(39)).tracking(-1.2).fixedSize(horizontal: false, vertical: true)
                 ImageEngineStudy(tint: sage).frame(height: 78).accessibilityHidden(true)
             }
             Group {
@@ -112,7 +112,7 @@ struct ImagesPage: View {
             HStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(im?.busy == true ? "Follow this drawing" : "Open Imagine").font(.ui(typeSize.isAccessibilitySize ? 17 : 22, .semibold)).fixedSize(horizontal: false, vertical: true)
-                    if !typeSize.isAccessibilitySize { Text("Your words. Your next picture.").font(.ui(14)).foregroundStyle(Color(hex: 0x3C5141)) }
+                    if !typeSize.isAccessibilitySize { Text("Describe a picture in Imagine").font(.ui(14)).foregroundStyle(Color(hex: 0x3C5141)) }
                 }
                 Spacer(minLength: 0)
                 if !typeSize.isAccessibilitySize { Image(systemName: "arrow.up.right").font(.system(size: 22, weight: .medium)) }

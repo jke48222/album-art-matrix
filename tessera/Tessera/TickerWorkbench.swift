@@ -22,7 +22,13 @@ struct TickerWorkbench: View {
     @State private var colouring = false
     @FocusState private var typing: Bool
 
-    private var normalized: String { String(PixelFont.normalize(message).prefix(120)) }
+    /// Cut at 120 code points, as the wall cuts with normalize(v)[:120]. By
+    /// Characters, a flag or a skin tone let more than 120 through, and
+    /// chips past the wall's cut coloured letters it never shows.
+    private var normalized: String { Self.first120(PixelFont.normalize(message)) }
+    private static func first120(_ text: String) -> String {
+        String(String.UnicodeScalarView(text.unicodeScalars.prefix(120)))
+    }
     private var empty: Bool { normalized.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var signature: String { "\(wall.host)|\(normalized)|\(style)|\(inks.joined())|\(color.wallHex)|\(speed)|\(phase)" }
     private var ink: Color { accent.toned(forDark: true) }
@@ -31,22 +37,22 @@ struct TickerWorkbench: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             VStack(alignment: .leading, spacing: 7) {
-                Text("A MESSAGE FOR THE ROOM").font(.machine(8)).tracking(1.1).foregroundStyle(ink)
-                Text("Words, in motion.").font(.display(typeSize.isAccessibilitySize ? 18 : 34)).foregroundStyle(Ink.ink)
-                Text("A little note. A big entrance.").font(.ui(14)).foregroundStyle(Ink.dim)
+                Text("TICKER").font(.machine(8)).tracking(1.1).foregroundStyle(ink)
+                Text("Scrolling message").font(.display(typeSize.isAccessibilitySize ? 18 : 34)).foregroundStyle(Ink.ink)
+                Text("Scrolling text for the wall.").font(.ui(14)).foregroundStyle(Ink.dim)
             }
             previewPanel
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Message").font(.ui(14, .semibold)); Spacer()
-                    Text("\(normalized.count) / 120").font(.machine(10)).foregroundStyle(Ink.dim)
+                    Text("\(normalized.unicodeScalars.count) / 120").font(.machine(10)).foregroundStyle(Ink.dim)
                 }
-                TextField("Something worth putting in lights", text: $message, axis: .vertical)
+                TextField("Type a message", text: $message, axis: .vertical)
                     .font(.ui(19, .medium)).lineLimit(3...5).focused($typing)
                     .padding(16).background(Ink.sunk, in: RoundedRectangle(cornerRadius: 15))
                     .accessibilityLabel("Ticker message")
                     .onChange(of: message) { _, value in
-                        if value.count > 120 { message = String(value.prefix(120)) }
+                        if value.unicodeScalars.count > 120 { message = Self.first120(value) }
                         receipt = nil; problem = nil
                     }
             }.foregroundStyle(Ink.ink)
@@ -69,18 +75,19 @@ struct TickerWorkbench: View {
                 }
             }
             DisclosureGroup(isExpanded: $colouring) {
-                LetterInker(text: normalized, colors: inks, accent: ink, base: color.wallHex) { inks = $0; receipt = nil }.padding(.top, 16)
+                // Code points, as the wall's Ticker and Crawl ink them.
+                LetterInker(text: normalized, colors: inks, accent: ink, base: color.wallHex, inksCodePoints: true) { inks = $0; receipt = nil }.padding(.top, 16)
             } label: {
                 HStack {
                     Text("Letter colours").font(.ui(15, .medium)).foregroundStyle(Ink.ink)
                     Spacer()
-                    ColorPicker("Base ink", selection: $color, supportsOpacity: false).labelsHidden().frame(width: 44, height: 44)
+                    ColorPicker("Base ink", selection: baseInk, supportsOpacity: false).labelsHidden().frame(width: 44, height: 44)
                 }
             }.tint(ink)
             VStack(alignment: .leading, spacing: 14) {
                 HStack {
                     Text("Pace").font(.ui(14, .semibold)); Spacer()
-                    Text(String(format: "%.1f×", speed)).font(.machine(12)).foregroundStyle(Ink.dim)
+                    Text(String(format: "%.1fx", speed)).font(.machine(12)).foregroundStyle(Ink.dim)
                 }
                 Slider(value: $speed, in: 0.2...3, step: 0.1).tint(ink).accessibilityLabel("Message pace")
                 Picker("At the end", selection: $repeats) {
@@ -106,13 +113,29 @@ struct TickerWorkbench: View {
         .onAppear {
             guard !initialized else { return }; initialized = true
             message = wall.state.tickerText; style = wall.state.tickerStyle; inks = wall.state.tickerColors
-            speed = wall.state.speed; color = Color.wall(hex: wall.state.color); repeats = wall.state.tickerLoop
+            // The ticker's own ink and pace. On a wall that keeps them apart
+            // from the Lamp, color and speed are the Lamp's. An older wall
+            // sends only those, and tickerColor and tickerSpeed fall back.
+            speed = wall.state.tickerSpeed; color = Color.wall(hex: wall.state.tickerColor); repeats = wall.state.tickerLoop
         }
-        .task(id: "\(signature)|\(initialized)|\(wall.link.isLive)|\(scenePhase)") {
+        .task(id: "\(signature)|\(initialized)|\(wall.link.isLive)|\(wall.link.isStandIn)|\(scenePhase)") {
             if scenePhase == .active { await refreshPreview() }
         }
         .onChange(of: signature) { _, _ in receipt = nil }
         .onChange(of: repeats) { _, _ in receipt = nil }
+    }
+
+    /// Letters still in the base ink follow it when it changes. LetterInker
+    /// does this while it is showing. With Letter colours collapsed it is
+    /// not there, and those letters kept the old ink. Done in the setter,
+    /// not in onChange(of: color), so loading the wall's own ink on appear
+    /// never repaints letters that only happen to share the default ink.
+    private var baseInk: Binding<Color> {
+        Binding(get: { color }, set: { new in
+            let from = color.wallHex.lowercased()
+            inks = inks.map { $0.lowercased() == from ? new.wallHex : $0 }
+            color = new
+        })
     }
 
     private var previewPanel: some View {
@@ -123,7 +146,9 @@ struct TickerWorkbench: View {
                 else {
                     VStack(spacing: 8) {
                         Image(systemName: "textformat").font(.system(size: 32, weight: .ultraLight))
-                        Text(empty ? "Your words go here" : "Preparing the wall’s pixels").font(.ui(12))
+                        // "Preparing" only while a request can be in flight: with a
+                        // problem set nothing is coming, and the reason is shown below.
+                        Text(empty ? "Your words go here" : previewProblem != nil ? "Preview unavailable" : "Preparing the wall’s pixels").font(.ui(12))
                     }.foregroundStyle(Ink.dim)
                 }
             }.aspectRatio(1.65, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 15))
@@ -140,10 +165,17 @@ struct TickerWorkbench: View {
     }
 
     private func refreshPreview() async {
-        guard initialized, wall.link.isLive, let url = URL(string: "http://\(wall.host)/ticker/preview") else {
-            preview = nil; previewProblem = wall.link.isStandIn ? "The wall generates this preview when connected." : nil; return
+        guard initialized else { return }
+        guard wall.link.isLive, let url = URL(string: "http://\(wall.host)/ticker/preview") else {
+            // Nothing will be fetched, so say why rather than leave "Preparing" up.
+            preview = nil
+            previewProblem = wall.link.isStandIn ? "The wall generates this preview when connected." : "Reconnect the wall to see this preview."
+            return
         }
         let key = signature
+        // A request is about to go out, so an earlier reason (such as the
+        // wall being offline) no longer applies while it is in flight.
+        previewProblem = nil
         do {
             try await Task.sleep(for: .milliseconds(250))
             var request = URLRequest(url: url); request.httpMethod = "POST"; request.timeoutInterval = 8
@@ -173,7 +205,7 @@ struct TickerWorkbench: View {
             if accepted {
                 if key == signature && loop == repeats { receipt = wall.link.isStandIn ? "Playing in your phone preview" : "Message accepted by your wall" }
                 Taps.landed()
-            } else { problem = "The wall didn’t accept the message. Your draft is safe; try again."; Taps.error() }
+            } else { problem = "The wall didn’t accept the message. Your draft is kept. Try again."; Taps.error() }
         }
     }
 }

@@ -31,6 +31,9 @@ struct WallWeather: Decodable {
     var problem: String?
     var now: Now?
     var hours: [Hour]?
+    /// True when the wall runs with weather switched off. That is a
+    /// setting, not an outage, so the page says so and offers no retry.
+    var off: Bool?
 
     static func read(host: String, refresh: Bool = false) async -> WallWeather? {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/weather") else { return nil }

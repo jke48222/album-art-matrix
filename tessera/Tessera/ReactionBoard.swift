@@ -24,13 +24,17 @@ struct ReactionBoard: View {
     private var kind: String { game.state["last_kind"].string ?? (last == nil ? "false_start" : "hit") }
     private var player: String { game.state["turn"].string ?? game.players.first ?? "You" }
     private var shownPlayer: String { game.state["last_player"].string ?? player }
+    /// While a result is shown, turn and round already name the next turn,
+    /// so the header uses the turn that produced the result.
+    private var headerPlayer: String { phase == "shown" ? shownPlayer : player }
+    private var headerRound: Int { phase == "shown" ? max(1, min(rounds, game.state["last_round"].int ?? round)) : round }
     private var title: String {
-        if game.over { return last.map { "\($0) milliseconds" } ?? (kind == "missed" ? "No response" : "An early start") }
+        if game.over { return last.map { "\($0) milliseconds" } ?? (kind == "missed" ? "Missed" : "Too early") }
         switch phase {
-        case "red": return "Hold your nerve."
+        case "red": return "Wait."
         case "green": return "Now. Knock or tap."
-        case "shown": return last.map { "\($0) milliseconds." } ?? (kind == "missed" ? "The signal passed." : "A little too soon.")
-        default: return "One moment. All instinct."
+        case "shown": return last.map { "\($0) milliseconds." } ?? (kind == "missed" ? "Missed." : "Too early.")
+        default: return "Ready."
         }
     }
     private var detail: String {
@@ -50,7 +54,7 @@ struct ReactionBoard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 17) {
             HStack(alignment: .firstTextBaseline) {
-                Text(game.over ? "THE ROUND, REMEMBERED" : "\(player.uppercased()) · \(round) / \(rounds)")
+                Text(game.over ? "RESULTS" : "\(headerPlayer.uppercased()), TURN \(headerRound) OF \(rounds)")
                     .font(.machine(10)).foregroundStyle(ReactionInk.ready).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
             }
@@ -101,7 +105,7 @@ struct ReactionBoard: View {
 
     private var results: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Your rhythm").font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
+            Text("Times").font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
             ForEach(game.players, id: \.self) { name in
                 let values = game.state["times"][name].array
                 let valid = values.compactMap(\.int)
@@ -134,7 +138,7 @@ struct ReactionBoard: View {
     private func metric(_ label: String, value: Int?) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(label).font(.ui(12)).foregroundStyle(Ink.dim)
-            Text(value.map { "\($0) ms" } ?? "—").font(.display(28)).foregroundStyle(ReactionInk.ready)
+            Text(value.map { "\($0) ms" } ?? "None").font(.display(28)).foregroundStyle(ReactionInk.ready)
         }.accessibilityElement(children: .combine)
     }
     private func trials(for name: String) -> [Int?] { game.state["times"][name].array.map(\.int) }

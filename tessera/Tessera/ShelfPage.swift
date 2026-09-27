@@ -35,7 +35,8 @@ struct ShelfPage: View {
                 else if readFailed { notice("Couldn't refresh the shelf", detail: "Your collection stays here. Pull to refresh or try again below.", symbol: "arrow.clockwise") }
                 if loading && shelf == nil { loadingShelf }
                 else if let shelf {
-                    if !shelf.uniqueReleases.isEmpty {
+                    if !shelf.available { shelfOff }
+                    else if !shelf.uniqueReleases.isEmpty {
                         collectionPortrait(shelf)
                         syncReceipt(shelf)
                         if let playing = shelf.uniqueReleases.first(where: { $0.id == ownedID }) { ownedReceipt(playing) }
@@ -60,7 +61,7 @@ struct ShelfPage: View {
                     } else { emptyShelf(shelf) }
                 } else {
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Your records are waiting.").font(.ui(25, .semibold))
+                        Text("Collection unavailable").font(.ui(25, .semibold))
                         Text("The wall couldn’t send its collection. Your Discogs account hasn’t changed.").font(.ui(15)).foregroundStyle(Ink.dim)
                         Button { Task { await load(host: wall.host) } } label: {
                             Label("Try again", systemImage: "arrow.clockwise").font(.ui(16, .semibold)).frame(minHeight: 48)
@@ -98,10 +99,10 @@ struct ShelfPage: View {
 
     private var masthead: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label("A COLLECTION OF YOUR OWN", systemImage: "opticaldisc")
+            Label("YOUR DISCOGS COLLECTION", systemImage: "opticaldisc")
                 .font(.machine(9)).tracking(0.6).foregroundStyle(tint).accessibilityHidden(true)
-            Text("The shelf.").font(typeSize.isAccessibilitySize ? .ui(30, .semibold) : .display(48)).tracking(-1)
-            Text("Every pressing has a place.").font(.ui(16)).foregroundStyle(Ink.dim)
+            Text("The shelf").font(typeSize.isAccessibilitySize ? .ui(30, .semibold) : .display(48)).tracking(-1)
+            Text("The records you own, from Discogs.").font(.ui(16)).foregroundStyle(Ink.dim)
         }
     }
 
@@ -211,14 +212,14 @@ struct ShelfPage: View {
             ShelfReleaseCover(url: release.coverURL)
                 .overlay(alignment: .bottomTrailing) {
                     if release.copyCount > 1 {
-                        Text("×\(release.copyCount)").font(.machine(10)).foregroundStyle(Ink.ink).padding(8)
+                        Text("x\(release.copyCount)").font(.machine(10)).foregroundStyle(Ink.ink).padding(8)
                             .background(Ink.ground.opacity(0.88), in: RoundedRectangle(cornerRadius: 8)).padding(8)
                     }
                 }
             VStack(alignment: .leading, spacing: 5) {
                 Text(release.title).font(.ui(16, .semibold)).foregroundStyle(Ink.ink).lineLimit(typeSize.isAccessibilitySize ? nil : 2)
                 Text(release.artistLine).font(.ui(13)).foregroundStyle(Ink.dim).lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                Text([release.year.flatMap { $0 > 0 ? String($0) : nil }, release.formats?.first].compactMap { $0 }.joined(separator: " · "))
+                Text([release.year.flatMap { $0 > 0 ? String($0) : nil }, release.formats?.first].compactMap { $0 }.joined(separator: ", "))
                     .font(.ui(11)).foregroundStyle(Ink.dim)
             }
             if release.id == ownedID {
@@ -231,14 +232,14 @@ struct ShelfPage: View {
     private var ownershipNote: some View {
         HStack(alignment: .top, spacing: 12) {
             ShelfOwnershipGlyph().stroke(tint, lineWidth: 1.6).frame(width: 24, height: 24).accessibilityHidden(true)
-            Text("Your wall adds a small record to artwork from an album you own. The sleeve stays the same; the mark makes it yours.")
+            Text("Your wall adds a small record to artwork from an album you own. The sleeve stays the same. A small mark shows you own it.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }.padding(.top, 10)
     }
     private func emptyShelf(_ shelf: ShelfList) -> some View {
         VStack(alignment: .leading, spacing: 24) {
             ShelfRecordStack(releases: [], tint: tint).frame(height: 220).accessibilityHidden(true)
-            Text(shelf.configured ? "Room for your first record." : "Bring your records home.")
+            Text(shelf.configured ? "No records yet" : "Connect Discogs to see your records")
                 .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .displayMid(32))
             Text(shelf.configured ? "Add the pressings you own to your Discogs collection, then read it here. Your wall will recognize the albums that belong to you." : "Connect your Discogs account once. Your collection, pressing details and ownership marks will follow.")
                 .font(.ui(16)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
@@ -251,6 +252,14 @@ struct ShelfPage: View {
                 }.buttonStyle(PressStyle(scale: 0.98))
             }
             ownershipNote
+        }
+    }
+    /// The shelf feature is off on this wall: it answers with only a problem
+    /// and no account fields. Connecting Discogs would not help, so say so.
+    private var shelfOff: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            ShelfRecordStack(releases: [], tint: tint).frame(height: 220).accessibilityHidden(true)
+            notice("The shelf is off on this wall", detail: "Your Discogs collection shows here when the shelf feature is switched on in the wall's settings.", symbol: "power")
         }
     }
     private var loadingShelf: some View {

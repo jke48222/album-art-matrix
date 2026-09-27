@@ -18,6 +18,7 @@ import time
 from . import Game, register
 from .board import blank, text_centred, fit_text, wrap_text, text, text_right, fill
 from .heardle import answer_key
+from .parking import ParkedClock, parked
 from ..art.pixelfont import text_width
 
 SECONDS = 20.0
@@ -107,8 +108,15 @@ class Quiz(Game):
         self.history = []
         self.leaders = []
         self._clock = time.monotonic
-        self.t_q = self._clock()
+        self._park = ParkedClock()
+        self.t_q = self._now()
         self.message = self.theme
+
+    def _now(self):
+        """The round's own time, which stands still while the game is parked
+        off the wall: the phone locks answering then, so the timer must not
+        reveal and move on with nobody able to reply."""
+        return self._park.read(self, self._clock())
 
     @staticmethod
     def _valid_round(value):
@@ -133,7 +141,7 @@ class Quiz(Game):
     def tick(self):
         if self.over:
             return
-        now = self._clock()
+        now = self._now()
         if self.phase == "question" and (now - self.t_q >= self.seconds or len(self.answered) >= len(self.players)):
             self._reveal()
         elif self.phase == "answer" and now - self.t_q >= SHOW_ANSWER_S:
@@ -142,7 +150,7 @@ class Quiz(Game):
     def _reveal(self):
         if self.over or self.phase != "question":
             return
-        self.phase, self.t_q = "answer", self._clock()
+        self.phase, self.t_q = "answer", self._now()
         self.history.append({"question": self.question, "answer": self.display_answers[self.i],
                              "answered": {p: {"text": t, "right": r} for p, (t, r) in self.answered.items()}})
         self.message = f"Answer: {self.display_answers[self.i]}."
@@ -160,9 +168,9 @@ class Quiz(Game):
             winner = self.leaders[0] if len(self.players) > 1 and len(self.leaders) == 1 and top > 0 else None
             tied = len(self.leaders) > 1
             scores = ", ".join(f"{p} {self.scores[p]}" for p in sorted(self.players, key=lambda p: -self.scores[p]))
-            self.finish(won=top > 0, winner=winner, message=("Draw — " if tied else "") + scores)
+            self.finish(won=top > 0, winner=winner, message=("Draw. " if tied else "") + scores)
         else:
-            self.phase, self.t_q = "question", self._clock()
+            self.phase, self.t_q = "question", self._now()
             self.message = f"Question {self.i + 1}."
             self.changed()
 
@@ -174,6 +182,8 @@ class Quiz(Game):
         token = move.get("question_id")
         if "question_id" in move and (type(token) is not int or token != self.question_id):
             return {"error": "the question has changed"}
+        if parked(self):
+            return {"error": "Return the quiz to the wall to answer."}
         if "next" in move:
             if move["next"] is not True:
                 return {"error": "next must be true"}
@@ -206,6 +216,8 @@ class Quiz(Game):
             return {"error": "the question has changed"}
         if self.phase != "question":
             return {"error": "wait for the next question"}
+        if parked(self):
+            return {"error": "Return the quiz to the wall to answer."}
         if player not in self.players:
             return {"error": "unknown player"}
         if player in self.answered:
@@ -224,22 +236,27 @@ class Quiz(Game):
 
     def state(self):
         self.tick()
-        left = max(0.0, self.seconds - (self._clock() - self.t_q)) if self.phase == "question" else 0.0
-        reveal = max(0.0, SHOW_ANSWER_S - (self._clock() - self.t_q)) if self.phase == "answer" else 0.0
+        now = self._now()
+        left = max(0.0, self.seconds - (now - self.t_q)) if self.phase == "question" else 0.0
+        reveal = max(0.0, SHOW_ANSWER_S - (now - self.t_q)) if self.phase == "answer" else 0.0
         # Correctness and score changes are revealed together after everyone locks in.
         scores = {p: score - int(self.phase == "question" and self.answered.get(p, ("", False))[1])
                   for p, score in self.scores.items()}
         return {"theme": self.theme, "number": min(self.i + 1, len(self.questions)), "count": len(self.questions),
                 "question_id": self.question_id, "question": self.question, "phase": self.phase,
                 "seconds": self.seconds, "seconds_left": round(left, 1), "reveal_seconds_left": round(reveal, 1),
-                "frame_step": 0 if self.over else int((self._clock() - self.t_q) * 2), "scores": scores,
+                "frame_step": 0 if self.over else int((now - self.t_q) * 2), "scores": scores,
+                "paused": self._park.since is not None and not self.over,
                 "answered": {p: {"text": t, "right": r if self.phase != "question" else None} for p, (t, r) in self.answered.items()},
                 "answer": self.display_answers[self.i] if self.phase == "answer" else None,
                 "leaders": list(self.leaders), "tied": self.over and len(self.leaders) > 1,
                 "results": list(self.history) if self.over else None}
 
     def voice_words(self):
-        return [a for _, accept in self.questions for a in accept][:400]
+        # Never the accepted answers: every poll carries these to the phone,
+        # where they could be read, and priming the recogniser with them
+        # biases what it hears toward the right answer.
+        return []
 
     def frame_at(self, size, t):
         state = self.state()
@@ -288,7 +305,7 @@ class Quiz(Game):
         offset = 0
         if len(lines) > capacity:
             window = self.seconds if self.phase == "question" else SHOW_ANSWER_S
-            elapsed = max(0, self._clock() - self.t_q - min(2, window / 4))
+            elapsed = max(0, self._now() - self.t_q - min(2, window / 4))
             offset = min(int(elapsed / max(1, window - min(4, window / 2)) * (len(lines) - capacity + 1)), len(lines) - capacity)
         for i, line_ in enumerate(lines[offset:offset + capacity]):
             text(c, line_, margin, y0 + i * lineheight, cream if self.phase == "question" else (166, 223, 185), content_scale)

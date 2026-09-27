@@ -14,28 +14,37 @@ struct ShowPage: View {
     @State private var problem: String?
     @State private var requestID = UUID()
     @State private var version = 0
+    /// The wall's last failure, once the user has moved on from it. The wall
+    /// keeps it until the next run starts, so the poll put it straight back
+    /// while the next search was being typed.
+    @State private var dismissedProblem: String?
     @FocusState private var typing: Bool
     private let tint = Color(hex: 0xA9D2D4)
     private var pending: Bool { busy || status?.pending == true }
+    /// Switched off on the wall, which would refuse every search.
+    private var off: Bool { status?.off == true }
     private var query: String { (drafts[scope] ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
     private var queryBinding: Binding<String> {
-        Binding(get: { drafts[scope] ?? "" }, set: { drafts[scope] = String($0.prefix(500)); problem = nil })
+        Binding(get: { drafts[scope] ?? "" }, set: { drafts[scope] = String($0.prefix(500)); dismissProblem() })
     }
+    private func dismissProblem() { if problem != nil { dismissedProblem = status?.problem }; problem = nil }
 
     var body: some View {
-        DiscoveryPage(title: "Show me", eyebrow: "A WINDOW TO ANYWHERE", tint: tint) {
+        DiscoveryPage(title: "Show me", eyebrow: "PICTURES, COVERS AND VIDEOS", tint: tint) {
             if result == nil {
-                DiscoveryIntroduction(title: "Find a little\nwonder.", detail: "A place. A record. A moving picture.\nGive your wall something new.", symbol: "viewfinder", tint: tint)
+                DiscoveryIntroduction(title: "Show it on\nthe wall", detail: "Search for a picture, an album cover or a video.", symbol: "viewfinder", tint: tint)
             }
             if !wall.link.isLive {
                 DiscoveryNotice(title: "Your wall is offline", detail: "Your searches stay here until it reconnects.", symbol: "wifi.slash", tint: tint)
             } else if readFailed {
                 DiscoveryNotice(title: "Couldn't read recent discoveries", detail: "Pull to refresh. Your search is safe.", symbol: "arrow.clockwise", tint: tint)
+            } else if off {
+                DiscoveryNotice(title: "Show me is off on this wall", detail: "Turn it on in the wall's feature settings to search from here.", symbol: "power", tint: tint)
             }
             if let result { resultCard(result) }
             composer
             if pending {
-                DiscoveryWaiting(title: scope == .video ? "Finding a moving picture" : "Looking beyond the room", detail: "The result will appear here when the wall confirms it.", tint: tint)
+                DiscoveryWaiting(title: scope == .video ? "Finding the video" : "Searching", detail: "The result will appear here when the wall confirms it.", tint: tint)
             }
             if let problem { DiscoveryProblem(text: problem) }
             if !pending { sourceNote }
@@ -51,7 +60,7 @@ struct ShowPage: View {
         }
         .onChange(of: wall.host) { _, _ in
             requestID = UUID(); version += 1; busy = false; result = nil
-            status = nil; loaded = false; readFailed = false; problem = nil
+            status = nil; loaded = false; readFailed = false; problem = nil; dismissedProblem = nil
         }
     }
 
@@ -72,7 +81,7 @@ struct ShowPage: View {
                 Text("\(query.count)/500").font(.machine(9)).foregroundStyle(Ink.dim)
             }.accessibilityHidden(true)
             DiscoveryAction(title: pending ? "Finding…" : (scope == .video ? "Find & play" : "Find & show"), symbol: scope == .video ? "play.fill" : "arrow.up.right", tint: tint,
-                            enabled: wall.link.isLive && !query.isEmpty && !pending && !(scope == .video && status?.video_available == false), busy: pending) { send() }
+                            enabled: wall.link.isLive && !off && !query.isEmpty && !pending && !(scope == .video && status?.video_available == false), busy: pending) { send() }
             if query.isEmpty && !pending {
                 Button {
                     drafts[scope] = scope.example; typing = true; Taps.detent()
@@ -94,7 +103,7 @@ struct ShowPage: View {
     private var scopeButtons: some View {
         ForEach(DiscoveryScope.allCases) { item in
             Button {
-                scope = item; problem = nil; Taps.detent()
+                scope = item; dismissProblem(); Taps.detent()
             } label: {
                 Label(item.title, systemImage: item.symbol).font(.ui(13, .semibold))
                     .foregroundStyle(scope == item ? Ink.ground : Ink.dim)
@@ -126,7 +135,7 @@ struct ShowPage: View {
                 Label("The composition sent to your wall", systemImage: "square.grid.3x3")
                     .font(.ui(12)).foregroundStyle(Ink.dim)
             } else if result.isVideo {
-                Text(result.active == true ? "Live wall frame · sound plays through this iPhone." : "This video has finished or another face is now showing.")
+                Text(result.active == true ? "Live wall frame. Sound plays through this iPhone." : "This video has finished or another face is now showing.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
             if let url = result.url.flatMap(URL.init(string:)), ["https", "http"].contains(url.scheme ?? "") {
@@ -137,7 +146,7 @@ struct ShowPage: View {
 
     private var sourceNote: some View {
         VStack(alignment: .leading, spacing: 9) {
-            Text(scope == .picture ? (status?.picture_provider ?? "Web search") : scope == .cover ? "The record, by name" : "A little cinema")
+            Text(scope == .picture ? (status?.picture_provider ?? "Web search") : scope == .cover ? "The record, by name" : "Video search")
                 .font(.ui(14, .semibold)).foregroundStyle(Ink.ink)
             Text(scope == .picture ? "Finds a picture through your configured Google Images service, the web, or an image archive. The source stays with the result."
                  : scope == .cover ? "Searches iTunes for a sleeve. Add the artist when two records share a name. Your music keeps playing."
@@ -156,12 +165,16 @@ struct ShowPage: View {
         let value: DiscoveryStatus? = await DiscoveryAPI.read("/show", host: host)
         guard !Task.isCancelled, host == wall.host, observedVersion == version, !busy else { return }
         loaded = true; readFailed = value == nil
-        if let value { status = value; result = value.last; if problem == nil { problem = value.problem } }
+        if let value {
+            status = value; result = value.last
+            if value.problem == nil { dismissedProblem = nil }      // cleared on the wall: a repeat is news
+            else if problem == nil, value.problem != dismissedProblem { problem = value.problem }
+        }
     }
 
     private func send() {
-        guard !pending, wall.link.isLive, !query.isEmpty else { return }
-        typing = false; busy = true; problem = nil; version += 1
+        guard !pending, !off, wall.link.isLive, !query.isEmpty else { return }
+        typing = false; busy = true; dismissProblem(); version += 1
         let id = UUID(), host = wall.host, selected = scope, text = query
         requestID = id
         Task {
@@ -187,21 +200,23 @@ struct EarwormPage: View {
     @State private var problem: String?
     @State private var requestID = UUID()
     @State private var version = 0
+    /// As on Show me: the wall's last failure, once the user has moved on.
+    @State private var dismissedProblem: String?
     @FocusState private var typing: Bool
     private let tint = Color(hex: 0xDEB8A4)
     private var pending: Bool { busy || status?.pending == true }
     private var typed: String { words.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        DiscoveryPage(title: "Earworm", eyebrow: "FOR THE SONG THAT STAYED", tint: tint) {
+        DiscoveryPage(title: "Earworm", eyebrow: "SONG FINDER", tint: tint) {
             if found == nil {
-                DiscoveryIntroduction(title: "On the tip of\nyour tongue.", detail: "A half-remembered chorus.\nLet's put a name to it.", symbol: "waveform", tint: tint)
+                DiscoveryIntroduction(title: "Name a song\nfrom its words", detail: "Describe a lyric, the voice or the video.", symbol: "waveform", tint: tint)
             }
             connection
             if let found { foundCard(found) }
             composer
             if pending {
-                DiscoveryWaiting(title: "Following the melody in your words", detail: "Looking for a song and its sleeve. You can leave this page; the discovery stays here.", tint: tint)
+                DiscoveryWaiting(title: "Identifying the song", detail: "Looking for a song and its sleeve. You can leave this page. The result stays here.", tint: tint)
             }
             if let problem { DiscoveryProblem(text: problem) }
             if let alternatives = found?.alternatives, !alternatives.isEmpty { alternativesList(alternatives) }
@@ -217,7 +232,7 @@ struct EarwormPage: View {
         }
         .onChange(of: wall.host) { _, _ in
             requestID = UUID(); version += 1; busy = false; found = nil
-            status = nil; loaded = false; readFailed = false; problem = nil
+            status = nil; loaded = false; readFailed = false; problem = nil; dismissedProblem = nil
         }
     }
 
@@ -228,6 +243,9 @@ struct EarwormPage: View {
             HStack(spacing: 10) { ProgressView().tint(tint); Text("Checking the song finder…").font(.ui(13)).foregroundStyle(Ink.dim) }
         } else if readFailed {
             DiscoveryNotice(title: "Couldn't read the song finder", detail: "Pull to refresh. Your words are safe.", symbol: "arrow.clockwise", tint: tint)
+        } else if status?.off == true {
+            // Not ready either, but a Claude key would not help here.
+            DiscoveryNotice(title: "Naming a song from its words is off on this wall", detail: "Turn it on in the wall's feature settings to use it from here.", symbol: "power", tint: tint)
         } else if status?.ready != true {
             VStack(alignment: .leading, spacing: 10) {
                 DiscoveryNotice(title: "Connect Claude to begin", detail: "Identification uses your Claude service. Add the key once in Services.", symbol: "key.horizontal", tint: tint)
@@ -247,7 +265,7 @@ struct EarwormPage: View {
             }
             TextField("Remembered words", text: $words, prompt: Text("A line of lyrics, the singer's voice, a scene from the video…").foregroundStyle(Ink.dim), axis: .vertical)
                 .font(.ui(22)).foregroundStyle(Ink.ink).lineLimit(3...6).focused($typing).disabled(pending)
-                .onChange(of: words) { _, value in if value.count > 2000 { words = String(value.prefix(2000)) }; problem = nil }
+                .onChange(of: words) { _, value in if value.count > 2000 { words = String(value.prefix(2000)) }; dismissProblem() }
             DiscoveryAction(title: pending ? "Finding the song…" : "Find that song", symbol: "waveform", tint: tint,
                             enabled: wall.link.isLive && status?.ready == true && !readFailed && !pending && !typed.isEmpty, busy: pending) { identify() }
             Text("Describe it in words. This page doesn't listen to or record audio. Matches are suggestions, not certainty.")
@@ -281,7 +299,7 @@ struct EarwormPage: View {
                 DiscoveryNotice(title: "The song has a name", detail: "We couldn't find its sleeve. The result is saved here.", symbol: "music.note", tint: tint)
             }
             if song.preview_png != nil {
-                Text("Exact wall composition · stays for ten minutes. Your music keeps playing.").font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                Text("Exact wall composition. It stays for ten minutes. Your music keeps playing.").font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }.padding(18).discoverySurface()
     }
@@ -314,8 +332,14 @@ struct EarwormPage: View {
         let value: EarwormStatus? = await DiscoveryAPI.read("/earworm", host: host)
         guard !Task.isCancelled, host == wall.host, observedVersion == version, !busy else { return }
         loaded = true; readFailed = value == nil
-        if let value { status = value; found = value.last; if problem == nil { problem = value.problem } }
+        if let value {
+            status = value; found = value.last
+            if value.problem == nil { dismissedProblem = nil }      // cleared on the wall: a repeat is news
+            else if problem == nil, value.problem != dismissedProblem { problem = value.problem }
+        }
     }
+
+    private func dismissProblem() { if problem != nil { dismissedProblem = status?.problem }; problem = nil }
 
     private func identify() {
         guard wall.link.isLive, status?.ready == true, !pending, !typed.isEmpty else { return }
@@ -328,7 +352,7 @@ struct EarwormPage: View {
     }
 
     private func perform(_ body: [String: Any]) {
-        typing = false; busy = true; problem = nil; version += 1
+        typing = false; busy = true; dismissProblem(); version += 1
         let id = UUID(), host = wall.host
         requestID = id
         Task {

@@ -107,27 +107,29 @@ def test_snake_queues_two_turns_in_order_without_reversing():
     assert g.apply({'dir': 'up'}, 'You')['accepted']
     assert g.apply({'dir': 'left'}, 'You')['accepted']
     assert g.apply({'dir': 'down'}, 'You')['error']  # full queue, not lost silently
+    mid = g.N // 2
     advance(g, clock, 0.1)
-    assert g.body[0] == (16, 15)
+    assert g.body[0] == (mid, mid - 1)
     advance(g, clock, 0.1)
-    assert g.body[0] == (15, 15) and not g.turns
+    assert g.body[0] == (mid - 1, mid - 1) and not g.turns
     assert g.apply({'dir': 'right'}, 'You')['error']
 
 
 def test_snake_input_does_not_rewrite_the_elapsed_interval():
     g, clock = game(Snake, step=0.1)
     start(g)
+    mid = g.N // 2
     clock[0] += 0.1
     g.apply({'dir': 'up'}, 'You')
-    assert g.body[0] == (17, 16)
+    assert g.body[0] == (mid + 1, mid)
     advance(g, clock, 0.1)
-    assert g.body[0] == (17, 15)
+    assert g.body[0] == (mid + 1, mid - 1)
 
 
 def test_snake_growth_tail_and_complete_garden():
     g, clock = game(Snake, seed=3, step=0.1)
     start(g)
-    g.food = (17, 16)
+    g.food = (g.N // 2 + 1, g.N // 2)
     advance(g, clock, 0.1)
     assert g.score == 1 and len(g.body) == 4 and g.food not in g.body
     # A moving tail vacates its square during this step.
@@ -140,7 +142,7 @@ def test_snake_growth_tail_and_complete_garden():
     g.food = (1, 0); g.dir = g.next_dir = (1, 0)
     advance(g, clock, g.step_s)
     assert g.over and g.won and g.reason == 'filled' and g.food is None
-    assert len(g.state()['body']) == 1024
+    assert len(g.state()['body']) == g.N * g.N
 
 
 def test_snake_self_collision_and_end_immutability():

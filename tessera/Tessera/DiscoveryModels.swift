@@ -11,7 +11,7 @@ enum DiscoveryScope: String, CaseIterable, Identifiable {
     }
     var placeholder: String {
         switch self {
-        case .picture: "A place, a painting, a small wonder…"
+        case .picture: "A place, a painting, an animal…"
         case .cover: "An album or song, and the artist…"
         case .video: "The video you have in mind…"
         }
@@ -56,6 +56,10 @@ struct ShowResult: DiscoveryReply, Identifiable {
 
 struct DiscoveryStatus: Decodable {
     var last: ShowResult?
+    /// The wall says true when Show me is on. Older walls leave it out.
+    var ready: Bool?
+    /// Show me switched off in the wall's features: a setting, not an outage.
+    var off: Bool?
     var pending: Bool?
     var problem: String?
     var picture_provider: String?
@@ -85,12 +89,15 @@ struct Earworm: DiscoveryReply, Identifiable {
         guard let confidence, confidence.isFinite else { return "A possible match" }
         return confidence >= 0.85 ? "A strong possibility" : confidence >= 0.65 ? "A likely match" : "A possibility to explore"
     }
-    var shareText: String { [title, artist].compactMap { $0?.nilIfDiscoveryEmpty }.joined(separator: " — ") }
+    var shareText: String { [title, artist].compactMap { $0?.nilIfDiscoveryEmpty }.joined(separator: " by ") }
 }
 
 struct EarwormStatus: Decodable {
     var last: Earworm?
     var ready: Bool?
+    /// Earworm switched off in the wall's features. It also reads not ready,
+    /// but a Claude key would not help, so the page must say which it is.
+    var off: Bool?
     var pending: Bool?
     var problem: String?
 }

@@ -111,7 +111,7 @@ struct CrosswordBoard: View {
             if over {
                 entering = false
                 showClues = false
-                UIAccessibility.post(notification: .announcement, argument: "Crossword solved. Every crossing comes together.")
+                UIAccessibility.post(notification: .announcement, argument: "Crossword solved.")
             }
         }
         .confirmationDialog("Clear \(clearClue?.title ?? "this answer")?", isPresented: Binding(get: { clearClue != nil }, set: { if !$0 { clearClue = nil } }), titleVisibility: .visible) {
@@ -137,7 +137,7 @@ struct CrosswordBoard: View {
     private var progress: some View {
         let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 7)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
         return layout {
-            Text(game.over ? "EVERY CROSSING, COMPLETE" : "THE MINI")
+            Text(game.over ? "SOLVED" : "THE MINI")
                 .font(.machine(10)).foregroundStyle(game.over ? CrosswordInk.solved : CrosswordInk.cursor)
             if !typeSize.isAccessibilitySize { Spacer() }
             Text("\(filled) / \(total) squares").font(.ui(13, .medium)).monospacedDigit().foregroundStyle(Ink.dim)
@@ -208,7 +208,7 @@ struct CrosswordBoard: View {
                 Button { switchDirection(direction == "across" ? "down" : "across") } label: {
                     HStack(spacing: 7) {
                         Image(systemName: direction == "across" ? "arrow.right" : "arrow.down")
-                        Text("\(clue.title.uppercased()) · \(clue.cells.count) LETTERS")
+                        Text("\(clue.title.uppercased()), \(clue.cells.count) LETTERS")
                             .font(.machine(10)).fixedSize(horizontal: false, vertical: true)
                     }.foregroundStyle(CrosswordInk.cursor).frame(minHeight: 44, alignment: .leading)
                 }.buttonStyle(.plain).accessibilityLabel("\(clue.title), \(clue.cells.count) letters. Switch direction")
@@ -233,9 +233,12 @@ struct CrosswordBoard: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 44), spacing: 6)], spacing: 6) {
                     ForEach(Array("QWERTYUIOPASDFGHJKLZXCVBNM"), id: \.self) { letter in
                         Button {
-                            guard let selected else { return }
+                            guard pending?.letter == nil else { return }
                             let token = UUID().uuidString
-                            let payload: [String: Any] = ["cell": selected.pair, "letter": String(letter).lowercased(), "client_move_id": token]
+                            // No cell: the wall's cursor is authoritative. A cell read
+                            // from the last status goes stale once the previous letter
+                            // lands, and a retry would overwrite that letter.
+                            let payload: [String: Any] = ["letter": String(letter).lowercased(), "client_move_id": token]
                             pending = Pending(token: token, clueID: clue.id, word: nil, letter: String(letter), move: payload)
                             send(payload)
                         } label: {
@@ -245,6 +248,9 @@ struct CrosswordBoard: View {
                         }.buttonStyle(PressStyle(scale: 0.98)).accessibilityLabel("Enter \(String(letter))")
                     }
                 }
+                // One letter at a time until the wall confirms it, so a quick
+                // second tap is never dropped without a trace.
+                .disabled(pending?.letter != nil)
                 Button { move(["backspace": true]) } label: {
                     Label("Backspace", systemImage: "delete.left").font(.ui(15, .semibold))
                         .frame(maxWidth: .infinity, minHeight: 48).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 12))
@@ -254,6 +260,8 @@ struct CrosswordBoard: View {
                         Text("\(letter) is waiting for confirmation.").font(.ui(13)).foregroundStyle(Ink.dim)
                         Spacer(minLength: 8)
                         Button("Retry") { send(pending.move) }.font(.ui(13, .semibold)).frame(minWidth: 44, minHeight: 44)
+                        // The keyboard waits for this letter, so let the player drop it.
+                        Button("Cancel") { self.pending = nil }.font(.ui(13)).foregroundStyle(Ink.dim).frame(minWidth: 44, minHeight: 44)
                     }
                 }
             } else {
@@ -313,8 +321,8 @@ struct CrosswordBoard: View {
         HStack(alignment: .top, spacing: 13) {
             Image(systemName: "checkmark.seal").font(.system(size: 26)).foregroundStyle(CrosswordInk.solved)
             VStack(alignment: .leading, spacing: 6) {
-                Text("Every crossing comes together.").font(.ui(20, .semibold)).foregroundStyle(Color.white)
-                Text("\(clues.count) clues. \(total) letters. One complete picture.")
+                Text("Solved").font(.ui(20, .semibold)).foregroundStyle(Color.white)
+                Text("\(clues.count) clues, \(total) letters.")
                     .font(.ui(14)).foregroundStyle(Ink.dim)
             }.fixedSize(horizontal: false, vertical: true)
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
@@ -343,7 +351,7 @@ struct CrosswordBoard: View {
                                 Text(String(clue.number)).font(.machine(12)).foregroundStyle(CrosswordInk.cursor).frame(minWidth: 25, alignment: .leading)
                                 VStack(alignment: .leading, spacing: 5) {
                                     Text(clue.text).font(.ui(15, chosen?.id == clue.id ? .semibold : .regular)).foregroundStyle(Ink.ink)
-                                    Text(clue.cells.map { letter(at: $0).isEmpty ? "·" : letter(at: $0).uppercased() }.joined(separator: " "))
+                                    Text(clue.cells.map { letter(at: $0).isEmpty ? "_" : letter(at: $0).uppercased() }.joined(separator: " "))
                                         .font(.machine(11)).foregroundStyle(Ink.dim)
                                 }.fixedSize(horizontal: false, vertical: true)
                                 Spacer(minLength: 0)

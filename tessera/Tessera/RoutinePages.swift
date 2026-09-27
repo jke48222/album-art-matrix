@@ -16,22 +16,22 @@ struct SunPage: View {
     private var located: Bool { wall.state.lat.isFinite && wall.state.lon.isFinite && abs(wall.state.lat) <= 90 && abs(wall.state.lon) <= 180 }
     private var enabled: Bool { wall.state.sun == "on" }
     private var phase: String {
-        guard located else { return "Find your daylight" }
-        guard enabled else { return "A daily rhythm" }
+        guard located else { return enabled ? "Needs a location" : "No location set" }
+        guard enabled else { return "Off" }
         switch wall.state.sunPhase {
-        case "day", "polar_day": return "In the daylight"
-        case "dawn": return "The room is waking"
-        case "dusk": return "Easing into evening"
-        case "night", "polar_night": return "An after-dark glow"
+        case "day", "polar_day": return "Daytime"
+        case "dawn": return "Sunrise"
+        case "dusk": return "Sunset"
+        case "night", "polar_night": return "After dark"
         default: return "Following the sun"
         }
     }
 
     var body: some View {
-        RoutinePage(title: "Follow the sun", eyebrow: "LIGHT, IN RHYTHM", tint: gold, problem: problem) {
+        RoutinePage(title: "Follow the sun", eyebrow: "BRIGHTNESS BY TIME OF DAY", tint: gold, problem: problem) {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 VStack(alignment: .leading, spacing: 16) {
-                    RoutineEyebrow(text: enabled ? (ready ? "SUNLIGHT PLAN · ACTIVE" : "LAST SUNLIGHT PLAN") : "SUNLIGHT PLAN", tint: gold)
+                    RoutineEyebrow(text: enabled ? (ready ? "SUNLIGHT PLAN, ACTIVE" : "LAST SUNLIGHT PLAN") : "SUNLIGHT PLAN", tint: gold)
                     Text(phase).font(typeSize.isAccessibilitySize ? .ui(20, .semibold) : .display(30)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
                     SunCourse(progress: course(at: ready ? context.date : wall.state.routineReceivedAt), enabled: enabled, tint: gold)
                         .frame(height: 144).accessibilityHidden(true)
@@ -46,17 +46,22 @@ struct SunPage: View {
                     }
                 }.routineHero()
             }
+            // Turning it on needs a location, turning it off never does. First
+            // run switches it on before the one-shot location read, and when
+            // that read was refused the toggle was stuck on with no dimming.
             Toggle(isOn: Binding(get: { enabled }, set: { value in save(["sun": value ? "on" : "off"]) })) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Follow the sun").font(.ui(17, .semibold))
                     Text("Forty-minute transitions at dawn and dusk.").font(.ui(13)).foregroundStyle(Ink.dim)
                 }
-            }.tint(gold).disabled(!ready || saving || !located)
+            }.tint(gold).disabled(!ready || saving || (!located && !enabled))
             if !located {
-                Text("Set the wall’s location to calculate sunrise and sunset. It keeps working without your phone.")
-                    .font(.ui(14)).foregroundStyle(Ink.dim)
+                Text(enabled || wall.state.sunPhase == "location"
+                     ? "Follow the sun is on but has no location, so the brightness does not change. Set the wall’s location below, or turn it off."
+                     : "Set the wall’s location to calculate sunrise and sunset. It keeps working without your phone.")
+                    .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
-            RoutineSection(title: "The light in your room", subtitle: "Daylight sets your wall brightness. After dark is a fraction of that level.") {
+            RoutineSection(title: "Brightness", subtitle: "Daylight sets your wall brightness. After dark is a fraction of that level.") {
                 RoutineLevel(title: "Daylight", symbol: "sun.max", value: $daylight, range: 0.05...1, tint: gold) {
                     save(["brightness": daylight])
                 }
@@ -74,7 +79,7 @@ struct SunPage: View {
                         Text(located ? (wall.state.place.isEmpty ? "Location saved on the wall" : wall.state.place) : "No location saved")
                             .font(.ui(16, .medium)).foregroundStyle(Ink.ink)
                         if located {
-                            Text(String(format: "%.2f° %@ · %.2f° %@", abs(wall.state.lat), wall.state.lat < 0 ? "S" : "N", abs(wall.state.lon), wall.state.lon < 0 ? "W" : "E"))
+                            Text(String(format: "%.2f° %@, %.2f° %@", abs(wall.state.lat), wall.state.lat < 0 ? "S" : "N", abs(wall.state.lon), wall.state.lon < 0 ? "W" : "E"))
                                 .font(.ui(12)).foregroundStyle(Ink.dim)
                         }
                     }
@@ -110,11 +115,11 @@ struct SunPage: View {
     }
     private var sunReceipt: String {
         guard enabled else { return "Your selected brightness stays constant." }
-        if let level = wall.state.effectiveBrightness { return "Output now · \(Int((level * 100).rounded()))% brightness" }
+        if let level = wall.state.effectiveBrightness { return "Output now: \(Int((level * 100).rounded()))% brightness" }
         return "Sunlight adjusts the brightness of your current face."
     }
     private func time(_ date: Date?) -> String {
-        guard let date else { return "—" }
+        guard let date else { return "Unknown" }
         return RoutineText.time(date, zone: wall.state.routineTimeZone, twentyFour: wall.state.clock24h)
     }
     private func course(at date: Date) -> Double? {
@@ -137,6 +142,7 @@ struct SunPage: View {
 
 struct SleepPage: View {
     @Environment(WallSession.self) private var wall
+    @Environment(\.dynamicTypeSize) private var typeSize
     let accent: Color
     @State private var minutes = 30.0
     @State private var saving = false
@@ -146,26 +152,31 @@ struct SleepPage: View {
     private var fading: Bool { wall.state.sleepStatus == "fading" || (wall.state.sleepRemaining ?? 0) > 0 }
 
     var body: some View {
-        RoutinePage(title: "Sleep", eyebrow: "LET THE ROOM REST", tint: moon, problem: problem) {
+        RoutinePage(title: "Sleep", eyebrow: "FADE TO OFF", tint: moon, problem: problem) {
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 let remaining = wall.state.sleepSeconds(at: ready ? context.date : wall.state.routineReceivedAt)
                 let fraction = fading ? 1 - Double(remaining ?? 0) / Double(max(1, wall.state.sleepTotal ?? Int(minutes * 60))) : 0
                 VStack(alignment: .leading, spacing: 14) {
-                    RoutineEyebrow(text: fading ? (ready ? "FADING TO BLACK" : "LAST FADE STATUS") : wall.state.sleepStatus == "completed" ? "THE WALL IS RESTING" : "SLEEP PLAN", tint: moon)
+                    RoutineEyebrow(text: fading ? (ready ? "FADING TO BLACK" : "LAST FADE STATUS") : wall.state.sleepStatus == "completed" ? "FADE FINISHED" : "SLEEP PLAN", tint: moon)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(fading ? RoutineText.countdown(remaining ?? 0) : "\(Int(minutes))")
                             .font(.display(64)).foregroundStyle(Ink.ink).monospacedDigit().minimumScaleFactor(0.65).lineLimit(1)
                         if !fading { Text("min").font(.ui(20)).foregroundStyle(moon) }
                     }
-                    Text(fading ? "A little less light, every moment." : wall.state.sleepStatus == "completed" ? "The fade finished. Rest easy." : "A soft landing at the end of the day.")
+                    Text(fading ? "The light is fading." : wall.state.sleepStatus == "completed" ? "The fade finished and the wall is off." : "The wall fades out, then turns off.")
                         .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     RoutineEnvelope(rising: false, progress: fading ? fraction : nil, tint: moon)
                         .frame(height: 110).accessibilityHidden(true)
-                    HStack {
+                    // Side by side, the two halves wrapped into fragments at
+                    // accessibility sizes. Stacked there, as Sun and Wake do.
+                    let row = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                        : AnyLayout(HStackLayout())
+                    row {
                         Text(fading ? "Fading now" : "Your current light")
-                        Spacer()
+                        if !typeSize.isAccessibilitySize { Spacer() }
                         Text(fading ? endTime : "Off in \(Int(minutes)) min")
-                    }.font(.ui(12)).foregroundStyle(moon)
+                    }.font(.ui(12)).foregroundStyle(moon).fixedSize(horizontal: false, vertical: true)
                 }.routineHero()
             }
             if fading {
@@ -176,7 +187,7 @@ struct SleepPage: View {
                 Text("Cancel restores your selected brightness. The wall keeps its current face.")
                     .font(.ui(14)).foregroundStyle(Ink.dim)
             } else {
-                RoutineSection(title: "Time to unwind", subtitle: "Keep your current artwork, then switch the wall off.") {
+                RoutineSection(title: "Fade length", subtitle: "Keep your current artwork, then switch the wall off.") {
                     RoutineDurations(value: $minutes, values: [15, 30, 45, 60], tint: moon)
                     Slider(value: $minutes, in: 5...120, step: 5).tint(moon)
                         .accessibilityLabel("Sleep fade duration").accessibilityValue("\(Int(minutes)) minutes")
@@ -189,7 +200,7 @@ struct SleepPage: View {
                         .font(.ui(14)).foregroundStyle(Ink.dim)
                 }
             }
-            RoutineWallReceipt(detail: fading ? "The current face fades in place." : "Sleep fades the light; your artwork stays yours.", tint: moon)
+            RoutineWallReceipt(detail: fading ? "The current face fades in place." : "Sleep fades the light. Your artwork stays on the wall.", tint: moon)
         }
     }
     private var endTime: String {
@@ -225,12 +236,12 @@ struct WakePage: View {
     private var timeLabel: String { TimeInput.timeLabel(draftTime, twentyFour: wall.state.clock24h) }
 
     var body: some View {
-        RoutinePage(title: "Wake up", eyebrow: "A GENTLER BEGINNING", tint: dawn, problem: problem) {
+        RoutinePage(title: "Wake up", eyebrow: "MORNING FADE", tint: dawn, problem: problem) {
             VStack(alignment: .leading, spacing: 14) {
-                RoutineEyebrow(text: dirty ? "UNSAVED WAKE-UP PLAN" : wall.state.wakeActive ? "LIGHT IS RISING" : draftEnabled ? "YOUR DAILY SUNRISE" : "WAKE-UP PLAN", tint: dawn)
+                RoutineEyebrow(text: dirty ? "UNSAVED WAKE-UP PLAN" : wall.state.wakeActive ? "LIGHT IS RISING" : draftEnabled ? "DAILY WAKE-UP" : "WAKE-UP PLAN", tint: dawn)
                 Text(timeLabel)
                     .font(.display(typeSize.isAccessibilitySize ? 32 : 60)).foregroundStyle(Ink.ink).minimumScaleFactor(0.65).lineLimit(1)
-                Text(wall.state.wakeActive && !dirty ? "The day arrives in warm colour." : "Let the light arrive before the rush.")
+                Text(wall.state.wakeActive && !dirty ? "The light is rising." : "The wall fades up before you wake.")
                     .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 RoutineEnvelope(rising: true, progress: wall.state.wakeActive && !dirty ? wall.state.wakeProgress : nil, tint: dawn)
                     .frame(height: 110).accessibilityHidden(true)
@@ -246,7 +257,7 @@ struct WakePage: View {
                     Text("Every day, on the wall’s clock.").font(.ui(13)).foregroundStyle(Ink.dim)
                 }
             }.tint(dawn).disabled(saving || !clockReady)
-            RoutineSection(title: "Start the morning", subtitle: clockReady ? "Wall time · \(wall.state.wallTimeZone ?? zone.identifier)" : "Connect to read the wall’s time zone before setting a schedule.") {
+            RoutineSection(title: "Start the morning", subtitle: clockReady ? "Wall time: \(wall.state.wallTimeZone ?? zone.identifier)" : "Connect to read the wall’s time zone before setting a schedule.") {
                 DatePicker("Fade starts", selection: Binding(get: {
                     TimeInput.date(draftTime)
                 }, set: { draftTime = TimeInput.civilTime($0) }), displayedComponents: .hourAndMinute)
@@ -256,7 +267,7 @@ struct WakePage: View {
                     .accessibilityLabel("Daily wake fade start time on the wall")
                     .disabled(saving || !clockReady)
             }
-            RoutineSection(title: "How slowly the light arrives", subtitle: "Warm first, then clear. A longer fade makes a quieter entrance.") {
+            RoutineSection(title: "Fade length", subtitle: "Warm first, then clear.") {
                 RoutineDurations(value: $fade, values: [10, 20, 30, 45], tint: dawn)
             }.disabled(saving)
             if dirty {
@@ -269,7 +280,7 @@ struct WakePage: View {
                 Text("Wake up lifts a wall that is off. A wall already showing something keeps its current light. This routine makes no sound.")
                     .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
-            RoutineWallReceipt(detail: wall.state.wakeActive ? "Your artwork is coming up with the light." : "The wall keeps this schedule when your phone is away.", tint: dawn)
+            RoutineWallReceipt(detail: wall.state.wakeActive ? "The wall is fading up now." : "The wall keeps this schedule when your phone is away.", tint: dawn)
         }
         .onAppear {
             guard !loaded else { return }
@@ -291,10 +302,10 @@ struct WakePage: View {
     }
     private var schedule: String {
         if dirty { return "Changes are ready to save" }
-        guard wall.state.wakeEnabled else { return "Schedule saved · currently off" }
+        guard wall.state.wakeEnabled else { return "Schedule saved. Wake up is off." }
         guard let date = wall.state.wakeNextStart else { return "Every day at \(timeLabel)" }
         let formatter = DateFormatter(); formatter.timeZone = zone; formatter.dateFormat = "EEE, MMM d"
-        return "Next · \(formatter.string(from: date)) at \(RoutineText.time(date, zone: zone, twentyFour: wall.state.clock24h))"
+        return "Next: \(formatter.string(from: date)) at \(RoutineText.time(date, zone: zone, twentyFour: wall.state.clock24h))"
     }
     private func save() {
         guard ready, !saving, clockReady else { return }
@@ -311,7 +322,7 @@ struct WakePage: View {
 
 private enum RoutineText {
     static func time(_ date: Date, zone: TimeZone?, twentyFour: Bool) -> String {
-        guard let zone else { return "—" }
+        guard let zone else { return "Unknown" }
         let formatter = DateFormatter(); formatter.timeZone = zone
         formatter.dateFormat = twentyFour ? "HH:mm" : "h:mm a"
         return formatter.string(from: date)
@@ -338,7 +349,7 @@ private struct RoutinePage<Content: View>: View {
                     Text(title).font(.display(typeSize.isAccessibilitySize ? 27 : 38)).foregroundStyle(Ink.ink)
                 }.padding(.top, 10)
                 if !wall.link.isLive {
-                    Label(wall.link.isStandIn ? "Preview on this phone · connect to control the wall" : "Wall offline · showing the last received state", systemImage: "wifi.slash")
+                    Label(wall.link.isStandIn ? "Preview on this phone. Connect to control the wall." : "Wall offline. Showing the last received state.", systemImage: "wifi.slash")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if let problem { RoutineProblem(message: problem) }

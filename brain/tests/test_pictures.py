@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from brain.games.host import GameHost                       # noqa: E402
 from brain.games import pictures                            # noqa: E402,F401
-from brain.tests.test_games import FakeCtrl                 # noqa: E402
+from brain.tests.test_games import FakeCtrl, shown_for      # noqa: E402
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")
 
@@ -114,9 +114,9 @@ def test_reveal(tmp_path):
         g._clock = lambda: clock[0]
         g.t0 = 100.0
         blurry = host.frame_at(size)
-        clock[0] = 115.0
+        shown_for(host, clock, 15.0, size)                                   # the wall draws it all along
         half = host.frame_at(size)
-        clock[0] = 129.0
+        shown_for(host, clock, 14.0, size)
         nearly = host.frame_at(size)
         sharp = np.asarray(g.sleeve.resize((size, size)) if g.sleeve.size[0] != size else g.sleeve)
         def diff(a):
@@ -132,8 +132,9 @@ def test_reveal(tmp_path):
     host = GameHost(Ctrl(64), path=str(tmp_path / "g.json"))
     host.start("reveal", {"image": path, "album": "Blonde", "seconds": 1})
     g = host.game
-    g._clock = lambda: g.t0 + 2.0
-    host.frame_at(64)
+    clock = [g.t0]
+    g._clock = lambda: clock[0]
+    shown_for(host, clock, 2.0)
     assert g.over and not g.won and host.status()["game"]["answer"]["album"] == "Blonde"
 
 

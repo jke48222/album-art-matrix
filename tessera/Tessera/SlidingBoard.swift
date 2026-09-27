@@ -25,17 +25,17 @@ struct SlidingBoard: View {
             if !typeSize.isAccessibilitySize {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(game.over ? "Back together." : "Piece by piece.").font(.display(typeSize.isAccessibilitySize ? 29 : 33)).foregroundStyle(Ink.ink)
-                    Text(game.over ? "Every piece in its place." : "A familiar sleeve. A different perspective.").font(.ui(14)).foregroundStyle(Ink.dim)
+                    Text(game.over ? "Solved" : "Sliding puzzle").font(.display(typeSize.isAccessibilitySize ? 29 : 33)).foregroundStyle(Ink.ink)
+                    Text(game.over ? "Every tile is in place." : "Slide the tiles to rebuild the album cover.").font(.ui(14)).foregroundStyle(Ink.dim)
                 }
                 Spacer(minLength: 10)
-                Text("\(n) × \(n)").font(.machine(13)).foregroundStyle(sage)
+                Text("\(n)x\(n)").font(.machine(13)).foregroundStyle(sage).accessibilityLabel("\(n) by \(n)")
             }
             }
             if valid {
                 board.frame(maxWidth: typeSize.isAccessibilitySize ? 260 : 320).frame(maxWidth: .infinity)
                 if typeSize.isAccessibilitySize {
-                    Text("\(moves) \(moves == 1 ? "move" : "moves") · \(placed)/\(n * n - 1) home")
+                    Text("\(moves) \(moves == 1 ? "move" : "moves"), \(placed) of \(n * n - 1) in place")
                         .font(.ui(15, .semibold)).foregroundStyle(sage)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityLabel("\(moves) moves. \(placed) of \(n * n - 1) tiles in the correct position.")
@@ -47,7 +47,7 @@ struct SlidingBoard: View {
                     }
                     Spacer(minLength: 4)
                     VStack(alignment: .trailing, spacing: 8) {
-                        Text("\(placed) of \(n * n - 1) tiles home").font(.ui(14, .semibold)).foregroundStyle(sage)
+                        Text("\(placed) of \(n * n - 1) tiles in place").font(.ui(14, .semibold)).foregroundStyle(sage)
                         ProgressView(value: Double(placed), total: Double(n * n - 1)).tint(sage).frame(maxWidth: 150)
                             .accessibilityLabel("Tiles in the correct position").accessibilityValue("\(placed) of \(n * n - 1)")
                     }

@@ -163,9 +163,9 @@ class SpellingBee(Game):
         font = max(1, round(size / 192))
         honey, paper, cell = (232, 178, 44), (234, 228, 216), (30, 27, 22)
         state = self.state()
+        # The full rank, as the phone says it. A rank wider than its box
+        # travels through it, so "MOVING UP" is never cut to "UP".
         rank = "QUEEN BEE" if self.over else state["rank"].upper()
-        if size <= 96:
-            rank = {"BEGINNER": "BEGIN", "GOOD START": "START", "MOVING UP": "UP", "QUEEN BEE": "QUEEN"}.get(rank, rank)
         top = max(1, round(2 * unit))
         text_scrolled(c, rank, margin, top, size - 2 * margin - text_width(str(self.points), font) - max(2, round(3 * unit)), t, honey, font, height=7)
         text_right(c, str(self.points), size - margin, top, paper, font)

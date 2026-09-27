@@ -52,15 +52,19 @@ struct PressingPanel: View {
     @State private var saveName = ""
     @State private var saving = false
     @State private var photoError: String?
+    @State private var paletteMemo = PaletteMemo()
     private var art: UIImage? { store.photo(choice.photo) ?? sleeve }
-    private var palette: [Pressing.RGB] { choice.safeColours ?? Pressing.palette(of: art) }
+    /// One palette per picture. It draws the whole photo into a small
+    /// context, and as a plain computed property it ran about nine times a
+    /// body pass on the main thread, which stuttered the panel.
+    private var palette: [Pressing.RGB] { choice.safeColours ?? paletteMemo.palette(of: art) }
     private var kept: PressingChoice { store.choice(for: albumKey) ?? PressingChoice() }
     private var labels: [LabelStyle] { [.paper, .neon, .coin, .holo, .mono] }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Make it yours").font(.displayMid(typeSize.isAccessibilitySize ? 18 : 26)).foregroundStyle(ink.ink)
+                Text("Pressing").font(.displayMid(typeSize.isAccessibilitySize ? 18 : 26)).foregroundStyle(ink.ink)
                 Spacer(minLength: 8)
                 if !choice.isEmpty {
                     Button("Reset") { choice = PressingChoice() }.font(.ui(13, .medium))
@@ -163,7 +167,11 @@ struct PressingPanel: View {
                     while colours.count < 3 { colours.append(colours.last ?? .black) }
                     var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
                     guard UIColor(value).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return }
-                    colours[index] = Pressing.RGB(r: Float(red), g: Float(green), b: Float(blue))
+                    // A Display P3 pick reads outside 0...1 in extended sRGB.
+                    // The store clamps what it keeps, so an unclamped choice
+                    // never equalled the kept one and Keep never said Kept.
+                    func unit(_ v: CGFloat) -> Float { Float(min(1, max(0, v))) }
+                    colours[index] = Pressing.RGB(r: unit(red), g: unit(green), b: unit(blue))
                     choice.colours = colours.map { [$0.r, $0.g, $0.b] }
                 })
             }, stroke: ink.ink.opacity(0.14), names: ["Primary", "Secondary", "Accent"])
@@ -195,7 +203,7 @@ struct PressingPanel: View {
     private var shelf: some View {
         VStack(alignment: .leading, spacing: 14) {
             if store.library.isEmpty {
-                Label("Your own small pressing plant.", systemImage: "opticaldisc").font(.displayMid(21)).foregroundStyle(ink.ink)
+                Label("No saved pressings", systemImage: "opticaldisc").font(.displayMid(21)).foregroundStyle(ink.ink)
                 Text("Save a vinyl style, its colours and label. Use it on another album whenever you like.").font(.ui(14)).foregroundStyle(ink.dim)
             } else {
                 ForEach(store.library) { saved in
@@ -228,6 +236,18 @@ struct PressingPanel: View {
         if store.keep(choice, named: name.isEmpty ? "Pressing \(store.library.count + 1)" : name) {
             saving = false; saveName = ""; Taps.commit()
         }
+    }
+}
+
+/// The sleeve's palette, kept against the picture it was read from. Held by
+/// reference so reading it from a body does not count as a state change.
+private final class PaletteMemo {
+    private var source: UIImage?
+    private var value: [Pressing.RGB] = []
+    func palette(of image: UIImage?) -> [Pressing.RGB] {
+        guard let image else { return [] }
+        if source !== image { source = image; value = Pressing.palette(of: image) }
+        return value
     }
 }
 
@@ -267,9 +287,11 @@ private struct ShelfRecord: View {
         }.clipShape(Circle()).accessibilityHidden(true)
             .task(id: "\(key)|\(title)|\(artist)|\(sleeve != nil)|\(String(describing: choice))") {
                 let art = PressingStore.shared.photo(choice.photo) ?? sleeve
-                let palette = choice.safeColours ?? Pressing.palette(of: art)
-                let pressing = Pressing.make(key: key, palette: palette, hasPicture: true, title: title, artist: artist, forced: choice.kind)
                 let result = await Task.detached(priority: .utility) {
+                    // off the main actor: seventeen of these draw at once
+                    // when the kinds page opens
+                    let palette = choice.safeColours ?? Pressing.palette(of: art)
+                    let pressing = Pressing.make(key: key, palette: palette, hasPicture: true, title: title, artist: artist, forced: choice.kind)
                     let label = RecordLabel.styled(sleeve: art, title: title, artist: artist, palette: palette,
                                                    key: "\(key)|\(String(describing: choice))|\(art != nil)",
                                                    forcedStyle: choice.label.flatMap(LabelStyle.init(rawValue:)))

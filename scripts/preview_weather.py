@@ -17,7 +17,7 @@ font = ImageFont.truetype(str(FONTS / "Switzer-Medium.otf"), 17)
 for i, (size, title) in enumerate(((64, "64 × 64 · actual wall pixels"),
                                  (192, "192 × 192 · larger wall"),
                                  (512, "Full-resolution composition"))):
-    frame = Image.fromarray(WeatherFace(size).frame_at(25, data, place="Douglasville, Georgia", now=now))
+    frame = Image.fromarray(WeatherFace(size).frame_at(25, data, place="Philadelphia, Pennsylvania", now=now))
     frame.save(out / f"parity-{size}.png")
     draw.text((i * width + 22, 23), title, font=font, fill=(238, 235, 226))
     sheet.paste(frame.resize((width, width), Image.Resampling.NEAREST if size < 512 else Image.Resampling.LANCZOS),

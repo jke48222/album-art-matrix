@@ -99,7 +99,7 @@ class SpotifySource(NowPlayingSource):
         clean = self.validate_tokens(tokens)
         with self._lock:
             if client_id is not None and client_id != self.client_id:
-                raise ValueError("the Spotify app ID changed; sign in again")
+                raise ValueError("The Spotify app ID changed. Sign in again.")
             self._save_tokens(clean)
             self._generation += 1
             self._backoff_until = 0.0

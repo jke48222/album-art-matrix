@@ -12,6 +12,7 @@ import time
 
 from . import Game, register
 from .board import blank, disc, fill, rect, ring, text_centred
+from .parking import parked
 from ..art.pixelfont import text_width
 
 WAIT_MIN_S, WAIT_MAX_S = 2.0, 5.0
@@ -115,7 +116,7 @@ class ReactionKnock(Game):
             ranked = sorted((value, p) for p, value in best.items() if value is not None)
             tied = [p for value, p in ranked if value == ranked[0][0]] if ranked else []
             self.finish(won=bool(ranked), winner=tied[0] if len(tied) == 1 and len(self.players) > 1 else None,
-                        message=f"Best {ranked[0][0]} ms." if ranked else "A round of anticipation. Try again when you're ready.")
+                        message=f"Best {ranked[0][0]} ms." if ranked else "No turns scored.")
             return
         for offset in range(1, len(self.players) + 1):
             next_turn = (self.turn + offset) % len(self.players)
@@ -129,6 +130,15 @@ class ReactionKnock(Game):
             return
         now = self._now()
         if now is None:
+            return
+        if parked(self):
+            # The phone keeps polling a parked game, but its board is off and
+            # the host drops knocks, so nobody can answer. Hand the live turn
+            # back unscored, and do not begin the next one on its own.
+            if self.phase in ("red", "green") or (self.phase == "shown" and now - self.t_shown >= SHOW_S):
+                self.phase = "ready"
+                self.message = f"{self.players[self.turn]}: start when you're ready."
+                self.changed()
             return
         if self.phase in ("red", "green") and now - self.t_go > RESPONSE_LIMIT_S:
             self._score(None, "missed", "none", "No response this round.")

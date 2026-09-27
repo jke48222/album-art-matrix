@@ -157,7 +157,7 @@ struct HeardleBoard: View {
         VStack(alignment: .leading, spacing: 14) {
             if !typeSize.isAccessibilitySize {
                 HStack(alignment: .firstTextBaseline) {
-                    Text(game.over ? "That’s the one." : "Just a little listen.").font(.display(29)).foregroundStyle(Ink.ink)
+                    Text(game.over ? (game.won ? "Found it" : "The song") : "Name the song").font(.display(29)).foregroundStyle(Ink.ink)
                     Spacer(minLength: 8)
                     Text("\(min(6, tries.count + (game.over ? 0 : 1)))/6").font(.machine(13)).foregroundStyle(honey)
                 }.accessibilityElement(children: .combine)
@@ -169,7 +169,7 @@ struct HeardleBoard: View {
                     HStack(spacing: 10) {
                         if clip.phase == .loading { ProgressView().tint(Ink.ground) }
                         else { Image(systemName: isActive ? "stop.fill" : clip.phase == .failed ? "arrow.clockwise" : "play.fill") }
-                        Text(clip.phase == .loading ? "Loading · tap to cancel" : clip.phase == .playing ? "Stop listening" : clip.phase == .failed ? "Retry preview" : "Listen · \(seconds) sec")
+                        Text(clip.phase == .loading ? "Loading. Tap to cancel" : clip.phase == .playing ? "Stop listening" : clip.phase == .failed ? "Retry preview" : "Listen for \(seconds) sec")
                             .fixedSize(horizontal: false, vertical: true)
                     }.font(.ui(16, .semibold)).frame(maxWidth: .infinity, minHeight: 52).padding(.vertical, 4)
                 }.buttonStyle(PressStyle()).foregroundStyle(Ink.ground)
@@ -186,7 +186,7 @@ struct HeardleBoard: View {
                 composer
                 HStack(alignment: .firstTextBaseline) {
                     Button { clip.stop(); send(["skip": true, "step": step]) } label: {
-                        Label(step == 5 ? "Reveal song" : typeSize.isAccessibilitySize ? "Skip" : "Skip · \([1, 2, 4, 7, 11, 16][min(5, step + 1)]) sec", systemImage: "forward.end")
+                        Label(step == 5 ? "Reveal song" : typeSize.isAccessibilitySize ? "Skip" : "Skip to \([1, 2, 4, 7, 11, 16][min(5, step + 1)]) sec", systemImage: "forward.end")
                             .font(.ui(14, .semibold)).fixedSize(horizontal: false, vertical: true).frame(minHeight: 44)
                     }.buttonStyle(.plain).foregroundStyle(honey).disabled(!myTurn)
                         .accessibilityHint(step == 5 ? "Reveals the song and ends this round" : "Unlocks the first \([1, 2, 4, 7, 11, 16][min(5, step + 1)]) seconds")
@@ -241,7 +241,7 @@ struct HeardleBoard: View {
     }
     private var result: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Label(game.won ? "FOUND IN \(tries.count)" : "THE REVEAL", systemImage: game.won ? "checkmark.circle" : "music.note")
+            Label(game.won ? "FOUND IN \(tries.count)" : "THE ANSWER", systemImage: game.won ? "checkmark.circle" : "music.note")
                 .font(.machine(11)).foregroundStyle(honey)
             Text(game.state["answer"]["title"].string ?? "Song revealed").font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(30)).foregroundStyle(Ink.ink)
                 .fixedSize(horizontal: false, vertical: true)

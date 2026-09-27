@@ -35,7 +35,7 @@ struct HearingPage: View {
     private let blurb = "A microphone on the wall, read all the time. When the room is louder than the gate, the last few seconds are named by Shazam: a record, the TV, a speaker on any app. No account and no key."
 
     var body: some View {
-        MessagePage(title: "Hearing", eyebrow: "THE SOUND OF YOUR ROOM", tint: mint) {
+        MessagePage(title: "Hearing", eyebrow: "MUSIC RECOGNITION", tint: mint) {
             hero
             if readFailed || !wall.link.isLive {
                 MessageNotice(title: "Waiting for your wall", detail: "Live levels will return when the connection does. Your settings stay on the wall.", symbol: "wifi.slash", tint: mint)
@@ -50,9 +50,9 @@ struct HearingPage: View {
                 }.disabled(readFailed || !wall.link.isLive)
             }
             SetupGroup("A gesture across the room", note: "Two knocks toggle the wall. Whistle upward to turn it on, downward to turn it off.") {
-                gestureRow("knock", title: "Two knocks", detail: "A tap, a tap. Lights change.", symbol: "hand.tap")
+                gestureRow("knock", title: "Two knocks", detail: "Two knocks turn the wall on or off.", symbol: "hand.tap")
                 Rule()
-                gestureRow("whistle", title: "A rising whistle", detail: "Up for light. Down for quiet.", symbol: "wind")
+                gestureRow("whistle", title: "A rising whistle", detail: "Whistle up to turn on, down to turn off.", symbol: "wind")
                 if store.values["knock"] ?? 0 > 0.5 { Rule(); knob("knock_sensitivity") }
                 if let k = ears?.knock { Rule(); fact("Recognized", switchLine(k)) }
             }
@@ -98,6 +98,19 @@ struct HearingPage: View {
             }.tint(mint).padding(18).messageSurface()
         }
         .task(id: wall.host) { await store.load(host: wall.host) }
+        // The load above runs once per host. If the wall was away then, the
+        // knobs stay empty (no gesture toggles, gain or timing) and the old
+        // error stays up after the levels come back. Retry while the wall is
+        // answering, on its own clock so a slow /tuning never stalls the meter.
+        .task(id: "\(wall.host)|\(scenePhase)|tuning") {
+            guard scenePhase == .active else { return }
+            let host = wall.host
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard !Task.isCancelled, host == wall.host else { return }
+                if !readFailed, store.knobs.isEmpty || store.problem != nil { await store.load(host: host) }
+            }
+        }
         .task(id: "\(wall.host)|\(scenePhase)") {
             guard scenePhase == .active else { return }
             let host = wall.host
@@ -120,11 +133,11 @@ struct HearingPage: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(ears?.on == true ? "Every room\nhas a rhythm." : "Let the room play.")
+            Text(ears == nil ? "Hearing" : ears?.on == true ? "Hearing is on" : "Hearing is off")
                 .font(typeSize.isAccessibilitySize ? .ui(23, .semibold) : .display(38))
                 .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 16) {
-                Text("A record. The radio.\nA song from somewhere.")
+                Text("Recognizes music playing in the room.")
                     .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
                 if !typeSize.isAccessibilitySize {
@@ -212,6 +225,7 @@ struct HearingPage: View {
 
     private var taughtNote: String {
         guard let t = taught else { return "Songs the wall knows on its own, asked before Shazam." }
+        if !t.available { return "Teaching is off on this wall." }
         if t.songs.isEmpty {
             return "None yet. The wall learns a song's preview when another source names it and the ear keeps missing it, and learns the room's own hearing of a song after fifteen loud seconds."
         }
@@ -228,7 +242,7 @@ struct HearingPage: View {
     private var roomNote: String {
         var s = "Drag the mark to set the gate: above the quiet floor, below the music."
         if let l = ears?.level_db, let f = ears?.floor_db {
-            s += String(format: " The room reads %.0f dB now; its quiet floor lately is %.0f.", l, f)
+            s += String(format: " The room reads %.0f dB now. Its quiet floor lately is %.0f.", l, f)
         }
         return s
     }

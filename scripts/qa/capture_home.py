@@ -240,6 +240,10 @@ def wall_snapshot(host: str, output: Path) -> tuple[dict, bytes]:
     if not 16 <= side <= 512 or side * side * 3 != len(frame):
         raise ValueError("The wall did not return a square RGB888 frame")
     state = {key: source[key] for key in SAFE_STATE_KEYS if key in source}
+    # The weather's place names where the wall lives; the committed evidence
+    # keeps only that one was set.
+    if state.get("place"):
+        state["place"] = "[redacted]"
     # Only identity/display fields are persisted; service and account configuration is excluded.
     if "now_showing" in state:
         state["now_showing"] = {key: value for key, value in state["now_showing"].items()
@@ -438,7 +442,7 @@ def main() -> int:
                     now = datetime(2026,9,23,11,30,24,tzinfo=timezone.utc).timestamp()
                     state.update({"wall_time":now,"wall_timezone":"America/New_York","wall_utc_offset_s":-14400,
                         "clock_24h":True,"alarm_enabled":True,"alarm_time":"07:30","alarm_next_at":now+86400,
-                        "sun":"on","sun_night":.25,"lat":33.75,"lon":-84.75,"place":"Douglasville, Georgia",
+                        "sun":"on","sun_night":.25,"lat":39.95,"lon":-75.17,"place":"Philadelphia, Pennsylvania",
                         "sun_phase":"day","sun_factor":1.,"sunrise_at":now-600,"sunset_at":now+42480,
                         "effective_brightness":1.,"sleep_state":"idle","wake_enabled":True,"wake_time":"07:00",
                         "wake_fade_min":20.,"wake_next_at":now+84576,"wake_next_end_at":now+85776})

@@ -329,9 +329,21 @@ class AppleMusicSource(NowPlayingSource):
     def status(self):
         with self._remote_lock:
             stale = self._remote_checked is not None and time.time() - self._remote_checked > 30
-            state = "stale" if stale and self.endpoint else self._remote_state
+            if stale and self.endpoint and self._remote_busy is None:
+                # Only the source chain polls the reporter, and it stops at
+                # the first source playing: while the phone or AirPlay plays,
+                # nothing asks the Mac. Reading the status asks it again, in
+                # the background (retry() only starts a thread), at most once
+                # every 30 seconds, since each answer resets the clock.
+                self.retry()
+            if stale and self.endpoint:
+                state = "checking" if self._remote_busy is not None else "stale"
+            else:
+                state = self._remote_state
             now = self._remote_current if not stale else None
-            return {"endpoint": self.endpoint, "answering": None if stale else self.answering,
+            # The last answer stands while the next one is on its way, so a
+            # healthy reporter does not read as unset in the meantime.
+            return {"endpoint": self.endpoint, "answering": self.answering,
                     "state": state, "checked_at": self._remote_checked,
                     "problem": self._remote_problem,
                     "current": ({"title": now.title, "artist": now.artist, "album": now.album,
@@ -346,7 +358,14 @@ class AppleMusicSource(NowPlayingSource):
                 return True
             self._remote_busy = claim
             self._remote_state = "checking"
-        threading.Thread(target=self._remote, kwargs={"claim": claim}, daemon=True).start()
+            try:
+                threading.Thread(target=self._remote, kwargs={"claim": claim}, daemon=True).start()
+            except RuntimeError:
+                # The Pi can refuse a thread when memory is short. Release the
+                # claim so a later check is not refused as already running.
+                self._remote_busy = None
+                self._remote_state = "unavailable"
+                return False
         return True
 
     def _remote(self, claim=None):

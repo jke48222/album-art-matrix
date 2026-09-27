@@ -331,3 +331,72 @@ def test_services_reports_actual_configured_source_order_without_inventing_defau
     assert configured['source_order'] == ['spotify', 'phone', 'ears']
     configured['source_order'].append('lastfm')
     assert api.ctrl.source_order == ['spotify', 'phone', 'ears']
+
+
+# ---- the ticker's own ink and pace (C12-2) ----------------------------------
+
+def test_the_ticker_keeps_its_own_ink_and_pace_apart_from_the_lamp(api):
+    api.post("/state", {"color": "#4060ff", "speed": 0.5, "match_art": True})
+    code, body = api.post("/state", {"mode": "ticker", "ticker_text": "Hello",
+                                     "ticker_color": "#112233", "ticker_speed": 2})
+    assert code == 200 and "rejected" not in body
+    assert body["ticker_color"] == "#112233" and body["ticker_speed"] == pytest.approx(2.0)
+    # the lamp's settings, untouched by a message
+    assert body["color"] == "#4060ff" and body["speed"] == pytest.approx(0.5)
+    assert body["match_art"] is True
+    assert api.ctrl.ticker_own_ink() == "#112233"
+
+
+def test_ticker_speed_is_clamped_and_a_bad_ticker_color_refused(api):
+    _, body = api.post("/state", {"ticker_speed": 9})
+    assert body["ticker_speed"] == pytest.approx(3.0)
+    _, body = api.post("/state", {"ticker_speed": 0})
+    assert body["ticker_speed"] == pytest.approx(0.1)
+    for bad in ("#12345", "112233", "#12345g", 7, None):
+        _, body = api.post("/state", {"ticker_color": bad})
+        assert "ticker_color" in body["rejected"]
+    _, body = api.post("/state", {"ticker_speed": "fast"})
+    assert "ticker_speed" in body["rejected"]
+    assert api.ctrl.get()["ticker_color"] == "#f4f1ea"          # the default, unchanged
+
+
+def test_a_message_without_its_own_ink_keeps_the_lamps(monkeypatch):
+    """Notes, the remote's Info key and spoken messages bring no ink, so the
+    render loop gives them the lamp's (the album's under Match Art), as
+    before the ticker had an ink of its own. A note over a message with its
+    own ink hands that message back in it."""
+    class Timer:
+        def __init__(self, *args, **kwargs):
+            self.daemon = True
+        def start(self):
+            pass
+        def cancel(self):
+            pass
+    monkeypatch.setattr("brain.control.threading.Timer", Timer)
+    ctrl = ControlState()
+    ctrl.apply({"mode": "ticker", "ticker_text": "Info title"})
+    assert ctrl.ticker_own_ink() is None
+    ctrl.apply({"mode": "ticker", "ticker_text": "Mine", "ticker_color": "#112233"})
+    assert ctrl.ticker_own_ink() == "#112233"
+    ctrl.note("Back at seven", 30)
+    assert ctrl.ticker_own_ink() is None                       # the note: the lamp's ink
+    ctrl.clear_note()
+    assert ctrl.get()["ticker_text"] == "Mine" and ctrl.ticker_own_ink() == "#112233"
+
+
+def test_a_state_saved_before_the_ticker_had_an_ink_keeps_what_it_showed():
+    with open(control.STATE_PATH, "w") as fh:
+        json.dump({"mode": "ticker", "ticker_text": "Old", "color": "#aa0000", "speed": 0.4}, fh)
+    ctrl = ControlState()
+    s = ctrl.get()
+    assert s["ticker_color"] == "#aa0000" and s["ticker_speed"] == pytest.approx(0.4)
+    assert ctrl.ticker_own_ink() is None                       # drawn in the lamp's ink, as before
+    with open(control.STATE_PATH, "w") as fh:
+        json.dump({**s, "ticker_color": "#00aa00"}, fh)
+    assert ControlState().ticker_own_ink() == "#00aa00"        # a message saved with its own ink
+
+
+def test_services_says_asking_claude_is_off_in_a_sentence(api):
+    _, body = api.get("/services")
+    assert body["claude"] == {"ready": False, "state": "off",
+                              "problem": "Asking Claude is switched off on this wall."}

@@ -30,9 +30,9 @@ struct RevealBoard: View {
             } else {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(game.over ? (game.won ? "You knew it." : "There it is.") : "Look familiar?")
+                    Text(game.over ? (game.won ? "Solved" : "Answer") : "Name this cover")
                         .font(.display(typeSize.isAccessibilitySize ? 29 : 35)).foregroundStyle(Ink.ink)
-                    Text(game.over ? "The sleeve, in full." : "Name the album or artist as the image clears.")
+                    Text(game.over ? "The full cover." : "Name the album or artist as the image clears.")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 8)
@@ -44,8 +44,12 @@ struct RevealBoard: View {
                 }
             }
             }
+            // The canvas hides itself from VoiceOver, so give the artwork its own
+            // element; a label on the hidden canvas is never read.
             GameArtworkCanvas(game: game).aspectRatio(1, contentMode: .fit).frame(maxWidth: typeSize.isAccessibilitySize ? 240 : 300).frame(maxWidth: .infinity)
+                .accessibilityElement(children: .ignore)
                 .accessibilityLabel(game.over ? "Revealed album artwork" : "Album cover, gradually becoming clearer")
+                .accessibilityAddTraits(.isImage)
             if game.over { answer }
             else {
                 if !typeSize.isAccessibilitySize { timeline }
@@ -99,13 +103,13 @@ struct RevealBoard: View {
                 }
             }.accessibilityHidden(true)
             HStack {
-                Text("A HINT OF COLOUR"); Spacer(); Text("COMING INTO FOCUS")
+                Text("BLURRED"); Spacer(); Text("CLEAR")
             }.font(.machine(8)).tracking(0.6).foregroundStyle(Ink.dim)
         }.accessibilityElement(children: .ignore).accessibilityLabel("Reveal progress").accessibilityValue("\(Int(fraction * 100)) percent")
     }
     private var answer: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Label(game.won ? "RECOGNISED IN \(elapsed.formatted(.number.precision(.fractionLength(1)))) SECONDS" : "THE REVEAL", systemImage: game.won ? "checkmark.circle" : "eye")
+            Label(game.won ? "RECOGNISED IN \(elapsed.formatted(.number.precision(.fractionLength(1)))) SECONDS" : "THE ANSWER", systemImage: game.won ? "checkmark.circle" : "eye")
                 .font(.machine(10)).foregroundStyle(honey)
             Text(answerTitle).font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(31)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             if let artist = game.state["answer"]["artist"].string, !artist.isEmpty { Text(artist).font(.ui(17)).foregroundStyle(Ink.dim) }

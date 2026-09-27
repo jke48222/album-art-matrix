@@ -16,6 +16,9 @@ struct SettingsSheet: View {
     @State private var vitals: Vitals?
     @FocusState private var searching: Bool
     @State private var openedInitialRoute = false
+    /// Next steps the owner closed. A suggestion that could not be dismissed
+    /// kept one nag up forever and hid every step after it.
+    @AppStorage("settings.nextStep.dismissed") private var dismissedSteps = ""
 
     private var warm: Color { Color(hex: 0xE5BE83) }
     private var results: [SettingsDestination] { SettingsDestination.results(for: query) }
@@ -32,11 +35,6 @@ struct SettingsSheet: View {
                         ForEach(SettingsSection.allCases) { section in
                             sectionBlock(section)
                         }
-                        HStack(spacing: 9) {
-                            Image(systemName: "square.grid.3x3.fill").font(.system(size: 12))
-                            Text("A small wall. A world of possibilities.").font(.ui(12))
-                        }
-                        .foregroundStyle(Ink.dim).padding(.top, 4)
                     } else {
                         searchResults
                     }
@@ -104,10 +102,6 @@ struct SettingsSheet: View {
 
     private var masthead: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if !typeSize.isAccessibilitySize {
-                Text("TESSERA / YOUR WALL, YOUR WAY")
-                    .font(.machine(9)).tracking(1.2).foregroundStyle(warm)
-            }
             Text("Settings").font(typeSize.isAccessibilitySize ? .ui(23, .semibold) : .display(46))
                 .foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
         }
@@ -147,19 +141,31 @@ struct SettingsSheet: View {
             .accessibilityHint("Opens the wall’s connection settings")
             if let suggestion {
                 Rectangle().fill(warm.opacity(0.15)).frame(height: 1).padding(.horizontal, 20)
-                Button {
-                    if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { wall.lookForWallAgain() }
-                    else { path.append(suggestion.route) }
-                } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: suggestion.symbol).font(.system(size: 14))
-                        Text(suggestion.title).font(.ui(13, .medium)).fixedSize(horizontal: false, vertical: true)
-                        Spacer(minLength: 8)
-                        Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold))
+                HStack(spacing: 0) {
+                    Button {
+                        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { wall.lookForWallAgain() }
+                        else { path.append(suggestion.route) }
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: suggestion.symbol).font(.system(size: 14))
+                            Text(suggestion.title).font(.ui(13, .medium)).fixedSize(horizontal: false, vertical: true)
+                            Spacer(minLength: 8)
+                            Image(systemName: "arrow.up.right").font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(warm).padding(.leading, 20).padding(.trailing, suggestion.id == nil ? 20 : 8)
+                        .padding(.vertical, 16).frame(minHeight: 48)
+                        .contentShape(Rectangle())
+                    }.buttonStyle(PressStyle(scale: 0.99))
+                    // Reconnecting is never dismissed. Every other step is.
+                    if let id = suggestion.id {
+                        Button { dismissStep(id) } label: {
+                            Image(systemName: "xmark").font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Ink.dim).frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(PressStyle(scale: 0.94)).padding(.trailing, 8)
+                        .accessibilityLabel("Dismiss suggestion")
                     }
-                    .foregroundStyle(warm).padding(.horizontal, 20).padding(.vertical, 16).frame(minHeight: 48)
-                    .contentShape(Rectangle())
-                }.buttonStyle(PressStyle(scale: 0.99))
+                }
             }
         }
         .background {
@@ -177,7 +183,7 @@ struct SettingsSheet: View {
                 Text(statusWord.uppercased()).font(.machine(8)).tracking(0.5).foregroundStyle(Ink.ink)
             }
             Text("Your wall").font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(26)).foregroundStyle(Ink.ink)
-            Text(wall.link.isLive ? "\(Panel.side) x \(Panel.side), \(wall.state.mode == "off" ? "lights out" : "\(Int(wall.state.brightness * 100))% light")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
+            Text(wall.link.isLive ? "\(Panel.side) x \(Panel.side), \(resting ?? "\(Int((wall.state.brightness * 100).rounded()))% brightness")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
                 .font(.ui(12)).foregroundStyle(Color(hex: 0xB8BBAF))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -195,7 +201,6 @@ struct SettingsSheet: View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
                 Text(section.title).font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(25)).foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
-                if !typeSize.isAccessibilitySize { Text(section.caption).font(.machine(8)).tracking(0.7).foregroundStyle(Ink.dim) }
             }
             .padding(.top, 5)
             routeList(section.entries)
@@ -291,9 +296,22 @@ struct SettingsSheet: View {
         }
     }
 
+    /// Why a live wall is dark, when it is: switched off, or the quiet-room
+    /// plan resting it. Only mode "off" used to count, so a wall dark from
+    /// Away or Go dark still read "Connected" and "100% light".
+    private var resting: String? {
+        if wall.state.mode == "off" { return "off" }
+        if wall.state.awayActive { return "resting, phone away" }
+        if wall.state.displayedMode == "off" { return "resting between songs" }
+        if let raw = wall.state.idleActive, let policy = IdlePolicy(rawValue: raw) {
+            return "between songs, \(policy.shortTitle.lowercased())"
+        }
+        return nil
+    }
+
     private var statusWord: String {
         switch wall.link {
-        case .live: wall.state.mode == "off" ? "Connected, off" : "Connected"
+        case .live: resting.map { "Connected, \($0)" } ?? "Connected"
         case .searching: "Finding the wall"
         case .offline: "Offline"
         case .standIn: "Phone preview"
@@ -308,30 +326,56 @@ struct SettingsSheet: View {
         let peak = max(wall.state.wbR, wall.state.wbG, wall.state.wbB, 0.001)
         return min(wall.state.wbR, wall.state.wbG, wall.state.wbB) / peak < 0.995
     }
-    private var suggestion: (title: String, symbol: String, route: SettingsDestination)? {
+    /// `id` nil means the step cannot be dismissed.
+    private var suggestion: (title: String, symbol: String, route: SettingsDestination, id: String?)? {
         // Also while the owner chose this phone: that stand-in never probes.
-        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { return ("Look for your wall again", "arrow.clockwise", .addresses) }
-        if !musicConnected && !musicRefused { return ("Connect Apple Music", "music.note", .services) }
-        if let services, !services.spotify.linked, services.lastfm.user.isEmpty { return ("Connect your music services", "music.note", .services) }
-        if wall.link.isLive && !corrected { return ("Find your panel’s true colour", "camera.aperture", .colour) }
+        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { return ("Look for your wall again", "arrow.clockwise", .addresses, nil) }
+        let dismissed = Set(dismissedSteps.split(separator: ",").map(String.init))
+        // Any one music service is enough. Apple Music only while none is
+        // linked, since Spotify, Last.fm or ListenBrainz already feed the wall.
+        let otherMusic = services?.spotify.linked == true || !(services?.lastfm.user.isEmpty ?? true)
+            || !(services?.listenbrainz?.user.isEmpty ?? true)
+        if !musicConnected && !musicRefused && !otherMusic && !dismissed.contains("apple-music") {
+            return ("Connect Apple Music", "music.note", .services, "apple-music")
+        }
+        if services != nil, !musicConnected, !otherMusic, !dismissed.contains("music-services") {
+            return ("Connect your music services", "music.note", .services, "music-services")
+        }
+        if wall.link.isLive && !corrected && !dismissed.contains("true-colour") {
+            return ("Find your panel’s true colour", "camera.aperture", .colour, "true-colour")
+        }
         return nil
+    }
+
+    private func dismissStep(_ id: String) {
+        let kept = dismissedSteps.split(separator: ",").map(String.init).filter { $0 != id }
+        dismissedSteps = (kept + [id]).joined(separator: ",")
+        Taps.detent(intensity: 0.3)
     }
     private func detail(_ item: SettingsDestination) -> String {
         guard wall.link.isLive || wall.link.isStandIn else { return item.detail }
         switch item {
-        case .light: return "\(Int(wall.state.brightness * 100))% brightness"
+        // Rounded, as the identity line above rounds: truncating showed 0.29 as 28%.
+        case .light: return "\(Int((wall.state.brightness * 100).rounded()))% brightness"
         case .time:
             if wall.state.timerRinging { return wall.state.timerKind == "alarm" ? "Your alarm is ringing" : "Timer complete" }
             if let left = wall.state.timerSeconds() { return "Timer, \(TimeInput.clock(left)) remaining" }
             return item.detail
-        case .sun: return wall.state.sun == "on" ? "On, \(Int(wall.state.sunNight * 100))% after dark" : item.detail
+        case .sun:
+            guard wall.state.sun == "on" else { return item.detail }
+            // On with no location saved (the wall says sun_phase "location"),
+            // nothing dims yet, so the row must not promise a level after dark.
+            let located = wall.state.lat.isFinite && wall.state.lon.isFinite
+                && abs(wall.state.lat) <= 90 && abs(wall.state.lon) <= 180
+            if !located || wall.state.sunPhase == "location" { return "On, needs a location" }
+            return "On, \(Int((wall.state.sunNight * 100).rounded()))% after dark"
         case .sleep:
             if let left = wall.state.sleepSeconds(), left > 0 { return "Fading, \(max(1, (left + 59) / 60)) min remaining" }
             return item.detail
         case .wake: return wall.state.wakeEnabled ? "Every day at \(TimeInput.timeLabel(wall.state.wakeTime, twentyFour: wall.state.clock24h))" : item.detail
         case .idle:
-            let names = ["black": "Go dark", "hold": "Hold the sleeve", "dim": "Dim the sleeve", "ambient": "Drift", "weather": "Show the weather"]
-            return "\(names[wall.state.idle] ?? "Go dark"), \(wall.state.away == "off" ? "off when away" : "stays on when away")"
+            // the Idle page's own names, so the row and the page agree
+            return "\(IdlePolicy.current(wall.state.idle).shortTitle), \(wall.state.away == "off" ? "off when away" : "stays on when away")"
         case .services:
             var connected: [String] = []
             if musicConnected { connected.append("Apple Music") }
@@ -423,7 +467,9 @@ struct LightPage: View {
                     HStack {
                         Text("Brightness").font(.ui(16)).foregroundStyle(Ink.ink)
                         Spacer()
-                        Text("\(Int(brightness * 100))%")
+                        // Rounded, like the Light row: the slider's steps can
+                        // land a hair under a whole percent.
+                        Text("\(Int((brightness * 100).rounded()))%")
                             .font(.machine(13)).foregroundStyle(Ink.dim)
                             .contentTransition(.numericText())
                     }
@@ -975,7 +1021,7 @@ struct AboutPage: View {
                 Rule()
                 SetupRow(title: "Opening", subtitle: introStyle == "mark" ? "The mark builds on the wall and becomes the panel."
                          : introStyle == "sting" ? "The Record sting, on black."
-                         : introStyle == "sting-room" ? "The Record sting in the room's light; then the app glitches in."
+                         : introStyle == "sting-room" ? "The Record sting in the room's light, then the app glitches in."
                          : "The iPod or room film: the cover, the badge, the pull back.") {
                     HStack(spacing: 6) {
                         ActionPill(title: "Sting", filled: introStyle == "sting") { introStyle = "sting" }

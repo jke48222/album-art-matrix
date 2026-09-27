@@ -86,17 +86,25 @@ final class WallCanvas {
         canRedo = !redoStack.isEmpty
     }
 
+    /// Whether a fill at this cell would change anything. Out of bounds, or
+    /// pouring a colour onto itself, is a no-op, and a no-op must not cost an
+    /// undo step (a checkpoint also clears redo).
+    func fillChanges(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8)) -> Bool {
+        guard x >= 0, x < side, y >= 0, y < side else { return false }
+        let o = (y * side + x) * 3
+        return abs(Int(px[o]) - Int(rgb.0)) >= 4 || abs(Int(px[o + 1]) - Int(rgb.1)) >= 4
+            || abs(Int(px[o + 2]) - Int(rgb.2)) >= 4
+    }
+
     /// The bucket. Fills the connected region under the tap with the ink,
     /// where "connected" means neighbouring tiles near the tapped tile's
     /// colour. The tolerance exists for imported photos, whose regions are
     /// never exactly one value; drawings fill exactly.
     func fill(x: Int, y: Int, rgb: (UInt8, UInt8, UInt8)) {
-        guard x >= 0, x < side, y >= 0, y < side else { return }
+        // pouring a colour onto itself is a no-op, not a 4,096-tile walk
+        guard fillChanges(x: x, y: y, rgb: rgb) else { return }
         let o = (y * side + x) * 3
         let t = (Int(px[o]), Int(px[o + 1]), Int(px[o + 2]))
-        // pouring a colour onto itself is a no-op, not a 4,096-tile walk
-        if abs(t.0 - Int(rgb.0)) < 4, abs(t.1 - Int(rgb.1)) < 4,
-           abs(t.2 - Int(rgb.2)) < 4 { return }
         let tol = 14
         var seen = [Bool](repeating: false, count: side * side)
         var stack = [(x, y)]
@@ -298,7 +306,13 @@ struct StudioScreen: View {
                 clipFrame = (clipFrame + advance) % clip.count
                 canvas.load(clip[clipFrame])
             }
-            .onDisappear { importTask?.cancel() }
+            .onDisappear {
+                importTask?.cancel()
+                // The Undo banner goes with the Studio, so does its trash. The
+                // full-screen framing step also fires this, and the Studio and
+                // its banner come back after it, so the trash stays then.
+                if framing == nil { kept.purgeRemoved() }
+            }
     }
 
     private var editor: some View {
@@ -306,7 +320,7 @@ struct StudioScreen: View {
             studioHeading
             Picker("Studio section", selection: $showingMade) {
                 Text("Create").tag(false)
-                Text("Made · \(kept.made.count)").tag(true)
+                Text("Made (\(kept.made.count))").tag(true)
             }.pickerStyle(.segmented)
             if showingMade {
                 madeCollection
@@ -491,10 +505,12 @@ struct StudioScreen: View {
                         }
                         if writing { leaveWords() }
                         if !clip.isEmpty { clip = [] }
-                        guard tool != .fill else { return }   // the bucket pours on release
                         let cell = geo.size.width / CGFloat(canvas.side)
                         let fx = min(Double(canvas.side) - 0.51, max(0.0, g.location.x / cell - 0.5))
                         let fy = min(Double(canvas.side) - 0.51, max(0.0, g.location.y / cell - 0.5))
+                        // The bucket pours on release. lastF still marks the
+                        // touch as begun, so warm() fires once, not per event.
+                        guard tool != .fill else { lastF = (fx, fy); return }
                         let rgb: (UInt8, UInt8, UInt8) = tool == .erase ? (0, 0, 0) : ink
                         let radius = thick ? 1 : 0
                         if let l = lastF {
@@ -515,9 +531,13 @@ struct StudioScreen: View {
                             let cell = geo.size.width / CGFloat(canvas.side)
                             let x = min(canvas.side - 1, max(0, Int(g.location.x / cell)))
                             let y = min(canvas.side - 1, max(0, Int(g.location.y / cell)))
-                            canvas.checkpoint()
-                            canvas.fill(x: x, y: y, rgb: ink)
-                            Taps.commit()
+                            if canvas.fillChanges(x: x, y: y, rgb: ink) {
+                                canvas.checkpoint()
+                                canvas.fill(x: x, y: y, rgb: ink)
+                                Taps.commit()
+                            } else {
+                                Taps.detent(intensity: 0.3)
+                            }
                         } else {
                             Taps.detent(intensity: 0.3)
                         }
@@ -530,7 +550,7 @@ struct StudioScreen: View {
             if canvas.isEmpty {
                 VStack(spacing: 10) {
                     Image(systemName: "plus").font(.system(size: 28, weight: .ultraLight))
-                    Text("Start with a mark").font(.ui(15, .medium))
+                    Text("Draw on the canvas").font(.ui(15, .medium))
                 }.foregroundStyle(Ink.dim.opacity(0.6)).allowsHitTesting(false).accessibilityHidden(true)
             }
         }
@@ -547,14 +567,14 @@ struct StudioScreen: View {
                 VStack(alignment: .leading, spacing: 8) { studioTitle; canvasSize }
             }
             HStack {
-                Text(showingMade ? "Your little collection of light." : writing ? "Drag the words into place." : clip.isEmpty ? "Every pixel is yours." : "A moving picture, made for your wall.").font(.ui(13)).foregroundStyle(Ink.dim)
+                Text(showingMade ? "Saved creations on this iPhone." : writing ? "Drag the words into place." : clip.isEmpty ? "Draw, type or import a picture." : "Clip preview. It loops on the wall.").font(.ui(13)).foregroundStyle(Ink.dim)
                 Spacer()
                 Button { emitterPreview.toggle() } label: {
                     Image(systemName: emitterPreview ? "square.grid.3x3.fill" : "square.fill")
                         .foregroundStyle(accent).frame(width: 44, height: 44)
                 }.accessibilityLabel(emitterPreview ? "Show exact pixels" : "Show LED simulation")
             }
-            if emitterPreview { Text("LED simulation · colours are approximate").font(.ui(11)).foregroundStyle(Ink.dim) }
+            if emitterPreview { Text("LED simulation. Colours are approximate.").font(.ui(11)).foregroundStyle(Ink.dim) }
         }
     }
 
@@ -563,7 +583,7 @@ struct StudioScreen: View {
             .fixedSize(horizontal: true, vertical: false)
     }
     private var canvasSize: some View {
-        Text("\(canvas.side) × \(canvas.side)").font(.machine(9)).foregroundStyle(Ink.dim)
+        Text("\(canvas.side) x \(canvas.side)").font(.machine(9)).foregroundStyle(Ink.dim)
             .fixedSize(horizontal: true, vertical: false)
     }
 
@@ -669,7 +689,7 @@ struct StudioScreen: View {
                 Spacer()
                 Text("\(words.count) / 96").font(.machine(10)).foregroundStyle(Ink.dim)
             }
-            TextField("Make yourself at home", text: $words, axis: .vertical)
+            TextField("Type your words", text: $words, axis: .vertical)
                 .lineLimit(1...3).font(.ui(20, .medium)).foregroundStyle(Ink.ink)
                 .textInputAutocapitalization(.never).autocorrectionDisabled().focused($typing)
                 .padding(16).background(Ink.sunk, in: RoundedRectangle(cornerRadius: 12))
@@ -742,11 +762,11 @@ struct StudioScreen: View {
                 }
                 if tool != .fill {
                     if typeSize.isAccessibilitySize {
-                        Toggle("Wide brush · 3 pixels", isOn: $thick).font(.ui(14)).foregroundStyle(Ink.ink).tint(accent)
+                        Toggle("Wide brush, 3 pixels", isOn: $thick).font(.ui(14)).foregroundStyle(Ink.ink).tint(accent)
                     } else {
                         Picker("Brush width", selection: $thick) {
-                            Text("Fine · 1 pixel").tag(false)
-                            Text("Wide · 3 pixels").tag(true)
+                            Text("Fine, 1 pixel").tag(false)
+                            Text("Wide, 3 pixels").tag(true)
                         }.pickerStyle(.segmented)
                     }
                 }
@@ -775,8 +795,11 @@ struct StudioScreen: View {
     // MARK: Send and keep
 
     private var canSend: Bool { (!canvas.isEmpty || !clip.isEmpty) && (!writing || lettering.fits) }
+    /// The saved copy must still exist: deleting it from Made (with the work
+    /// still on the canvas) otherwise left Save disabled and reading "Saved".
     private var isSaved: Bool {
-        savedID != nil && savedTitle == titleForSave && (clip.isEmpty ? savedPixels == canvas.px : savedClip == clip)
+        guard let savedID, kept.made.contains(where: { $0.id == savedID }) else { return false }
+        return savedTitle == titleForSave && (clip.isEmpty ? savedPixels == canvas.px : savedClip == clip)
     }
     private var titleForSave: String {
         let title = creationTitle.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -813,11 +836,14 @@ struct StudioScreen: View {
                     sending = false
                     if ok {
                         sent = movie.isEmpty ? revision == canvas.revision : movie == clip
-                        if !alreadySaved, let saved = kept.keep(movie.isEmpty ? [pixels] : movie, fps: fps, title: title), sent {
+                        // `sent` first: a canvas that changed mid-send is not
+                        // what was kept, and keeping it anyway left an orphan
+                        // copy that a later Save duplicated.
+                        if sent, !alreadySaved, let saved = kept.keep(movie.isEmpty ? [pixels] : movie, fps: fps, title: title) {
                             savedID = saved.id; savedTitle = title; savedPixels = pixels; savedClip = movie
                         }
                     } else {
-                        sendError = "Couldn’t reach the wall. Your creation is safe here; tap to try again."
+                        sendError = "Couldn’t reach the wall. Your creation is still here. Tap to try again."
                         Taps.error()
                     }
                 }
@@ -831,6 +857,13 @@ struct StudioScreen: View {
                     .frame(maxWidth: .infinity, minHeight: 56)
                     .background(canSend ? accent : Ink.sunk, in: RoundedRectangle(cornerRadius: 16))
             }.buttonStyle(PressStyle()).disabled(!canSend || sending)
+            // The wall runs drawings and clips through its finish (main.py's
+            // frame and clip branches), so with Dither or Poster on it lights
+            // something other than these exact pixels. The stand-in does not.
+            if wall.link.isLive && wall.state.finish != "clean" {
+                Text("Your wall shows this with its \(wall.state.finish.capitalized) finish. Choose Clean in Finish to light these exact pixels.")
+                    .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
@@ -846,7 +879,7 @@ struct StudioScreen: View {
                 Text(String(format: "%.1f / %.1fs", Double(clipFrame) / clipFPS, Double(clip.count) / clipFPS))
                     .font(.machine(10)).foregroundStyle(Ink.dim)
             }
-            Text("Silent clip · drawing on it keeps the current frame as a still.")
+            Text("Silent clip. Drawing on it keeps the current frame as a still.")
                 .font(.ui(12)).foregroundStyle(Ink.dim)
         }
     }
@@ -870,10 +903,10 @@ struct StudioScreen: View {
             if kept.made.isEmpty {
                 VStack(alignment: .leading, spacing: 20) {
                     Image(systemName: "square.stack.3d.up").font(.system(size: 38, weight: .ultraLight)).foregroundStyle(accent)
-                    Text("Keep a little light.").font(.display(30)).foregroundStyle(Ink.ink)
-                    Text("Save your drawings, lettering, photos and moving studies here. They stay on this iPhone, ready for another evening.")
+                    Text("No saved creations yet").font(.display(30)).foregroundStyle(Ink.ink)
+                    Text("Saved drawings, lettering, photos and clips appear here. They stay on this iPhone.")
                         .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-                    Button("Make your first piece") { showingMade = false }.font(.ui(15, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
+                    Button("Go to the canvas") { showingMade = false }.font(.ui(15, .semibold)).foregroundStyle(accent).frame(minHeight: 44)
                 }.padding(.vertical, 32)
             } else {
                 Text("Tap a piece to bring it back to your canvas.").font(.ui(13)).foregroundStyle(Ink.dim)
@@ -901,7 +934,7 @@ struct StudioScreen: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title).font(.ui(14, .medium)).foregroundStyle(Ink.ink).lineLimit(2)
-                    Text("\(item.animated ? "Clip" : "Still") · \(item.side) × \(item.side)")
+                    Text("\(item.animated ? "Clip" : "Still"), \(item.side) x \(item.side)")
                         .font(.machine(9)).foregroundStyle(Ink.dim)
                 }
                 Spacer(minLength: 0)

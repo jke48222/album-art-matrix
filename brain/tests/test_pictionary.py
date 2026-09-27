@@ -14,6 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from brain.games.host import GameHost                  # noqa: E402
 from brain.games import pictionary                     # noqa: E402,F401
 from brain.tests.test_pictures import Ctrl             # noqa: E402
+from brain.tests.test_games import shown_for        # noqa: E402
 
 OUT = os.environ.get("VOICE_TEST_OUT", "")
 
@@ -58,8 +59,9 @@ def test_time_runs_out_and_no_key(tmp_path):
     host.start("pictionary", {"word": "owl", "imaginer": FakeImaginer(), "seconds": 5})
     g = host.game
     wait_drawn(g)
-    g._clock = lambda: g.t0 + 6.0
-    host.frame_at(64)
+    clock = [g.t0]
+    g._clock = lambda: clock[0]
+    shown_for(host, clock, 6.0)
     assert g.over and not g.won and g.message == "Time. It was a owl."
     assert "image key" in host.start("pictionary", {})["error"]
 

@@ -111,18 +111,27 @@ struct GameCard: Decodable, Identifiable {
         default: return "Puzzles"
         }
     }
-    var playerLabel: String { maximumPlayers == 1 ? "Solo" : "\(minimumPlayers)–\(maximumPlayers) players" }
+    var playerLabel: String { maximumPlayers == 1 ? "Solo" : "\(minimumPlayers) to \(maximumPlayers) players" }
 
 }
 
 struct GameList: Decodable {
     var games: [GameCard]
+    /// Set, with no games, when the wall has games switched off.
+    var problem: String?
 }
 
 enum GameLink {
     enum Failure: LocalizedError {
         case message(String)
-        var errorDescription: String? { if case .message(let text) = self { return text }; return nil }
+        /// The wall answered, but its games feature is switched off.
+        case gamesOff
+        var errorDescription: String? {
+            switch self {
+            case .message(let text): return text
+            case .gamesOff: return "Games are off on this wall."
+            }
+        }
     }
     static func request(host: String, action: String, body: [String: Any]? = nil, timeout: TimeInterval? = nil) async throws -> Data {
         guard !host.isEmpty, let url = URL(string: "http://\(host)/game\(action)") else {
@@ -144,7 +153,11 @@ enum GameLink {
         return data
     }
     static func catalogue(host: String) async throws -> [GameCard] {
-        let cards = try JSONDecoder().decode(GameList.self, from: await request(host: host, action: "/list")).games
+        let list = try JSONDecoder().decode(GameList.self, from: await request(host: host, action: "/list"))
+        // An empty list with a problem is a readable answer, not a failure to
+        // read: the hub says games are off instead of "no games available".
+        if list.games.isEmpty, list.problem != nil { throw Failure.gamesOff }
+        let cards = list.games
         guard Set(cards.map(\.name)).count == cards.count,
               cards.allSatisfy({ !$0.name.isEmpty && !$0.title.isEmpty && $0.players.count == 2 && $0.players[0] >= 1 && $0.players[1] >= $0.players[0] && $0.players[1] <= 24 }) else {
             throw Failure.message("The wall sent an unreadable games list.")
@@ -168,16 +181,23 @@ enum GameLink {
 
 /// Coalesces continuous controls while one network acknowledgement is pending.
 struct GameSteeringBuffer {
-    private var latest: (y: Double, at: TimeInterval, session: String?)?
-    mutating func offer(_ y: Double, session: String?, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
+    /// A phone-only key a board adds to the position where a drag, slider or
+    /// button press ends. GameScreen removes it before the move leaves the
+    /// phone, since the wall accepts only the position itself.
+    static let finalKey = "phone_final"
+    private var latest: (y: Double, at: TimeInterval, session: String?, final: Bool)?
+    mutating func offer(_ y: Double, session: String?, final: Bool = false, now: TimeInterval = ProcessInfo.processInfo.systemUptime) {
         guard y.isFinite else { return }
-        latest = (max(0, min(1, y)), now, session)
+        latest = (max(0, min(1, y)), now, session, final)
     }
     mutating func clear() { latest = nil }
     mutating func take(session: String?, now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> Double? {
         defer { latest = nil }
+        // A mid-drag sample goes stale because a newer one replaces it. The
+        // final one never does: the board keeps showing it as its target, so
+        // it is sent however long the previous reply took.
         guard let latest, latest.session == session,
-              now >= latest.at, now - latest.at < 0.35 else { return nil }
+              now >= latest.at, latest.final || now - latest.at < 0.35 else { return nil }
         return latest.y
     }
 }

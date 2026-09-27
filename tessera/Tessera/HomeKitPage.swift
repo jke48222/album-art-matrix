@@ -89,15 +89,24 @@ struct HomeKitPage: View {
                     .font(.ui(16, .semibold)).fixedSize(horizontal: false, vertical: true)
             } else {
                 HStack(alignment: .top, spacing: 12) {
-                    Text(paired ? "Welcome\nhome." : "Your wall.\nAt home.")
+                    Text(paired ? "Paired" : "Add to Apple Home")
                         .font(.display(43)).tracking(-0.7)
                         .fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
                     HomeKitHouse(tint: honey).frame(width: 88, height: 96).accessibilityHidden(true)
                 }
-                Text(paired ? "Light, music and the room around you.\nTogether in Apple Home." : "Bring Tessera to Siri, your scenes and the Home app.")
+                Text(paired ? pairedSummary : "Control the wall from Siri, scenes and the Home app.")
                     .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
+    }
+
+    /// Names only what this wall puts in Home. The remote and the sensors
+    /// are left out below on a wall that does not bridge them, so the line
+    /// must not promise them either.
+    private var pairedSummary: String {
+        let names = ["light"] + (status?.television != false ? ["remote"] : []) + (status?.sensors != false ? ["sensors"] : [])
+        let list = names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " and " + names[names.count - 1]
+        return "The wall's \(list) \(names.count == 1 ? "is" : "are") in Apple Home."
     }
 
     private var pairingCard: some View {
@@ -161,16 +170,16 @@ struct HomeKitPage: View {
                 .opacity((canShow || status?.showing_code == true) ? 1 : 0.5)
                 .accessibilityIdentifier("homekit.showCode")
             if status?.showing_code == true {
-                Label("On the wall · returns automatically in \(max(1, Int(ceil(Double(status?.code_seconds_remaining ?? 180) / 60)))) min", systemImage: "clock")
+                Label("On the wall, returns automatically in \(max(1, Int(ceil(Double(status?.code_seconds_remaining ?? 180) / 60)))) min", systemImage: "clock")
                     .font(.ui(13)).foregroundStyle(honey).fixedSize(horizontal: false, vertical: true)
                     .accessibilityIdentifier("homekit.showing")
             }
             VStack(alignment: .leading, spacing: 13) {
                 step("1", "Open Home", detail: "Tap +, then Add Accessory.")
                 step("2", "Scan the wall", detail: "Or choose More Options and enter the eight-digit code.")
-                step("3", "Make it yours", detail: "Choose a room and a name for the wall.")
+                step("3", "Name it", detail: "Choose a room and a name for the wall.")
             }
-            Text("Keep your phone on the wall’s network. Home may identify this personal bridge as uncertified; choose Add Anyway to continue.")
+            Text("Keep your phone on the wall’s network. Home may identify this personal bridge as uncertified. Choose Add Anyway to continue.")
                 .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -191,15 +200,15 @@ struct HomeKitPage: View {
 
     private var accessories: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text("At home with Tessera").font(.ui(22, .semibold))
-            accessory("lightbulb", "The light", "Power, brightness and a colour for the lamp.", detail: "Home · Light")
+            Text("Accessories in Home").font(.ui(22, .semibold))
+            accessory("lightbulb", "The light", "Power, brightness and a colour for the lamp.", detail: "Light in Home")
             if status?.television != false {
                 Divider().overlay(Ink.hairline)
-                accessory("appletvremote.gen4", "The remote", "Faces as inputs. A controller when a game is on.", detail: "Home · Television")
+                accessory("appletvremote.gen4", "The remote", "Faces as inputs. A controller when a game is on.", detail: "Television in Home")
             }
             if status?.sensors != false {
                 Divider().overlay(Ink.hairline)
-                accessory("waveform", "The room", "Sound and music sensors for your automations.", detail: "Home · Two sensors")
+                accessory("waveform", "The room", "Sound and music sensors for your automations.", detail: "Two sensors in Home")
             }
         }
     }
@@ -215,7 +224,7 @@ struct HomeKitPage: View {
                 remoteKey("info.circle", "Info", "Show the current song as a ticker.")
                 if let faces = status?.faces, !faces.isEmpty {
                     Text("Available inputs").font(.ui(14, .semibold)).foregroundStyle(honey)
-                    Text(faces.map(\.name).joined(separator: " · ")).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                    Text(faces.map(\.name).joined(separator: ", ")).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
             }.padding(.top, 16)
         } label: {
@@ -233,7 +242,7 @@ struct HomeKitPage: View {
                     Label(busy ? "Refreshing accessories…" : "Refresh accessories", systemImage: "arrow.clockwise")
                         .font(.ui(15, .semibold)).frame(minHeight: 44)
                 }.disabled(!ready || busy).accessibilityIdentifier("homekit.refreshAccessories")
-                Text("Manage people and remove this bridge in Home → Home Settings → Home Hubs & Bridges. Removing it there doesn't erase your Tessera settings.")
+                Text("Manage people and remove this bridge in Home, then Home Settings, then Home Hubs and Bridges. Removing it there doesn't erase your Tessera settings.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }.padding(.top, 16)
         } label: {
@@ -244,7 +253,7 @@ struct HomeKitPage: View {
     private var footer: some View {
         VStack(alignment: .leading, spacing: 10) {
             Divider().overlay(Ink.hairline).padding(.bottom, 9)
-            Text("A home hub takes it further.").font(.ui(16, .semibold))
+            Text("Home hubs").font(.ui(16, .semibold))
             Text("A HomePod or Apple TV lets you run automations, share control and reach your wall away from home.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             Link("Apple Home setup guide", destination: URL(string: "https://support.apple.com/en-us/104998")!)
@@ -343,7 +352,7 @@ private struct HomeKitHouse: View {
     }
 }
 
-/// Draws the wall's canonical 64×64 QR composition using the wall's module matrix.
+/// Draws the wall's canonical 64x64 QR composition using the wall's module matrix.
 private struct HomeKitCode: View {
     let modules: [String]
     var body: some View {

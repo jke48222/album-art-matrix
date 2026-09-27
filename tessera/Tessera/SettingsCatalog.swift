@@ -82,32 +82,32 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
 
     var detail: String {
         switch self {
-        case .light: "Brightness, just right"
+        case .light: "Wall brightness"
         case .time: "Clock, timer and daily alarm"
-        case .sun: "Light that follows your day"
-        case .sleep: "A slow fade to dark"
-        case .wake: "Bring the room to life"
+        case .sun: "Dim after sunset, brighten at sunrise"
+        case .sleep: "Fade to off on a timer"
+        case .wake: "Wake-up fade and time"
         case .idle: "Idle, away and off"
         case .services: "Your music and connected accounts"
         case .voice: "Wake word and listening history"
         case .hearing: "Room recognition, knocks and whistles"
         case .shelf: "Your record collection, from Discogs"
         case .teach: "Build the wall’s song library"
-        case .ask: "A question, answered in light"
-        case .note: "Leave a thought on the wall"
+        case .ask: "Ask a question, see the answer on the wall"
+        case .note: "Short messages on the wall"
         case .show: "Find a cover or a video"
         case .earworm: "Find the song in your head"
         case .imagine: "Turn a few words into a picture"
-        case .weather: "A window onto the day"
+        case .weather: "Forecast and the weather face"
         case .games: "Play on the wall and the phone"
-        case .lockScreen: "The wall, at a glance"
+        case .lockScreen: "The wall on the lock screen"
         case .homeKit: "Scenes and the Home app"
         case .guests: "Share your Wi-Fi with a code"
         case .colour: "Calibrate the panel with your camera"
         case .panel: "Check every light"
         case .health: "Temperature and performance"
         case .addresses: "Find your wall or connect a Mac"
-        case .about: "Made for your music"
+        case .about: "Version and credits"
         }
     }
 
@@ -170,15 +170,6 @@ enum SettingsSection: String, CaseIterable, Identifiable {
         case .explore: "Create & explore"
         case .home: "Around your home"
         case .care: "Care & connection"
-        }
-    }
-    var caption: String {
-        switch self {
-        case .rhythm: "FROM FIRST LIGHT TO LIGHTS OUT"
-        case .music: "EVERY RECORD HAS A PLACE"
-        case .explore: "THERE’S MORE TO THIS WALL"
-        case .home: "A PART OF YOUR EVERYDAY"
-        case .care: "KEEP EVERYTHING IN TUNE"
         }
     }
     var entries: [SettingsDestination] { SettingsDestination.allCases.filter { $0.section == self } }

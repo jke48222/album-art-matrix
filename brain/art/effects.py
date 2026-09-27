@@ -476,10 +476,13 @@ def _snake_frame(self, t):
         sn.tick()
 
     arr = np.zeros((self.size, self.size, 3), dtype=np.float32)
+    # One cell of the 32x32 board is this many pixels: 2 at 64, 6 at 192.
+    # A fixed 2 played the whole game in the top-left 64 px of a 192 wall.
+    b = max(1, self.size // sn.N)
 
     def block(p, col):
-        x, y = p[0] * 2, p[1] * 2
-        arr[y:y + 2, x:x + 2] = col
+        x, y = p[0] * b, p[1] * b
+        arr[y:y + b, x:x + b] = col
 
     if not sn.dead:
         block(sn.food, self.c2)

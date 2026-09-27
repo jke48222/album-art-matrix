@@ -214,7 +214,7 @@ class Sudoku(Game):
         if "puzzle" in self.options:
             raw = str(self.options["puzzle"])
             if not re.fullmatch(r"[0-9.\s]+", raw):
-                raise ValueError("a puzzle is 81 digits; use zero or a dot for blanks")
+                raise ValueError("A puzzle is 81 digits. Use 0 or a dot for blanks.")
             p = [0 if ch == "." else int(ch) for ch in raw if not ch.isspace()]
             if len(p) != 81:
                 raise ValueError("a puzzle is 81 digits")
@@ -299,7 +299,7 @@ class Sudoku(Game):
             return {"error": "choose a digit or erase the cell"}
         digit = self._digit(move.get("digit", move.get("value")), allow_clear=True)
         if digit is None:
-            return {"error": "a digit, one to nine; zero to erase"}
+            return {"error": "Choose a digit from 1 to 9, or 0 to erase."}
         if self.grid[i] != digit or self.notes.get(i):
             self._remember()
         self.grid[i] = digit
@@ -407,9 +407,6 @@ class Sudoku(Game):
                     scale = max(1, (cell - 5) // 7)
                     text(canvas, str(value), x + (cell - 5 * scale) // 2,
                          y + (cell - 7 * scale) // 2, colour, scale)
-                if index in self.wrong:
-                    # An underline marks an incorrect entry even without colour.
-                    fill(canvas, x + 2, y + cell - 2, max(2, cell - 4), 1, (255, 167, 143))
             elif self.notes.get(index):
                 for digit in self.notes[index]:
                     nr, nc = divmod(digit - 1, 3)
@@ -433,6 +430,22 @@ class Sudoku(Game):
             rect(canvas, x0 + column * cell, y0 + row * cell, cell, cell, (162, 211, 240), max(1, round(size / 96)))
         elif self.over:
             rect(canvas, x0, y0, extent, extent, (163, 207, 155), max(1, round(size / 96)))
+        # An underline marks an incorrect entry even without colour. It sits
+        # on the first row below the glyph, never on the glyph itself (at 64
+        # the old mark replaced the digit's base), and is drawn last: the
+        # selection outline and the closing grid line cover that row on the
+        # chosen cell and the bottom row, and a new mistake is always the
+        # chosen cell.
+        for index in self.wrong:
+            row, column = divmod(index, 9)
+            x, y = x0 + column * cell, y0 + row * cell
+            if cell < 12:
+                below = y + (cell - 5) // 2 + 5
+                fill(canvas, x + (cell - 3) // 2 + 1, min(below, y + cell - 1), 3, 1, (255, 167, 143))
+            else:
+                scale = max(1, (cell - 5) // 7)
+                below = y + (cell - 7 * scale) // 2 + 7 * scale
+                fill(canvas, x + 2, min(below, y + cell - 1), max(2, cell - 4), 1, (255, 167, 143))
         return canvas
 
     @staticmethod

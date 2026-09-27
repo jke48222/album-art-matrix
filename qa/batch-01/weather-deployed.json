@@ -14,11 +14,8 @@
     "ytdlp": "2026.08.19"
   },
   "weather": {
-    "place": "Douglasville, Georgia",
-    "where": [
-      33.7515,
-      -84.74771
-    ],
+    "place": "[redacted]",
+    "where": null,
     "units": "f",
     "utc_offset_s": -14400,
     "age_s": 77,

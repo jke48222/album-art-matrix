@@ -22,6 +22,7 @@ from brain.games.host import GameHost                                           
 from brain.games import (wordle, sudoku, spellingbee, letterboxed, connections,    # noqa: E402,F401
                          strands, crossword, contexto, reaction, whistlebird, pictures, heardle, quiz,
                          twentyq, pictionary, arcade)
+from brain.games.parking import ParkedClock                                         # noqa: E402
 
 
 class Ctrl:
@@ -105,6 +106,8 @@ def setup(name, host):
     elif name == "reveal":
         host.start(name, {"image": sleeve_path(), "title": "Nights", "artist": "Frank Ocean", "album": "Blonde"}); g = host.game
         g._clock = lambda: g.t0 + 14.0
+        # A fresh park clock: the jump to the fake time is not time off the wall.
+        g._park = ParkedClock()
     elif name == "heardle":
         host.start(name, {"title": "Nights", "artist": "Frank Ocean", "preview": "https://example/x.m4a"}); host.move(None, {"skip": True}); host.move(None, {"played": True})
     elif name == "quiz":
@@ -118,6 +121,8 @@ def setup(name, host):
             if not g.drawing: break
             time.sleep(0.02)
         g._clock = lambda: g.t0 + 20.0
+        # A fresh park clock: the jump to the fake time is not time off the wall.
+        g._park = ParkedClock()
     elif name == "pong":
         host.start(name, {"seed": 1}); g = host.game; g.score = [3, 2]; g.ball = [0.6, 0.35]; g.paddles = [0.3, 0.6]; g.wait_until = 0
     elif name == "snake":

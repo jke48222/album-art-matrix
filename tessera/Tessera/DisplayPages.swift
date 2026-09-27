@@ -1,3 +1,4 @@
+import MediaPlayer
 import SwiftUI
 
 /// Images from the production renderer, owned by the lifetime of the view's task.
@@ -6,9 +7,15 @@ final class WallImages {
     private(set) var shots: [String: UIImage] = [:]
     private(set) var problem: String?
     private(set) var loading = true
+    /// True in phone preview, where no wall renders these images.
+    private(set) var phoneOnly = false
+
+    static let phoneOnlyNote = "Previews appear when your wall is connected."
+    /// The stand-in's last frame that showed the art with the Clean finish.
+    private static var lastCleanFrame: Data?
 
     func watch(host: String, path: String, interval: Double = 2) async {
-        shots = [:]; problem = nil; loading = true
+        shots = [:]; problem = nil; loading = true; phoneOnly = false
         while !Task.isCancelled {
             guard let url = URL(string: "http://\(host)\(path)"), !host.isEmpty else {
                 loading = false; problem = "Connect to your wall to see these previews."; return
@@ -30,11 +37,49 @@ final class WallImages {
                 shots = decoded; problem = nil; loading = false
             } catch {
                 guard !Task.isCancelled else { return }
-                problem = shots.isEmpty ? "Previews unavailable. Reconnecting…" : "Last received previews · reconnecting…"
+                problem = shots.isEmpty ? "Previews unavailable. Reconnecting…" : "Last received previews. Reconnecting…"
                 loading = false
             }
             do { try await Task.sleep(for: .seconds(interval)) } catch { return }
         }
+    }
+
+    /// Phone preview. `wall.host` keeps its saved default there and no wall
+    /// answers at it, so fetching only ever failed and read as "Reconnecting"
+    /// forever. Nothing is fetched: `local` draws what the phone can draw
+    /// itself, and without it the previews say plainly that the wall makes them.
+    func standIn(every interval: Double, local: (@MainActor () -> [String: UIImage])?) async {
+        phoneOnly = true; loading = false; problem = nil; shots = [:]
+        while !Task.isCancelled {
+            shots = local?() ?? [:]
+            problem = shots.isEmpty ? Self.phoneOnlyNote : "Drawn on this phone. Your wall renders its own when connected."
+            guard local != nil else { return }
+            do { try await Task.sleep(for: .seconds(interval)) } catch { return }
+        }
+    }
+
+    /// The three finishes drawn on this phone. The sleeve is the source when
+    /// there is one, as it is on the wall. The stand-in's frame is used only
+    /// when it is the clean art: otherwise it already carries the chosen
+    /// finish, and Clean would show Dither.
+    static func localFinishes(sleeve: UIImage?, frame: Data?, frameIsCleanArt: Bool) -> [String: UIImage] {
+        // Picking Dither or Poster puts that finish on the stand-in's frame.
+        // Without a sleeve the previews then went blank until Clean was picked
+        // again, so the last clean frame stays the source.
+        if frameIsCleanArt, let frame { lastCleanFrame = frame }
+        let px = (frameIsCleanArt ? frame : lastCleanFrame).map { [UInt8]($0) }
+        guard sleeve != nil || px != nil else { return [:] }
+        var out: [String: UIImage] = [:]
+        for finish in ["clean", "dither", "poster"] {
+            if let image = FinishSwatch.render(px: px, sleeve: sleeve, finish: finish) { out[finish] = image }
+        }
+        return out
+    }
+
+    /// What the stand-in shows: the artwork of what this phone is playing.
+    static var phoneSleeve: UIImage? {
+        guard MPMediaLibrary.authorizationStatus() == .authorized else { return nil }
+        return MPMusicPlayerController.systemMusicPlayer.nowPlayingItem?.artwork?.image(at: CGSize(width: 256, height: 256))
     }
 }
 
@@ -42,7 +87,7 @@ enum DisplayDetail: String, Identifiable {
     case lyrics, nine, finishes, lamp
     var id: String { rawValue }
     var title: String { switch self { case .lyrics: "Lyrics"; case .nine: "Nine"; case .finishes: "Finishes"; case .lamp: "Lamp" } }
-    var eyebrow: String { switch self { case .lyrics: "EVERY WORD, IN ITS MOMENT"; case .nine: "YOUR RECENT ROTATION"; case .finishes: "THREE WAYS TO WEAR IT"; case .lamp: "COLOUR THAT FILLS THE ROOM" } }
+    var eyebrow: String { switch self { case .lyrics: "SYNCED LYRICS"; case .nine: "RECENT COVERS"; case .finishes: "IMAGE FINISH"; case .lamp: "LAMP SCENES" } }
     var mode: String? { switch self { case .lyrics: "lyrics"; case .nine: "nine"; case .lamp: "ambient"; case .finishes: nil } }
 }
 
@@ -78,13 +123,22 @@ struct DisplayPage: View {
     @State private var offset = 0.2
     @State private var speed = 1.0
     @State private var retry = 0
+    /// Set by the lyrics Try again and cleared once its POST is sent. `retry`
+    /// stays in the feed key to restart the feed, but the feed also restarts
+    /// on every song and scene change, and each restart re-sent the retry.
+    @State private var lyricsRetryPending = false
     @State private var editing = false
+    /// Lamp colours being dragged in the system picker, sent once they settle.
+    @State private var colourDraft: [String: String] = [:]
+    @State private var colourSend: Task<Void, Never>?
     @AppStorage("lyrics.nudge") private var lyricsNudge = 0.0
     private let finishes = [("clean", "Clean", "Every colour, left intact."), ("dither", "Dither", "Fine grain. Softer transitions."), ("poster", "Poster", "Bold blocks. A graphic silhouette.")]
     private let effects = [("solid", "Solid"), ("breathe", "Breathe"), ("pulse", "Pulse"), ("rainbow", "Spectrum"), ("gradient", "Gradient"), ("plaid", "Plaid"), ("weave", "Weave"), ("deco", "Deco"), ("snake", "Snake")]
     private var ready: Bool { wall.link.isLive || wall.link.isStandIn }
     private var imagePath: String { detail == .lamp ? "/ambient/previews" : "/finishes" }
-    private var feedKey: String { "\(wall.host)|\(detail.rawValue)|\(retry)" }
+    /// The link kind is part of the key so the feeds restart when a phone
+    /// preview becomes a real wall, or the other way round.
+    private var feedKey: String { "\(wall.host)|\(detail.rawValue)|\(retry)|\(wall.link.isStandIn)" }
 
     var body: some View {
         Group {
@@ -101,7 +155,17 @@ struct DisplayPage: View {
                 if scenePhase == .active && (detail == .lyrics || detail == .nine) { await watchContent() }
             }
             .task(id: "\(feedKey)|\(wall.state.mode)|\(wall.state.color)|\(wall.state.color2)|\(wall.state.matchArt)|\(scenePhase)") {
-                if scenePhase == .active && (detail == .finishes || detail == .lamp) { await images.watch(host: wall.host, path: imagePath, interval: detail == .lamp ? 5 : 0.6) }
+                guard scenePhase == .active && (detail == .finishes || detail == .lamp) else { return }
+                if wall.link.isStandIn && detail == .finishes {
+                    await images.standIn(every: 2) {
+                        WallImages.localFinishes(sleeve: WallImages.phoneSleeve, frame: wall.frame,
+                                                 frameIsCleanArt: wall.state.mode == "art" && wall.state.finish == "clean")
+                    }
+                } else if wall.link.isStandIn {
+                    await images.standIn(every: 2, local: nil)    // lamp scenes are only drawn by the wall
+                } else {
+                    await images.watch(host: wall.host, path: imagePath, interval: detail == .lamp ? 5 : 0.6)
+                }
             }
             .onAppear { offset = wall.state.lyricOffset; speed = wall.state.speed }
             .onChange(of: wall.state.lyricOffset) { _, value in if !editing { offset = value } }
@@ -145,7 +209,7 @@ struct DisplayPage: View {
                 Label(wall.link.isLive ? "Live wall" : wall.link.isStandIn ? "Preview on this phone" : "Last received frame", systemImage: wall.link.isLive ? "dot.radiowaves.left.and.right" : "wifi.slash")
                 Spacer()
                 if wall.state.mode != detail.mode { Text("\(wall.state.mode.capitalized) face") }
-                else { Text("\(Panel.side) × \(Panel.side)") }
+                else { Text("\(Panel.side) x \(Panel.side)") }
             }.font(.ui(12)).foregroundStyle(Ink.dim)
         }
     }
@@ -154,7 +218,7 @@ struct DisplayPage: View {
         VStack(alignment: .leading, spacing: 12) {
             preview(images.shots[wall.state.finish], label: "Finish preview")
             HStack {
-                Text("\(wall.state.finish.capitalized) · rendered by your wall")
+                Text("\(wall.state.finish.capitalized), \(images.phoneOnly ? "drawn on this phone" : "rendered by your wall")")
                 Spacer()
                 Image(systemName: "viewfinder")
             }.font(.ui(12)).foregroundStyle(Ink.dim)
@@ -167,7 +231,8 @@ struct DisplayPage: View {
             Color(hex: 0x151b19)
             if let image { Image(uiImage: image).resizable().interpolation(.none).scaledToFit() }
             else if images.loading { ProgressView().tint(accent) }
-            else { Image(systemName: "photo.badge.exclamationmark").font(.system(size: 28)).foregroundStyle(Ink.dim) }
+            // phone preview has no wall to render this: a neutral mark, not an error
+            else { Image(systemName: images.phoneOnly ? "square.dashed" : "photo.badge.exclamationmark").font(.system(size: 28)).foregroundStyle(Ink.dim) }
         }.aspectRatio(1, contentMode: .fit).clipShape(RoundedRectangle(cornerRadius: 12)).accessibilityLabel(label)
     }
 
@@ -201,30 +266,45 @@ struct DisplayPage: View {
             if let artist = wall.state.artist { Text(artist).font(.ui(13)).foregroundStyle(Ink.dim) }
             if let sheet, !sheet.lines.isEmpty {
                 TimelineView(.animation(minimumInterval: 0.15, paused: !wall.state.songPlaying || !wall.link.isLive)) { context in
-                    let time = (PlaybackIdentity(state: wall.state, link: wall.link, at: context.date).elapsed ?? 0) + offset
-                    let index = sheet.lines.lastIndex { $0.at <= time }
                     VStack(alignment: .leading, spacing: 18) {
-                        if let index {
-                            activeLine(sheet.lines[index], time: time)
-                                .font(.system(size: typeSize.isAccessibilitySize ? 28 : 34, weight: .bold, design: .rounded))
-                                .fixedSize(horizontal: false, vertical: true)
-                            if index + 1 < sheet.lines.count {
-                                Text(sheet.lines[index + 1].text).font(.ui(22, .semibold)).foregroundStyle(Ink.dim)
+                        // No position (a source that reports none, or stopped
+                        // music): the wall shows the plain sleeve then, so the
+                        // phone says so instead of pinning the sheet at zero.
+                        if let elapsed = PlaybackIdentity(state: wall.state, link: wall.link, at: context.date).elapsed {
+                            let time = elapsed + offset
+                            if let index = sheet.lines.lastIndex(where: { $0.at <= time }) {
+                                activeLine(sheet.lines[index], time: time)
+                                    .font(.system(size: typeSize.isAccessibilitySize ? 28 : 34, weight: .bold, design: .rounded))
                                     .fixedSize(horizontal: false, vertical: true)
+                                if index + 1 < sheet.lines.count {
+                                    Text(sheet.lines[index + 1].text).font(.ui(22, .semibold)).foregroundStyle(Ink.dim)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            } else {
+                                Text("Before the first word").font(.displayMid(28)).foregroundStyle(Ink.ink)
+                                Text(sheet.lines[0].text).font(.ui(22, .semibold)).foregroundStyle(Ink.dim)
                             }
                         } else {
-                            Text("Before the first word").font(.displayMid(28)).foregroundStyle(Ink.ink)
+                            Text("Waiting for the song position").font(.displayMid(28)).foregroundStyle(Ink.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("The wall shows the sleeve until the player reports where the song is.")
+                                .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                             Text(sheet.lines[0].text).font(.ui(22, .semibold)).foregroundStyle(Ink.dim)
                         }
                     }.frame(maxWidth: .infinity, alignment: .leading)
                 }
                 PlaybackProgress(state: wall.state, link: wall.link, accent: accent)
+            } else if wall.link.isStandIn {
+                // Phone preview: there is no wall to read the synced sheet from.
+                Label("No wall connected", systemImage: "text.quote")
+                    .font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
+                Text("The synced lyrics sheet shows here when your wall is connected.").font(.ui(14)).foregroundStyle(Ink.dim)
             } else {
-                Label(problem != nil || sheet?.state == "error" ? "Lyrics are out of reach" : !loaded || sheet?.state == "loading" ? "Finding the words…" : "No synced lyrics for this song", systemImage: "text.quote")
+                Label(problem != nil || sheet?.state == "error" ? "Lyrics unavailable" : !loaded || sheet?.state == "loading" ? "Finding the words…" : "No synced lyrics for this song", systemImage: "text.quote")
                     .font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
                 Text(problem ?? (sheet?.state == "error" ? "The lyrics service isn’t answering. Try again in a moment." : "The sleeve stays on the wall until synced words are available.")).font(.ui(14)).foregroundStyle(Ink.dim)
             }
-            if problem != nil || sheet?.state == "error" || sheet?.state == "none" { Button("Try again") { retry += 1 }.frame(minHeight: 44) }
+            if problem != nil || sheet?.state == "error" || sheet?.state == "none" { Button("Try again") { lyricsRetryPending = true; retry += 1 }.frame(minHeight: 44) }
         }.padding(22).background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 22))
     }
 
@@ -251,7 +331,12 @@ struct DisplayPage: View {
             HStack { Text("In this rotation").font(.ui(21, .semibold)); Spacer(); Text("\(covers.count) / 9").font(.machine(11)).foregroundStyle(Ink.dim) }
             Text("Newest first. Each cover gets one place, even when you play it again.").font(.ui(14)).foregroundStyle(Ink.dim)
             if covers.isEmpty {
-                ContentUnavailableView(loaded ? "Room for nine records" : "Loading your rotation", systemImage: "square.grid.3x3", description: Text(problem ?? "Play music and your latest sleeves will fill the wall."))
+                if wall.link.isStandIn {
+                    // Phone preview: the covers come from the wall's journal.
+                    ContentUnavailableView("No wall connected", systemImage: "square.grid.3x3", description: Text("Recent covers show here when your wall is connected."))
+                } else {
+                    ContentUnavailableView(loaded ? "No covers yet" : "Loading your rotation", systemImage: "square.grid.3x3", description: Text(problem ?? "Play music and your latest sleeves will fill the wall."))
+                }
             }
             ForEach(Array(covers.enumerated()), id: \.element.id) { index, cover in
                 HStack(spacing: 14) {
@@ -273,7 +358,7 @@ struct DisplayPage: View {
     private var lampChoices: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack { Text("Choose an atmosphere").font(.ui(20, .semibold)); Spacer() }.foregroundStyle(Ink.ink)
-            Text("Preview studies · one moment from each moving scene").font(.ui(12)).foregroundStyle(Ink.dim)
+            Text("One moment from each scene").font(.ui(12)).foregroundStyle(Ink.dim)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: typeSize.isAccessibilitySize ? 2 : 3), spacing: 16) {
                 ForEach(effects, id: \.0) { effect in
                     Button { wall.send(["mode": "ambient", "effect": effect.0]); Taps.detent() } label: {
@@ -294,22 +379,44 @@ struct DisplayPage: View {
 
     private var lampControls: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Toggle("Borrow the album’s colours", isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) }))
+            Toggle("Use album colours", isOn: Binding(get: { wall.state.matchArt }, set: { wall.send(["match_art": $0]) }))
                 .font(.ui(16, .semibold)).tint(accent)
             if !wall.state.matchArt {
-                ColorPicker("First colour", selection: Binding(get: { Color.wall(hex: wall.state.color) }, set: { wall.send(["color": $0.wallHex]) }), supportsOpacity: false)
-                ColorPicker("Second colour", selection: Binding(get: { Color.wall(hex: wall.state.color2) }, set: { wall.send(["color2": $0.wallHex]) }), supportsOpacity: false)
+                ColorPicker("First colour", selection: colourBinding("color", current: wall.state.color), supportsOpacity: false)
+                ColorPicker("Second colour", selection: colourBinding("color2", current: wall.state.color2), supportsOpacity: false)
             }
             Divider().overlay(Ink.dim.opacity(0.2))
-            HStack { Text("Pace").font(.ui(16, .semibold)); Spacer(); Text(String(format: "%.1f×", speed)).font(.machine(12)) }
+            HStack { Text("Pace").font(.ui(16, .semibold)); Spacer(); Text(String(format: "%.1fx", speed)).font(.machine(12)) }
             Slider(value: $speed, in: 0.1...3, step: 0.1) { editing = $0; if !$0 { wall.send(["speed": speed]) } }.accessibilityLabel("Scene speed")
-            HStack { Text("Unhurried"); Spacer(); Text("Energetic") }.font(.ui(12)).foregroundStyle(Ink.dim)
+            HStack { Text("Slower"); Spacer(); Text("Faster") }.font(.ui(12)).foregroundStyle(Ink.dim)
         }.foregroundStyle(Ink.ink).padding(22).background(Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 22)).disabled(!ready)
+    }
+
+    /// The system picker reports every step of a drag. Each send is its own
+    /// POST, so they could land out of order and leave an earlier colour on
+    /// the wall, and each one rewrites control.json on the Pi. The swatch
+    /// follows the finger here; the wall gets one patch once it settles.
+    private func colourBinding(_ key: String, current: String) -> Binding<Color> {
+        Binding(get: { Color.wall(hex: colourDraft[key] ?? current) }, set: { value in
+            colourDraft[key] = value.wallHex
+            colourSend?.cancel()
+            colourSend = Task {
+                try? await Task.sleep(for: .milliseconds(250))
+                guard !Task.isCancelled, !colourDraft.isEmpty else { return }
+                let patch = colourDraft
+                colourDraft = [:]
+                wall.send(patch)    // optimistic, so the swatch keeps the new colour
+            }
+        })
     }
 
     private func watchContent() async {
         loaded = false; problem = nil; sheet = nil; covers = []
-        if detail == .lyrics, retry > 0, let url = URL(string: "http://\(wall.host)/lyrics/retry") {
+        // Phone preview: `wall.host` keeps its saved default and no wall
+        // answers there, so asking would only show "not answering" forever.
+        guard !wall.link.isStandIn else { loaded = true; return }
+        if detail == .lyrics, lyricsRetryPending, let url = URL(string: "http://\(wall.host)/lyrics/retry") {
+            lyricsRetryPending = false    // once per tap, not once per restart
             var request = URLRequest(url: url); request.httpMethod = "POST"; request.timeoutInterval = 4
             _ = try? await URLSession.shared.data(for: request)
         }
@@ -326,7 +433,9 @@ struct DisplayPage: View {
                     var seen = Set<String>()
                     covers = rows.compactMap { row -> RotationCover? in
                         guard let url = row["art_url"] as? String, !url.isEmpty, seen.insert(url).inserted else { return nil }
-                        return RotationCover(id: url, title: row["album"] as? String ?? row["title"] as? String ?? "Untitled", artist: row["artist"] as? String ?? "Unknown artist")
+                        // journal rows always carry "album", often empty (singles, shows)
+                        return RotationCover(id: url, title: nonEmpty(row["album"]) ?? nonEmpty(row["title"]) ?? "Untitled",
+                                             artist: nonEmpty(row["artist"]) ?? "Unknown artist")
                     }.prefix(9).map { $0 }
                 }
                 problem = nil; loaded = true
@@ -336,5 +445,10 @@ struct DisplayPage: View {
             }
             do { try await Task.sleep(for: .seconds(detail == .lyrics ? 1 : 5)) } catch { return }
         }
+    }
+
+    private func nonEmpty(_ value: Any?) -> String? {
+        guard let text = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+        return text
     }
 }

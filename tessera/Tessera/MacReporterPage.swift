@@ -39,21 +39,25 @@ struct MacReporterPage: View {
     private var mac: WallServices.Mac? { services?.mac }
     private var endpoint: String { mac?.endpoint ?? "" }
     private var available: Bool { wall.link.isLive && services != nil && !failed }
+    /// Opened with nothing read yet (from Other players, or after a host
+    /// change): reading, not offline, until the first read answers or fails.
+    private var loading: Bool { wall.link.isLive && services == nil && !failed }
     private var linked: Bool { !endpoint.isEmpty }
     private var current: WallServices.Mac.Track? { available && ["playing", "paused"].contains(mac?.state ?? "") ? mac?.current : nil }
     private var name: String { URL(string: endpoint)?.host()?.replacingOccurrences(of: ".local", with: "") ?? "Your Mac" }
     private var status: String {
+        if loading { return "Reading the Mac connection" }
         guard available else { return "Waiting for the wall" }
         if busy { return "Updating the connection" }
         switch mac?.state {
         case "playing": return "Music is arriving"
         case "paused": return "Playback is paused"
-        case "idle": return "Connected · nothing playing"
+        case "idle": return "Connected, nothing playing"
         case "checking": return "Checking from the wall"
         case "unavailable": return "Reporter unreachable"
         case "stale": return "Time to check again"
         case "local": return "Running on this Mac"
-        default: return linked ? "Address saved · not checked" : "Connect a Mac"
+        default: return linked ? "Address saved, not checked yet" : "Connect a Mac"
         }
     }
     private var canSave: Bool { available && !busy && Self.origin(address) != nil && Self.origin(address) != endpoint }
@@ -72,7 +76,10 @@ struct MacReporterPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 26) {
                 hero
-                if !available {
+                if loading {
+                    ProgressView("Reading the Mac connection").tint(mint).frame(maxWidth: .infinity, minHeight: 80)
+                        .accessibilityIdentifier("mac.loading")
+                } else if !available {
                     Label("Connect to the wall to check or change its Mac reporter.", systemImage: "wifi.slash").font(.ui(14)).foregroundStyle(Ink.dim)
                     Button("Try again") { run(check: false) }.frame(minHeight: 44).accessibilityIdentifier("mac.retryWall")
                 }
@@ -83,7 +90,8 @@ struct MacReporterPage: View {
                 if typeSize.isAccessibilitySize { connection }
                 if let current { track(current) }
                 if !typeSize.isAccessibilitySize { connection }
-                if !linked || editing { editor }
+                // Only after a read: the saved address is unknown until then.
+                if services != nil && (!linked || editing) { editor }
                 setup
                 troubleshooting
                 forwardingControls
@@ -100,7 +108,7 @@ struct MacReporterPage: View {
                 }
             }
             .onChange(of: endpoint) { old, next in if !editing || address == old { address = next } }
-            .onChange(of: wall.host) { _, _ in cancel(); services = nil; address = ""; editing = false; failed = true; notice = nil; problem = nil }
+            .onChange(of: wall.host) { _, _ in cancel(); services = nil; address = ""; editing = false; failed = false; notice = nil; problem = nil }
             .onChange(of: scene) { _, next in if next != .active { cancel() } }
             .onDisappear { cancel() }
     }
@@ -109,7 +117,7 @@ struct MacReporterPage: View {
             if typeSize.isAccessibilitySize { Text("Mac reporter").font(.ui(14,.semibold)).foregroundStyle(mint) }
             else { Label("FROM YOUR MAC", systemImage: "desktopcomputer").font(.machine(10)).tracking(1.2).foregroundStyle(mint) }
             if !typeSize.isAccessibilitySize {
-                Text("One desktop.\nA whole room.").font(.display(42)).tracking(-0.7).foregroundStyle(Ink.ink)
+                Text("Mac reporter").font(.display(42)).tracking(-0.7).foregroundStyle(Ink.ink)
                 HStack(spacing: 20) {
                     Image(systemName: "laptopcomputer").font(.system(size: 47, weight: .ultraLight))
                     Canvas { ctx, size in
@@ -164,11 +172,11 @@ struct MacReporterPage: View {
     }
     private var setup: some View {
         VStack(alignment:.leading,spacing:18) {
-            Text("Bring the Mac along").font(.ui(22,.semibold)).foregroundStyle(Ink.ink)
+            Text("Set up the reporter").font(.ui(22,.semibold)).foregroundStyle(Ink.ink)
             step("01","Start the reporter","On the Mac, run the reporter from your Tessera checkout. Keep the Mac awake while listening.")
             ShareLink(item:"From the album-art-matrix folder on your Mac, run:\npython3 scripts/mac_reporter.py\n\nThen enter your Mac’s local hostname and port 8787 in Tessera.") { Label("Send setup to your Mac",systemImage:"square.and.arrow.up").font(.ui(14,.semibold)) }.frame(minHeight:44).accessibilityIdentifier("mac.shareSetup")
-            step("02","Find its name","In Mac System Settings, open General → Sharing. Use the local hostname shown there, with :8787 at the end.")
-            step("03","Let the music through","Allow the reporter’s Automation access to Music and local network access if macOS asks. For other players, install media-control on the Mac.")
+            step("02","Find its name","In Mac System Settings, open General, then Sharing. Use the local hostname shown there, with :8787 at the end.")
+            step("03","Allow access","Allow the reporter’s Automation access to Music and local network access if macOS asks. For other players, install media-control on the Mac.")
         }
     }
     private func step(_ number:String,_ title:String,_ text:String) -> some View {

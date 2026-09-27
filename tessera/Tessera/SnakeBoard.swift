@@ -54,9 +54,9 @@ struct SnakeBoard: View {
     }
     private var instruction: String {
         switch scene.phase {
-        case "ready": return "Follow the fruit. Each bite grows your trail. Keep clear of the edges and yourself."
+        case "ready": return "Steer the snake to the fruit. Avoid the edges and your trail."
         case "paused": return game.message.isEmpty ? "Your trail is saved. Resume when you’re ready." : game.message
-        case "finished": return "\(scene.score) fruit · \(scene.body.count) squares of trail"
+        case "finished": return "\(scene.score) fruit. \(scene.body.count) squares of trail."
         default: return "Swipe the garden or use the arrows. Two quick turns can be queued."
         }
     }
@@ -87,7 +87,7 @@ struct SnakeBoard: View {
                                 Color.clear.frame(height: 1).accessibilityHidden(true)
                             } else {
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text("FOLLOW THE FRUIT").font(.machine(9)).foregroundStyle(SnakeInk.body)
+                                    Text("FRUIT").font(.machine(9)).foregroundStyle(SnakeInk.body)
                                     Text("\(scene.score) collected").font(.ui(15, .semibold)).foregroundStyle(.white)
                                 }
                             }

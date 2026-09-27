@@ -57,6 +57,8 @@ import Foundation
         check("nonfinite steering never queues", steering.take(session: "A", now: 100.1) == nil)
         steering.offer(2, session: "A", now: 100)
         check("steering stays in the flight area", steering.take(session: "A", now: 100.1) == 1)
+        steering.offer(0.3, session: "A", final: true, now: 100)
+        check("final steering survives a slow reply", steering.take(session: "A", now: 102) == 0.3)
 
         let host = CommandLine.arguments[1]
         let catalogue = try await GameLink.catalogue(host: host)
@@ -68,6 +70,9 @@ import Foundation
             do { _ = try await GameLink.catalogue(host: host); check(label, false) }
             catch { check(label, true) }
         }
+        do { _ = try await GameLink.catalogue(host: host); check("games switched off is its own answer", false) }
+        catch GameLink.Failure.gamesOff { check("games switched off is its own answer", true) }
+        catch { check("games switched off is its own answer", false) }
         let firstRead = await GameLink.status(host: host)
         check("status request reads matching session", firstRead?.session_id == "session-A")
         let badStatus = await GameLink.status(host: host)

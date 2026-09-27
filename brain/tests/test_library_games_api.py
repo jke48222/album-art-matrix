@@ -213,7 +213,7 @@ def test_teach_busy_is_409_not_provider_error(teacher):
     try:
         code, response = api.post("/teach/learn", {"title": "Blue", "artist": "Joni Mitchell"})
         assert code == 409 and "learning another" in response["error"]
-        assert api.get("/teach")[1]["teacher"]["learning"] == "Existing artist — Existing song"
+        assert api.get("/teach")[1]["teacher"]["learning"] == "Existing song by Existing artist"
     finally:
         instructor._finish()
 

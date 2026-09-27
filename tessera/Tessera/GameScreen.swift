@@ -26,6 +26,12 @@ struct GameScreen: View {
     @FocusState private var typing: Bool
     private var game: GameStatus.Game? { status?.game?.name == name ? status?.game : nil }
     private var me: String { !chosenPlayer.isEmpty ? chosenPlayer : game?.players.first(where: { $0 == player }) ?? game?.players.first ?? "You" }
+    /// In a shared Wordle the wall credits each guess to whoever's turn it
+    /// is, whoever sends it, so the phone plays as that person too.
+    private var wordleTurn: String? {
+        guard let g = game, g.name == "wordle", g.players.count > 1, let turn = g.state["turn"].string, g.players.contains(turn) else { return nil }
+        return turn
+    }
     private var onWall: Bool { wall.state.displayedMode == "game" && status?.on_wall != false }
     private var canSend: Bool { wall.link.isLive && !readFailed && !sending && game != nil }
     private var canSteer: Bool { wall.link.isLive && !readFailed && scenePhase == .active && game != nil }
@@ -56,18 +62,22 @@ struct GameScreen: View {
                         }
                     }
                     if !wall.link.isLive || readFailed {
-                        MessageNotice(title: "Waiting for your wall", detail: "Your board and draft are kept here. Moves resume when the connection returns.", symbol: "wifi.slash", tint: accent)
+                        // The wall pauses Snake and Tetris after a few seconds
+                        // without hearing from the phone.
+                        MessageNotice(title: "Waiting for your wall", detail: ["snake", "tetris"].contains(g.name) ? "The round pauses on the wall until your phone reconnects." : "Your board and draft are kept here. Moves resume when the connection returns.", symbol: "wifi.slash", tint: accent)
                     }
                     if g.players.count > 1 {
                         Picker("Playing as", selection: $chosenPlayer) {
                             ForEach(g.players, id: \.self) { person in Text(person).tag(person) }
-                        }.pickerStyle(.menu).tint(accent).disabled(sending)
+                        }.pickerStyle(.menu).tint(accent).disabled(sending || wordleTurn != nil)
                     }
                     board(g).id(status?.session_id ?? "\(g.name)-\(g.state["started"].int ?? 0)")
                         .environment(\.gameSessionID, status?.session_id)
                         .environment(\.gameCanInteract, canSteer && onWall && scenePhase == .active)
                         .disabled(!(["whistlebird", "pong", "snake", "tetris"].contains(g.name) ? canSteer : canSend) || !onWall)
-                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris"].contains(g.name) {
+                    // These boards already show their own status, so the wall's
+                    // message line would repeat it.
+                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris", "contexto", "sliding", "reveal", "reaction", "whistlebird"].contains(g.name) {
                         Text(g.message).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     }
                     if g.over { result(g) }
@@ -108,12 +118,23 @@ struct GameScreen: View {
                     try? await Task.sleep(for: .seconds(pollingInterval))
                 }
             }
-            .onAppear { chosenPlayer = me; GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }
+            .onAppear { chosenPlayer = wordleTurn ?? me; GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }
             .onDisappear { pauseArcade(); pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false }
             .onChange(of: chosenPlayer) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil }
+            .onChange(of: wordleTurn) { _, turn in if let turn { chosenPlayer = turn } }
+            // A move that reached the wall just after the round ended comes back
+            // as "that game is over". The results already say so.
+            .onChange(of: game?.over) { _, over in if over == true { problem = nil } }
             .onChange(of: scenePhase) { _, next in if next == .active { GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }; if next != .active { pauseArcade(); pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil } }
             .onChange(of: wall.host) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false; readFailed = true; typed = "" }
-            .onChange(of: status?.session_id) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); typed = ""; chosenPlayer = game?.players.first ?? "You" }
+            .onChange(of: status?.session_id) { _, _ in
+                pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); typed = ""
+                // A rematch keeps the same players, so each phone keeps its own
+                // side or seat. Only a player who is no longer in the game moves.
+                if let g = game, !g.players.contains(chosenPlayer) {
+                    chosenPlayer = g.players.first(where: { $0 == player }) ?? g.players.first ?? "You"
+                }
+            }
     }
 
     @ViewBuilder private func board(_ g: GameStatus.Game) -> some View {
@@ -142,7 +163,7 @@ struct GameScreen: View {
     }
     private func result(_ g: GameStatus.Game) -> some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(g.won || g.winner != nil ? "Nicely played." : "Every round is practice.").font(.display(29)).foregroundStyle(Ink.ink)
+            Text(headline(g)).font(.display(29)).foregroundStyle(Ink.ink)
             Text(g.message).font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             if let scores = status?.scores {
                 ForEach(g.players, id: \.self) { person in
@@ -156,12 +177,28 @@ struct GameScreen: View {
                     }
                 }
             }
-            Button { perform("start", ["name": g.name, "players": g.players]) } label: {
+            // The wall restarts with this round's options and players, so a
+            // Sudoku rematch keeps its difficulty.
+            Button { perform("move", ["player": me, "move": ["again": true]]) } label: {
                 HStack { Text("Play another round").font(.ui(16, .semibold)); Spacer(); Image(systemName: "arrow.right") }
                     .padding(18).foregroundStyle(Ink.ground).background(accent, in: RoundedRectangle(cornerRadius: 17))
             }.buttonStyle(PressStyle()).disabled(!canSend)
             Button("Return to the wall") { perform("end", [:], leaving: true) }.font(.ui(14, .semibold)).frame(minHeight: 44).disabled(!canSend)
         }.padding(20).background(accent.opacity(0.08), in: RoundedRectangle(cornerRadius: 24))
+    }
+    private func headline(_ g: GameStatus.Game) -> String {
+        if g.players.count > 1 { return g.winner.map { "\($0) won" } ?? "Round over" }
+        if ["pong", "snake", "tetris", "whistlebird", "reaction", "quiz"].contains(g.name) { return "Game over" }
+        return g.won ? "Solved" : "Not solved"
+    }
+    /// Wall errors arrive as short lowercase phrases, such as "not in the
+    /// list". Show them as sentences.
+    private static func sentence(_ text: String) -> String {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let first = trimmed.first else { return text }
+        var result = first.uppercased() + trimmed.dropFirst()
+        if let last = result.last, !".!?".contains(last) { result += "." }
+        return result
     }
     private func stat(_ title: String, _ value: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -213,6 +250,9 @@ struct GameScreen: View {
     }
 
     private func post(_ move: [String: Any]) {
+        var move = move
+        // Phone-only: marks where a drag or slider ended. The wall never sees it.
+        let final = move.removeValue(forKey: GameSteeringBuffer.finalKey) as? Bool == true
         if ["snake", "tetris"].contains(name), sending {
             guard canSteer, onWall, game?.over == false else { return }
             if !pendingCommands.offer(move, session: status?.session_id) { problem = "Let the wall catch up, then try again." }
@@ -228,7 +268,7 @@ struct GameScreen: View {
             guard canSteer, onWall, game?.over == false, y.isFinite else { return }
             if sending {
                 // Keep only the newest finger position; never replay a drag backlog.
-                pendingSteer.offer(y, session: status?.session_id)
+                pendingSteer.offer(y, session: status?.session_id, final: final)
                 return
             }
         }
@@ -275,7 +315,7 @@ struct GameScreen: View {
                 if leaving { dismiss() }
             } catch {
                 guard operation == token, host == wall.host else { return }
-                problem = error.localizedDescription
+                problem = Self.sentence(error.localizedDescription)
                 pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil
             }
             version += 1; sending = false; activeRequest = nil

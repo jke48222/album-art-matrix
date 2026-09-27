@@ -130,6 +130,11 @@ DEFAULTS = {
     "ticker_loop": True,
     "ticker_style": "across",  # across (slide) | up (prompter) | tilt (crawl)
     "ticker_colors": [],       # per-glyph inks, in glyph order; [] = one ink     # loop, or scroll once then back to art
+    # The ticker's own ink and pace, apart from the lamp's color and speed,
+    # so a message from the phone leaves the lamp and Match Art alone. The
+    # ink is used for a message that came with it (see ticker_own_ink).
+    "ticker_color": "#f4f1ea",
+    "ticker_speed": 1.0,       # 0.1-3.0, like speed
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
     "lyric_offset": 0.2,     # seconds the words run ahead of the song
     "spin_face": "pressing", # what the record turns: pressing | art
@@ -169,6 +174,13 @@ def feature_response_code(result: dict, default: int = 404) -> int:
         return code
     return {"busy": 409, "not_found": 404, "invalid_prompt": 400,
             "unavailable": 503, "not_ready": 503, "provider": 502}.get(code, default) if isinstance(code, str) else default
+
+
+def _feature_on(ctrl, name: str) -> bool:
+    """A [features] switch, asked now. A brain built without switches (a
+    test, an older config) has every feature on."""
+    fe = getattr(ctrl, "features", None)
+    return fe is None or fe.on(name)
 
 
 class ControlState:
@@ -234,6 +246,8 @@ class ControlState:
         self.replay_active = False
         self.resume_music = False
         self.ticker_revision = 0
+        # The ticker_revision whose message came with its own ticker_color.
+        self.ticker_ink_revision = None
         self.lyric_book = None
         self._ambient_previews = (None, None)
         self.sleep = None            # {"t0": monotonic, "minutes": N} while fading
@@ -242,6 +256,10 @@ class ControlState:
         self.routines = RoutineEngine()
         self.fps_last = 0.0          # main loop's sustained rate, for /health
         self.last_client = None      # monotonic of the app's last request
+        # Until this monotonic moment Away and the idle face stand back: a
+        # knock that lit the wall, or a wake-up that just finished, counts
+        # as someone in the room (main.py reads it before resolve_rest).
+        self.rest_hold_until = None
         # The adapters, set by build_sources. Every one exists whether or
         # not it has its details yet, so the phone can hand them over later.
         self.pushed = None           # PushedSource
@@ -268,7 +286,23 @@ class ControlState:
         self.shown_seq = 0
         try:
             with open(STATE_PATH) as fh:
-                self._merge(json.load(fh), persist=False)
+                saved = json.load(fh)
+            # Saved states carry whether the message up was drawn in its own
+            # ink. Every save writes ticker_color (it is a default), so its
+            # presence alone cannot say. States from before the flag fall
+            # back to that guess.
+            own_ink = isinstance(saved, dict) and bool(saved.pop("_ticker_own_ink", "ticker_color" in saved))
+            if isinstance(saved, dict):
+                # Saved before the ticker had its own ink and pace: start
+                # them from the lamp's, which is what the message used.
+                for own, shared in (("ticker_color", "color"), ("ticker_speed", "speed")):
+                    if own not in saved and shared in saved:
+                        saved[own] = saved[shared]
+            self._merge(saved, persist=False)
+            if own_ink:
+                # A message saved with its own ink comes back in it. One
+                # saved before there was one keeps the ink it was drawn in.
+                self.ticker_ink_revision = self.ticker_revision
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             if seed:
                 self._merge(seed, persist=False)
@@ -289,7 +323,7 @@ class ControlState:
             try:
                 with os.fdopen(fd, "w") as handle:
                     os.fchmod(handle.fileno(), 0o600)
-                    json.dump(candidate, handle, indent=2)
+                    json.dump({**candidate, "_ticker_own_ink": self.ticker_ink_revision == self.ticker_revision}, handle, indent=2)
                     handle.flush()
                     os.fsync(handle.fileno())
                 os.replace(temporary, STATE_PATH)
@@ -327,7 +361,33 @@ class ControlState:
         if getattr(self, "_note_until", None) is not None and (
                 ("ticker_text" in patch and isinstance(patch["ticker_text"], str))
                 or (patch.get("mode") in MODES and patch["mode"] != "ticker")):
+            if self._note_current() and "ticker_text" not in patch:
+                # Leaving a note for another face (a timer, the alarm, a
+                # knock) puts the ticker back as it was before the note, so a
+                # later return to "ticker" shows that and not a note with no
+                # expiry and no Take down.
+                for key, value in (self._note_restore or {}).items():
+                    if key.startswith("ticker_"):
+                        patch.setdefault(key, value)
             self._clear_note_metadata()
+
+    def resting_face(self) -> str:
+        """The face to come back to. While a note is up the mode is
+        "ticker", but the note is passing through: anything that remembers a
+        face to return to (a timer, the alarm, a knock, a video) must
+        remember the face the note will return to, or the note comes back
+        later with no expiry and no Take down."""
+        with self._lock:
+            return self._note_restore["mode"] if self._note_current() else self._s["mode"]
+
+    def ticker_own_ink(self) -> str | None:
+        """The ticker_color the message up came with (the phone's Ticker
+        page sends one with its words), or None. A message without one (a
+        note, the remote's Info key, a spoken message) keeps the lamp's
+        ink, the album's under Match Art, as it did before the ticker had
+        an ink of its own."""
+        with self._lock:
+            return self._s["ticker_color"] if self.ticker_ink_revision == self.ticker_revision else None
 
     def note(self, text: str, minutes: float):
         """Replace the current note atomically, keeping its original return face."""
@@ -343,10 +403,16 @@ class ControlState:
                     previous = self.video_ret or "art"
                 if previous not in MODES or previous in ("timer", "video"):
                     previous = "art"
+                # The ticker as it was, whatever face was up: a return to
+                # "ticker" after this note (from a caller that remembered
+                # "ticker" as its face) shows the owner's own message, never
+                # the note again with no expiry.
                 restore = {"mode": previous}
-                if here == "ticker":
-                    restore.update({key: self._s[key] for key in
-                                    ("ticker_text", "ticker_colors", "ticker_loop", "ticker_style")})
+                restore.update({key: self._s[key] for key in
+                                ("ticker_text", "ticker_colors", "ticker_loop", "ticker_style")})
+                if self.ticker_ink_revision == self.ticker_revision:
+                    # The owner's message had its own ink: it comes back in it.
+                    restore["ticker_color"] = self._s["ticker_color"]
             self._clear_note_metadata()
             self.apply({"ticker_text": text, "ticker_colors": [], "ticker_loop": True,
                         "ticker_style": "across", "mode": "ticker"})
@@ -395,33 +461,63 @@ class ControlState:
                 return {"text": None, "seconds_left": 0, "active": False, "id": None}
             return {"text": self._note_text, "seconds_left": left, "active": True, "id": self._note_id}
 
+    def ticker_finished(self, revision: int) -> bool:
+        """A once-only message has run out: back to art, but only if that
+        message is still the one up. A note or a new message that landed
+        after the render loop last read the state keeps the wall."""
+        with self._lock:
+            if self._s["mode"] != "ticker" or self.ticker_revision != revision:
+                return False
+            self.apply({"mode": "art"})
+            return True
+
     def knock_toggle(self, why: str, want: str | None = None) -> str:
         """Two knocks on the frame, or a whistle: off, or back to the face
         that was up (art when there was none worth keeping). `want` pins
         the direction (a rising whistle means on, a falling one off); a
-        knock just flips. Returns "on" or "off", what the wall now is."""
-        here = self.get()["mode"]
-        going_off = (here != "off") if want is None else (want == "off")
-        if going_off:
-            if here == "off":
-                return "off"
-            self.knock_ret = here if here not in ("frame", "clip", "timer", "video") else "art"
-            self.apply({"mode": "off"})
-            print(f"[control] {why}: off (was {here})", flush=True)
-            return "off"
-        if here != "off":
-            return "on"
-        back = getattr(self, "knock_ret", None) or "art"
-        self.apply({"mode": back})
-        print(f"[control] {why}: on ({back})", flush=True)
-        return "on"
+        knock just flips. Returns "on" or "off", what the wall now is.
+
+        Away and the idle "black" face blank the wall without changing the
+        saved face, and to someone in the room that is a dark wall all the
+        same. So the flip follows what the wall shows, not only the saved
+        mode: a knock at a wall that is dark by that override lights it and
+        saves nothing, and only a wall actually showing something is turned
+        Off (a lasting choice)."""
+        from .routines import REST_HOLD_S
+        with self._lock:
+            here = self._s["mode"]
+            dark = here == "off" or self.display_mode == "off"
+            going_off = (not dark) if want is None else (want == "off")
+            if going_off:
+                if dark:
+                    return "off"
+                face = self.resting_face()
+                self.knock_ret = face if face not in ("frame", "clip", "timer", "video") else "art"
+                self.apply({"mode": "off"})
+                said = f"off (was {here})"
+            elif not dark:
+                return "on"
+            else:
+                # Someone is in the room: Away and the idle face stand back
+                # for a while, or they would blank the wall again at once.
+                self.rest_hold_until = time.monotonic() + REST_HOLD_S
+                if here == "off":
+                    back = getattr(self, "knock_ret", None) or "art"
+                    self.apply({"mode": back})
+                    said = f"on ({back})"
+                else:
+                    self.dirty.set()
+                    said = f"on (was dark with {here} saved)"
+        print(f"[control] {why}: {said}", flush=True)
+        return "off" if going_off else "on"
 
     def _merge(self, patch: dict, persist: bool = True) -> dict:
         rejected = {}
         with self._lock:
             for k, v in patch.items():
                 numeric = {"wake_fade_min", "wb_r", "wb_g", "wb_b", "sun_night", "lat", "lon",
-                           "brightness", "rpm", "speed", "lyric_offset", "panel_brightness", "panel_type"}
+                           "brightness", "rpm", "speed", "ticker_speed", "lyric_offset",
+                           "panel_brightness", "panel_type"}
                 if k in numeric:
                     try:
                         if isinstance(v, bool) or not math.isfinite(float(v)):
@@ -507,7 +603,7 @@ class ControlState:
                     self._s[k] = _clamp(v, 0.05, 1.0)
                 elif k == "rpm":
                     self._s[k] = _clamp(v, 0.5, 45.0)
-                elif k == "speed":
+                elif k in ("speed", "ticker_speed"):
                     self._s[k] = _clamp(v, 0.1, 3.0)
                 elif k == "lyric_offset":
                     self._s[k] = _clamp(v, -2.0, 2.0)
@@ -520,13 +616,14 @@ class ControlState:
                         self._s[k] = v
                     else:
                         rejected[k] = v
-                elif k in ("color", "color2") and isinstance(v, str) \
+                elif k in ("color", "color2", "ticker_color") and isinstance(v, str) \
                         and len(v) == 7 and v.startswith("#") \
                         and all(c in "0123456789abcdefABCDEF" for c in v[1:]):
                     self._s[k] = v.lower()
                 else:
                     rejected[k] = v
             snap = dict(self._s)
+            snap["_ticker_own_ink"] = self.ticker_ink_revision == self.ticker_revision
         if persist:
             try:
                 os.makedirs(os.path.dirname(STATE_PATH), exist_ok=True)
@@ -545,14 +642,22 @@ class ControlState:
         """Counted, not identified. The previews were keyed on id(picture),
         and a per-frame picture is freed as the next one is made, so CPython
         handed out the same id again and the spinning record served the first
-        frame it ever drew for as long as it turned."""
+        frame it ever drew for as long as it turned.
+
+        The same object again is not a change. The loop names the base on
+        every pass (the nine and a still sleeve), and counting those made
+        every /finishes poll redo three full-panel quantisations. Identity is
+        safe here, unlike id(): the old picture is still held right here, so
+        its address cannot have been handed to a new one."""
+        if img is self._finish_base:
+            return
         self._finish_base = img
         self.finish_seq += 1
 
     def ring(self):
         """Start the daily alarm without losing its eventual return face."""
         with self._lock:
-            here = self.get()["mode"]
+            here = self.resting_face()
             ret = self.timer["ret"] if self.timer else \
                 (here if here not in ("timer", "video") else "clock")
             self.timer = {"end": time.monotonic(), "total": 60.0, "ret": ret,
@@ -573,20 +678,31 @@ class ControlState:
             return None
         return "This action is not available for the current timer."
 
-    def apply(self, patch: dict, *, interrupt: bool = True) -> dict:
+    def apply(self, patch: dict, *, interrupt: bool = True, replaying: bool = False) -> dict:
         """Merge a patch, persist, wake the main loop. Returns rejected keys.
         A command from someone ends a display check that is up. A face putting
         itself back on its own (a note or a picture running out) passes
-        interrupt=False and leaves the check where it is."""
+        interrupt=False and leaves the check where it is. /replay passes
+        replaying=True: its switch to art must not also ask for the music
+        back, or the loop can restore the song before the replay lands."""
         with self._lock:
-            rejected = self._apply_locked(dict(patch))
+            where = (self._s["lat"], self._s["lon"])
+            rejected = self._apply_locked(dict(patch), replaying=replaying)
+            moved = (self._s["lat"], self._s["lon"]) != where
             keys = {"mode", "brightness", "wb_r", "wb_g", "wb_b", "timer_min", "timer_action", "sleep_fade_min", "resume_music"}
             if (interrupt and self.display_session.item and "timer_action" not in rejected and
                     any(k in patch and k not in rejected for k in keys)):
                 self.display_session.cancel()
-            return rejected
+        # A location saved through /state (Routines, first run) wakes the
+        # weather now; its thread would otherwise sleep out its ten minutes
+        # with no forecast for the new place. Outside the lock: the weather
+        # keeps a lock of its own.
+        weather = getattr(self, "weather", None)
+        if moved and weather is not None:
+            weather.refresh()
+        return rejected
 
-    def _apply_locked(self, patch: dict) -> dict:
+    def _apply_locked(self, patch: dict, *, replaying: bool = False) -> dict:
         rejected_commands = {}
         if "timer_action" in patch:
             action = patch.pop("timer_action")
@@ -616,7 +732,13 @@ class ControlState:
                 except (TypeError, ValueError, OverflowError):
                     rejected_commands[key] = "Use a duration from 0 to 180 minutes"
                     patch.pop(key)
-        if patch.pop("resume_music", False) or patch.get("mode") in ("art", "cd", "lyrics"):
+        # Back to the music: asked for outright, or by choosing a music face
+        # while an Archive replay is up or on its way. Any other face switch
+        # leaves the song alone; resuming on every switch re-showed the
+        # sleeve and wrote the same song into the journal again each time.
+        explicit = patch.pop("resume_music", False)
+        if explicit or (not replaying and patch.get("mode") in ("art", "cd", "lyrics")
+                        and (self.replay_active or self.replay is not None)):
             self.resume_music = True
             self.replay = None
             self.news.set()
@@ -636,7 +758,7 @@ class ControlState:
         if "timer_min" in patch:
             minutes = _clamp(patch.pop("timer_min"), 0, 180)
             if minutes > 0:
-                here = self.get()["mode"]
+                here = self.resting_face()
                 ret = self.timer["ret"] if self.timer else \
                     (here if here not in ("timer", "video") else "clock")
                 self.timer = {"end": time.monotonic() + minutes * 60,
@@ -659,6 +781,13 @@ class ControlState:
             want = True
         self._note_interrupted_by(patch)
         rejected = {**rejected_commands, **self._merge(patch)}
+        if "ticker_color" in patch and "ticker_color" not in rejected:
+            # This message came with its own ink (after _merge, so a new
+            # message's words have already moved the revision).
+            self.ticker_ink_revision = self.ticker_revision
+            # _merge saved before the flag could be known. Save it again so
+            # a restart draws this message in its own ink too.
+            self._merge({})
         # Choosing any other face ends a video: nothing keeps decoding for a
         # picture nobody is looking at.
         if "mode" in patch and self._s["mode"] != "video" \
@@ -695,6 +824,10 @@ class ControlState:
                "wall": {"width": self.wall.width, "height": self.wall.height,
                         "tile": self.wall.tile, "cols": self.wall.cols,
                         "rows": self.wall.rows, "frame_side": self.phone_side}}
+        # The ink the message on the wall is actually drawn in when it brought
+        # its own, else None (the lamp's colour, or the album's under Match
+        # Art). ticker_color alone cannot say: it is always set.
+        out["ticker_ink"] = self.ticker_own_ink()
         temporary = self.display_session.status()
         out["display_session"] = {k: v for k, v in temporary.items() if k != "token"}
         if temporary["active"]:
@@ -752,7 +885,8 @@ class ControlState:
             "hearing": hearing,
             # Ask the wall: whether a key is set, and how the asking has gone
             "claude": (self.asker.status() if getattr(self, "asker", None)
-                       else {"ready": False, "problem": "asking is off on this wall"}),
+                       else {"ready": False, "state": "off",
+                             "problem": "Asking Claude is switched off on this wall."}),
             # AirPlay: is shairport-sync there, is a stream on, who is sending
             "airplay": ({**self.airplay.status(), "receiver": (self.airplay_receiver.status()
                          if getattr(self, "airplay_receiver", None) else None)}
@@ -768,7 +902,9 @@ class ControlState:
                      else {"key_set": False, "posters": 0, "known": 0, "last": None,
                            "problem": "posters are off on this wall"}),
             # pictures: whether Google is set up for "show me", and what was last found
-            "google": (self.shower.status() if getattr(self, "shower", None)
+            # The shower also serves earworm and imagine, so it can be built
+            # with Show me switched off; the page must still say off then.
+            "google": (self.shower.status() if getattr(self, "shower", None) and _feature_on(self, "show")
                        else {"key_set": False, "cx_set": False, "pictures": 0, "last": None,
                              "state": "off", "verified": False, "checking": False,
                              "checked_at": None, "problem": "Show me is off on this wall."}),
@@ -864,7 +1000,8 @@ class ControlState:
             clock = "phone" if recent else "wall"
         here = self.get()["mode"]
         if here != "video":
-            self.video_ret = here if here not in ("frame", "clip", "timer") else "art"
+            face = self.resting_face()
+            self.video_ret = face if face not in ("frame", "clip", "timer") else "art"
             self._showing_before = self.now_showing
         self.video.start(url, sound=sound, loop=loop, clock=clock, title=title)
         self.shown_seq += 1
@@ -992,7 +1129,7 @@ class ControlState:
         frames = Sting.get(self.wall.width).boot_frames()
         if not frames:
             return                     # no film to be had; the sting said why
-        here = self.get()["mode"]
+        here = self.resting_face()
         ret = here if here not in ("clip", "frame", "timer", "video") else "art"
         self.clip = {"fps": FPS, "frames": frames, "once": True, "ret": ret}
         self.shown_seq += 1
@@ -1024,11 +1161,19 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
         # second, spent its life waiting on name lookups.
         protocol_version = "HTTP/1.1"
 
+        def _closing(self):
+            # A body too large to drain ends the connection (_drain). Say so
+            # in the answer, or the client sends its next request down a
+            # socket the wall is about to close.
+            if self.close_connection:
+                self.send_header("Connection", "close")
+
         def _json(self, code: int, obj):
             body = json.dumps(obj).encode()
             self.send_response(code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(body)))
+            self._closing()
             # The web control plane calls this API from a browser; without
             # CORS headers the browser refuses to deliver the response.
             self.send_header("Access-Control-Allow-Origin", "*")
@@ -1042,6 +1187,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             # 204 says it by being defined as empty
             if code != 204:
                 self.send_header("Content-Length", "0")
+            self._closing()
             for k, v in extra:
                 self.send_header(k, v)
             self.end_headers()
@@ -1070,7 +1216,9 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(413, {"error": f"the body must be under {BODY_MAX // 1_000_000} MB"})
                 return None
             try:
-                patch = json.loads(self.rfile.read(n) or b"{}")
+                raw = self.rfile.read(n)
+                self._unread = getattr(self, "_unread", 0) - len(raw)
+                patch = json.loads(raw or b"{}")
                 if not isinstance(patch, dict):
                     raise ValueError
                 return patch
@@ -1198,14 +1346,23 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 state = ctrl.get()
                 colors = ctrl.art_colors if state["match_art"] and ctrl.art_colors else [state["color"], state["color2"]]
                 c1, c2 = colors[0], colors[-1]
-                # One fixed moment, produced by exactly the renderer on the wall.
-                key = (c1, c2, state["speed"])
+                # One fixed moment, produced by exactly the renderer on the wall,
+                # at the wall's own size: plaid, weave and deco are measured in
+                # pixels, so a 64 px swatch of a 192 wall showed a third of its
+                # repeats. Shrunk on the Pi so the phone still gets 64 px, not
+                # nine full frames (about 1.3 MB of base64 at 192) every poll.
+                from PIL import Image
+                side = ctrl.wall.width
+                key = (c1, c2, state["speed"], side)
                 cached_key, cached = ctrl._ambient_previews
                 if key == cached_key:
                     self._json(200, cached)
                     return
-                shots = {name: base64.b64encode(Ambient(64, name, c1, c2, state["speed"])
-                         .frame_at(8).tobytes()).decode() for name in
+
+                def swatch(name):
+                    img = Ambient(side, name, c1, c2, state["speed"]).frame_at(8)
+                    return img if side == 64 else img.resize((64, 64), Image.BOX)
+                shots = {name: base64.b64encode(swatch(name).tobytes()).decode() for name in
                          ("solid", "breathe", "pulse", "rainbow", "gradient", "plaid", "weave", "deco", "snake")}
                 ctrl._ambient_previews = (key, shots)
                 self._json(200, shots)
@@ -1246,7 +1403,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if u.path.startswith("/weather"):
                 w = getattr(ctrl, "weather", None)
-                self._json(200, w.status() if w is not None else {"problem": "the weather is off on this wall"})
+                # "off" tells the phone this is a switch, not an outage, so it
+                # can say so instead of offering a retry that cannot work.
+                self._json(200, w.status() if w is not None else
+                           {"off": True, "problem": "Weather is off on this wall."})
                 return
             if u.path == "/game/frame.png":
                 query = parse_qs(u.query)
@@ -1280,7 +1440,8 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             if u.path in ("/game", "/game/list"):
                 gh = getattr(ctrl, "games", None)
                 if gh is None:
-                    self._json(200, {"running": False, "games": [], "problem": "games are off on this wall"})
+                    # seq too: GameStatus needs it to decode this answer
+                    self._json(200, {"running": False, "seq": 0, "games": [], "problem": "games are off on this wall"})
                     return
                 if u.path == "/game/list":
                     self._json(200, {"games": gh.listing(), **gh.status()})
@@ -1338,7 +1499,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if u.path.startswith("/ask"):
                 a = getattr(ctrl, "asker", None)
-                self._json(200, a.status() if a is not None else {"ready": False, "problem": "asking is off on this wall"})
+                # can_show: an answer reaches the panel through the voice's
+                # answer face, so without the voice every answer stays here.
+                self._json(200, {**a.status(), "can_show": getattr(ctrl, "voice", None) is not None}
+                           if a is not None else {"ready": False, "can_show": False,
+                                                  "problem": "Asking Claude is switched off on this wall."})
                 return
             if u.path.startswith("/note"):
                 if self._switched_off("note", "notes"):
@@ -1347,13 +1512,22 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if u.path in ("/show", "/earworm"):
                 sh = getattr(ctrl, "shower", None)
-                method = "discovery_status" if u.path == "/show" else "earworm_status"
-                self._json(200, getattr(sh, method)() if sh is not None and hasattr(sh, method)
-                           else {"last": getattr(sh, "last", None), "ready": False})
+                what = u.path.strip("/")
+                method = "discovery_status" if what == "show" else "earworm_status"
+                # One shower serves several switches, so it can exist with
+                # this one off. "off" lets the page say that rather than
+                # keep offering a search the wall will refuse.
+                if sh is None or not hasattr(sh, method) or not _feature_on(ctrl, SHOWER_SWITCH[what][0]):
+                    self._json(200, {"last": None, "ready": False, "off": True})
+                    return
+                status = getattr(sh, method)()
+                # Show me needs no key (built-in search is the fallback), so
+                # a switched-on shower is ready. Earworm says for itself.
+                self._json(200, {"ready": True, **status} if what == "show" else status)
                 return
             if u.path == "/pictures/last.png":
                 # Served on its own so /services polls do not carry the image.
-                sh = getattr(ctrl, "shower", None)
+                sh = getattr(ctrl, "shower", None) if _feature_on(ctrl, "show") else None
                 png = sh.last_picture_frame() if sh is not None and hasattr(sh, "last_picture_frame") else None
                 if png is None:
                     self._json(404, {"error": "No picture has been shown yet."})
@@ -1436,6 +1610,41 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             self._json(404, {"error": "not found"})
 
         def do_POST(self):
+            # Many routes answer before reading their body: a feature that is
+            # off, a guard that fails first. On a kept-alive connection those
+            # unread bytes became the start of the next request line
+            # ("{}GET /services"), so the phone's next call failed. Count what
+            # each route reads and drain the rest once it has answered.
+            try:
+                self._unread = max(0, int(self.headers.get("Content-Length", 0) or 0))
+            except ValueError:
+                self._unread = 0
+                self.close_connection = True
+            if self._unread > BODY_MAX and not self.path.startswith("/video/upload"):
+                # Decided now, so the answer can say it. An upload reads its
+                # own large body and keeps the connection.
+                self.close_connection = True
+            try:
+                self._post()
+            finally:
+                self._drain()
+
+        def _drain(self):
+            left = getattr(self, "_unread", 0)
+            if left <= 0:
+                return
+            if left > BODY_MAX:
+                # Not worth reading on the Pi: end the connection instead.
+                self.close_connection = True
+                return
+            while left > 0:
+                chunk = self.rfile.read(min(1 << 16, left))
+                if not chunk:
+                    break
+                left -= len(chunk)
+            self._unread = 0
+
+        def _post(self):
             if self.path == "/routines/preview":
                 patch = self._body()
                 if patch is None:
@@ -1549,13 +1758,26 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     self._json(409 if reply.get("busy") else 502, {"error": reply["error"]})
                     return
                 answer = reply["answer"]
-                shown = False
+                shown, reason = False, None
                 voice = getattr(ctrl, "voice", None)
-                if reply_mode == "wall" and voice is not None:
-                    with ctrl._lock:
-                        if ctrl.get()["mode"] != "off" and ctrl.display_mode != "off" and ctrl.timer is None:
-                            shown = voice.show_answer(answer)
-                self._json(200, {"answer": answer, "shown": shown})
+                if reply_mode == "wall":
+                    # Why an answer stayed on the phone, so the phone can say
+                    # so: the wall is off or dark, a timer has the panel, the
+                    # wall has no answer face (it comes with the voice), or
+                    # the voice is in the middle of something.
+                    if voice is None:
+                        reason = "unavailable"
+                    else:
+                        with ctrl._lock:
+                            if ctrl.get()["mode"] == "off" or ctrl.display_mode == "off":
+                                reason = "off"
+                            elif ctrl.timer is not None:
+                                reason = "timer"
+                            else:
+                                shown = voice.show_answer(answer)
+                                reason = None if shown else "busy"
+                self._json(200, {"answer": answer, "shown": shown,
+                                 **({"reason": reason} if reason else {})})
                 return
             if self.path.startswith("/note"):
                 if self._switched_off("note", "notes"):
@@ -1661,6 +1883,29 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     return
                 self._json(feature_response_code(result) if result.get("error") else 200, result)
                 return
+            if urlparse(self.path).path == "/imagine":
+                # Drawing from words is the imaginer's, not the shower's: with
+                # Show me switched off there is no shared shower, and this
+                # route used to answer 404 while GET /imagine said ready.
+                if self._switched_off(*SHOWER_SWITCH["imagine"]):
+                    return
+                im = getattr(ctrl, "imaginer", None)
+                if im is None:
+                    self._json(404, {"error": "Drawing from words is off on this wall."})
+                    return
+                patch = self._body()
+                if patch is None:
+                    return
+                text = patch.get("text", patch.get("query", patch.get("words", patch.get("prompt", ""))))
+                if not isinstance(text, str) or not text.strip() or len(text) > 1200:
+                    self._json(400, {"error": "Write between 1 and 1200 characters."})
+                    return
+                text = text.strip()
+                result = im.begin(text) if patch.get("async") is True else im.imagine(text)
+                code = (feature_response_code(result) if result.get("error") else
+                        202 if result.get("accepted") else 200) if isinstance(result, dict) else 200
+                self._json(code, result if isinstance(result, dict) else {"said": result})
+                return
             if self.path.startswith("/earworm") or self.path.startswith("/show") \
                     or self.path.startswith("/play") or self.path.startswith("/imagine"):
                 sh = getattr(ctrl, "shower", None)
@@ -1728,7 +1973,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
             if self.path.startswith("/weather/"):
                 w = getattr(ctrl, "weather", None)
                 if w is None:
-                    self._json(404, {"error": "the weather is off on this wall"})
+                    self._json(404, {"error": "Weather is off on this wall.", "off": True})
                     return
                 patch = self._body()
                 if patch is None:
@@ -1891,7 +2136,10 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if entry is None:
                     self._json(404, {"error": "no such journal entry"})
                     return
-                ctrl.apply({"mode": "art"})
+                # replaying: this switch to art is the replay's own, so it
+                # must not ask for the music back first (the loop could take
+                # that before the replay lands and journal the song again).
+                ctrl.apply({"mode": "art"}, replaying=True)
                 ctrl.resume_music = False
                 ctrl.replay = entry
                 ctrl.replay_active = True
@@ -1904,7 +2152,8 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 # stays on the kept-alive connection and spoils the next request.
                 if self._body() is None:
                     return
-                checker = getattr(getattr(ctrl, "shower", None), "picture_connection", None)
+                checker = (getattr(getattr(ctrl, "shower", None), "picture_connection", None)
+                           if _feature_on(ctrl, "show") else None)
                 if checker is None:
                     self._json(503, {"error": "Picture search is unavailable on this wall."})
                 elif not checker.check():
@@ -2115,7 +2364,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 # A small mp4 the phone made from a video of its own: the
                 # picture, square, at a size the wall decodes for nothing.
                 # The phone keeps the original and plays its sound itself.
+                # Refused unread, a body past BODY_MAX is not drained either:
+                # the connection ends, and the answer says so.
+                refused_unread = self._unread > BODY_MAX
                 if ctrl.video is None:
+                    self.close_connection = self.close_connection or refused_unread
                     self._json(404, {"error": "video is not available on this wall"})
                     return
                 try:
@@ -2123,6 +2376,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 except ValueError:
                     n = 0
                 if not 1000 <= n <= UPLOAD_MAX:
+                    self.close_connection = self.close_connection or refused_unread
                     self._json(413 if n > UPLOAD_MAX else 400,
                                {"error": f"the picture must be under {UPLOAD_MAX // 1_000_000} MB"})
                     return
@@ -2134,6 +2388,7 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                     with open(path, "wb") as fh:
                         while left > 0:
                             chunk = self.rfile.read(min(1 << 20, left))
+                            self._unread -= len(chunk)
                             if not chunk:
                                 break
                             fh.write(chunk)
@@ -2277,6 +2532,12 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 posters = getattr(ctrl, "posters", None)
                 if posters is None or not hasattr(posters, "check"):
                     self._json(404, {"error": "Poster lookup is unavailable on this wall."})
+                    return
+                from .posters import clean_title
+                if title.strip() and not clean_title(title.strip()):
+                    # "Netflix" or "S01E03" leaves nothing to search for. Say
+                    # that, rather than the 409 below, which reads as busy.
+                    self._json(400, {"error": "Enter a film or series name without the service or episode number."})
                     return
                 if not posters.check(title.strip() or None):
                     self._json(409, {"error": "Add a key or wait for the current check to finish."})

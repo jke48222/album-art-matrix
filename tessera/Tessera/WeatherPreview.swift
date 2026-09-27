@@ -17,7 +17,7 @@ struct WeatherPreview: View {
         }
         let parity = variant == "parity"
         let current = WallWeather.Now(temp: temp, feels: temp - 1, code: code, is_day: day, wind_kmh: parity ? 8 : 14, cloud: 38, precip_mm: code == 63 ? 2.4 : 0, high: parity ? 24.4 : temp + 3, low: parity ? 17.2 : temp - 7, sunrise: now - (11 * 3600 + 54 * 60), sunset: now + 42 * 60)
-        let place = variant == "empty" ? "" : variant == "long" ? "Saint-Rémy-de-Provence, France" : parity ? "Douglasville, Georgia" : "Marietta, Georgia"
+        let place = variant == "empty" ? "" : variant == "long" ? "Saint-Rémy-de-Provence, France" : parity ? "Philadelphia, Pennsylvania" : "Marietta, Georgia"
         return WallWeather(place: place, units: "f", utc_offset_s: -14400, age_s: variant == "stale" ? 7200 : 120, stale: variant == "stale", refreshing: variant == "loading", problem: variant == "offline" ? "The wall isn't answering. Pull to retry." : nil, now: ["empty", "loading", "offline"].contains(variant) ? nil : current, hours: hours)
     }
     var body: some View {

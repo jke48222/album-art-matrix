@@ -194,8 +194,9 @@ class Connections(Game):
             theme = self.groups[best][0]
             self.message = f"{theme}."
             if len(self.found) == 4:
+                slips = "no mistakes" if not self.mistakes else f"{self.mistakes} mistake{'s' if self.mistakes != 1 else ''}"
                 self.finish(won=True, winner=player if len(self.players) > 1 else None,
-                            message=["Perfect.", "Great.", "Solid.", "Phew."][min(self.mistakes, 3)])
+                            message=f"Solved with {slips}.")
             else:
                 self.changed()
             return {"group": best, "theme": theme, "colour": NAMES[best]}
@@ -204,8 +205,9 @@ class Connections(Game):
         self.picked = list(words)
         if self.mistakes >= 4:
             self.picked = []
-            self.finish(won=False, message="Four mistakes. " + "; ".join(f"{t}: {', '.join(g)}" for t, g in self.groups
-                                                                       if self.groups.index((t, g)) not in self.found))
+            # The finished board already shows every group, so the message
+            # does not repeat them.
+            self.finish(won=False, message="Out of mistakes.")
         else:
             self.changed()
         return {"group": None, "one_away": best_n == 3, "mistakes": self.mistakes}

@@ -172,7 +172,8 @@ class LetterBoxed(Game):
         self.hinted = None
         self.words.pop()
         self.used = set("".join(self.words))
-        self.message = f"{len(self.letters - self.used)} letters to go."
+        left = len(self.letters - self.used)
+        self.message = f"{left} letter{'s' if left != 1 else ''} to go."
         self.changed()
         return {"undone": True}
 
@@ -183,7 +184,7 @@ class LetterBoxed(Game):
             return {"hint": self.hinted}
         candidates = [w for w in common(3, 12) if self.check(w) is None]
         if not candidates:
-            return {"error": "no continuation here; undo the last word to try another route"}
+            return {"error": "No word continues from here. Undo the last word to try another route."}
         # Prefer the known solution while the player follows it, otherwise a
         # legal continuation that reaches the most unused letters.
         next_par = self.par[len(self.words)] if len(self.words) < len(self.par) and self.words == list(self.par[:len(self.words)]) else None
@@ -242,7 +243,7 @@ class LetterBoxed(Game):
             ink = gold if small and used else (15, 12, 8) if used else paper
             text(canvas, ch.upper(), tx, ty, ink, scale)
             # At 64, the old underline cut through a glyph's last rows.
-            # Put the status mark below the entire 5×7 glyph instead.
+            # Put the status mark below the entire 5x7 glyph instead.
             if used:
                 marker_y = ty + 7 * scale + 1
                 line(canvas, (x - radius * .38, marker_y), (x + radius * .38, marker_y), ink, max(1, round(size * .004)))

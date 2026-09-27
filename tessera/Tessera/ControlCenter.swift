@@ -111,6 +111,10 @@ struct ControlCenterPanel: View {
     /// The Video face is chosen here, not on the wall: a video needs a link
     /// before there is anything for the wall to be in the middle of.
     @State private var videoFace = false
+    /// The ticker composer stays up on the phone's own choice, like the
+    /// video. Keyed on the wall's mode alone, a once-only message finishing
+    /// and handing back to art unmounted it, and the draft, mid-typing.
+    @State private var tickerFace = false
     /// The games live in their own sheet: a board wants the whole screen.
     @State private var showGames = false
     @State private var showWeather = false
@@ -119,7 +123,6 @@ struct ControlCenterPanel: View {
     @State private var returnFailed = false
     @State private var showArtwork = false
     @State private var artworkIsSpin = false
-    @State private var showColour = false
     @State private var localPlayback = false
     @State private var controlsLocalTrack = false
     /// A rail being dragged: its key and where the thumb is now, so the
@@ -142,10 +145,9 @@ struct ControlCenterPanel: View {
                     Rectangle().fill(.ultraThinMaterial).ignoresSafeArea()
                     VStack(spacing: 0) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                        Text("Your wall").font(.display(typeSize.isAccessibilitySize ? 17 : 30)).foregroundStyle(ink.ink)
-                        Text(connectionLabel).font(.machine(9)).kerning(0.8).foregroundStyle(ink.ink.opacity(0.78))
-                            }
+                            // At accessibility sizes the title scrolls with the
+                            // board: pinned, it took a third of the screen.
+                            if !typeSize.isAccessibilitySize { headerWords }
                             Spacer()
                             closeKey
                         }
@@ -156,6 +158,9 @@ struct ControlCenterPanel: View {
                         ScrollViewReader { scroll in
                         ScrollView(.vertical) {
                             VStack(spacing: gutter) {
+                                if typeSize.isAccessibilitySize {
+                                    headerWords.frame(maxWidth: .infinity, alignment: .leading)
+                                }
                                 lightSlab
                                 faces
                                 context.id("face.workspace")
@@ -227,14 +232,9 @@ struct ControlCenterPanel: View {
                     .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showWeather = false } } }
             }.preferredColorScheme(.dark)
         }
-        .sheet(isPresented: $showColour) {
-            ColourSheet(colour: Binding(get: { Color.wall(hex: wall.state.color) },
-                                       set: { wall.send(["color": $0.wallHex]) }), title: "Primary colour")
-        }
         .onAppear {
             refreshLocalPlayback()
             #if DEBUG
-            if CommandLine.arguments.contains("-control-colour") { showColour = true }
             if CommandLine.arguments.contains("-artwork-page") || CommandLine.arguments.contains("-spin-page") {
                 artworkIsSpin = CommandLine.arguments.contains("-spin-page"); showArtwork = true
             }
@@ -261,10 +261,18 @@ struct ControlCenterPanel: View {
     }
     private var connectionLabel: String {
         switch wall.link {
-        case .live: "CONNECTED · \(faceName(wall.state.mode))"
+        case .live: "CONNECTED, \(faceName(wall.state.mode).uppercased())"
         case .standIn: "PHONE PREVIEW"
         case .searching: "FINDING YOUR WALL"
-        case .offline: "WALL OFFLINE · CHANGES WAIT FOR CONNECTION"
+        case .offline: "WALL OFFLINE. CHANGES SEND WHEN IT RECONNECTS"
+        }
+    }
+
+    private var headerWords: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Your wall").font(.display(typeSize.isAccessibilitySize ? 17 : 30)).foregroundStyle(ink.ink)
+            Text(connectionLabel).font(.machine(9)).kerning(0.8).foregroundStyle(ink.ink.opacity(0.78))
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -373,14 +381,18 @@ struct ControlCenterPanel: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(light.isOff ? "ASLEEP" : "BRIGHTNESS").font(.machine(9)).kerning(1).foregroundStyle(ink.dim)
                         .lineLimit(1).minimumScaleFactor(0.8)
-                    HStack(alignment: .firstTextBaseline, spacing: 3) {
-                        Text(light.isOff ? "—" : "\(Int((value * 100).rounded()))")
-                            .font(.display(typeSize.isAccessibilitySize ? 40 : 58)).foregroundStyle(ink.ink).monospacedDigit()
-                            .lineLimit(1).minimumScaleFactor(0.65)
-                            .contentTransition(.numericText())
-                        if !light.isOff { Text("%").font(.ui(17)).foregroundStyle(ink.dim) }
+                    // At accessibility sizes the slider below already shows the
+                    // number, so the lit wall does not repeat it here.
+                    if light.isOff || !typeSize.isAccessibilitySize {
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text(light.isOff ? "Off" : "\(Int((value * 100).rounded()))")
+                                .font(.display(typeSize.isAccessibilitySize ? 40 : 58)).foregroundStyle(ink.ink).monospacedDigit()
+                                .lineLimit(1).minimumScaleFactor(0.65)
+                                .contentTransition(.numericText())
+                            if !light.isOff { Text("%").font(.ui(17)).foregroundStyle(ink.dim) }
+                        }
                     }
-                    Text(light.isOff ? "Your next moment of light." : faceName(wall.state.mode))
+                    Text(light.isOff ? "The wall is off." : faceName(wall.state.mode))
                         .font(.ui(13)).foregroundStyle(ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
@@ -443,7 +455,7 @@ struct ControlCenterPanel: View {
                 Image(systemName: "square.grid.2x2").font(.system(size: 20))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(faceName(wall.state.mode)).font(.ui(17, .semibold))
-                    Text(choosingFace ? "Choose what fills your room" : "Change face").font(.ui(12)).foregroundStyle(ink.dim)
+                    Text(choosingFace ? "Choose a face" : "Change face").font(.ui(12)).foregroundStyle(ink.dim)
                 }
             }.foregroundStyle(ink.ink).frame(minHeight: 48)
         }.tint(accent).padding(18).background(Slab(radius: 24, ink: ink))
@@ -464,6 +476,7 @@ struct ControlCenterPanel: View {
         return Button {
             choosingFace = false
             videoFace = mode == "video"
+            tickerFace = mode == "ticker"
             if let action { action() }
             else if let mode { wall.send(["mode": mode == "off" && wall.state.mode == "off" ? "art" : mode]) }
             Taps.detent(intensity: 0.4)
@@ -522,17 +535,17 @@ struct ControlCenterPanel: View {
     private func faceDescription(_ mode: String?) -> String {
         switch mode {
         case "art": "The album sleeve"
-        case "cd": "A record in motion"
-        case "lyrics": "Follow the song"
+        case "cd": "A spinning record"
+        case "lyrics": "Song lyrics"
         case "nine": "Nine sleeves"
-        case "frame": "Open your studio"
-        case "video": "A moving picture"
-        case "ambient": "Colour & atmosphere"
+        case "frame": "Open Studio"
+        case "video": "Play a video"
+        case "ambient": "Colour effects"
         case "clock": "Time & timers"
-        case "weather": "Your local sky"
-        case "game": "Something to play"
-        case "ticker": "Words in motion"
-        case "off": "Let the wall rest"
+        case "weather": "Current weather"
+        case "game": "Play a game"
+        case "ticker": "Scrolling text"
+        case "off": "Turn the wall off"
         default: "Choose this face"
         }
     }
@@ -542,6 +555,8 @@ struct ControlCenterPanel: View {
     @ViewBuilder private var context: some View {
         if videoFace || wall.state.mode == "video" {
             videoBoard
+        } else if tickerFace || wall.state.mode == "ticker" {
+            wordsBoard
         } else {
             faceContext
         }
@@ -558,7 +573,7 @@ struct ControlCenterPanel: View {
         case "frame", "clip": designBoard
         case "weather":
             board("Weather") {
-                Label(wall.state.place.isEmpty ? "Choose a place to follow its sky." : wall.state.place, systemImage: "location")
+                Label(wall.state.place.isEmpty ? "Choose a place for the forecast." : wall.state.place, systemImage: "location")
                     .font(.ui(15)).foregroundStyle(ink.ink)
                 Button { showWeather = true } label: {
                     Label("Forecast & place", systemImage: "arrow.up.right")
@@ -698,7 +713,7 @@ struct ControlCenterPanel: View {
     private var designBoard: some View {
         VStack(spacing: gutter) {
             board("Design") {
-                Text(wall.state.mode == "clip" ? "A creation in motion." : "Your canvas, in light.")
+                Text(wall.state.mode == "clip" ? "Animation on the wall." : "Drawing on the wall.")
                     .font(.ui(15)).foregroundStyle(ink.ink)
                 Button { onClose(); onStudio() } label: {
                     Label("Open Studio", systemImage: "paintbrush.pointed")

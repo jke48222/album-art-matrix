@@ -194,7 +194,11 @@ class TwentyQuestions(Game):
             if self.over:
                 return False
             if kind in ("knock", "whistle"):
-                return "error" not in self.answer("yes" if kind == "knock" else "no", self.question_id)
+                # Always consumed while the game runs. An answer that arrives
+                # while the next question is loading is refused, but a False
+                # here lets the ear treat a falling whistle as "wall off".
+                self.answer("yes" if kind == "knock" else "no", self.question_id)
+                return True
             return kind == "double"
 
     def state(self) -> dict:

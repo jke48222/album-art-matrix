@@ -45,7 +45,7 @@ final class GameInteractionTests: XCTestCase {
         enter.tap()
         let state = try await receivedMove()
         XCTAssertEqual((state["game"] as? [String: Any])?["won"] as? Bool, true)
-        XCTAssertTrue(app.staticTexts["Nicely played."].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Solved"].firstMatch.waitForExistence(timeout: 5))
     }
     @MainActor func testSlidingLegalTileSendsRealMove() async throws {
         let app = try await launch("sliding")
@@ -65,7 +65,8 @@ final class GameInteractionTests: XCTestCase {
         XCTAssertTrue(send.isHittable); send.tap()
         let state = try await receivedMove()
         XCTAssertEqual((state["game"] as? [String: Any])?["won"] as? Bool, true)
-        XCTAssertTrue(app.staticTexts["You knew it."].waitForExistence(timeout: 5))
+        // The board header and the result headline both read "Solved".
+        XCTAssertTrue(app.staticTexts["Solved"].firstMatch.waitForExistence(timeout: 5))
     }
     @MainActor func testReactionGreenTapRecordsTime() async throws {
         let app = try await launch("reaction", phase: "green")

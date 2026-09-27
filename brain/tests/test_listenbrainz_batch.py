@@ -196,18 +196,41 @@ def test_corrupt_queue_line_does_not_discard_other_waiting_listens(tmp_path):
     assert oct(__import__("os").stat(room.scr.queue_path).st_mode & 0o777) == "0o600"
 
 
-def test_legacy_queue_without_account_record_stays_held(tmp_path):
+def legacy_queue(tmp_path):
     room = queued_room(tmp_path)
     item = json.loads(open(room.scr.queue_path).read())
     item.pop("owner"); item.pop("owner_name")
     with open(room.scr.queue_path, "w") as stream:
         stream.write(json.dumps(item) + "\n")
-    again = Room(tmp_path)
+
+
+def test_legacy_queue_goes_to_the_token_it_was_queued_under(tmp_path):
+    legacy_queue(tmp_path)
+    again = Room(tmp_path)          # the token services.json held at the upgrade
+    assert again.scr.status()["queued"] == 1
+    assert again.scr.status()["legacy_queued"] == 0
+    again.run(200)                  # past the queued retry time
+    assert len(again.sent("import")) == 1
     assert again.scr.status()["queued"] == 0
+
+
+def test_legacy_queue_is_never_sent_to_a_later_account(tmp_path):
+    legacy_queue(tmp_path)
+    again = Room(tmp_path)
+    again.scr.configure(token="somebody-else")
+    again.answers.append((200, {"valid": True, "user_name": "new-user"}, {}))
+    again.run(200)                  # past the queued retry time
+    assert again.sent("import") == []
+    assert again.scr.status()["held_queued"] == 1
+
+
+def test_legacy_queue_without_any_token_stays_held(tmp_path):
+    legacy_queue(tmp_path)
+    again = Room(tmp_path, token="")
     assert again.scr.status()["legacy_queued"] == 1
     again.scr.configure(token="somebody-else")
     again.answers.append((200, {"valid": True, "user_name": "new-user"}, {}))
-    again.run(100)
+    again.run(200)                  # past the queued retry time
     assert again.sent("import") == []
     assert again.scr.status()["held_queued"] == 1
 
@@ -273,16 +296,29 @@ def test_reader_clears_stale_song_when_service_is_offline(monkeypatch):
     assert source.status()["read_playing"] is None
 
 
+def join_checks():
+    for thread in threading.enumerate():
+        if thread.name == "listenbrainz-check":
+            thread.join(3)
+
+
 def test_reader_user_switch_ignores_in_flight_old_song(monkeypatch):
     source = ListenBrainzSource("first")
     monkeypatch.setattr(source, "_art", lambda *args: None)
-    def get(*args, **kwargs):
-        source.configure("second")
-        return Response(listen())
+    asked = []
+    def get(url, **kwargs):
+        asked.append(url)
+        if len(asked) == 1:
+            source.configure("second")
+            return Response(listen())
+        return Response()           # the new user: nothing playing
     monkeypatch.setattr("brain.nowplaying.listenbrainz.requests.get", get)
     assert source.get_current() is None
-    assert source.status()["user"] == "second"
-    assert source.status()["read_state"] == "checking"
+    status = source.status()        # starts the new username's first check
+    assert status["user"] == "second" and status["read_playing"] is None
+    join_checks()
+    assert asked[1].endswith("/second/playing-now")
+    assert source.status()["read_state"] == "ready"
     assert source.status()["read_playing"] is None
 
 
@@ -376,7 +412,8 @@ def test_reader_status_expires_unpolled_playing_report_without_faking_idle(monke
     assert source.status()["read_state"] == "playing"
     assert source.status()["read_playing"] is not None
     clock[0] += 0.1
-    assert source.status()["read_state"] == "checking"
+    # The report proved the username; only the song is unknown now.
+    assert source.status()["read_state"] == "ready"
     assert source.status()["read_playing"] is None
     assert source.status()["read_checked_at"] == checked_at
 
@@ -395,7 +432,7 @@ def test_reader_busy_request_cannot_return_expired_cached_track(monkeypatch):
         clock[0] += 21
         assert source.get_current() is None
         assert source.status()["read_playing"] is None
-        assert source.status()["read_state"] == "checking"
+        assert source.status()["read_state"] == "ready"
     finally:
         source._request_lock.release()
 

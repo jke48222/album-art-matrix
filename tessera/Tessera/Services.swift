@@ -160,8 +160,17 @@ struct WallServices: Decodable {
         rejected = try? c.decode([String].self, forKey: .rejected)
     }
 
-    private static func call(host: String, path: String, body: [String: Any]? = nil) async -> WallServices? {
-        guard !host.isEmpty, let url = URL(string: "http://\(host)\(path)") else { return nil }
+    /// What one call to the wall came to. `status` is nil only when the wall
+    /// did not answer at all, so a save the wall refused (a 503 when its disk
+    /// write failed) is not reported as a wall that is not answering.
+    struct Outcome {
+        var services: WallServices?
+        var status: Int?
+        var error: String?          // the wall's own words for a refusal
+    }
+
+    private static func exchange(host: String, path: String, body: [String: Any]? = nil) async -> Outcome {
+        guard !host.isEmpty, let url = URL(string: "http://\(host)\(path)") else { return Outcome() }
         var req = URLRequest(url: url)
         req.timeoutInterval = 6
         if let body {
@@ -170,10 +179,18 @@ struct WallServices: Decodable {
             req.httpBody = try? JSONSerialization.data(withJSONObject: body)
         }
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
-              (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-        guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              ["spotify", "lastfm", "listenbrainz", "hearing", "claude", "airplay", "images", "discogs"].contains(where: { object[$0] is [String: Any] }) else { return nil }
-        return try? JSONDecoder().decode(WallServices.self, from: data)
+              let status = (resp as? HTTPURLResponse)?.statusCode else { return Outcome() }
+        let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+        guard status == 200 else {
+            return Outcome(status: status, error: (object?["error"] as? String).map { String($0.prefix(240)) })
+        }
+        guard let object,
+              ["spotify", "lastfm", "listenbrainz", "hearing", "claude", "airplay", "images", "discogs"].contains(where: { object[$0] is [String: Any] }) else { return Outcome(status: status) }
+        return Outcome(services: try? JSONDecoder().decode(WallServices.self, from: data), status: status)
+    }
+
+    private static func call(host: String, path: String, body: [String: Any]? = nil) async -> WallServices? {
+        await exchange(host: host, path: path, body: body).services
     }
 
     static func read(host: String) async -> WallServices? {
@@ -188,8 +205,10 @@ struct WallServices: Decodable {
         await call(host: host, path: "/mac/retry", body: [:])
     }
 
-    static func checkPosters(host: String, title: String = "") async -> WallServices? {
-        await call(host: host, path: "/posters/check", body: ["title": title])
+    /// The whole outcome, not just the services: a refused check (a 400
+    /// that names what to type instead) carries the wall's own words.
+    static func checkPosters(host: String, title: String = "") async -> Outcome {
+        await exchange(host: host, path: "/posters/check", body: ["title": title])
     }
 
     static func retryLastfm(host: String) async -> WallServices? {
@@ -203,11 +222,16 @@ struct WallServices: Decodable {
     /// Hand the wall new details. Comes back with what the wall now has,
     /// or nil when the wall did not answer.
     static func save(host: String, _ patch: [String: Any]) async -> WallServices? {
-        await call(host: host, path: "/services", body: patch)
+        await submit(host: host, patch).services
     }
 
-    static func unlinkSpotify(host: String) async -> WallServices? {
-        await call(host: host, path: "/spotify/unlink", body: [:])
+    /// A save with how it went, for pages that say what failed.
+    static func submit(host: String, _ patch: [String: Any]) async -> Outcome {
+        await exchange(host: host, path: "/services", body: patch)
+    }
+
+    static func unlinkSpotify(host: String) async -> Outcome {
+        await exchange(host: host, path: "/spotify/unlink", body: [:])
     }
 
     /// What the wall has, after quietly handing it any developer key it is
@@ -243,13 +267,23 @@ extension WallSession {
 /// One place that hands details to the wall and says what happened, in words.
 enum ServiceSave {
     static func send(_ patch: [String: Any], to host: String) async -> (WallServices?, String?) {
-        guard let fresh = await WallServices.save(host: host, patch) else {
-            return (nil, "The wall is not answering right now.")
-        }
+        let outcome = await WallServices.submit(host: host, patch)
+        guard let fresh = outcome.services else { return (nil, failure(outcome)) }
         if let r = fresh.rejected, !r.isEmpty {
             return (fresh, "The wall did not take " + r.joined(separator: ", ") + ". Check for typos.")
         }
         return (fresh, nil)
+    }
+
+    /// A wall that answered but did not save is not a wall that is away.
+    /// The wall's 503 means its own disk write failed.
+    static func failure(_ outcome: WallServices.Outcome) -> String {
+        switch outcome.status {
+        case nil: return "The wall is not answering right now."
+        case 503: return "The wall could not save this. Try again."
+        case 200: return "The wall's reply could not be read. Try again."
+        default: return "The wall did not accept this change. Try again."
+        }
     }
 }
 

@@ -52,6 +52,7 @@ final class MadeStore {
     func load() {
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            purgeTrash()
             let files = try FileManager.default.contentsOfDirectory(at: directory,
                 includingPropertiesForKeys: [.isDirectoryKey, .creationDateKey], options: [.skipsHiddenFiles])
             var loaded: [Made] = [], unreadable = false
@@ -138,6 +139,23 @@ final class MadeStore {
             removed = (original, trash); removedTitle = item.title
             made.removeAll { $0.id == item.id }; error = nil
         } catch { self.error = error.localizedDescription }
+    }
+
+    /// The undo window is over: the deleted creation goes for good.
+    func purgeRemoved() {
+        guard let removed else { return }
+        try? FileManager.default.removeItem(at: removed.trash)
+        self.removed = nil; removedTitle = nil
+    }
+
+    /// Trash from earlier sessions. `removed` lives only in memory, so the
+    /// last deletion of every session used to stay in Documents (and in
+    /// device backups) for good; only the one still offered for Undo is kept.
+    private func purgeTrash() {
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return }
+        for name in names where name.hasPrefix(".deleted-") && name != removed?.trash.lastPathComponent {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
     }
 
     func undoRemove() {

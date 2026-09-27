@@ -248,6 +248,10 @@ struct RoomWallScreen: View {
         .onDisappear {
             roomVisible = false
             transitionTask?.cancel(); introSettleTask?.cancel()
+            // The settle was cancelled with its task. An intro that already
+            // finished must still land settled, or the needle stays parked
+            // for the rest of the session.
+            if introDone { introSettled = true }
             settleRoomTransition()
             cancelLightTouch()
             pressingTask?.cancel(); pressingRequest = UUID()
@@ -644,7 +648,7 @@ struct RoomWallScreen: View {
                         .lineLimit(1).minimumScaleFactor(0.75)
                     Spacer(minLength: 4)
                     if !typeSize.isAccessibilitySize {
-                        Text(roomCompletion ? "OPEN" : (light.isOff ? "ASLEEP" : "\(roomFaceName) · \(Int((wall.state.brightness * 100).rounded()))%"))
+                        Text(roomCompletion ? "OPEN" : (light.isOff ? "ASLEEP" : "\(roomFaceName), \(Int((wall.state.brightness * 100).rounded()))%"))
                             .font(.machine(8)).kerning(0.5)
                     }
                     Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
@@ -769,7 +773,7 @@ struct RoomWallScreen: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Your wall").font(.displayMid(24)).foregroundStyle(inkLight)
-                    Text("\(roomConnectionLabel) · \(roomFaceName)")
+                    Text("\(roomConnectionLabel), \(roomFaceName)")
                         .font(.machine(8)).kerning(0.7).foregroundStyle(inkLightDim)
                 }
                 Spacer()
@@ -842,7 +846,7 @@ struct RoomWallScreen: View {
                         .allowsHitTesting(false)
                     VStack(spacing: -6) {
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
-                            Text("\(Int(level * 100))").font(.display(64))
+                            Text("\(Int((level * 100).rounded()))").font(.display(64))
                             Text("%").font(.ui(18, .medium)).opacity(0.7)
                         }
                         Text("LIGHT").font(.machine(10)).kerning(1.8).opacity(0.7)
@@ -888,7 +892,7 @@ struct RoomWallScreen: View {
             )
             .accessibilityElement()
             .accessibilityLabel("The wall")
-            .accessibilityValue("Light \(Int(level * 100)) percent")
+            .accessibilityValue("Light \(Int((level * 100).rounded())) percent")
             .accessibilityHint("Drag up or down to set the light. Tap to go back.")
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { leaveWall() }
@@ -1081,8 +1085,11 @@ struct RoomWallScreen: View {
     }
 
     private func finishIntro(after delay: Double) {
-        guard roomVisible else { return }
         introSettleTask?.cancel()
+        // Offscreen (Archive swiped to, a cover up) the state still lands and
+        // only the animation is skipped. Dropping the finish left the chrome
+        // hidden, or the needle parked, until the app was relaunched.
+        guard roomVisible else { introDone = true; introSettled = true; return }
         withAnimation(reducedMotion ? nil : .easeInOut(duration: min(0.4, delay))) { introDone = true }
         if reducedMotion || delay == 0 || scenePhase != .active { introSettled = true; return }
         introSettleTask = Task { @MainActor in

@@ -25,6 +25,7 @@ from . import GAMES, Game
 from .board import scoreboard
 
 PATH = os.path.expanduser("~/.config/album-art-matrix/games.json")
+VOICE_WORDS = 100
 
 
 class GameHost:
@@ -97,6 +98,11 @@ class GameHost:
             generation = self._generation
             self._starting = cls.name
             previous_mode = self.ctrl.get()["mode"]
+            # The face to hand back: the one a note up now will return to,
+            # not the note's "ticker", which would come back with no expiry
+            # and no Take down.
+            previous_face = (self.ctrl.resting_face() if hasattr(self.ctrl, "resting_face")
+                             else previous_mode)
             previous_shown = self.ctrl.shown_seq
         # Provider-backed games may need the network. Keep status, rendering and
         # ending the old game responsive while the new puzzle is prepared.
@@ -124,8 +130,10 @@ class GameHost:
             self._recorded = None
             self.session_id = uuid.uuid4().hex
             self._t0 = self._clock()
-            if previous_mode != "game":
-                self._ret = previous_mode if previous_mode not in ("frame", "clip", "timer", "video") else "art"
+            # A note over a game returns to "game": the game keeps its own
+            # return face then, as it does when the game was up.
+            if previous_mode != "game" and previous_face != "game":
+                self._ret = previous_face if previous_face not in ("frame", "clip", "timer", "video") else "art"
             self.seq += 1
             self.ctrl.apply({"mode": "game"})
             self.ctrl.shown_seq += 1
@@ -174,6 +182,12 @@ class GameHost:
             g = self.game
             if g is None or g.over:
                 return None
+            # The wall's own ears carry no session. A game parked off the wall
+            # must not take the room's speech: "clock" or "sleep" would become
+            # a guess and the command would never run. The phone's calls carry
+            # its session and are unchanged.
+            if session_id is None and self.ctrl.get()["mode"] != "game":
+                return None
             try:
                 result = g.hear(" ".join((text or "").split()), self._who(player))
             except Exception as exc:
@@ -214,7 +228,20 @@ class GameHost:
                 return {**self.status(), "error": "No game to return to.", "code": 409}
             here = self.ctrl.get()["mode"]
             if here != "game":
-                self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+                if not self.game.over:
+                    # A timed game stops its own clock once a reading finds it
+                    # parked (brain/games/parking.py). Take that reading before
+                    # the wall switches back, so a park nobody polled does not
+                    # come back as time already used up.
+                    try:
+                        self.game.state()
+                    except Exception as exc:
+                        print(f"[games] {self.game.name} resume: {exc}", flush=True)
+                # As in start: the note's own return face, and a note over
+                # this game keeps the return face the game already has.
+                face = self.ctrl.resting_face() if hasattr(self.ctrl, "resting_face") else here
+                if face != "game":
+                    self._ret = face if face not in ("frame", "clip", "timer", "video") else "art"
                 self.ctrl.apply({"mode": "game"})
                 self.ctrl.shown_seq += 1
                 self.seq += 1
@@ -311,7 +338,9 @@ class GameHost:
             return {"running": g is not None, "seq": self.seq, "game": public,
                     "session_id": self.session_id, "on_wall": g is not None and self.ctrl.get()["mode"] == "game",
                     "starting": self._starting, "scores": self.scores(g.name) if g else {}, "last": self.last,
-                    "voice_words": (g.voice_words() if g else [])[:3000]}
+                    # Every poll carries these, and the phone primes its speech
+                    # recogniser with only the first 100 (GameSpeech.swift).
+                    "voice_words": (g.voice_words() if g else [])[:VOICE_WORDS]}
 
     def artwork(self, size: int, session_id: str, sequence: int, frame_step: int | None = None):
         """A detailed rendering of this exact session, without changing faces."""

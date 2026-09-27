@@ -77,7 +77,7 @@ def configure(wall, host: str, phase: str, feature: str, renderer_root: Path | N
                          "cover": url, "country": "US", "url": f"https://www.discogs.com/release/{900100+index}",
                          "plays": [24,12,7,4,3,1][index], "added": f"2026-09-{25-index:02}T08:00:00-04:00", "copies": 2 if index == 0 else 1})
     empty = phase == "empty"
-    teacher = {"by_ear": True, "learning": "Mira Vale — Amber Hours" if phase == "learning" else None,
+    teacher = {"by_ear": True, "learning": "Amber Hours by Mira Vale" if phase == "learning" else None,
                "problem": "The preview catalogue isn't answering. Your library is safe." if phase == "failed" else None,
                "last_learned": {"id": "qa-song-0", "title": titles[0], "artist": artists[0], "at": STAMP} if phase == "result" else None}
     wall.studies["/teach"] = {"enabled": True, "landmarks": sum(s["landmarks"] for s in songs) if not empty else 0,

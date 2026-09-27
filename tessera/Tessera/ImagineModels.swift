@@ -81,7 +81,7 @@ struct WallImagined: Decodable {
             if (200...299).contains(code), acknowledged { return Reply(ok: true) }
             return Reply(ok: false, error: json["error"] as? String ?? "The wall did not confirm that action. Check the studio before trying again.")
         } catch {
-            return Reply(ok: false, error: route == "/imagine" ? "The connection ended before the wall confirmed. Check the canvas before creating again; a picture may already be in progress." : "The wall didn't answer. Your collection will refresh when it reconnects.")
+            return Reply(ok: false, error: route == "/imagine" ? "The connection ended before the wall confirmed. Check the canvas before creating again. A picture may already be in progress." : "The wall didn't answer. Your collection will refresh when it reconnects.")
         }
     }
 }

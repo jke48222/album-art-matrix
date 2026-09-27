@@ -36,17 +36,19 @@ struct ListenBrainzPage: View {
         available && !busy && typedUser != savedUser
             && typedUser.range(of: "^[^\\s/]{1,64}$", options: .regularExpression) != nil
     }
-    private var canSaveToken: Bool { available && !busy && UUID(uuidString: typedToken) != nil }
+    private var canSaveToken: Bool { available && !busy && !writingOff && UUID(uuidString: typedToken) != nil }
     private var writerState: String { lb?.state ?? (tokenSet ? "checking" : "unlinked") }
+    /// Scrobbling is switched off on the wall: a token saved now would not be used.
+    private var writingOff: Bool { available && writerState == "disabled" }
     private var readerState: String { lb?.read_state ?? (savedUser.isEmpty ? "unlinked" : "checking") }
     private var current: WallServices.Listenbrainz.Playing? { available ? lb?.playing : nil }
     private var journalTitle: String {
         if !available { return checked ? "Waiting for the wall" : "Opening your journal" }
         if let current {
-            if current.listened { return (lb?.queued ?? 0) > 0 ? "Counted. Waiting to send." : "A listen to remember." }
-            return lb?.counting == true ? "A record is becoming\na memory." : "A moment of quiet."
+            if current.listened { return (lb?.queued ?? 0) > 0 ? "Counted. Waiting to send." : "Listen counted" }
+            return lb?.counting == true ? "Counting" : "Paused while the room is quiet"
         }
-        return tokenSet ? "The next record\nstarts here." : "Keep what\nyou listen to."
+        return tokenSet ? "No record playing" : "Your listening journal"
     }
     private var writerTitle: String {
         guard available else { return "Not checked" }
@@ -93,7 +95,7 @@ struct ListenBrainzPage: View {
                 writing
                 if available && (lb?.last_listen != nil || (lb?.queued ?? 0) > 0 || (lb?.held_queued ?? 0) > 0) { history }
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("Your music. An open history.").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
+                    Text("About ListenBrainz").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
                     Text("ListenBrainz is the open listening journal from the MusicBrainz community. Reading and writing can use different accounts.")
                         .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     Link("Explore ListenBrainz", destination: URL(string: "https://listenbrainz.org/")!)
@@ -151,7 +153,7 @@ struct ListenBrainzPage: View {
                 HStack(alignment: .top, spacing: 14) {
                     if !typeSize.isAccessibilitySize { journalMotif }
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(typeSize.isAccessibilitySize ? journalTitle.replacingOccurrences(of: "\n", with: " ") : "Every record leaves a little trace.")
+                        Text(typeSize.isAccessibilitySize ? journalTitle.replacingOccurrences(of: "\n", with: " ") : "Records the wall hears can be written here.")
                             .font(.ui(15, .semibold)).foregroundStyle(paper).fixedSize(horizontal: false, vertical: true)
                         Text(available ? "Follow a player’s reports, or keep the records the wall hears." : "Listening status appears when your wall answers.")
                             .font(.ui(13)).foregroundStyle(paper.opacity(0.7)).fixedSize(horizontal: false, vertical: true)
@@ -240,33 +242,41 @@ struct ListenBrainzPage: View {
                 .font(.ui(15, .medium)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             Text("Only sound recognized by the wall’s ears is written. A listen counts after half the track or four minutes, whichever comes first.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-            if available, let why = lb?.problem { feedback(why, symbol: "exclamationmark.circle") }
-            if available && ["refused", "offline", "unavailable", "rate_limited"].contains(writerState) { retryButton }
-            DisclosureGroup(isExpanded: $writeExpanded) {
-                VStack(alignment: .leading, spacing: 13) {
-                    Text("Your user token writes to its own account. It never changes the username above.")
-                        .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-                    SecureField(tokenSet ? "Replace user token" : "User token", text: $token)
-                        .font(.ui(16)).foregroundStyle(Ink.ink).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        .privacySensitive().focused($focus, equals: .token).submitLabel(.done)
-                        .onSubmit { if canSaveToken { save(["token": typedToken], label: "Token saved. ListenBrainz is checking it.") } }
-                        .padding(15).background(Ink.ground, in: RoundedRectangle(cornerRadius: 12))
-                        .accessibilityIdentifier("listenbrainz.token")
-                    if !typedToken.isEmpty && UUID(uuidString: typedToken) == nil {
-                        Text("Paste the complete user token from ListenBrainz settings.").font(.ui(12)).foregroundStyle(amber)
-                    }
-                    Link("Find your user token", destination: URL(string: "https://listenbrainz.org/settings/")!)
-                        .font(.ui(14, .medium)).foregroundStyle(amber).frame(minHeight: 44)
-                    primary(tokenSet ? "Replace token" : "Start writing", enabled: canSaveToken, id: "listenbrainz.saveToken") {
-                        save(["token": typedToken], label: "Token saved. ListenBrainz is checking it.")
-                    }
-                }.padding(.top, 14)
-            } label: { Text(tokenSet ? "Manage user token" : "Connect writing").font(.ui(14, .semibold)).foregroundStyle(amber).accessibilityIdentifier("listenbrainz.writeSetup") }
-            if tokenSet {
-                if unlink == "token" { unlinkConfirmation("Stop writing records?", detail: "The token is removed. Queued listens stay held for their original account for up to seven days. Reading stays connected.", field: "token") }
-                else { Button("Disconnect writing", role: .destructive) { unlink = "token" }.font(.ui(13)).frame(minHeight: 44).disabled(!available || busy).accessibilityIdentifier("listenbrainz.unlinkWrite") }
-            }
+            if writingOff {
+                Text("Writing is switched off in this wall's features. Turn it on there before adding a token.")
+                    .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("listenbrainz.writingOff")
+            } else { writingSetup }
         }.padding(20).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 21))
+    }
+    /// The token editor and its recovery, hidden when writing is switched off.
+    @ViewBuilder private var writingSetup: some View {
+        if available, let why = lb?.problem { feedback(why, symbol: "exclamationmark.circle") }
+        if available && ["refused", "offline", "unavailable", "rate_limited"].contains(writerState) { retryButton }
+        DisclosureGroup(isExpanded: $writeExpanded) {
+            VStack(alignment: .leading, spacing: 13) {
+                Text("Your user token writes to its own account. It never changes the username above.")
+                    .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                SecureField(tokenSet ? "Replace user token" : "User token", text: $token)
+                    .font(.ui(16)).foregroundStyle(Ink.ink).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    .privacySensitive().focused($focus, equals: .token).submitLabel(.done)
+                    .onSubmit { if canSaveToken { save(["token": typedToken], label: "Token saved. ListenBrainz is checking it.") } }
+                    .padding(15).background(Ink.ground, in: RoundedRectangle(cornerRadius: 12))
+                    .accessibilityIdentifier("listenbrainz.token")
+                if !typedToken.isEmpty && UUID(uuidString: typedToken) == nil {
+                    Text("Paste the complete user token from ListenBrainz settings.").font(.ui(12)).foregroundStyle(amber)
+                }
+                Link("Find your user token", destination: URL(string: "https://listenbrainz.org/settings/")!)
+                    .font(.ui(14, .medium)).foregroundStyle(amber).frame(minHeight: 44)
+                primary(tokenSet ? "Replace token" : "Start writing", enabled: canSaveToken, id: "listenbrainz.saveToken") {
+                    save(["token": typedToken], label: "Token saved. ListenBrainz is checking it.")
+                }
+            }.padding(.top, 14)
+        } label: { Text(tokenSet ? "Manage user token" : "Connect writing").font(.ui(14, .semibold)).foregroundStyle(amber).accessibilityIdentifier("listenbrainz.writeSetup") }
+        if tokenSet {
+            if unlink == "token" { unlinkConfirmation("Stop writing records?", detail: "The token is removed. Queued listens stay held for their original account for up to seven days. Reading stays connected.", field: "token") }
+            else { Button("Disconnect writing", role: .destructive) { unlink = "token" }.font(.ui(13)).frame(minHeight: 44).disabled(!available || busy).accessibilityIdentifier("listenbrainz.unlinkWrite") }
+        }
     }
 
     private var history: some View {
@@ -370,7 +380,23 @@ struct ListenBrainzPage: View {
     private func save(_ patch: [String: String], label: String) {
         guard available, !busy else { return }
         focus = nil
-        act(success: label) { host in await ServiceSave.send(["listenbrainz": patch], to: host) }
+        act(success: label) { host in
+            let (fresh, why) = await ServiceSave.send(["listenbrainz": patch], to: host)
+            // A receipt only when the wall now holds the value and uses it.
+            if why == nil, let fresh, !Self.took(patch, fresh.listenbrainz) {
+                return (fresh, fresh.listenbrainz?.state == "disabled" ? "Writing is turned off on this wall, so the token is not in use." : "The wall has not confirmed this change. Check again in a moment.")
+            }
+            return (fresh, why)
+        }
+    }
+    static func took(_ patch: [String: String], _ lb: WallServices.Listenbrainz?) -> Bool {
+        guard let lb else { return false }
+        if let name = patch["user"], lb.user != name { return false }
+        if let token = patch["token"] {
+            if token.isEmpty { return lb.token_set != true }
+            return lb.token_set == true && lb.state != "disabled"
+        }
+        return true
     }
     private func act(success: String? = nil, work: @escaping (String) async -> (WallServices?, String?)) {
         guard available, !busy else { return }

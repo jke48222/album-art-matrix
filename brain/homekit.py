@@ -479,7 +479,9 @@ class HomeKit:
             ns = self.ctrl.now_showing or {}
             if ns.get("title"):
                 text = ns["title"] + (" - " + ns["artist"] if ns.get("artist") else "")
-                self.ctrl.apply({"ticker_text": text[:120], "ticker_loop": False,
+                # No per-letter colours: the last phone message's colours
+                # belong to its words, not to the song's title.
+                self.ctrl.apply({"ticker_text": text[:120], "ticker_colors": [], "ticker_loop": False,
                                  "ticker_style": "across", "mode": "ticker"})
         elif key in (K_FF, K_REWIND):
             self._tv_volume(0 if key == K_FF else 1)
@@ -566,8 +568,15 @@ class HomeKit:
             # A second request extends this presentation. If another source
             # replaced it, this is a new presentation with a new return point.
             owns_frame = self._code_frame is not None and ctrl.frame_override is self._code_frame
-            if not owns_frame or s["mode"] != "frame":
-                self._code_ret = s["mode"]
+            # A note over the code rests on this frame: keep the code's own
+            # return face rather than taking "frame" as it.
+            note_over_code = (owns_frame and self._code_ret is not None and hasattr(ctrl, "resting_face")
+                              and ctrl.resting_face() == "frame")
+            if not note_over_code and (not owns_frame or s["mode"] != "frame"):
+                # The face a note up now will return to, not the note's
+                # "ticker", which would come back with no expiry and no
+                # Take down.
+                self._code_ret = ctrl.resting_face() if hasattr(ctrl, "resting_face") else s["mode"]
                 if not owns_frame:
                     self._code_previous_frame = ctrl.frame_override
             self._code_frame = px

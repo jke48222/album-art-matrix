@@ -212,7 +212,7 @@ class Countdown(_TimeFace):
             if index < fill:
                 canvas[y:y + self.unit, x:x + self.unit] = color
         # Header sits just inside the perimeter and never shares its pixels.
-        self.text(canvas, "SNOOZE" if snoozed else "REMAIN", 5, self.paper)
+        self.text(canvas, "SNOOZE" if snoozed else "LEFT", 5, self.paper)
         seconds = int(np.ceil(max(0, remaining)))
         minutes, seconds = divmod(seconds, 60)
         top, bottom, labels = f"{minutes:02d}", f"{seconds:02d}", ("M", "S")
@@ -270,7 +270,8 @@ class Countdown(_TimeFace):
                       fill=self.paper, width=max(2, round(3 * scale)), joint="curve")
         canvas = np.asarray(image).copy()
         self.text(canvas, "ALARM" if alarm else "TIME UP", 3, self.paper)
-        self.text(canvas, "YOUR CUE" if alarm else "ALL DONE", 55, tuple(jewel.astype(int)))
+        # Plain words on the wall: what is happening, not a flourish.
+        self.text(canvas, "RINGING" if alarm else "ALL DONE", 55, tuple(jewel.astype(int)))
         return Image.fromarray(canvas, "RGB")
 
 

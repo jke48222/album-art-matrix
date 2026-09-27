@@ -664,7 +664,9 @@ struct OnboardingFlow: View {
         let host = wall.host
         where0.fetch { latitude, longitude in
             guard step == .light, host == wall.host, wall.link.isLive else { return }
-            saveLight(["sun": "on", "lat": latitude, "lon": longitude], success: "The wall will follow sunrise and sunset here.")
+            // Clear the place name with the coordinates, as Routines does, so
+            // a city saved earlier never labels this new location's weather.
+            saveLight(["sun": "on", "lat": latitude, "lon": longitude, "place": ""], success: "The wall will follow sunrise and sunset here.")
         }
     }
 

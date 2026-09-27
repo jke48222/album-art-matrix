@@ -47,9 +47,11 @@ def test_title_check_records_match_without_a_wall(tmp_path):
     wait_for(lambda: not posters.status()["checking"])
     state = posters.status()
     assert state["state"] == "matched" and state["verified"]
-    assert state["last"]["poster"].startswith("https://image.tmdb.org/")
-    assert state["last"]["id"] == 95396
-    assert state["last"]["overview"]
+    assert state["checked"]["poster"].startswith("https://image.tmdb.org/")
+    assert state["checked"]["id"] == 95396
+    assert state["checked"]["overview"]
+    # A lookup from the phone is not a poster the Mac found.
+    assert state["last"] is None and state["posters"] == 0
 
 
 @pytest.mark.parametrize("title", ["", " ", "x" * 241, 45, {}, "Netflix"])

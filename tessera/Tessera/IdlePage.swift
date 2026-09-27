@@ -17,14 +17,17 @@ struct IdlePage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("THE QUIETER MOMENTS").font(.machine(10)).tracking(1.1).foregroundStyle(sage)
-                    Text("Between songs.").font(.display(typeSize.isAccessibilitySize ? 28 : 38)).foregroundStyle(Ink.ink)
+                    Text("IDLE, AWAY AND OFF").font(.machine(10)).tracking(1.1).foregroundStyle(sage)
+                    // The display face still scales at accessibility sizes and
+                    // split "Between" mid-word at AX5. The UI face, as on the
+                    // sibling pages, wraps whole words.
+                    Text("Between songs").font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(38)).foregroundStyle(Ink.ink)
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Give the room its own rhythm, even when the music stops.")
+                    Text("What the wall does when the music stops, when you are away, and when you turn it off.")
                         .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }.padding(.top, 10)
                 if !wall.link.isLive {
-                    Label(wall.link.isStandIn ? "Phone preview · connect a wall to save changes" : "Wall offline · showing the last received settings", systemImage: "wifi.slash")
+                    Label(wall.link.isStandIn ? "Phone preview. Connect a wall to save changes." : "Wall offline. Showing the last saved settings.", systemImage: "wifi.slash")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if let problem {
@@ -53,7 +56,7 @@ struct IdlePage: View {
                 RestWallReceipt(tint: sage)
             }.padding(.horizontal, 22).padding(.bottom, 40)
         }.scrollIndicators(.hidden).background(Ink.ground).tint(sage)
-            .navigationTitle("Quiet moments").navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("Between songs").navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
     }
 
@@ -64,7 +67,7 @@ struct IdlePage: View {
     private var behaviorPlan: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text("YOUR QUIET-ROOM PLAN").font(.machine(9)).tracking(0.7)
+                Text("QUIET-ROOM PLAN").font(.machine(9)).tracking(0.7)
                 Spacer()
                 Image(systemName: "waveform.path").font(.system(size: 15))
             }.foregroundStyle(sage)
@@ -73,9 +76,9 @@ struct IdlePage: View {
             layout {
                 planStep("01", "Music stops", "Cover or Spin")
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 4) }
-                planStep("02", "A minute passes", "A little breathing room")
+                planStep("02", "A minute passes", "No music playing")
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 4) }
-                planStep("03", selected.shortTitle, "Your chosen ending")
+                planStep("03", selected.shortTitle, "Your choice below")
             }
         }.padding(20).frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(hex: 0x191D19), in: RoundedRectangle(cornerRadius: 22))
@@ -176,7 +179,7 @@ struct WallRestWorkbench: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 11) {
                 Image(systemName: off ? "moon.zzz" : "power").font(.system(size: 22, weight: .light)).foregroundStyle(accent)
-                Text(off ? "The wall is resting" : "A moment of darkness").font(.ui(18, .semibold)).foregroundStyle(ink.ink)
+                Text(off ? "The wall is off" : "Turn the wall off").font(.ui(18, .semibold)).foregroundStyle(ink.ink)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Text(off ? "Music won’t turn it on by itself. Choose a face, or let your next Alarm or Wake up begin." : "Switch off now. It stays off until you choose a face or a scheduled Alarm or Wake up begins.")
@@ -234,7 +237,7 @@ private struct RestWallReceipt: View {
     private var detail: String {
         if wall.state.mode == "off" { return "Off by choice. Your schedules are still saved." }
         if wall.state.awayActive { return "Resting while your phone is away." }
-        if let raw = wall.state.idleActive, let policy = IdlePolicy(rawValue: raw) { return policy.title + " · your quiet-room plan is active." }
+        if let raw = wall.state.idleActive, let policy = IdlePolicy(rawValue: raw) { return policy.title + ". The quiet-room plan is active." }
         return "Your current face is on the wall. The plan waits for a quiet moment."
     }
     var body: some View {

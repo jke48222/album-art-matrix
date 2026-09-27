@@ -40,6 +40,18 @@ class FakeCtrl:
         return {}
 
 
+def shown_for(host, clock, seconds, size=64):
+    """Move a fake clock on by `seconds` with the wall drawing the game once
+    a second. The render loop draws a shown game many times a second, and a
+    hosted timed game takes a longer silence as time parked off the wall
+    (brain/games/parking.py), so a test that lets time run on the wall has
+    to draw it too."""
+    end = clock[0] + seconds
+    while clock[0] < end:
+        clock[0] = min(end, clock[0] + 1.0)
+        host.frame_at(size)
+
+
 def test_word_lists_are_there():
     assert len(answers5()) >= 2000 and all(len(w) == 5 for w in answers5())
     assert "crane" in valid5() and "zzzzz" not in valid5()
@@ -60,7 +72,7 @@ def test_a_game_runs_end_to_end(tmp_path):
     assert any(g["name"] == "wordle" for g in host.listing())
     st = host.start("wordle", {"word": "crane"}, ["Jalen"])
     assert st["running"] and st["game"]["title"] == "Wordle" and ctrl.s["mode"] == "game"
-    assert st["game"]["answer"] is None and "crane" in st["voice_words"]
+    assert st["game"]["answer"] is None and st["voice_words"] == ["guess"]      # never the answer pool
     r = host.move("Jalen", {"guess": "zzzzz"})
     assert r["error"] and r["game"]["guesses_left"] == 6              # not a word, not counted
     r = host.hear("guess slate", "Jalen")
@@ -69,7 +81,7 @@ def test_a_game_runs_end_to_end(tmp_path):
     seq = host.seq
     r = host.hear("crane", "Jalen")
     assert r["marks"] == "ggggg" and r["game"]["over"] and r["game"]["won"] and r["game"]["answer"] == "crane"
-    assert r["game"]["message"] == "Magnificent." and host.seq > seq
+    assert r["game"]["message"] == "Solved in 2 guesses." and host.seq > seq
     assert host.scores("wordle")["Jalen"] == {"played": 1, "won": 1, "streak": 1, "best": 1,
                                              "last": host.scores("wordle")["Jalen"]["last"]}
     assert host.move("Jalen", {"guess": "crane"})["error"] == "that game is over"

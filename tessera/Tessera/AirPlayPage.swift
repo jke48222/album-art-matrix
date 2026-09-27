@@ -38,7 +38,7 @@ struct AirPlayPage: View {
     }
     private var canSave: Bool { manageable && !busy && validName && typedName != savedName }
     private var receiverState: String {
-        guard available else { return checked || readFailed ? "offline" : "loading" }
+        guard available else { return checked || readFailed || !wall.link.isLive ? "offline" : "loading" }
         guard let rx else { return "unavailable" }
         if rx.external == true { return "external" }
         if let state = rx.state { return state }
@@ -81,7 +81,12 @@ struct AirPlayPage: View {
                 if let problem { message(problem, symbol: "exclamationmark.circle", id: "airplay.problem") }
                 if let notice { message(notice, symbol: "checkmark.circle", id: "airplay.notice") }
                 if receiving && !typeSize.isAccessibilitySize { incoming }
-                if !available { offline }
+                // Nothing read yet is loading, not offline: the hero says
+                // "Finding the receiver" and the body must agree.
+                if receiverState == "loading" {
+                    ProgressView("Reading the receiver").tint(mint).frame(maxWidth: .infinity, minHeight: 80)
+                        .accessibilityIdentifier("airplay.loading")
+                } else if !available { offline }
                 else if receiverState == "not_installed" || receiverState == "unavailable" { installation }
                 else if receiverState == "external" { external }
                 else { receiverControls }
@@ -128,10 +133,10 @@ struct AirPlayPage: View {
             if !typeSize.isAccessibilitySize {
                 HStack(alignment: .center, spacing: 16) {
                     VStack(alignment: .leading, spacing: 7) {
-                        Text(rx?.external == true ? "In the air.\nOn the wall." : savedName)
+                        Text(rx?.external == true ? "External receiver" : savedName)
                             .font(.display(44)).tracking(-0.8).foregroundStyle(Ink.ink)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Music arrives.\nThe sleeve follows.").font(.ui(15)).foregroundStyle(mint.opacity(0.9))
+                        Text("Music sent here shows its artwork on the wall.").font(.ui(15)).foregroundStyle(mint.opacity(0.9))
                     }.frame(maxWidth: .infinity, alignment: .leading)
                     antenna.frame(width: 76, height: 100).accessibilityHidden(true)
                 }
@@ -285,7 +290,7 @@ struct AirPlayPage: View {
 
     private var connectionGuide: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Send it to the wall.").font(.display(typeSize.isAccessibilitySize ? 25 : 31)).foregroundStyle(Ink.ink)
+            Text("How to connect").font(.display(typeSize.isAccessibilitySize ? 25 : 31)).foregroundStyle(Ink.ink)
             guideStep("01", title: "Stay on the same network", text: "Connect your iPhone, iPad or Mac to the wall’s local network.")
             guideStep("02", title: "Open your player’s AirPlay menu", text: rx?.external == true ? "Select the receiver configured on your wall." : "Select “\(savedName)” to send the stream and its available artwork.")
             HStack(alignment: .top, spacing: 12) {
@@ -294,7 +299,7 @@ struct AirPlayPage: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(rx?.external == true ? "Your receiver controls the audio" : "This receiver is silent")
                         .font(.ui(14, .semibold)).foregroundStyle(Ink.ink)
-                    Text(rx?.external == true ? "Its audio output and AirPlay version are configured on the wall. Tessera reads the metadata it shares." : "Selecting it can move sound away from your phone. Classic AirPlay cannot join an iPhone speaker group; grouping with HomePod requires an AirPlay 2 receiver.")
+                    Text(rx?.external == true ? "Its audio output and AirPlay version are configured on the wall. Tessera reads the metadata it shares." : "Selecting it can move sound away from your phone. Classic AirPlay cannot join an iPhone speaker group. Grouping with HomePod requires an AirPlay 2 receiver.")
                         .font(.ui(13)).foregroundStyle(Ink.dim)
                 }.fixedSize(horizontal: false, vertical: true)
             }.padding(16).background(mint.opacity(0.055), in: RoundedRectangle(cornerRadius: 16))
@@ -317,7 +322,7 @@ struct AirPlayPage: View {
     private var receiverDetails: some View {
         DisclosureGroup(isExpanded: $details) {
             VStack(alignment: .leading, spacing: 14) {
-                Text(rx?.external == true ? "System managed · configuration is read-only here" : rx?.protocol == "airplay2" ? "AirPlay 2 · silent audio output" : rx?.protocol == "classic" ? "Classic AirPlay · silent audio output" : "Protocol will be known when the receiver starts")
+                Text(rx?.external == true ? "System managed, configuration is read-only here" : rx?.protocol == "airplay2" ? "AirPlay 2, silent audio output" : rx?.protocol == "classic" ? "Classic AirPlay, silent audio output" : "Protocol will be known when the receiver starts")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 if let version = rx?.version, rx?.external != true {
                     Text("Shairport Sync \(version.components(separatedBy: "-").first ?? version)")
@@ -343,7 +348,7 @@ struct AirPlayPage: View {
 
     private var installation: some View {
         VStack(alignment: .leading, spacing: 11) {
-            Text(receiverState == "not_installed" ? "A receiver belongs on the wall." : "AirPlay isn’t enabled on this wall.")
+            Text(receiverState == "not_installed" ? "Install the receiver" : "AirPlay isn’t enabled on this wall.")
                 .font(.display(typeSize.isAccessibilitySize ? 24 : 29)).foregroundStyle(Ink.ink)
             Text(receiverState == "not_installed" ? "Install the bundled receiver on the Raspberry Pi, then return here to name it and turn it on." : "Enable the AirPlay feature in the wall’s configuration, then check again.")
                 .font(.ui(14)).foregroundStyle(Ink.dim)
@@ -357,7 +362,7 @@ struct AirPlayPage: View {
 
     private var external: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Your system, your receiver.").font(.display(typeSize.isAccessibilitySize ? 24 : 29)).foregroundStyle(Ink.ink)
+            Text("Another receiver is running").font(.display(typeSize.isAccessibilitySize ? 24 : 29)).foregroundStyle(Ink.ink)
             Text("Another Shairport Sync receiver is running on the wall. Its name, power and audio output are managed there. Tessera can read its track information when it uses the shared metadata pipe.")
                 .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             refreshButton
@@ -467,7 +472,7 @@ private enum AirPlayCommand {
         request.httpMethod = "POST"; request.httpBody = data
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         guard let (responseData, response) = try? await URLSession.shared.data(for: request) else {
-            return Result(accepted: false, problem: "The wall didn’t confirm the change. Your draft is kept; reconnect and check again.")
+            return Result(accepted: false, problem: "The wall didn’t confirm the change. Your draft is kept. Reconnect and check again.")
         }
         let accepted = (response as? HTTPURLResponse)?.statusCode == 200 && WallAcknowledgement.accepted(responseData)
         return Result(accepted: accepted, problem: accepted ? nil : "The wall could not apply this change. Check whether the receiver is managed by another service, then try again.")

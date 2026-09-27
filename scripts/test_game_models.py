@@ -37,6 +37,10 @@ class Handler(BaseHTTPRequestHandler):
                      for name, title, players in [('wordle', 'Wordle', [1, 4]), ('sudoku', 'Sudoku', [1, 1]), ('pictionary', 'Pictionary', [1, 8])]]
             if self.server.catalogue_calls == 2: cards.append(cards[0])
             if self.server.catalogue_calls == 3: cards[0]['players'] = [9223372036854775807, 9223372036854775807]
+            # The fourth read is a wall with games switched off.
+            if self.server.catalogue_calls == 4:
+                self.reply(200, {'running': False, 'games': [], 'problem': 'games are off on this wall'})
+                return
             self.reply(200, {'games': cards})
         elif self.path == '/game':
             self.server.status_calls += 1

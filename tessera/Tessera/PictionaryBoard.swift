@@ -31,7 +31,7 @@ struct PictionaryBoard: View {
             GameArtworkCanvas(game: game).frame(maxWidth: typeSize.isAccessibilitySize ? 260 : 300).frame(maxWidth: .infinity)
             if game.over {
                 VStack(alignment: .leading, spacing: 8) {
-                    Label(game.won ? "You saw it." : "The answer", systemImage: game.won ? "checkmark.circle" : "eye")
+                    Label(game.won ? "Found" : "The answer", systemImage: game.won ? "checkmark.circle" : "eye")
                         .font(.ui(14, .semibold)).foregroundStyle(honey)
                     Text((game.state["word"].string ?? "The picture").capitalized)
                         .font(typeSize.isAccessibilitySize ? .custom(Face.uiSemibold, size: 17, relativeTo: .body) : .display(36)).foregroundStyle(paper)
@@ -76,11 +76,11 @@ struct PictionaryBoard: View {
     }
     private var heading: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(typeSize.isAccessibilitySize ? (game.over ? "Revealed." : ready ? "Name it." : "Drawing…") : (game.over ? "The whole picture." : ready ? "What do you see?" : "A little mystery."))
+            Text(game.over ? "Round over" : ready ? "Name the picture" : "Drawing")
                 .font(typeSize.isAccessibilitySize ? .custom(Face.uiMedium, size: 17, relativeTo: .body) : .display(31)).foregroundStyle(paper)
                 .fixedSize(horizontal: false, vertical: true)
             if !typeSize.isAccessibilitySize {
-                Text(game.over ? "Every detail, revealed." : ready ? "Name the thing in the drawing." : "A new picture, made for this round.")
+                Text(game.over ? "The drawing is complete." : ready ? "Name the thing in the drawing." : "The wall is drawing a new picture for this round.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }

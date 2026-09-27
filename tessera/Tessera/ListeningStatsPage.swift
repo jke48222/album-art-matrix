@@ -31,7 +31,7 @@ struct ListeningStatsPage: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("THE SHAPE OF YOUR LISTENING").font(.machine(8)).tracking(1).foregroundStyle(accent.toned(forDark: true))
+                        Text("INSIGHTS").font(.machine(8)).tracking(1).foregroundStyle(accent.toned(forDark: true))
                         Text("Your listening").font(.display(typeSize.isAccessibilitySize ? 20 : 35)).foregroundStyle(Ink.ink)
                     }
                     Picker("History period", selection: $period) {
@@ -39,7 +39,11 @@ struct ListeningStatsPage: View {
                         Text("All history").tag(1)
                     }.pickerStyle(.segmented)
                     timeCard
-                    HStack(alignment: .top, spacing: 0) {
+                    // three columns cannot hold "Appearances" at accessibility sizes
+                    let metrics = typeSize.isAccessibilitySize
+                        ? AnyLayout(VStackLayout(alignment: .leading, spacing: 14))
+                        : AnyLayout(HStackLayout(alignment: .top, spacing: 0))
+                    metrics {
                         metric("\(stats.plays)", "Appearances")
                         metric("\(stats.sleeves)", "Sleeves")
                         metric("\(stats.artists)", "Artists")
@@ -67,7 +71,8 @@ struct ListeningStatsPage: View {
                             Text("On repeat").font(.displayMid(25)).foregroundStyle(Ink.ink)
                             ForEach(Array(artists.prefix(5).enumerated()), id: \.element.0) { index, artist in
                                 HStack(spacing: 14) {
-                                    Text(String(format: "%02d", index + 1)).font(.machine(11)).foregroundStyle(Ink.dim).frame(width: 28)
+                                    Text(String(format: "%02d", index + 1)).font(.machine(11)).foregroundStyle(Ink.dim)
+                                        .fixedSize().frame(minWidth: 28, alignment: .leading)
                                     VStack(alignment: .leading, spacing: 8) {
                                         HStack(alignment: .firstTextBaseline) {
                                             Text(artist.0).font(.ui(16, .medium)).foregroundStyle(Ink.ink)

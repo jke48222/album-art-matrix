@@ -77,10 +77,16 @@ final class StandIn {
         if let v = patch["match_art"] as? Bool { state.matchArt = v }
         if let v = patch["color"] as? String { state.color = v }
         if let v = patch["color2"] as? String { state.color2 = v }
-        if let v = patch["ticker_text"] as? String { state.tickerText = v }
+        // A message brings its own ink only in the same patch as its words,
+        // the rule the wall keeps (ticker_ink).
+        if let v = patch["ticker_text"] as? String { state.tickerText = v; state.tickerInk = patch["ticker_color"] as? String }
         if let v = patch["ticker_loop"] as? Bool { state.tickerLoop = v }
         if let v = patch["ticker_style"] as? String { state.tickerStyle = v }
         if let v = patch["ticker_colors"] as? [String] { state.tickerColors = v }
+        // The ticker's own ink and pace, as a wall that keeps them apart
+        // from the Lamp's color and speed does.
+        if let v = patch["ticker_color"] as? String { state.ownTickerColor = v }
+        if let v = patch["ticker_speed"] as? Double { state.ownTickerSpeed = v }
         if let v = patch["clock_24h"] as? Bool { state.clock24h = v }
         if let v = patch["idle"] as? String { state.idle = v }
         if let v = (patch["sleep_fade_min"] as? NSNumber)?.doubleValue {
@@ -315,7 +321,9 @@ final class StandIn {
     /// keyed so a new text, style or ink starts the run over from its top.
     private func letteringFrame() -> [UInt8] {
         let ink: (UInt8, UInt8, UInt8) = {
-            let hex = state.matchArt ? (artColors.first ?? state.color) : state.color
+            // The ticker's own ink when there is one, as on a wall that
+            // keeps it apart. Otherwise the shared ink, as before.
+            let hex = state.tickerInk ?? (state.matchArt ? (artColors.first ?? state.color) : state.color)
             if let c = rgb(hex) {
                 return (UInt8(c.0 * 255), UInt8(c.1 * 255), UInt8(c.2 * 255))
             }

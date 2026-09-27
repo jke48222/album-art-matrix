@@ -20,6 +20,7 @@ struct IPodWallScreen: View {
     @State private var wheelHint = "Turn the wheel to change the light"
     @State private var headerHeight: CGFloat = 70
     @State private var statusHeight: CGFloat = 44
+    @State private var stoppingTimer = false
     @State private var introDone = !IntroFlip.available || CommandLine.arguments.contains("-nointro")
         || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
     @AppStorage("intro.replay") private var replay = false
@@ -182,14 +183,33 @@ struct IPodWallScreen: View {
                     .contentTransition(.numericText(countsDown: true))
             }
             Spacer(minLength: 8)
-            Button("Stop") { wall.send(["timer_min": 0.0]); Taps.commit() }
+            Button("Stop") { stopTimer() }
                 .font(.ui(14, .semibold)).foregroundStyle(accent).frame(minWidth: 64, minHeight: 44)
                 .buttonStyle(PressStyle(scale: 0.96))
+                .disabled(stoppingTimer || (!wall.link.isLive && !wall.link.isStandIn))
                 .accessibilityLabel("Stop timer")
         }
         .padding(18)
         .background(Ink.ground.opacity(0.95), in: RoundedRectangle(cornerRadius: 20))
         .padding(.horizontal, 20)
+    }
+
+    /// A Stop is time-sensitive. It must reach the wall now or not at all:
+    /// through send() it fell into the offline outbox and, at the next
+    /// reconnect, cancelled whatever timer or alarm was running by then. The
+    /// event id makes the wall refuse it if the timer has changed since.
+    private func stopTimer() {
+        if wall.link.isStandIn {
+            wall.send(["timer_min": 0.0]); Taps.commit(); return
+        }
+        guard wall.link.isLive, !stoppingTimer else { return }
+        stoppingTimer = true
+        let patch: [String: Any] = wall.state.timerEventID.map { ["timer_action": "stop", "timer_id": $0] } ?? ["timer_min": 0.0]
+        Task { @MainActor in
+            let stopped = await wall.updateRoutine(patch)
+            stoppingTimer = false
+            if stopped { Taps.commit() } else { Taps.error() }
+        }
     }
 
     private var expandedWall: some View {
@@ -198,7 +218,8 @@ struct IPodWallScreen: View {
                 VStack(spacing: 24) {
                     WallHero(reading: light.reading, confirmed: isOff ? 0.05 : wall.state.brightness,
                              dragging: $dragLight, link: wall.link, arrivalKey: wall.arrivalKey,
-                             touching: $onPanel, onCommit: { wall.send(["brightness": $0]) },
+                             // asleep, the panel's 5% is a stand-in, never a level to save
+                             touching: $onPanel, onCommit: { if !isOff { wall.send(["brightness": $0]) } },
                              onHold: { wall.send(["mode": isOff ? "art" : "off"]) },
                              onFlickPrev: { skip(previous: true) }, onFlickNext: { skip(previous: false) })
                         .aspectRatio(1, contentMode: .fit)

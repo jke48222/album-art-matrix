@@ -30,6 +30,15 @@ from .pictures import _fold
 
 STEPS = [1, 2, 4, 7, 11, 16]
 _SKIP = re.compile(r"^(skip|pass|next|more)[.!?]*$")
+# A trailing streaming tag on a stored title: "Hey Jude - Remastered 2015".
+_VERSION_TAIL = re.compile(r"\s+[-\u2013\u2014]\s+.*\b(remaster(ed)?|live|version|edit|mix|mono|stereo|demo|acoustic)\b.*$",
+                           re.IGNORECASE)
+
+
+def song_line(song: dict) -> str:
+    """The song named for the result, without dashes: "Nights by Frank Ocean"."""
+    title, artist = str(song.get("title", "")).strip(), str(song.get("artist", "")).strip()
+    return f"{title} by {artist}" if artist else title
 
 
 def answer_key(text):
@@ -65,7 +74,7 @@ def pick_song(host, rng: random.Random, options: dict) -> dict:
             return {"title": e["title"], "artist": e["artist"], "album": e.get("album", ""),
                     "preview": found["preview"], "art_url": found.get("art_url") or e.get("art_url"),
                     "duration_ms": found.get("duration_ms")}
-    raise RuntimeError("no song with a preview in the journal yet; play something first")
+    raise RuntimeError("No song with a preview in the journal yet. Play something first.")
 
 
 @register
@@ -83,7 +92,12 @@ class Heardle(Game):
         preview = self.song.get("preview")
         if not isinstance(preview, str) or len(preview) > 4096 or urlparse(preview).scheme not in ("https", "http") or not urlparse(preview).netloc:
             raise ValueError("a valid audio preview URL is required")
-        self.answers = {answer_key(self.song["title"])} - {""}
+        # Journal titles come from streaming metadata, so "Nights (feat. Frank
+        # Ocean)" or "Hey Jude - Remastered 2015" must also accept the plain
+        # name. The guess side stays strict: only a whole title matches.
+        title = self.song["title"]
+        bare = _VERSION_TAIL.sub("", title)
+        self.answers = {answer_key(title), answer_key(bare), _fold(bare)} - {""}
         self.step, self.turn, self.play_count = 0, 0, 0
         self.tries: list[tuple[str, str, bool]] = []
         self.playing_until = None
@@ -151,7 +165,7 @@ class Heardle(Game):
         self.tries.append((text, player, skipped))
         self.turn = (self.turn + 1) % len(self.players)
         if len(self.tries) >= len(STEPS):
-            self.finish(won=False, message=f"{self.song['artist']} — {self.song['title']}")
+            self.finish(won=False, message=f"{song_line(self.song)}.")
         else:
             self.step = len(self.tries)
             self.message = f"{self.seconds} seconds now."
@@ -173,7 +187,7 @@ class Heardle(Game):
             self.playing_until = None
             self.tries.append((text, player, False))
             self.finish(won=True, winner=player if len(self.players) > 1 else None,
-                        message=f"{self.song['artist']} — {self.song['title']}, in {len(self.tries)}.")
+                        message=f"{song_line(self.song)}, in {len(self.tries)}.")
             return {"hit": True, "tries": len(self.tries)}
         self._miss(text, player, False)
         return {"hit": False, "seconds": self.seconds if not self.over else 0}

@@ -30,15 +30,21 @@ struct TeachPage: View {
     private var songs: [TaughtList.Song] { library?.songs ?? [] }
     private var filtered: [TaughtList.Song] { songs.filter { $0.matches(query) } }
     private var pending: Bool { busy || library?.teacher?.learning != nil }
-    private var canWrite: Bool { wall.link.isLive && loaded && !readFailed && !pending && forgetting == nil }
+    /// The wall answered but has no song library (teach switched off, or no
+    /// microphone). Every write would fail with 404 there.
+    private var unavailable: Bool { loaded && library?.available == false }
+    private var canWrite: Bool { wall.link.isLive && loaded && !readFailed && !unavailable && !pending && forgetting == nil }
     private var cleanTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var cleanArtist: String { artist.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        MessagePage(title: "Teach the wall", eyebrow: "MUSIC, REMEMBERED HERE", tint: mint) {
+        MessagePage(title: "Teach the wall", eyebrow: "SONG LIBRARY", tint: mint) {
             hero
             if !wall.link.isLive || readFailed {
                 MessageNotice(title: wall.link.isLive ? "Couldn't read the library" : "Your wall is offline", detail: "Your draft stays here. Reconnect or pull to refresh before changing the library.", symbol: "wifi.slash", tint: mint)
+            }
+            if unavailable {
+                MessageNotice(title: "Teaching is off on this wall", detail: "This wall has no song library. Teaching needs the wall's microphone and the teach feature switched on in the wall's settings.", symbol: "music.note.list", tint: mint)
             }
             if pending { learning }
             if let receipt {
@@ -84,7 +90,7 @@ struct TeachPage: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 21) {
             HStack(alignment: .top, spacing: 12) {
-                Text(typeSize.isAccessibilitySize ? "Your room.\nYour songs." : "A room that\nremembers.")
+                Text(typeSize.isAccessibilitySize ? "Songs the wall knows" : "Songs the\nwall knows")
                     .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .display(38))
                     .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 0)
@@ -92,12 +98,17 @@ struct TeachPage: View {
                     TeachFingerprint(tint: mint).frame(width: 80, height: 88).padding(.top, 5).accessibilityHidden(true)
                 }
             }
-            Text("Your records. Your friend's demo.\nThe songs that belong to this room.")
+            Text("The wall recognizes these songs on its own, before asking Shazam.")
                 .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .firstTextBaseline, spacing: 9) {
-                Text(loaded ? songs.count.formatted() : "—").font(.display(42)).foregroundStyle(mint)
-                Text(songs.count == 1 ? "song known by heart" : "songs known by heart")
-                    .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                if loaded {
+                    Text(songs.count.formatted()).font(.display(42)).foregroundStyle(mint)
+                    Text(songs.count == 1 ? "song learned" : "songs learned")
+                        .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text(wall.link.isLive && !readFailed ? "Reading the library…" : "Library not loaded")
+                        .font(.ui(14)).foregroundStyle(Ink.dim)
+                }
             }.accessibilityElement(children: .combine)
         }
     }
@@ -106,8 +117,10 @@ struct TeachPage: View {
         HStack(alignment: .top, spacing: 14) {
             ProgressView().tint(mint).padding(.top, 3)
             VStack(alignment: .leading, spacing: 5) {
-                Text("Making a memory").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
-                Text(library?.teacher?.learning ?? "\(cleanArtist) — \(cleanTitle)")
+                Text("Learning").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
+                // teach.py joins artist and title with a spaced em dash. Show a
+                // comma there instead, like the rest of the app.
+                Text(library?.teacher?.learning?.replacingOccurrences(of: " \u{2014} ", with: ", ") ?? "\(cleanTitle) by \(cleanArtist)")
                     .font(.ui(14)).foregroundStyle(mint).fixedSize(horizontal: false, vertical: true)
                 Text("You can leave this page. The wall will keep learning.")
                     .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
@@ -172,8 +185,10 @@ struct TeachPage: View {
                 } else {
                     HStack(spacing: 10) { ProgressView().tint(mint); Text("Reading your wall's library").font(.ui(14)).foregroundStyle(Ink.dim) }.padding(.vertical, 20)
                 }
+            } else if unavailable {
+                Text("No library on this wall.").font(.ui(14)).foregroundStyle(Ink.dim).padding(.vertical, 12)
             } else if songs.isEmpty {
-                MessageNotice(title: "Start with a song you love", detail: "Teach it by name, or play music while a connected source names it. Only sound fingerprints stay on the wall, never recordings.", symbol: "music.note", tint: mint)
+                MessageNotice(title: "No songs yet", detail: "Teach a song by name, or play music while a connected source names it. Only sound fingerprints stay on the wall, never recordings.", symbol: "music.note", tint: mint)
                     .padding(18).messageSurface()
             } else {
                 HStack(spacing: 10) {
@@ -216,7 +231,7 @@ struct TeachPage: View {
             if expanded == song.id {
                 VStack(alignment: .leading, spacing: 10) {
                     if let album = song.album, !album.isEmpty { Text(album).font(.ui(14)).foregroundStyle(Ink.ink) }
-                    Text("\((song.landmarks ?? 0).formatted()) sound landmarks · Recognized \(song.matched.formatted()) \(song.matched == 1 ? "time" : "times")")
+                    Text("\((song.landmarks ?? 0).formatted()) sound landmarks, recognized \(song.matched.formatted()) \(song.matched == 1 ? "time" : "times")")
                         .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     if let match = library?.last_match, match.id == song.id {
                         Label("Last match: \(match.score) aligned landmarks", systemImage: "checkmark.seal")

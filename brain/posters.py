@@ -97,7 +97,10 @@ class Posters:
         self.checked_at = None
         self.state = "saved" if self.api_key else "unlinked"
         self.count = 0
-        self.last: dict | None = None
+        self.last: dict | None = None       # the last poster a show on the Mac found
+        # The result of the phone's own "Look up title", kept apart from the
+        # count and history above: a test lookup does not change the wall.
+        self.checked: dict | None = None
         self.problem: str | None = None
         self._load()
 
@@ -121,6 +124,7 @@ class Posters:
                 self.checked_at = None
                 self._retry_at = 0
                 self.state = "saved" if self.ready else "unlinked"
+                self.checked = None
                 self._cache = {k: v for k, v in self._cache.items() if v.get("hit")}
                 self._save()
 
@@ -128,6 +132,7 @@ class Posters:
         with self._lock:
             return {"key_set": self.ready, "posters": self.count,
                     "last": dict(self.last) if self.last else None,
+                    "checked": dict(self.checked) if self.checked else None,
                     "known": sum(1 for v in self._cache.values() if v.get("hit")),
                     "problem": self.problem, "state": self.state,
                     "checking": self._checking, "verified": self._verified,
@@ -306,13 +311,24 @@ class Posters:
                 self.state = "matched" if hit else "no_match"
                 self.checked_at = self._clock()
                 self._verified = True
+                found = ({"title": hit["name"], "kind": hit["kind"], "year": hit["year"],
+                          "at": int(now), "poster": hit["poster"], "id": hit["id"], "overview": hit["overview"]}
+                         if hit else None)
                 if force:
+                    # The phone's lookup (check): its own answer, kept out of
+                    # the count, the history and the cache, so looking up a
+                    # title five times does not count five posters or replace
+                    # the poster the Mac last found.
                     self._retry_at = self._clock() + 3
-                self._cache[key] = {"at": now, "hit": hit}
-                if hit:
-                    self.count += 1
-                    self.last = {"title": hit["name"], "kind": hit["kind"], "year": hit["year"],
-                                 "at": int(now), "poster": hit["poster"], "id": hit["id"], "overview": hit["overview"]}
+                    self.checked = found
+                else:
+                    # The Mac's lookup is now the current result, so the
+                    # phone's earlier one no longer describes the state.
+                    self.checked = None
+                    self._cache[key] = {"at": now, "hit": hit}
+                    if found:
+                        self.count += 1
+                        self.last = found
                 self._save()
             return hit
         except Exception as exc:

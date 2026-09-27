@@ -26,14 +26,23 @@ struct StrandsBoard: View {
     private var hintProgress: Int { max(0, min(2, game.state["hint_progress"].int ?? game.state["extra"].strings.count % 3)) }
     private var ordered: Bool { game.state["hint_ordered"].bool == true }
     private var traced: String { trace.map(letter).joined() }
-    private var accessibleControls: Bool { voiceOver || typeSize.isAccessibilitySize }
+    /// Only VoiceOver needs the letter list. Large text keeps the board's
+    /// own tap and trace, where neighbours on screen are neighbours in play.
+    private var accessibleControls: Bool { voiceOver }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("TODAY'S THREAD").font(.machine(10)).tracking(1.8).foregroundStyle(blue)
-                Text(game.state["theme"].string ?? "Find the connection").font(.display(typeSize.isAccessibilitySize ? 29 : 35)).foregroundStyle(paper)
-                    .fixedSize(horizontal: false, vertical: true)
+                Text("THEME").font(.machine(10)).tracking(1.8).foregroundStyle(blue)
+                // The theme is the puzzle's main clue. At accessibility sizes the
+                // display face breaks a long word mid-word, so use the narrower UI
+                // face there, and let two lines shrink instead of a third line
+                // splitting a word. At other sizes a long theme wraps as before,
+                // since a cap there would cut it off.
+                Text(game.state["theme"].string ?? "Find the connection")
+                    .font(typeSize.isAccessibilitySize ? .ui(24, .semibold) : .display(35)).foregroundStyle(paper)
+                    .lineLimit(typeSize.isAccessibilitySize ? 2 : nil).minimumScaleFactor(typeSize.isAccessibilitySize ? 0.5 : 1)
+                    .fixedSize(horizontal: false, vertical: !typeSize.isAccessibilitySize)
                 HStack {
                     Text("\(found.count) of \(game.state["total"].int ?? (found.count + (game.state["left"].int ?? 0))) found").font(.ui(13)).foregroundStyle(Ink.dim)
                     Spacer()
@@ -107,7 +116,7 @@ struct StrandsBoard: View {
 
     private var discoveries: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(game.over ? "EVERY STRAND" : "UNRAVELLED").font(.machine(10)).tracking(1.5).foregroundStyle(Ink.dim)
+            Text(game.over ? "ALL WORDS" : "FOUND").font(.machine(10)).tracking(1.5).foregroundStyle(Ink.dim)
             ForEach(Array(found.enumerated()), id: \.offset) { _, item in
                 HStack(spacing: 12) {
                     Image(systemName: item["spangram"].bool == true ? "arrow.left.and.right" : "checkmark").frame(width: 22)
@@ -160,19 +169,30 @@ struct StrandsBoard: View {
     private var tapGrid: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Build your word").font(.ui(16, .semibold)).foregroundStyle(paper)
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                ForEach(0..<48) { index in
-                    Button { append(index, repeatedTap: true) } label: {
-                        VStack(spacing: 4) {
-                            Text(letter(index).uppercased()).font(.ui(21, .semibold))
-                            Text("\(index / 6 + 1),\(index % 6 + 1)").font(.machine(10))
-                        }.frame(maxWidth: .infinity, minHeight: 62)
-                            .foregroundStyle(trace.contains(index) ? dark : paper)
-                            .background(trace.contains(index) ? paper : Ink.plaster, in: RoundedRectangle(cornerRadius: 12))
-                    }.buttonStyle(.plain)
-                        .accessibilityLabel("\(letter(index).uppercased()), row \(index / 6 + 1), column \(index % 6 + 1)\(trace.contains(index) ? ", selected" : "")\(hint.contains(index) ? ", hinted" : "")")
-                        .accessibilityHint("Adds this adjacent letter; choosing the previous letter steps back")
-                }
+            // Six columns, like the board, so letters next to each other in
+            // this list are neighbours in the puzzle. Large text scrolls sideways
+            // rather than splitting a row.
+            if typeSize.isAccessibilitySize {
+                ScrollView(.horizontal) { letterGrid(Array(repeating: GridItem(.fixed(96), spacing: 8), count: 6)) }
+            } else {
+                letterGrid(Array(repeating: GridItem(.flexible(), spacing: 8), count: 6))
+            }
+        }
+    }
+
+    private func letterGrid(_ columns: [GridItem]) -> some View {
+        LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(0..<48) { index in
+                Button { append(index, repeatedTap: true) } label: {
+                    VStack(spacing: 4) {
+                        Text(letter(index).uppercased()).font(.ui(21, .semibold))
+                        Text("\(index / 6 + 1),\(index % 6 + 1)").font(.machine(10))
+                    }.frame(maxWidth: .infinity, minHeight: 62)
+                        .foregroundStyle(trace.contains(index) ? dark : paper)
+                        .background(trace.contains(index) ? paper : Ink.plaster, in: RoundedRectangle(cornerRadius: 12))
+                }.buttonStyle(.plain)
+                    .accessibilityLabel("\(letter(index).uppercased()), row \(index / 6 + 1), column \(index % 6 + 1)\(trace.contains(index) ? ", selected" : "")\(hint.contains(index) ? ", hinted" : "")")
+                    .accessibilityHint("Adds this letter. Choose the previous letter again to step back.")
             }
         }
     }

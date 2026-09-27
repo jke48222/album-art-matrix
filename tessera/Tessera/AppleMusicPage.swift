@@ -91,7 +91,7 @@ struct AppleMusicPage: View {
         ScrollView {
             VStack(alignment: .leading, spacing: typeSize.isAccessibilitySize ? 22 : 28) {
                 if let preview = connection.preview {
-                    Label("Preview · \(preview)", systemImage: "eye").font(.ui(12, .semibold)).foregroundStyle(Ink.dim)
+                    Label("Preview (\(preview))", systemImage: "eye").font(.ui(12, .semibold)).foregroundStyle(Ink.dim)
                 }
                 if !typeSize.isAccessibilitySize || !authorized { masthead }
                 if connection.checking {
@@ -138,7 +138,7 @@ struct AppleMusicPage: View {
                 Spacer(minLength: 0)
                 if authorized { Image(systemName: "checkmark.circle.fill").font(.system(size: 20)).foregroundStyle(mint).accessibilityLabel("Music access allowed") }
             }
-            Text(connection.checking ? "Music, in the room." : connection.permission.title).font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(37))
+            Text(connection.checking ? "Checking music access" : connection.permission.title).font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(37))
                 .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             if !authorized {
                 Text(connection.permission.detail).font(.ui(16)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
@@ -204,7 +204,7 @@ struct AppleMusicPage: View {
             }
         }
         return switch connection.permission {
-        case .notAsked: "Only when you say so."
+        case .notAsked: "What Tessera reads"
         case .denied: "Permission not granted"
         case .restricted: "Managed by this iPhone"
         case .unknown: "Permission could not be read"
@@ -335,7 +335,7 @@ struct AppleMusicPage: View {
     }
     private var accessDetails: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("A direct connection.").font(.ui(17, .semibold)).foregroundStyle(Ink.ink)
+            Text("How this works").font(.ui(17, .semibold)).foregroundStyle(Ink.ink)
             Text("This permission reads the Music player on this iPhone. It doesn’t connect an Apple Account on the wall or show what’s playing on another device.")
                 .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             if authorized {
@@ -348,10 +348,14 @@ struct AppleMusicPage: View {
         }.padding(.top, 5)
     }
     private func refresh() {
+        // The connection starts at .notAsked, so its first read is a load, not
+        // a change. Restarting the reporter on it cleared the wall's receipt
+        // and showed "Waiting for the wall" every time this page opened.
+        let loaded = !connection.checking
         let previous = connection.permission
         connection.refresh()
         updateBindings()
-        if connection.preview == nil && previous != connection.permission {
+        if loaded && connection.preview == nil && previous != connection.permission {
             if connection.permission.isAuthorized { wall.push.restart() }
             else { wall.push.stop() }
         }

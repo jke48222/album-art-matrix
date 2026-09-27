@@ -25,10 +25,10 @@ struct OtherPlayersPage: View {
                     if !typeSize.isAccessibilitySize {
                         Text("MORE WAYS TO LISTEN").font(.machine(9)).tracking(1.5).foregroundStyle(blue)
                     }
-                    Text(typeSize.isAccessibilitySize ? "Choose your player" : "Your player.\nYour wall.")
+                    Text("Other music players")
                         .font(typeSize.isAccessibilitySize ? .ui(18, .semibold) : .display(42))
                         .foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
-                    Text(typeSize.isAccessibilitySize ? "Find its path to your wall." : "Bring the music you love along. Choose a player to find its path to Tessera.")
+                    Text("Choose a player to see how it reaches the wall.")
                         .font(.ui(typeSize.isAccessibilitySize ? 13 : 15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 playerPicker
@@ -72,7 +72,7 @@ struct OtherPlayersPage: View {
                     Text("Another way in").font(.ui(20, .semibold)).foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
                     Text("For music outside a browser, use a supported Mac player or let the wall recognize what’s playing in the room.")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-                    NavigationLink { AddressesPage(accent: accent, onChange: {}) } label: {
+                    NavigationLink { MacReporterPage(accent: accent, services: $services) } label: {
                         alternative("Your Mac", "See reporter setup and connection status", symbol: "desktopcomputer")
                     }.accessibilityIdentifier("otherPlayers.mac")
                     NavigationLink { HearingPage(accent: accent, services: $services) } label: {

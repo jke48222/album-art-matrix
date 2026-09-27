@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import random
 import re
+import time
 from copy import deepcopy
 
 from . import Game, register
@@ -36,14 +37,77 @@ PATTERNS = [
     [(0, 0), (0, 1), (1, 0), (4, 4), (4, 3), (3, 4)],
 ]
 
-# hand-clued puzzles for a wall with no key: (blacks, rows, clues by slot)
+# hand-clued puzzles for a wall with no key: (blacks, rows, clues by slot).
+# Every keyless round and every failed clue request lands here, so there are
+# a dozen across the pattern shapes, and a new round avoids the last one.
 BUNDLED = [
     ([(0, 0), (4, 4)],
      ["_puff", "final", "ladle", "anise", "node_"],
      {"1A": "A little cloud of smoke", "5A": "Last in a series", "6A": "Spoon for serving soup",
       "7A": "Spice with a licorice flavor", "8A": "Point in a network", "1D": "Instrument with 88 keys",
       "2D": "Reversed an action", "3D": "Not true", "4D": "Run away", "5D": "Caramel-topped custard"}),
+    ([(0, 0), (4, 4)],
+     ["_dial", "mango", "under", "scene", "text_"],
+     {"1A": "Turn this to tune an old radio", "5A": "Tropical fruit with a large stone", "6A": "Beneath",
+      "7A": "Part of a play or film", "8A": "Message sent from a phone", "1D": "Waltz or tango",
+      "2D": "List at the back of a book", "3D": "A spy, for one", "4D": "Traditional stories and knowledge",
+      "5D": "Have to"}),
+    ([(0, 0), (4, 4)],
+     ["_toss", "hippo", "utter", "slice", "heck_"],
+     {"1A": "Throw lightly", "5A": "Large African river animal", "6A": "Say out loud",
+      "7A": "Piece of pizza", "8A": "Mild word of surprise", "1D": "Name of a book or song",
+      "2D": "Relating to the eye", "3D": "Tiny spot", "4D": "Aching", "5D": "Call for quiet"}),
+    ([(0, 4), (4, 0)],
+     ["scan_", "allow", "naive", "given", "_melt"],
+     {"1A": "Look over quickly", "5A": "Permit", "7A": "Lacking experience", "8A": "Handed over",
+      "9A": "Turn from ice to water", "1D": "Performed a song", "2D": "State as true",
+      "3D": "Living", "4D": "Long work of fiction", "6D": "Left"}),
+    ([(0, 4), (4, 0)],
+     ["mead_", "atlas", "shone", "hence", "_reek"],
+     {"1A": "Drink made from honey", "5A": "Book of maps", "7A": "Gave off light", "8A": "For this reason",
+      "9A": "Smell strongly", "1D": "Crush, as potatoes", "2D": "The upper air, in poems",
+      "3D": "By yourself", "4D": "Move to the music", "6D": "Look for"}),
+    ([(0, 0), (0, 4), (4, 0), (4, 4)],
+     ["_bar_", "debut", "elope", "woven", "_wee_"],
+     {"1A": "Place that serves drinks", "4A": "First public appearance", "6A": "Run off to marry",
+      "7A": "Made on a loom", "8A": "Tiny, in Scotland", "1D": "Underneath", "2D": "Overhead",
+      "3D": "Money of India", "4D": "Morning drops on the grass", "5D": "Number of fingers"}),
+    ([(0, 0), (1, 0), (3, 4), (4, 4)],
+     ["_sage", "_lira", "wiser", "idle_", "teen_"],
+     {"1A": "Herb used in stuffing", "5A": "Italian money before the euro", "6A": "More sensible",
+      "7A": "Not working", "8A": "Person aged 13 to 19", "1D": "Playground chute",
+      "2D": "Walkway between rows of seats", "3D": "Like grass in spring", "4D": "Organ of hearing",
+      "6D": "Quick cleverness with words"}),
+    ([(0, 3), (0, 4), (4, 0), (4, 1)],
+     ["men__", "alarm", "issue", "lease", "__let"],
+     {"1A": "Adult males", "4A": "Wake-up sound", "7A": "Edition of a magazine", "8A": "Rental agreement",
+      "9A": "Allow", "1D": "Letters and parcels", "2D": "Otherwise", "3D": "Of the nose",
+      "5D": "Clever trick", "6D": "Get together"}),
+    ([(0, 3), (0, 4), (4, 0), (4, 1)],
+     ["gag__", "along", "stool", "posse", "__eye"],
+     {"1A": "Joke", "4A": "By the side of", "7A": "Seat with no back", "8A": "Sheriff's band of helpers",
+      "9A": "Organ of sight", "1D": "Sharp breath of surprise", "2D": "Voice below soprano",
+      "3D": "Bird that honks", "5D": "Too curious about others", "6D": "Great delight"}),
+    ([(0, 0), (0, 1), (4, 3), (4, 4)],
+     ["__tin", "sauce", "allow", "stint", "hop__"],
+     {"1A": "Metal can", "4A": "Pasta topping", "6A": "Let happen", "7A": "Period of work",
+      "8A": "Jump on one foot", "1D": "Spring flower from Holland", "2D": "Small picture on a screen",
+      "3D": "Small pond amphibian", "4D": "Band worn across the chest", "5D": "Low female singing voice"}),
+    ([(0, 0), (0, 1), (1, 0), (4, 4), (4, 3), (3, 4)],
+     ["__two", "_thou", "error", "need_", "dew__"],
+     {"1A": "One plus one", "4A": "You, in old English", "5A": "Mistake", "6A": "Require",
+      "7A": "Drops on the lawn at dawn", "1D": "Tossed", "2D": "Timber", "3D": "Belonging to us",
+      "4D": "Oak or maple", "5D": "Finish"}),
+    ([(0, 0), (0, 1), (1, 0), (4, 4), (4, 3), (3, 4)],
+     ["__rib", "_rude", "tarot", "oval_", "eel__"],
+     {"1A": "Bone in the chest", "4A": "Impolite", "5A": "Cards used for fortune telling",
+      "6A": "Egg shape", "7A": "Long, snakelike fish", "1D": "Of the countryside",
+      "2D": "Someone greatly admired", "3D": "Wager", "4D": "Speak very highly of", "5D": "One of ten on the feet"}),
 ]
+# Filling a grid is pure CPU on the wall's small computer, and the phone
+# gives a start 30 seconds, one clue request included. Stop trying new
+# patterns after this long and use a bundled puzzle instead.
+FILL_SECONDS = 6.0
 _SAY = re.compile(r"^(?:(\w+)\s*(across|down|a|d)\s*(?:is|,|:)?\s*([a-z]+))[.!?]*$")
 _NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
 
@@ -79,8 +143,9 @@ def slots(blacks: set[tuple[int, int]]) -> list[dict]:
 
 
 def fill_grid(blacks: set[tuple[int, int]], rng: random.Random, words_by_len: dict[int, list[str]],
-              tries: int = 4000) -> dict[tuple[int, int], str] | None:
-    """Letters for every white cell such that every slot is a word."""
+              tries: int = 4000, deadline: float | None = None) -> dict[tuple[int, int], str] | None:
+    """Letters for every white cell such that every slot is a word, or None
+    when the tries run out or time.monotonic() passes the deadline."""
     sl = slots(blacks)
     grid: dict[tuple[int, int], str] = {}
     used: set[str] = set()
@@ -99,7 +164,7 @@ def fill_grid(blacks: set[tuple[int, int]], rng: random.Random, words_by_len: di
 
     def go(done: set[str]) -> bool:
         budget[0] -= 1
-        if budget[0] < 0:
+        if budget[0] < 0 or (deadline is not None and time.monotonic() > deadline):
             raise TimeoutError
         left = [s for s in sl if s["id"] not in done]
         if not left:
@@ -160,9 +225,12 @@ class Crossword(Game):
             by_len: dict[int, list[str]] = {}
             for word in common(3, 5, 8000):
                 by_len.setdefault(len(word), []).append(word)
+            deadline = time.monotonic() + FILL_SECONDS
             for pattern in rng.sample(PATTERNS, len(PATTERNS)):
+                if time.monotonic() > deadline:
+                    break
                 blacks = set(pattern)
-                grid = fill_grid(blacks, rng, by_len)
+                grid = fill_grid(blacks, rng, by_len, deadline=deadline)
                 if grid is None:
                     continue
                 answers = {s["id"]: "".join(grid[c] for c in s["cells"]) for s in slots(blacks)}
@@ -170,13 +238,24 @@ class Crossword(Game):
                     clues = asker.crossword_clues(sorted(set(answers.values())))
                 except Exception as exc:
                     print(f"[games] crossword clues unavailable: {type(exc).__name__}", flush=True)
-                    break
+                    clues = None
                 # A partial provider result must never create an unclued puzzle.
                 if isinstance(clues, dict) and all(isinstance(clues.get(w), str) and clues[w].strip() for w in answers.values()):
                     chosen = (blacks, grid, {sid: clues[w].strip() for sid, w in answers.items()})
-                    break
+                # One paid request per start, whatever it returned. The provider
+                # reports failure as None rather than raising, so looping on to
+                # the next pattern made a new request each time.
+                break
+        self.bundled = None
         if chosen is None:
-            blacks_l, rows, clues = BUNDLED[n % len(BUNDLED)] if n is not None else rng.choice(BUNDLED)
+            if n is not None:
+                self.bundled = n % len(BUNDLED)
+            else:
+                # "Play another round" should not hand back the grid just solved.
+                previous = getattr(self.host, "game", None)
+                last = getattr(previous, "bundled", None) if isinstance(previous, Crossword) else None
+                self.bundled = rng.choice([i for i in range(len(BUNDLED)) if i != last] or [0])
+            blacks_l, rows, clues = BUNDLED[self.bundled]
             blacks = set(blacks_l)
             grid = {(r, c): rows[r][c] for r in range(N) for c in range(N) if (r, c) not in blacks}
             chosen = (blacks, grid, dict(clues))
@@ -189,8 +268,8 @@ class Crossword(Game):
         self.checks = 0
         self.last_move_id: str | None = None
         self._last_move_payload: dict | None = None
-        self.feedback = {"kind": "ready", "message": "Start anywhere. Every crossing helps."}
-        self.message = f"{len(self.slots)} clues. One little grid."
+        self.feedback = {"kind": "ready", "message": "Choose a clue to start."}
+        self.message = f"{len(self.slots)} clues."
 
     def _slot(self, sid=None):
         return next((s for s in self.slots if s["id"] == (self.chosen if sid is None else sid)), None)
@@ -356,8 +435,8 @@ class Crossword(Game):
         remaining = len(self.solution) - len(self.grid)
         if remaining == 0 and self.grid == self.solution:
             self.wrong.clear()
-            self.feedback = {"kind": "solved", "message": "Every crossing comes together."}
-            self.finish(won=True, message="Solved. Every crossing comes together.")
+            self.feedback = {"kind": "solved", "message": "Solved."}
+            self.finish(won=True, message="Solved.")
             return {"solved": True, "filled": len(self.grid)}
         self.message = "Every square is filled. Check the crossings." if remaining == 0 else f"{remaining} {'square' if remaining == 1 else 'squares'} to fill."
         self.feedback = {"kind": kind, "message": message or self.message}

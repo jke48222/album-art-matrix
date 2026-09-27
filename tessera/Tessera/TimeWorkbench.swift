@@ -37,7 +37,17 @@ struct TimeWorkbench: View {
     private var ringing: Bool { wall.state.timerStatus == "ringing" }
     private var draftSeconds: Int? { TimeInput.seconds(minutes: minutes, seconds: seconds) }
     private var alarmDirty: Bool { alarmEnabled != wall.state.alarmEnabled || TimeInput.civilTime(alarmDate) != wall.state.alarmTime }
-    private var previewFace: String { tab == .timer && !activeTimer ? "timer" : "clock" }
+    /// What the preview draws. The Alarm tab shows the alarm as it rings
+    /// (the wall's bell and rings), not the clock: its caption used to point
+    /// at a Show clock button that tab does not have.
+    private var previewFace: String {
+        guard !activeTimer else { return "clock" }
+        switch tab {
+        case .clock: return "clock"
+        case .timer: return "timer"
+        case .alarm: return "alarm"
+        }
+    }
     private var useLiveFrame: Bool { (wall.state.mode == "clock" && previewFace == "clock") || activeTimer }
     private var previewKey: String { "\(wall.host)|\(tab)|\(draftSeconds ?? 0)|\(wall.state.mode)|\(wall.state.clock24h)|\(wall.state.color)|\(ready)|\(scenePhase)|\(initialized)" }
     private var zone: TimeZone? { TimeInput.timeZone(identifier: wall.state.wallTimeZone, offset: wall.state.wallUTCOffset) }
@@ -48,8 +58,8 @@ struct TimeWorkbench: View {
                 Text("Time & alarms").font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(ringing ? "A MOMENT, MADE VISIBLE" : "THE ROOM HAS ITS OWN RHYTHM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
-                    Text(ringing ? (wall.state.timerKind == "alarm" ? "Your daily cue." : "Time, completed.") : "Time, in light.")
+                    Text(ringing ? "ON THE WALL NOW" : "CLOCK, TIMER AND ALARM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
+                    Text(ringing ? (wall.state.timerKind == "alarm" ? "Alarm ringing" : "Timer done") : "Time and alarms")
                         .font(.display(34)).foregroundStyle(Ink.ink)
                 }
             }
@@ -148,11 +158,13 @@ struct TimeWorkbench: View {
                     .font(.machine(typeSize.isAccessibilitySize ? 9 : 8))
                 Spacer(minLength: 8)
                 if !typeSize.isAccessibilitySize {
-                    Text("\(Panel.side) × \(Panel.side)").font(.machine(8))
+                    Text("\(Panel.side) x \(Panel.side)").font(.machine(8))
                 }
             }.foregroundStyle(Ink.dim)
             if !useLiveFrame {
-                Text(previewFace == "timer" ? "The countdown begins when you press Start." : "Choose Show clock to put this view on the wall.")
+                Text(previewFace == "timer" ? "The countdown begins when you press Start."
+                     : previewFace == "alarm" ? "How the wall looks when the alarm rings."
+                     : "Choose Show clock to put this view on the wall.")
                     .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -160,7 +172,7 @@ struct TimeWorkbench: View {
 
     private var clockControls: some View {
         VStack(alignment: .leading, spacing: 20) {
-            sectionTitle("How you tell time", subtitle: "The same face, on your phone and your wall.")
+            sectionTitle("Clock format", subtitle: "The same face, on your phone and your wall.")
             let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
             layout {
                 clockFormat("12 hour", example: "8:24 PM", value: false)
@@ -169,7 +181,7 @@ struct TimeWorkbench: View {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Light colour").font(.ui(15, .semibold))
-                    Text("An ink for the hours.").font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text("The colour of the clock digits.").font(.ui(12)).foregroundStyle(Ink.dim)
                 }
                 Spacer(minLength: 8)
                 ColorPicker("Clock light colour", selection: Binding(get: { clockInk }, set: { clockInk = $0; inkEditing = true; receipt = nil }), supportsOpacity: false)
@@ -212,7 +224,7 @@ struct TimeWorkbench: View {
                     if ringing {
                         completionControls
                     } else {
-                        sectionTitle(wall.state.timerSnoozed ? "Five more minutes." : "A little time, set aside.",
+                        sectionTitle(wall.state.timerSnoozed ? "Snoozed for 5 minutes" : "Timer running",
                                      subtitle: wall.state.timerSnoozed ? "Your alarm will return when the light reaches zero." : "Keeps counting while you leave the app.")
                         Text(TimeInput.clock(remaining)).font(.display(typeSize.isAccessibilitySize ? 26 : 46)).monospacedDigit().foregroundStyle(ink)
                             .contentTransition(.numericText(countsDown: true))
@@ -233,7 +245,7 @@ struct TimeWorkbench: View {
             }
         } else {
             VStack(alignment: .leading, spacing: 18) {
-                sectionTitle("Set a little time aside.", subtitle: "A countdown, followed by a light on the wall.")
+                sectionTitle("New timer", subtitle: "A countdown, followed by a light on the wall.")
                 let durationLayout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 14)) : AnyLayout(HStackLayout(alignment: .top, spacing: 12))
                 durationLayout {
                     durationField("Minutes", text: $minutes)
@@ -264,9 +276,9 @@ struct TimeWorkbench: View {
     private var completionControls: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 6) {
-                Text(wall.state.timerKind == "alarm" ? "Your alarm is here." : "\(TimeInput.duration(wall.state.timerTotal ?? 0)), all yours.")
+                Text(wall.state.timerKind == "alarm" ? "Alarm ringing." : "\(TimeInput.duration(wall.state.timerTotal ?? 0)) timer done.")
                     .font(.ui(typeSize.isAccessibilitySize ? 16 : 18, .semibold)).foregroundStyle(Ink.ink)
-                Text(wall.state.timerKind == "alarm" ? "Take five more minutes, or return to your wall." : "Go again, or let the wall return to what it was showing.")
+                Text(wall.state.timerKind == "alarm" ? "Snooze for 5 minutes, or stop the alarm." : "Repeat it, or let the wall go back to what it was showing.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
             action(wall.state.timerKind == "alarm" ? "Stop alarm" : "Done", symbol: "checkmark") {
@@ -277,7 +289,7 @@ struct TimeWorkbench: View {
                 secondaryAction(alarm ? "Snooze for 5 minutes" : "Repeat \(TimeInput.duration(wall.state.timerTotal ?? 0))", symbol: alarm ? "zzz" : "arrow.counterclockwise") {
                     guard let event = wall.state.timerEventID else { return }
                     submit(["timer_action": alarm ? "snooze" : "repeat", "timer_id": event],
-                           receipt: alarm ? "Alarm snoozed for 5 minutes." : "A fresh timer, with the same duration.")
+                           receipt: alarm ? "Alarm snoozed for 5 minutes." : "Timer restarted.")
                 }
             }
             Text("The light settles after 3 minutes if left alone.")
@@ -313,7 +325,7 @@ struct TimeWorkbench: View {
 
     private var alarmControls: some View {
         VStack(alignment: .leading, spacing: 18) {
-            sectionTitle("A light for your daily cue.", subtitle: "A visual alarm on the wall, every day at the time you choose.")
+            sectionTitle("Alarm", subtitle: "A visual alarm on the wall, every day at the time you choose.")
             Toggle(isOn: Binding(get: { alarmEnabled }, set: { alarmEnabled = $0; alarmEditing = true; receipt = nil })) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("Daily alarm").font(.ui(16, .semibold))
@@ -346,7 +358,7 @@ struct TimeWorkbench: View {
     }
 
     private var wallZoneCaption: some View {
-        Label(zone.map { "Wall time · \($0.identifier.replacingOccurrences(of: "_", with: " "))" } ?? "Uses the wall’s local time.", systemImage: "globe")
+        Label(zone.map { "Wall time: \($0.identifier.replacingOccurrences(of: "_", with: " "))" } ?? "Uses the wall’s local time.", systemImage: "globe")
             .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
     }
 
@@ -377,7 +389,12 @@ struct TimeWorkbench: View {
             busy = false
             guard wall.host == host else { return }
             if saved { accepted(); receipt = message; Taps.commit() }
-            else { problem = "The wall didn’t confirm this change. Your edits are still here; try saving again."; Taps.error() }
+            else {
+                // The wall's own reason when it gave one (a timer that changed
+                // since this screen read it), not a generic line.
+                problem = wall.routineRejection ?? "The wall didn’t confirm this change. Your edits are still here. Try saving again."
+                Taps.error()
+            }
         }
     }
 
@@ -399,13 +416,16 @@ struct TimeWorkbench: View {
         let key = previewKey
         repeat {
             let duration = draftSeconds.map(Double.init)
-            let data = await wall.routinePreview(face: previewFace, twentyFour: wall.state.clock24h,
-                                                remaining: previewFace == "timer" ? duration : nil,
-                                                total: previewFace == "timer" ? duration : nil)
+            // the alarm preview is the timer face at zero with kind "alarm"
+            let alarm = previewFace == "alarm"
+            let data = await wall.routinePreview(face: alarm ? "timer" : previewFace, twentyFour: wall.state.clock24h,
+                                                remaining: previewFace == "timer" ? duration : alarm ? 0 : nil,
+                                                total: previewFace == "timer" ? duration : nil,
+                                                kind: alarm ? "alarm" : nil)
             guard !Task.isCancelled, key == previewKey else { return }
             preview = data.flatMap { FinishSwatch.bitmap([UInt8]($0)) }
             previewFailed = preview == nil
-            if previewFace == "timer" { return }
+            if previewFace != "clock" { return }
             do { try await Task.sleep(for: .seconds(1)) } catch { return }
         } while !Task.isCancelled
     }

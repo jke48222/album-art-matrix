@@ -16,6 +16,8 @@ struct SpotifyPage: View {
     @State private var copied = false
     @State private var setupExpanded = false
     @State private var confirmUnlink = false
+    /// Only a sign-in the person closed. Leaving for Last.fm setup is not one.
+    @State private var signInClosed = false
     @State private var spotify = SpotifyLink()
     @State private var request: Task<Void, Never>?
     @State private var operation = UUID()
@@ -55,6 +57,11 @@ struct SpotifyPage: View {
         default: return linked ? "checkmark.circle" : "link"
         }
     }
+    private var headline: String {
+        if state == "expired" { return "Spotify needs a new sign-in" }
+        if linked { return ["refused", "unavailable", "rate_limited"].contains(state) ? "Spotify needs attention" : "Spotify is connected" }
+        return "Connect Spotify"
+    }
     private var progressTitle: String {
         switch spotify.phase {
         case .authorizing: return "Continue in Spotify"
@@ -77,7 +84,7 @@ struct SpotifyPage: View {
                 }
                 if let notice {
                     Label(notice, systemImage: "checkmark.circle").font(.ui(14)).foregroundStyle(green).fixedSize(horizontal: false, vertical: true)
-                } else if spotify.phase == .cancelled {
+                } else if signInClosed {
                     Text("Sign-in closed. Your connection status is shown above.").font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if !available {
@@ -105,8 +112,8 @@ struct SpotifyPage: View {
                 }
             }
             .onChange(of: savedID) { old, next in if clientID.isEmpty || clientID == old { clientID = next } }
-            .onChange(of: wall.host) { _, _ in cancel(); services = nil; clientID = ""; readFailed = true; problem = nil; notice = nil }
-            .onDisappear { cancel() }
+            .onChange(of: wall.host) { _, _ in cancel(); services = nil; clientID = ""; readFailed = true; problem = nil; notice = nil; signInClosed = false }
+            .onDisappear { leave() }
     }
 
     private var hero: some View {
@@ -123,10 +130,10 @@ struct SpotifyPage: View {
                 HStack(alignment: .top) {
                     ServiceMark(service: .spotify, side: 44)
                     Spacer()
-                    Text("MUSIC, CONNECTED").font(.custom(Face.monoMedium, size: 9, relativeTo: .caption2))
+                    Text("SPOTIFY").font(.custom(Face.monoMedium, size: 9, relativeTo: .caption2))
                         .tracking(1.2).foregroundStyle(green).multilineTextAlignment(.trailing)
                 }
-                Text(state == "expired" ? "Let’s reconnect." : linked ? "Your music.\nAll around." : "Let the music\nfind your wall.")
+                Text(headline)
                     .font(.display(42)).tracking(-0.7).foregroundStyle(Ink.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 connectionDrawing
@@ -161,7 +168,7 @@ struct SpotifyPage: View {
             if working || state == "checking" {
                 HStack(spacing: 12) { ProgressView().tint(green); Text(state == "checking" ? "Checking Spotify…" : spotify.busy ? progressTitle : "Updating your wall…").font(.ui(16, .medium)).foregroundStyle(Ink.ink) }
                     .frame(minHeight: 50).accessibilityElement(children: .combine)
-                if spotify.busy { Button("Cancel sign-in") { cancel() }.font(.ui(14, .semibold)).frame(minHeight: 44) }
+                if spotify.busy { Button("Cancel sign-in") { cancel(); signInClosed = true }.font(.ui(14, .semibold)).frame(minHeight: 44) }
             } else if spotify.canRetryDelivery {
                 primary("Retry sending to wall", symbol: "arrow.clockwise") { signIn(retry: true) }
             } else if needsSignIn {
@@ -200,7 +207,7 @@ struct SpotifyPage: View {
                 Image(systemName: "person.crop.circle").font(.system(size: 28, weight: .light)).foregroundStyle(green).accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 5) {
                     Text(services?.spotify.account_name ?? "Your Spotify account").font(.ui(19, .semibold)).foregroundStyle(Ink.ink)
-                    Text(state == "expired" ? "Saved on this wall · sign in again" : "Connected to this wall").font(.ui(13)).foregroundStyle(Ink.dim)
+                    Text(state == "expired" ? "Saved on this wall. Sign in again." : "Connected to this wall").font(.ui(13)).foregroundStyle(Ink.dim)
                 }.fixedSize(horizontal: false, vertical: true)
             }
             if let checked = services?.spotify.checked_at, checked.isFinite {
@@ -287,11 +294,17 @@ struct SpotifyPage: View {
         let stamp = operation
         let fresh = await WallServices.read(host: host)
         guard !Task.isCancelled, wall.host == host, operation == stamp, !working else { return }
-        if let fresh { services = fresh; readFailed = false } else { readFailed = true }
+        if let fresh {
+            // Cleared when the connection itself changes, or by the next
+            // action (begin, a host change). Cleared on every read, the
+            // four-second poll hid the line before it could be read.
+            if fresh.spotify.state != services?.spotify.state || fresh.spotify.linked != services?.spotify.linked { signInClosed = false }
+            services = fresh; readFailed = false
+        } else { readFailed = true }
     }
     private func begin(_ action: @escaping @MainActor (String, UUID) async -> Void) {
         guard !working, available else { return }
-        busy = true; problem = nil; notice = nil; editingID = false
+        busy = true; problem = nil; notice = nil; signInClosed = false; editingID = false
         let host = wall.host, token = UUID(); operation = token
         request = Task {
             await action(host, token)
@@ -309,6 +322,9 @@ struct SpotifyPage: View {
             guard !id.isEmpty else { problem = "Save a Client ID to the wall first."; return }
             let connected = retry ? await spotify.retryDelivery(host: host, clientID: id) : await spotify.connect(clientID: id, wall: host)
             guard operation == token, wall.host == host, !Task.isCancelled else { return }
+            // Closed in Spotify's own sheet. A page leaving mid-sign-in changes
+            // the operation first, so it never lands here.
+            if !connected && spotify.phase == .cancelled { signInClosed = true }
             if connected {
                 let fresh = await WallServices.read(host: host)
                 guard operation == token, wall.host == host, !Task.isCancelled else { return }
@@ -338,11 +354,18 @@ struct SpotifyPage: View {
     }
     private func unlink() {
         begin { host, token in
-            let fresh = await WallServices.unlinkSpotify(host: host)
+            let outcome = await WallServices.unlinkSpotify(host: host)
             guard operation == token, wall.host == host, !Task.isCancelled else { return }
-            if let fresh, !fresh.spotify.linked { services = fresh; confirmUnlink = false; notice = "Disconnected from this wall."; Taps.commit() }
-            else { problem = "The wall hasn't confirmed the disconnect. Please try again." }
+            if let fresh = outcome.services, !fresh.spotify.linked { services = fresh; confirmUnlink = false; notice = "Disconnected from this wall."; Taps.commit() }
+            else if outcome.services != nil { problem = "The wall hasn't confirmed the disconnect. Please try again." }
+            else { problem = ServiceSave.failure(outcome) }
         }
     }
     private func cancel() { operation = UUID(); request?.cancel(); request = nil; spotify.cancel(); busy = false }
+    /// Pushing Last.fm setup hides this page. Stop an active sign-in, but keep
+    /// tokens waiting behind "Retry sending to wall" and the page's state.
+    private func leave() {
+        if spotify.busy { cancel(); return }
+        operation = UUID(); request?.cancel(); request = nil; busy = false
+    }
 }

@@ -61,6 +61,9 @@ Sources: [RootView](../tessera/Tessera/RootView.swift),
   progress, connection state and the inactive wall.
 - [ ] **A03 — Room home.** Room lighting, physical wall placement, dive into the
   wall, return transition, day/night room assets and reduced-motion behaviour.
+  **Not built yet:** a night render of the room and a sunrise/sunset crossfade
+  between the two. The wall already reports sun, lat and lon. Today the room is
+  lit by the wall alone.
 - [ ] **A04 — iPod home.** Click wheel, menus, now-playing display, artwork,
   controls, focus and tactile feedback.
 - [ ] **A05 — Now-playing identity.** Sleeve, record, label, title/artist, progress,

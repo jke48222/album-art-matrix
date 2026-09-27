@@ -25,6 +25,9 @@ struct DiscogsPage: View {
     private var ready: Bool { !savedUser.isEmpty && dg?.token_set == true }
     private var count: Int { max(0, dg?.releases ?? 0) }
     private var syncing: Bool { dg?.syncing == true || awaitedSync != nil }
+    /// Nothing read yet from this wall: its saved account is unknown, so the
+    /// page must not ask a connected person to connect.
+    private var unknown: Bool { services == nil && (!wall.link.isLive || readFailed) }
     private var typedUser: String { user.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var typedToken: String { token.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSave: Bool {
@@ -41,7 +44,7 @@ struct DiscogsPage: View {
         if syncing { return "Reading your collection" }
         if dg?.problem != nil { return "Read needs attention" }
         if ready { return dg?.synced_at == nil ? "Ready for the first read" : "Collection on the wall" }
-        return count > 0 ? "Local collection · disconnected" : "Not connected"
+        return count > 0 ? "Local collection, disconnected" : "Not connected"
     }
 
     var body: some View {
@@ -50,12 +53,15 @@ struct DiscogsPage: View {
                 hero
                 if !wall.link.isLive {
                     CreativeConnectionNotice(title: "Your wall is offline", detail: "Reconnect to manage Discogs or read the collection again. Saved records stay on the wall.", symbol: "wifi.slash", tint: parchment)
+                    if unknown { Button("Try again") { Task { await refresh() } }.font(.ui(16, .semibold)).foregroundStyle(parchment).frame(minHeight: 44) }
                 } else if readFailed {
                     CreativeConnectionNotice(title: "Couldn't read this connection", detail: "Your saved account and collection haven't changed.", symbol: "exclamationmark.circle", tint: parchment)
                     Button("Try again") { Task { await refresh() } }.font(.ui(16, .semibold)).foregroundStyle(parchment).frame(minHeight: 44)
                 }
                 if loading && dg == nil {
                     ProgressView("Reading Discogs status").font(.ui(15)).tint(parchment).frame(maxWidth: .infinity, minHeight: 90)
+                } else if unknown {
+                    // Status unknown: the notice above carries the retry.
                 } else {
                     if let issue = problem ?? dg?.problem {
                         CreativeConnectionNotice(title: "The collection couldn't update", detail: issue, symbol: "exclamationmark.circle", tint: parchment)
@@ -104,18 +110,17 @@ struct DiscogsPage: View {
                 Image(systemName: "opticaldisc").font(.system(size: 22, weight: .medium))
                 Text("DISCOGS").font(.machine(typeSize.isAccessibilitySize ? 10 : 12)).tracking(2)
                 Spacer(minLength: 0)
-                if !typeSize.isAccessibilitySize { Text("YOUR EDITION").font(.machine(9)).tracking(1) }
             }.foregroundStyle(parchment)
             if !typeSize.isAccessibilitySize {
-                Text("Every record.\nA place here.").font(.display(39)).tracking(-1).fixedSize(horizontal: false, vertical: true)
+                Text("Your record collection").font(.display(39)).tracking(-1).fixedSize(horizontal: false, vertical: true)
                 DiscogsGrooves(tint: parchment).frame(height: 92).accessibilityHidden(true)
             }
             Group {
                 if typeSize.isAccessibilitySize { Text(statusTitle).font(.ui(12, .medium)) }
                 else { Label(statusTitle, systemImage: !wall.link.isLive ? "wifi.slash" : syncing ? "arrow.triangle.2.circlepath" : ready ? "checkmark.circle" : "circle.dotted").font(.ui(14, .medium)) }
             }.foregroundStyle(parchment).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("discogs.status")
-            if !ready && count == 0 {
-                Text("Bring your record collection into the room, pressing by pressing.")
+            if !ready && count == 0 && !unknown {
+                Text("Connect Discogs so the wall knows which records and pressings you own.")
                     .font(.ui(16)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -135,7 +140,7 @@ struct DiscogsPage: View {
                     if !typeSize.isAccessibilitySize { Image(systemName: "arrow.up.right").font(.system(size: 22, weight: .medium)) }
                 }
                 Rectangle().fill(Color(hex: 0x342C20).opacity(0.16)).frame(height: 1)
-                HStack { Text("Explore The shelf").font(.ui(16, .semibold)).fixedSize(horizontal: false, vertical: true); Spacer(minLength: 0); Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
+                HStack { Text("Open the shelf").font(.ui(16, .semibold)).fixedSize(horizontal: false, vertical: true); Spacer(minLength: 0); Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
             }.foregroundStyle(Color(hex: 0x252218)).padding(22).frame(maxWidth: .infinity, alignment: .leading)
                 .background(parchment, in: RoundedRectangle(cornerRadius: 20))
         }.buttonStyle(.plain).accessibilityIdentifier("discogs.openShelf")
@@ -184,7 +189,7 @@ struct DiscogsPage: View {
             Button { openURL(URL(string: "https://www.discogs.com/settings/developers")!) } label: {
                 Label("Get a token from Discogs", systemImage: "arrow.up.right").font(.ui(14, .medium)).frame(minHeight: 44, alignment: .leading)
             }.foregroundStyle(parchment)
-            Text("In Discogs, open Settings → Developers → Generate new token. Your token is saved on the wall and isn't shown again here.")
+            Text("In Discogs, open Settings, then Developers, then Generate new token. Your token is saved on the wall and isn't shown again here.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             if dg?.token_set == true {
                 Divider().overlay(parchment.opacity(0.16))

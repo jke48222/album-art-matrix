@@ -44,6 +44,9 @@ struct AskStatus: Decodable {
     var problem: String?
     var workspace_set: Bool?
     var history: [Item]?
+    /// False when the wall has no answer face (it comes with the voice), so
+    /// every answer stays on the phone. Older walls leave it out.
+    var can_show: Bool?
 
     static func read(host: String) async -> AskStatus? {
         try? await MessageAPI.get(host: host, path: "/ask")
@@ -66,7 +69,8 @@ struct NoteStatus: Decodable {
     }
 
     static func post(host: String, text: String, minutes: Double) async -> MessageReply {
-        guard minutes.isFinite, (0.5...720).contains(minutes), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        // 1 to 720, as the page offers and this message says (the wall also takes 0.5)
+        guard minutes.isFinite, (1...720).contains(minutes), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return MessageReply(error: "Write a message and choose a duration from 1 to 720 minutes.")
         }
         return await MessageAPI.post(host: host, path: "/note", body: ["text": text, "minutes": minutes])
@@ -85,9 +89,23 @@ struct MessageReply: Decodable {
     var shown: Bool?
     var cleared: Bool?
     var error: String?
+    /// Why an answer asked for the wall stayed on the phone: off, timer,
+    /// unavailable or busy. Older walls leave it out.
+    var reason: String?
     var accepted = false
 
-    enum CodingKeys: String, CodingKey { case answer, shown, cleared, error }
+    enum CodingKeys: String, CodingKey { case answer, shown, cleared, error, reason }
+
+    /// Plain words for an answer that asked for the wall and stayed here.
+    /// Busy was the only case before walls sent a reason, so it is the default.
+    static func keptHere(reason: String?) -> String {
+        switch reason {
+        case "off": "Saved here. The wall is off."
+        case "timer": "Saved here. A timer is on the wall."
+        case "unavailable": "Saved here. This wall cannot show answers."
+        default: "Saved here. The wall is busy."
+        }
+    }
 
     init(error: String) { self.error = error }
 
@@ -128,7 +146,7 @@ enum MessageAPI {
             let (data, response) = try await URLSession.shared.data(for: request)
             return MessageReply.decode(data, status: (response as? HTTPURLResponse)?.statusCode ?? 0)
         } catch {
-            return MessageReply(error: "The wall didn't confirm this. Your draft is safe; check the connection before trying again.")
+            return MessageReply(error: "The wall didn't confirm this. Your draft is safe. Check the connection and try again.")
         }
     }
 }

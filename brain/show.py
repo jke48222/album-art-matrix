@@ -268,15 +268,26 @@ class Shower:
         with self._frame_lock:
             return self._last_picture_png
 
+    def _owns_frame(self) -> bool:
+        """Whether the frame face still shows the picture this put up. The
+        pixels are the ownership token, not ctrl.shown_seq: that counter also
+        moves on every song change, and a song changing under a picture must
+        not orphan it on the wall or mark it as gone on the phone."""
+        return (self._frame_bytes is not None and self.ctrl.get()["mode"] == "frame"
+                and self.ctrl.frame_override is self._frame_bytes)
+
     def _receipt(self, value: dict | None) -> dict | None:
         if value is None:
             return None
         result = dict(value)
-        active = (value.get("shown") is True and value.get("frame_seq") == self.ctrl.shown_seq
-                  and self.ctrl.get()["mode"] == "frame"
-                  and time.monotonic() < self._until)
+        active = (value.get("shown") is True and value.get("frame_seq") == self._frame_seq
+                  and self._owns_frame() and time.monotonic() < self._until)
         if value.get("what") == "play":
-            active = self.ctrl.get()["mode"] == "video" and value.get("frame_seq") == self.ctrl.shown_seq
+            # The player resolving the link bumps shown_seq too (video_media),
+            # so a playing video is recognised by its own link.
+            video = getattr(self.ctrl, "video", None)
+            active = (self.ctrl.get()["mode"] == "video" and bool(value.get("url"))
+                      and getattr(video, "url", None) == value.get("url"))
         result["active"] = active
         result["seconds_left"] = max(0, int(self._until - time.monotonic())) if active and value.get("what") != "play" else 0
         return result
@@ -316,7 +327,7 @@ class Shower:
         if not self._work_lock.acquire(blocking=False):
             return {"error": "The wall is finishing another discovery. Try again in a moment.", "code": 409}
         self.pending, self.problem, self._problem_kind = kind, None, kind
-        self._local.selection = (self.ctrl.get()["mode"], self.ctrl.shown_seq)
+        self._local.selection = self._selection()
         self._local.receipt = None
         try:
             result = work()
@@ -335,9 +346,30 @@ class Shower:
             self._local.selection = None
             self._work_lock.release()
 
+    def _selection(self) -> tuple:
+        """What someone chose to have on the wall: the face, the pictures
+        and video that stand for a choice, and whether an archive sleeve was
+        asked for. Not ctrl.shown_seq, which every song change and every
+        resolved video link also moves: a search must not be cancelled
+        because the music moved on while it ran."""
+        ctrl = self.ctrl
+        mode = ctrl.get()["mode"]
+        video = getattr(ctrl, "video", None)
+        return (mode, ctrl.frame_override, getattr(ctrl, "clip", None),
+                getattr(video, "url", None) if mode == "video" else None,
+                getattr(ctrl, "replay", None) is not None or bool(getattr(ctrl, "replay_active", False)))
+
     def _check_selection(self):
         expected = getattr(self._local, "selection", None)
-        if expected is not None and expected != (self.ctrl.get()["mode"], self.ctrl.shown_seq):
+        if expected is None:
+            return
+        mode, frame, clip, url, replaying = expected
+        now = self._selection()
+        # Objects are compared by identity: a new upload is a new choice even
+        # with the same pixels. A replay ending is the music moving on, so
+        # only a replay starting counts.
+        if (now[0] != mode or now[1] is not frame or now[2] is not clip or now[3] != url
+                or (now[4] and not replaying)):
             raise DisplayChanged()
 
     # ---- the frame face, for a while --------------------------------------------------------
@@ -369,17 +401,29 @@ class Shower:
             return False
         if not math.isfinite(seconds) or seconds <= 0:
             return False
+        # One object is both what the wall shows and the ownership token
+        # (see _owns_frame), so it is compared by identity.
+        px = bytes(px)
         with self._frame_lock, ctrl._lock:
             self._check_selection()
-            here = ctrl.get()["mode"]
-            if here != "frame" or self._ret is None or ctrl.shown_seq != self._frame_seq:
-                self._ret = here if here not in ("frame", "clip", "timer", "video") else "art"
+            # A note up over this picture: its resting face is this frame, so
+            # keep the face the picture itself will hand back.
+            note_over_this = (self._ret is not None and ctrl.frame_override is self._frame_bytes
+                              and hasattr(ctrl, "resting_face") and ctrl.resting_face() == "frame")
+            if not note_over_this and (self._ret is None or not self._owns_frame()):
+                # The face a note up now will return to, not the note's
+                # "ticker": a note that came back after this picture would
+                # have no expiry and no Take down.
+                face = ctrl.resting_face() if hasattr(ctrl, "resting_face") else ctrl.get()["mode"]
+                self._ret = face if face not in ("frame", "clip", "timer", "video") else "art"
             ctrl.frame_override = px
             ctrl.shown_seq += 1
-            self._frame_seq, self._frame_bytes = ctrl.shown_seq, bytes(px)
+            self._frame_seq, self._frame_bytes = ctrl.shown_seq, px
             self._local.receipt = (self._frame_seq, self._frame_bytes)
-            self._local.selection = ("frame", ctrl.shown_seq) if getattr(self._local, "selection", None) is not None else None
             ctrl.apply({"mode": "frame"})
+            if getattr(self._local, "selection", None) is not None:
+                # This picture is now the selection a later step must respect.
+                self._local.selection = self._selection()
             self._until = time.monotonic() + seconds
             if self._timer is not None:
                 self._timer.cancel()
@@ -396,8 +440,9 @@ class Shower:
                 return
             # A drawing, archive selection, or a newer showing owns the wall
             # now. An old expiry must never remove someone else's artwork.
-            if (self.ctrl.get()["mode"] == "frame" and self.ctrl.shown_seq == self._frame_seq
-                    and self.ctrl.frame_override == self._frame_bytes):
+            # A song change does not: it leaves the picture up and it still
+            # comes down on time.
+            if self._owns_frame():
                 self.ctrl.apply({"mode": self._ret or "art"}, interrupt=False)
             self._ret = None
 
@@ -549,13 +594,19 @@ class Shower:
             return {"error": "Naming a song from its words needs the Claude key, set under Services."}
         got = self.asker.earworm(words)
         if not got or not got.get("title"):
-            return {"error": getattr(self.asker, "problem", None) or "I could not place those words. Try another line or add the artist or decade.", "code": 502}
+            # The earworm's own miss, kept apart from the Claude connection's
+            # problem so a missed song never reads as a broken key.
+            why = getattr(self.asker, "earworm_problem", None) or getattr(self.asker, "problem", None)
+            return {"error": why or "I could not place those words. Try another line or add the artist or decade.", "code": 502}
         found = find_art(f"{got['artist']} {got['title']}") or {}
         art = found.get("art_url")
         shown = False
         if art:
             # The artwork is the same square composition on wall and phone;
             # song identity and actions remain outside the artwork on phone.
+            # Someone choosing another face meanwhile keeps that face, but the
+            # song (a paid answer) is still kept, unshown, so the phone can
+            # offer to put its sleeve up.
             try:
                 ctrl = self.ctrl
                 tune = getattr(ctrl, "tuning", None)
@@ -564,10 +615,13 @@ class Shower:
                               unsharp_percent=tune.get("unsharp_percent") if tune else 60)
                 shown = self.show_frame(pre, SHOW_S)
             except DisplayChanged:
-                raise
+                shown = False
             except Exception as exc:
                 print(f"[show] earworm sleeve: {exc}", flush=True)
-                shown = bool(self._put_up(art, SHOW_S))
+                try:
+                    shown = bool(self._put_up(art, SHOW_S))
+                except DisplayChanged:
+                    shown = False
         print(f"[show] earworm {words!r} -> {got['artist']} - {got['title']} "
               f"({got.get('confidence')})", flush=True)
         return self._remember({"what": "earworm", "shown": shown, **got, "art_url": art,

@@ -160,8 +160,13 @@ def test_earworm_finishing_after_new_face_does_not_replace_it(finder, sleeve, mo
         return {"title": "Signal", "artist": "North", "confidence": .91, "alternatives": []}
     finder.asker = SimpleNamespace(ready=True, problem=None, earworm=name_song)
     result = finder.earworm("words")
-    assert result["code"] == 409
+    # The clock stays, and the paid identification is kept, unshown, so the
+    # phone can offer to put the sleeve up.
+    assert "code" not in result and result["title"] == "Signal"
+    assert result["shown"] is False and result["active"] is False
     assert finder.ctrl.get()["mode"] == "clock"
+    assert finder.earworm_status()["last"]["id"] == result["id"]
+    assert finder.show_earworm(result["id"])["active"]
 
 
 def fake_asker(output=None, failure=None):
@@ -190,7 +195,8 @@ def test_earworm_provider_metadata_is_trimmed_and_alternatives_are_unique():
 def test_provider_invalid_confidence_fails_without_sticking_busy(confidence):
     value = fake_asker({"title": "Signal", "artist": "North", "confidence": confidence, "alternatives": []})
     assert value.earworm("words") is None
-    assert value.problem and not value.pending
+    # The guess failed, the connection did not: only the earworm page hears it.
+    assert value.earworm_problem and value.problem is None and not value.pending
     assert value._ask_lock.acquire(blocking=False)
     value._ask_lock.release()
 
@@ -198,11 +204,11 @@ def test_provider_invalid_confidence_fails_without_sticking_busy(confidence):
 def test_provider_can_say_no_match_instead_of_inventing_a_song():
     value = fake_asker({"title": "", "artist": "", "confidence": 0, "alternatives": []})
     assert value.earworm("unrecognizable") is None
-    assert "No confident match" in value.problem
+    assert "No confident match" in value.earworm_problem and value.problem is None
 
 
 def test_earworm_does_not_overlap_an_existing_ask_request():
     value = fake_asker(failure=AssertionError("must not call provider"))
     with value._ask_lock:
         assert value.earworm("words") is None
-        assert "finishing another request" in value.problem
+        assert "finishing another request" in value.earworm_problem and value.problem is None

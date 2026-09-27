@@ -177,12 +177,16 @@ class Scrobbler:
         self._rate_limited_until = 0.0
         self._token_checked = None           # the token that was validated
         self._queue = self._load_queue()
-        # Older releases did not record queue ownership. Never guess: those
-        # listens stay held until expiry, even if credentials changed while off.
+        # Older releases did not record queue ownership. They sent the queue
+        # with whatever token services.json held, and that file is the only
+        # place the token lives, so the token here now is the one the old
+        # release would have sent these with: they go to its account. With no
+        # token there is no account to name, so they stay held until expiry
+        # rather than go to whichever account is linked next.
         migrated = False
         for item in self._queue:
             if "owner" not in item:
-                item["owner"] = "unowned"
+                item["owner"] = self._owner()
                 migrated = True
         if migrated:
             self._save_queue()
@@ -517,7 +521,7 @@ class Scrobbler:
             wait = min(3600.0, max(1.0, wait)) if math.isfinite(wait) else RATE_LIMIT_FALLBACK_S
             self._rate_limited_until = self._mono() + wait
             self._state = "rate_limited"
-            self.problem = f"ListenBrainz is rate limited; retry in {int(wait)} seconds."
+            self.problem = f"ListenBrainz is rate limited. Retry in {int(wait)} seconds."
         elif code == 0:
             self._state = "offline"
             self.problem = "ListenBrainz has no network connection. Counted listens wait here."

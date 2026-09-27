@@ -11,6 +11,7 @@ import time
 
 from . import Game, register
 from .board import blank, disc, fill, rounded, text_centred
+from .parking import parked
 
 PITCH_HOLD_S = 0.35
 SINK_PER_S = 0.22
@@ -76,7 +77,7 @@ class WhistleBird(Game):
         self.t0 = self.last_t = now
         self.distance = 0.0
         self.elapsed = 0.0
-        self.message = "Whistle to begin, or start with touch. Your bird will wait."
+        self.message = "Whistle to begin, or start with touch."
 
     def _now(self):
         value = self._clock()
@@ -144,6 +145,9 @@ class WhistleBird(Game):
             return {"again": True}
         if self.dead or self.over:
             return {"error": "This flight is finished. Start a new flight from the results."}
+        if set(move) in ({"start"}, {"y"}) and parked(self):
+            # The flight holds still while the wall shows another face.
+            return {"error": "Return this game to the wall before flying."}
         if set(move) == {"start"} and move["start"] is True:
             if self.phase not in ("ready", "paused", "calibrating"):
                 return {"error": "The bird is already flying."}
@@ -165,10 +169,9 @@ class WhistleBird(Game):
             return {"y": self.target}
         return {"error": "Choose a flight height or start the flight."}
 
-    def hear(self, spoken, player):
-        if isinstance(spoken, str) and spoken.lower().strip(" .!") in ("again", "restart", "play again"):
-            return self.apply({"again": True}, player)
-        return None
+    # No hear(): the flight is steered by pitch and touch, not words. A spoken
+    # "again" used to restart a live flight without recording it, and could
+    # never reach a finished one, which the host keeps from the ears.
 
     def _collision(self):
         if self.y + BIRD_RADIUS >= GROUND:
@@ -194,9 +197,12 @@ class WhistleBird(Game):
                 self.message = "Your range is set. Whistle high to rise and low to descend."
                 self.changed()
             return
-        if dt > MAX_FRAME_DELAY:
+        # A late frame, or a flight parked while the wall shows another face:
+        # the phone keeps polling a parked game every second, which would
+        # otherwise fly it on with the board disabled and the whistles ignored.
+        if dt > MAX_FRAME_DELAY or parked(self):
             self.phase = "paused"
-            self.message = "Flight paused. Your place is saved; continue when you're ready."
+            self.message = "Flight paused. Continue when you are ready."
             self.changed()
             return
         # Validate the current pose even with dt=0: collisions do not depend on
@@ -244,7 +250,7 @@ class WhistleBird(Game):
         if self.dead or self.over:
             return
         self.dead, self.phase, self.reason = True, "finished", reason
-        self.finish(won=self.score > 0, message=f"{self.score} {'opening' if self.score == 1 else 'openings'} cleared. A little further next time.")
+        self.finish(won=self.score > 0, message=f"{self.score} {'opening' if self.score == 1 else 'openings'} cleared.")
 
     def state(self):
         self.step()

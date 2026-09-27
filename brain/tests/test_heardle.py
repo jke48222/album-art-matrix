@@ -39,7 +39,7 @@ def test_six_misses(tmp_path):
     g = host.game
     for i in range(6):
         host.move(None, {"guess": f"wrong {i}"})
-    assert g.over and not g.won and g.message == "Frank Ocean — Nights"
+    assert g.over and not g.won and g.message == "Nights by Frank Ocean."
 
 
 def test_the_bars_at_both_sizes(tmp_path):

@@ -64,6 +64,12 @@ struct LastfmPage: View {
         }
     }
     private var current: WallServices.Lastfm.Track? { available && state == "playing" ? account?.current : nil }
+    /// As on Spotify's page: saved details are not a working connection when
+    /// the status line under the headline says the access needs attention.
+    private var headline: String {
+        guard connected else { return "Last.fm" }
+        return ["refused", "not_found", "unavailable", "rate_limited"].contains(state) ? "Last.fm needs attention" : "Last.fm is connected"
+    }
 
     var body: some View {
         ScrollView {
@@ -82,7 +88,9 @@ struct LastfmPage: View {
                         .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("lastfm.notice")
                 }
                 if !available { offline }
-                if !connected || editing { editor }
+                // Only after a read: with nothing read from this wall its saved
+                // profile is unknown, and a connected person must not be asked to connect.
+                if services != nil && (!connected || editing) { editor }
                 if connected { accountActions }
                 reporting
             }.padding(.horizontal, 22).padding(.top, 18).padding(.bottom, 36)
@@ -127,12 +135,12 @@ struct LastfmPage: View {
                     .accessibilityLabel("Last.fm profile, \(savedUser)")
             }
             if !typeSize.isAccessibilitySize {
-                Text(connected ? "Every song,\none thread." : "Your listening,\nconnected.")
+                Text(headline)
                     .font(.display(42)).tracking(-0.8).foregroundStyle(Ink.ink)
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(alignment: .bottom, spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(savedUser.isEmpty ? "LAST.FM → YOUR WALL" : "@\(savedUser)")
+                        Text(savedUser.isEmpty ? "LAST.FM TO YOUR WALL" : "@\(savedUser)")
                             .font(.machine(12)).foregroundStyle(coral).lineLimit(2)
                         Label(statusTitle, systemImage: statusSymbol).font(.ui(13, .medium)).foregroundStyle(Ink.ink)
                             .fixedSize(horizontal: false, vertical: true)
@@ -179,7 +187,7 @@ struct LastfmPage: View {
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(state == "checking" ? "Finding your latest song…" : "Your next song starts here.")
+                    Text(state == "checking" ? "Finding your latest song…" : "No song playing right now")
                         .font(.display(typeSize.isAccessibilitySize ? 24 : 29)).foregroundStyle(Ink.ink)
                     Text("Play music in a player that reports Now Playing to Last.fm. The wall follows that public feed.")
                         .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
@@ -259,7 +267,7 @@ struct LastfmPage: View {
             }
             if !keyBaked || keySet {
                 VStack(alignment: .leading, spacing: 7) {
-                    Text(keySet ? "Replace API key · optional" : "API key").font(.ui(12, .semibold)).foregroundStyle(Ink.dim)
+                    Text(keySet ? "Replace API key (optional)" : "API key").font(.ui(12, .semibold)).foregroundStyle(Ink.dim)
                     SecureField(keySet ? "Saved privately on your wall" : "Paste your API key", text: $key)
                         .focused($focused, equals: .key).font(.ui(16)).foregroundStyle(Ink.ink)
                         .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.asciiCapable)
@@ -267,7 +275,7 @@ struct LastfmPage: View {
                         .padding(15).frame(minHeight: 52).background(Ink.ground, in: RoundedRectangle(cornerRadius: 12))
                         .accessibilityLabel(keySet ? "Replacement Last.fm API key, optional" : "Last.fm API key")
                         .accessibilityIdentifier("lastfm.apiKey")
-                    if !validKey { Text("Use the API key, 16–64 letters or numbers. Do not paste the shared secret.").font(.ui(12)).foregroundStyle(coral).fixedSize(horizontal: false, vertical: true) }
+                    if !validKey { Text("Use the API key, 16 to 64 letters or numbers. Do not paste the shared secret.").font(.ui(12)).foregroundStyle(coral).fixedSize(horizontal: false, vertical: true) }
                     Link("Get a Last.fm API key", destination: URL(string: "https://www.last.fm/api/account/create")!)
                         .font(.ui(14, .semibold)).foregroundStyle(coral).frame(minHeight: 44)
                 }
@@ -322,7 +330,7 @@ struct LastfmPage: View {
 
     private var reporting: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("One feed. Many players.").font(.display(typeSize.isAccessibilitySize ? 23 : 28)).foregroundStyle(Ink.ink)
+            Text("Players that report to Last.fm").font(.display(typeSize.isAccessibilitySize ? 23 : 28)).foregroundStyle(Ink.ink)
             Text("Your player must report Now Playing to Last.fm. Some scrobblers only send finished songs, so their artwork arrives after listening.")
                 .font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             NavigationLink { OtherPlayersPage(accent: accent, services: $services) } label: {

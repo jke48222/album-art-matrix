@@ -30,7 +30,7 @@ struct VideoWorkbench: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(alignment: .firstTextBaseline) {
-                Text("Picture in motion.").font(.display(typeSize.isAccessibilitySize ? 17 : 25)).foregroundStyle(ink.ink)
+                Text("Video").font(.display(typeSize.isAccessibilitySize ? 17 : 25)).foregroundStyle(ink.ink)
                 Spacer()
                 Image(systemName: "film").font(.system(size: 19, weight: .medium)).foregroundStyle(accent)
             }
@@ -71,6 +71,10 @@ struct VideoWorkbench: View {
                     }, commitTitle: wall.link.isLive ? "Play on wall" : "Keep framing")
         }
         .task { await takeHandoff() }
+        // "Accepted" is only true until the wall reports on that video. Once it
+        // moves on (playing, ended, error), the live panel or the error speaks,
+        // and the old receipt must not come back beside the entry form.
+        .onChange(of: "\(video?.status ?? "")|\(video?.url ?? "")|\(video?.error ?? "")") { _, _ in accepted = false }
         .onDisappear {
             // A presented framing step also causes disappearance; its source must survive.
             if framing == nil { operation?.cancel(); removeUnusedSource() }
@@ -88,7 +92,7 @@ struct VideoWorkbench: View {
                     .accessibilityLabel("Framed video preview, not yet playing on wall")
             }
             Text("Your frame is ready.").font(.ui(19, .semibold)).foregroundStyle(ink.ink)
-            Text("Phone preview · the entire video uses this framing.").font(.ui(12)).foregroundStyle(ink.dim)
+            Text("Phone preview. The whole video uses this framing.").font(.ui(12)).foregroundStyle(ink.dim)
             Button { begin { await send(file: staged.file, title: staged.title, crop: staged.crop) } } label: {
                 Label("Play on wall", systemImage: "play.fill").font(.ui(15, .semibold))
                     .foregroundStyle(Ink.ground).frame(maxWidth: .infinity).frame(minHeight: 50)
@@ -101,14 +105,14 @@ struct VideoWorkbench: View {
 
     private var entry: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("A film, a memory, a little movement.")
+            Text("Play a video on the wall.")
                 .font(.ui(15)).foregroundStyle(ink.dim).fixedSize(horizontal: false, vertical: true)
             PhotosPicker(selection: $selected, matching: .videos, preferredItemEncoding: .current) {
                 HStack(spacing: 14) {
                     Image(systemName: "photo.on.rectangle.angled").font(.system(size: 23, weight: .regular))
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Choose a video").font(.ui(16, .semibold))
-                        Text("Frame it once. Play the whole film.").font(.ui(12)).foregroundStyle(ink.dim)
+                        Text("Choose the square to show.").font(.ui(12)).foregroundStyle(ink.dim)
                     }
                     Spacer(minLength: 0)
                     Image(systemName: "arrow.up.right").font(.system(size: 14, weight: .semibold))

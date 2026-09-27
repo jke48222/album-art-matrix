@@ -27,6 +27,18 @@ struct WallState: Equatable {
     var tickerStyle: String = "across"
     /// One ink per visible glyph, in order; empty means one ink for all.
     var tickerColors: [String] = []
+    /// The ticker's own ink and pace, on a wall that keeps them apart from
+    /// the Lamp's. Nil on a wall that still shares colour and speed with the
+    /// Lamp, where sending a message used to overwrite both and switch off
+    /// Match Art.
+    var ownTickerColor: String? = nil
+    var ownTickerSpeed: Double? = nil
+    /// The ink the wall draws the current message in when it came with its
+    /// own; nil means the shared ink (the lamp's, or the album's under Match
+    /// Art). ticker_color is always reported, so it cannot say this.
+    var tickerInk: String? = nil
+    var tickerColor: String { ownTickerColor ?? color }
+    var tickerSpeed: Double { ownTickerSpeed ?? speed }
     var clock24h: Bool = true
     /// Seconds the wall's words run ahead of the song.
     var lyricOffset: Double = 0.2
@@ -173,6 +185,9 @@ struct WallState: Equatable {
         tickerLoop = json["ticker_loop"] as? Bool ?? true
         tickerStyle = json["ticker_style"] as? String ?? "across"
         tickerColors = json["ticker_colors"] as? [String] ?? []
+        ownTickerColor = json["ticker_color"] as? String
+        ownTickerSpeed = (json["ticker_speed"] as? Double).flatMap { $0.isFinite ? $0 : nil }
+        tickerInk = json["ticker_ink"] as? String
         clock24h = json["clock_24h"] as? Bool ?? true
         lyricOffset = json["lyric_offset"] as? Double ?? 0.2
         spinFace = json["spin_face"] as? String ?? "pressing"
@@ -280,6 +295,21 @@ enum WallAcknowledgement {
         if let rejected = json["rejected"] as? [String: Any], !rejected.isEmpty { return false }
         if let rejected = json["rejected"] as? [Any], !rejected.isEmpty { return false }
         return json["rejected"] == nil || (json["rejected"] as? [String: Any])?.isEmpty == true || (json["rejected"] as? [Any])?.isEmpty == true
+    }
+
+    /// What the wall turned down, by field. A reason is the wall's own words
+    /// when it gave some (a timer command answers with a sentence), and empty
+    /// when it only named the field.
+    static func reasons(_ data: Data) -> [String: String] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
+        var out: [String: String] = [:]
+        if let rejected = json["rejected"] as? [String: Any] {
+            for (key, value) in rejected { out[key] = value as? String ?? "" }
+        } else if let names = json["rejected"] as? [String] {
+            for key in names { out[key] = "" }
+        }
+        if let error = json["error"] as? String { out["error"] = error }
+        return out
     }
 }
 
@@ -455,6 +485,12 @@ final class WallSession {
         }
         WallAddress.localRoute = { [weak self] patch in
             guard let self, !self.link.isLive else { return false }
+            // A timer or a bedtime fade spoken while the wall is away must
+            // not wait in the outbox and run at the next reconnect, maybe the
+            // next day. Returning false posts it directly, so Siri says it did
+            // not work. The stand-in runs its own timers, so it still takes them.
+            if !self.link.isStandIn,
+               patch.keys.contains(where: { $0 == "timer_min" || $0 == "sleep_fade_min" }) { return false }
             self.send(patch)
             return true
         }
@@ -614,15 +650,27 @@ final class WallSession {
     /// Time-sensitive commands must be acknowledged now. They never enter the
     /// offline outbox, where a bedtime action could otherwise run the next day.
     @ObservationIgnored private var routineWriteInFlight = false
+    /// The wall's own reason for turning down the last timer command, when it
+    /// gave one ("This timer has changed..."). Read right after updateRoutine
+    /// returns false, so the screen can say that instead of a generic line.
+    @ObservationIgnored private(set) var routineRejection: String? = nil
 
     func updateRoutine(_ patch: [String: Any]) async -> Bool {
+        // Cleared before the early returns too, so a write turned away here
+        // (no wall, or another routine write in flight) never shows the
+        // reason an earlier command was refused.
+        routineRejection = nil
         guard link.isLive, !routineWriteInFlight, !patch.isEmpty else { return false }
         let requestedHost = host
         routineWriteInFlight = true
         defer { routineWriteInFlight = false }
-        let accepted = await postJSON("/state", patch)
+        let outcome = await post("/state", patch)
         guard requestedHost == host else { return false }
-        guard accepted else { await pollState(); return false }
+        guard outcome.ok else {
+            if case .rejected(let reasons) = outcome,
+               let reason = reasons["timer_action"], !reason.isEmpty { routineRejection = reason }
+            await pollState(); return false
+        }
         for key in patch.keys { pending.removeValue(forKey: key) }
         await pollState()
         guard requestedHost == host else { return false }
@@ -630,14 +678,18 @@ final class WallSession {
         return true
     }
 
+    /// `kind` "alarm" draws the timer face as the alarm rings (its bell and
+    /// rings), so the Alarm tab can preview the alarm rather than the clock.
     func routinePreview(face: String, twentyFour: Bool? = nil,
-                        remaining: Double? = nil, total: Double? = nil) async -> Data? {
+                        remaining: Double? = nil, total: Double? = nil,
+                        kind: String? = nil) async -> Data? {
         guard link.isLive, let endpoint = url("/routines/preview") else { return nil }
         let requestedHost = host
         var payload: [String: Any] = ["face": face]
         if let twentyFour { payload["twenty_four"] = twentyFour }
         if let remaining { payload["remaining_s"] = remaining }
         if let total { payload["total_s"] = total }
+        if let kind { payload["kind"] = kind }
         guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return nil }
         var request = URLRequest(url: endpoint)
         request.httpMethod = "POST"
@@ -688,6 +740,8 @@ final class WallSession {
             keep("ticker_loop", &fresh.tickerLoop, mine.tickerLoop)
             keep("ticker_style", &fresh.tickerStyle, mine.tickerStyle)
             keep("ticker_colors", &fresh.tickerColors, mine.tickerColors)
+            keep("ticker_color", &fresh.ownTickerColor, mine.ownTickerColor)
+            keep("ticker_speed", &fresh.ownTickerSpeed, mine.ownTickerSpeed)
             keep("clock_24h", &fresh.clock24h, mine.clock24h)
             keep("alarm_enabled", &fresh.alarmEnabled, mine.alarmEnabled)
             keep("alarm_time", &fresh.alarmTime, mine.alarmTime)
@@ -811,7 +865,7 @@ final class WallSession {
     /// still this session's business, not the stand-in's.
     private func renderLocally() {
         standIn.refreshNowPlaying()
-        standIn.apply([
+        var patch: [String: Any] = [
             "mode": state.mode,
             "effect": state.effect,
             "match_art": state.matchArt,
@@ -821,8 +875,13 @@ final class WallSession {
             "ticker_loop": state.tickerLoop,
             "ticker_style": state.tickerStyle,
             "ticker_colors": state.tickerColors,
+            // the ticker's pace, and its own ink only when the message has
+            // one, so the stand-in keeps the shared ink otherwise
+            "ticker_speed": state.tickerSpeed,
             "rpm": state.rpm,
-        ])
+        ]
+        if let ink = state.tickerInk { patch["ticker_color"] = ink }
+        standIn.apply(patch)
         let px = standIn.frame()
         // a finished non-looping run hands back to art, wall or no wall
         if standIn.state.mode != state.mode { state.mode = standIn.state.mode }
@@ -898,18 +957,37 @@ final class WallSession {
         if changed { WidgetCenter.shared.reloadAllTimelines() }
     }
 
+    /// What a POST came back with. Only `unreachable` means the wall did not
+    /// hear it. A wall that answered and turned something down was reached,
+    /// and replaying the patch from the outbox later would only repeat it.
+    private enum PostOutcome {
+        case accepted
+        case rejected([String: String])
+        case unreachable
+        var ok: Bool { if case .accepted = self { true } else { false } }
+    }
+
     /// The one JSON POST every endpoint shares: request shape, status check,
     /// timeout. Four hand-rolled copies of this had already drifted apart.
-    private func postJSON(_ path: String, _ obj: [String: Any]) async -> Bool {
+    private func post(_ path: String, _ obj: [String: Any]) async -> PostOutcome {
         guard !explicitStandIn, let u = url(path),
-              let body = try? JSONSerialization.data(withJSONObject: obj) else { return false }
+              let body = try? JSONSerialization.data(withJSONObject: obj) else { return .unreachable }
         var req = URLRequest(url: u)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
         guard let (data, resp) = try? await http.data(for: req),
-              (resp as? HTTPURLResponse)?.statusCode == 200 else { return false }
-        return WallAcknowledgement.accepted(data)
+              let code = (resp as? HTTPURLResponse)?.statusCode else { return .unreachable }
+        // Any 2xx is a delivery. /pressing answers 204 with no body, and
+        // reading that as a failure re-sent the whole pressing every second.
+        guard (200..<300).contains(code), WallAcknowledgement.accepted(data) else {
+            return .rejected(WallAcknowledgement.reasons(data))
+        }
+        return .accepted
+    }
+
+    private func postJSON(_ path: String, _ obj: [String: Any]) async -> Bool {
+        await post(path, obj).ok
     }
 
     private func pullFrame() async {
@@ -986,9 +1064,21 @@ final class WallSession {
     func sendTicker(text: String, style: String, colors: [String], color: String, speed: Double, loop: Bool) async -> Bool {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               ["across", "up", "tilt"].contains(style), speed.isFinite else { return false }
-        let patch: [String: Any] = ["mode": "ticker", "ticker_text": text, "ticker_style": style,
-                                   "ticker_colors": colors, "color": color, "match_art": false,
-                                   "speed": min(3, max(0.1, speed)), "ticker_loop": loop]
+        var patch: [String: Any] = ["mode": "ticker", "ticker_text": text, "ticker_style": style,
+                                    "ticker_colors": colors, "ticker_loop": loop]
+        let pace = min(3, max(0.1, speed))
+        // `color`, `speed` and `match_art` are the Lamp's settings. A wall
+        // that keeps the ticker's ink and pace apart (it reports ticker_color)
+        // takes them under their own keys, so a message leaves the Lamp and
+        // Match Art alone. An older wall only has the shared keys.
+        if state.ownTickerColor != nil {
+            patch["ticker_color"] = color
+            patch["ticker_speed"] = pace
+        } else {
+            patch["color"] = color
+            patch["match_art"] = false
+            patch["speed"] = pace
+        }
         if link.isStandIn { send(patch); return true }
         guard link.isLive else { return false }
         let destination = host
@@ -1033,10 +1123,23 @@ final class WallSession {
             return ok
         }
         guard link.isLive else { return false }
+        let seen = state.shownSeq
         let ok = await postJSON("/replay", ["ts": entry.ts, "title": entry.title, "artist": entry.artist])
-        guard host == destination, !Task.isCancelled else { return false }
-        if ok { await poll(); Taps.landed() }
-        return ok
+        guard host == destination, !Task.isCancelled, ok else { return false }
+        // A 200 only means the wall queued it. Its loop fetches the artwork
+        // next, and a dead link failed there with nothing said while this
+        // read "Requested". Watch for the new sleeve (shown_seq moves) or for
+        // the replay being dropped (replay_active goes false). A slow fetch
+        // that outlasts the watch still counts as requested.
+        for _ in 0..<8 {
+            await poll()
+            guard host == destination, !Task.isCancelled else { return false }
+            if state.shownSeq != seen { break }
+            if !state.replayActive { Taps.error(); return false }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        Taps.landed()
+        return true
     }
 
     func returnToMusic() async -> Bool {
@@ -1160,12 +1263,81 @@ final class WallSession {
     @ObservationIgnored private var lastPressing = ""
 
     func send(_ patch: [String: Any]) {
+        guard let merged = prepareSend(patch) else { return }
+        Task { [weak self] in await self?.deliver(merged) }
+    }
+
+    /// A colour well fires a patch for every step of a drag. Posted on their
+    /// own tasks they raced over parallel connections, and the wall kept
+    /// whichever arrived last rather than the colour the finger stopped on.
+    /// One colour POST at a time, with only the newest waiting behind it,
+    /// keeps the order and drops the steps in between.
+    @ObservationIgnored private var nextColour: [String: Any]? = nil
+    @ObservationIgnored private var colourPosting = false
+
+    func sendColour(_ patch: [String: Any]) {
+        guard let merged = prepareSend(patch) else { return }
+        // Merged into what is waiting, not put in its place. The first step
+        // away from rainbow carries `effect: solid` once (prepareSend has
+        // already set it here), and a second step queued behind it, or a
+        // switch from color to color2, dropped that key: the wall stayed on
+        // rainbow. Every key on this path is a colour setting, so the newest
+        // value for each is the right one.
+        nextColour = (nextColour ?? [:]).merging(merged) { _, new in new }
+        guard !colourPosting else { return }
+        colourPosting = true
+        Task { [weak self] in
+            guard let self else { return }
+            while let next = self.nextColour {
+                self.nextColour = nil
+                await self.deliver(next)
+            }
+            self.colourPosting = false
+        }
+    }
+
+    /// Commands that only mean something now. They never wait in the outbox:
+    /// a bedtime fade, a new timer or a Stop replayed at the next reconnect,
+    /// maybe the next day, would act on whatever the wall is doing by then.
+    private static let momentary: Set<String> = ["timer_min", "sleep_fade_min", "timer_action", "timer_id"]
+
+    /// The network half of a send.
+    private func deliver(_ merged: [String: Any]) async {
+        switch await post("/state", merged) {
+        case .accepted:
+            break
+        case .unreachable:
+            // Intent survives the network. It goes out when the wall
+            // answers again, and the UI says so in the meantime.
+            let durable = merged.filter { !Self.momentary.contains($0.key) }
+            FlightLog.note("SEND", "wall away, queued \(durable.keys.sorted().joined(separator: ","))")
+            if !durable.isEmpty { outbox.add(patch: durable) }
+            Taps.error()
+        case .rejected(let reasons):
+            // The wall heard it and turned some of it down (an older build
+            // that does not know a key, say). Queuing would replay the whole
+            // patch at some later reconnect. Stop holding what it refused
+            // and read back what it actually kept instead.
+            FlightLog.note("SEND", "wall rejected \(reasons.keys.sorted().joined(separator: ","))")
+            // No field named, or an error for the whole request: none of it held.
+            let refused = reasons.isEmpty || reasons["error"] != nil ? Array(merged.keys) : Array(reasons.keys)
+            for key in refused { pending.removeValue(forKey: key) }
+            Taps.error()
+            await pollState()
+        }
+    }
+
+    /// The optimistic half of a send: dedupe, merge into the local state so
+    /// the controls answer at once, hold the keys until the wall echoes them,
+    /// and play it on the stand-in. Returns the patch for the wall, or nil
+    /// when there is nothing to post.
+    private func prepareSend(_ patch: [String: Any]) -> [String: Any]? {
         // The colour well fired identical patches four times in 30ms; the
         // wall needs to hear each intent once.
         let sig = patch.keys.sorted().map { "\($0)=\(patch[$0] ?? "")" }
             .joined(separator: "&")
         if sig == lastSendSig, Date().timeIntervalSince(lastSendAt) < 0.15 {
-            return
+            return nil
         }
         lastSendSig = sig
         lastSendAt = Date()
@@ -1186,6 +1358,8 @@ final class WallSession {
         if let v = merged["ticker_loop"] as? Bool { state.tickerLoop = v }
         if let v = merged["ticker_style"] as? String { state.tickerStyle = v }
         if let v = merged["ticker_colors"] as? [String] { state.tickerColors = v }
+        if let v = merged["ticker_color"] as? String { state.ownTickerColor = v }
+        if let v = merged["ticker_speed"] as? Double { state.ownTickerSpeed = v }
         // Commands read optimistically too: a timer starts counting on the
         // screen the moment it is asked for, not a round-trip later.
         if let v = merged["timer_min"] as? Double {
@@ -1220,24 +1394,14 @@ final class WallSession {
             standIn.apply(merged)
             state = standIn.state
             syncWidget()
-            return
+            return nil
         }
         // An away wall still answers locally: the stand-in mirrors commands
         // like timers so what renders matches what was asked, and the outbox
-        // still carries the intent to the wall when it returns.
+        // still carries the lasting settings to the wall when it returns.
         if !link.isLive { standIn.apply(merged) }
         syncWidget()
-
-        Task { [weak self] in
-            guard let self else { return }
-            if !(await self.postJSON("/state", merged)) {
-                // Intent survives the network. It goes out when the wall
-                // answers again, and the UI says so in the meantime.
-                FlightLog.note("SEND", "wall away; queued \(merged.keys.sorted().joined(separator: ","))")
-                self.outbox.add(patch: merged)
-                Taps.error()
-            }
-        }
+        return merged
     }
 
     /// Everything queued while the wall was away, in one ORDERED pass. The

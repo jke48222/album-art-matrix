@@ -455,7 +455,7 @@ struct WallHero: View {
                 }
 
                 if dragging != nil {
-                    Text("\(Int(duty * 100))%")
+                    Text("\(Int((duty * 100).rounded()))%")
                         .font(.machine(11))
                         .foregroundStyle(Ink.ink)
                         .padding(14)
@@ -512,7 +512,7 @@ struct WallHero: View {
             }
             .accessibilityElement()
             .accessibilityLabel("The wall")
-            .accessibilityValue("Brightness \(Int(duty * 100)) percent")
+            .accessibilityValue("Brightness \(Int((duty * 100).rounded())) percent")
             .accessibilityHint("Adjust to dim the wall. Press and hold to put it to sleep. Swipe left for the next track, right for the previous.")
             .accessibilityAction(named: Text("Turn wall on or off")) { onHold() }
             .accessibilityAction(named: Text("Next track")) { onFlickNext() }
@@ -598,7 +598,7 @@ struct WallHero: View {
 
     @ViewBuilder private var staleStamp: some View {
         if case .offline(let since) = link {
-            Text("Saved · \(since.formatted(date: .omitted, time: .shortened))")
+            Text("Saved at \(since.formatted(date: .omitted, time: .shortened))")
                 .font(.machine(9))
                 .foregroundStyle(Ink.ink)
                 .padding(.horizontal, 10).padding(.vertical, 6)

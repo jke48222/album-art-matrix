@@ -24,17 +24,24 @@ struct ClaudePage: View {
     private var ready: Bool { claude?.isReady == true }
     private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var typedWorkspace: String { workspace.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var needsWorkspace: Bool { (claude?.problem ?? "").localizedCaseInsensitiveContains("workspace") }
+    /// Keyed on the wall's code: a 403 also mentions a workspace, but only
+    /// this problem is fixed by the workspace field.
+    private var needsWorkspace: Bool { claude?.problem_code == "needs_workspace" }
+    /// Nothing read yet from this wall: its saved status is unknown, so the
+    /// page must not ask a connected person to connect.
+    private var unknown: Bool { services == nil && (!wall.link.isLive || readFailed) }
+    private var off: Bool { claude?.isOff == true }
     private var statusTitle: String {
         if !wall.link.isLive { return "Wall offline" }
         if loading && claude == nil { return "Checking the wall" }
         if readFailed { return "Status unavailable" }
+        if off { return "Turned off on this wall" }
         if claude?.pending == true { return "Answering" }
         if claude?.problem != nil { return "Needs attention" }
         return ready ? "Key saved on the wall" : "Not connected"
     }
     private var canSave: Bool {
-        guard wall.link.isLive, services != nil, !busy else { return false }
+        guard wall.link.isLive, services != nil, !busy, !off else { return false }
         let validKey = typedKey.range(of: "^sk-ant-[A-Za-z0-9_-]{20,200}$", options: .regularExpression) != nil
         let validWorkspace = typedWorkspace.range(of: "^wrkspc_[A-Za-z0-9_-]{4,80}$", options: .regularExpression) != nil
         return (typedKey.isEmpty || validKey) && (typedWorkspace.isEmpty || validWorkspace)
@@ -46,16 +53,23 @@ struct ClaudePage: View {
             VStack(alignment: .leading, spacing: 28) {
                 hero
                 if !wall.link.isLive {
-                    CreativeConnectionNotice(title: "Your wall is offline", detail: "Reconnect to manage the key. Any saved status below is from the last read.", symbol: "wifi.slash", tint: clay)
+                    CreativeConnectionNotice(title: "Your wall is offline", detail: unknown ? "Reconnect to read the key status on your wall." : "Reconnect to manage the key. Any saved status below is from the last read.", symbol: "wifi.slash", tint: clay)
+                    if unknown { Button("Try again") { Task { await refresh() } }.font(.ui(16, .semibold)).foregroundStyle(clay).frame(minHeight: 44) }
                 } else if readFailed {
                     CreativeConnectionNotice(title: "Couldn't read this connection", detail: "The key on your wall hasn't changed.", symbol: "exclamationmark.circle", tint: clay)
                     Button("Try again") { Task { await refresh() } }.font(.ui(16, .semibold)).foregroundStyle(clay).frame(minHeight: 44)
                 }
                 if loading && claude == nil {
                     ProgressView("Reading Claude status").font(.ui(15)).tint(clay).frame(maxWidth: .infinity, minHeight: 90)
+                } else if unknown {
+                    // Status unknown: the notice above carries the retry.
+                } else if off {
+                    // A key saved here would not be used, so there is no editor.
+                    CreativeConnectionNotice(title: "Turned off on this wall", detail: "Asking Claude is switched off in this wall's features. Turn it on there before adding a key.", symbol: "power", tint: clay)
+                        .accessibilityIdentifier("claude.off")
                 } else {
                     if let issue = problem ?? claude?.problem {
-                        CreativeConnectionNotice(title: "Let's reconnect", detail: issue, symbol: "exclamationmark.circle", tint: clay)
+                        CreativeConnectionNotice(title: "Needs attention", detail: issue, symbol: "exclamationmark.circle", tint: clay)
                     }
                     if ready {
                         askLink
@@ -94,18 +108,17 @@ struct ClaudePage: View {
                 Image(systemName: "text.bubble").font(.system(size: 21, weight: .medium))
                 Text("CLAUDE").font(.machine(typeSize.isAccessibilitySize ? 10 : 12)).tracking(2)
                 Spacer(minLength: 0)
-                if !typeSize.isAccessibilitySize { Text("WORDS / IDEAS").font(.machine(9)).tracking(1) }
             }.foregroundStyle(clay)
             if !typeSize.isAccessibilitySize {
-                Text("A little more\nunderstanding.").font(.display(38)).tracking(-1).fixedSize(horizontal: false, vertical: true)
+                Text("Questions and answers").font(.display(38)).tracking(-1).fixedSize(horizontal: false, vertical: true)
                 ClaudeSignal(tint: clay).frame(height: 76).accessibilityHidden(true)
             }
             Group {
                 if typeSize.isAccessibilitySize { Text(statusTitle).font(.ui(12, .medium)) }
                 else { Label(statusTitle, systemImage: !wall.link.isLive ? "wifi.slash" : ready && claude?.problem == nil ? "checkmark.circle" : "circle.dotted").font(.ui(14, .medium)) }
             }.foregroundStyle(clay).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("claude.status")
-            if !ready {
-                Text("Questions about your music. Ideas for the room. Connect your Claude API key to begin.")
+            if !ready && !unknown && !off {
+                Text("Ask questions about your music and the wall. Add your Claude API key to begin.")
                     .font(.ui(16)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -160,7 +173,7 @@ struct ClaudePage: View {
                 .accessibilityIdentifier("claude.key")
             DisclosureGroup(isExpanded: $workspaceOpen) {
                 VStack(alignment: .leading, spacing: 12) {
-                    Text("Only add this for a key that can access multiple workspaces. Find the ID in Claude Console → Settings → Workspaces.").font(.ui(14)).foregroundStyle(Ink.dim)
+                    Text("Only add this for a key that can access multiple workspaces. Find the ID in Claude Console, then Settings, then Workspaces.").font(.ui(14)).foregroundStyle(Ink.dim)
                     CreativeCredentialField(title: "Workspace ID", hint: claude?.workspace_set == true ? "Replace saved workspace ID" : "wrkspc_…", text: $workspace, secure: true)
                         .accessibilityIdentifier("claude.workspace")
                     if claude?.workspace_set == true {
@@ -215,6 +228,12 @@ struct ClaudePage: View {
         loading = false; readFailed = fresh == nil
         if let fresh { services = fresh; if needsWorkspace { editing = true; workspaceOpen = true } }
     }
+    static func took(_ patch: [String: String], _ claude: WallServices.Claude?) -> Bool {
+        guard let claude, !claude.isOff else { return false }
+        if let key = patch["api_key"], claude.isReady == key.isEmpty { return false }
+        if let space = patch["workspace"], let set = claude.workspace_set, set == space.isEmpty { return false }
+        return true
+    }
     private func save(_ patch: [String: String], receipt: String) {
         guard wall.link.isLive, !busy else { return }
         let host = wall.host, id = UUID(); revision = id; busy = true; problem = nil; feedback = nil
@@ -223,6 +242,11 @@ struct ClaudePage: View {
             guard !Task.isCancelled, wall.host == host, revision == id else { return }
             revision = UUID(); busy = false
             if let fresh { services = fresh; readFailed = false }
+            // A receipt only when the saved value is now in use on the wall.
+            if why == nil, !Self.took(patch, fresh?.claude) {
+                problem = fresh?.claude?.isOff == true ? "Asking Claude is turned off on this wall, so the key is not in use." : "The wall has not confirmed this change. Check again in a moment."
+                return
+            }
             problem = why
             if why == nil { key = ""; workspace = ""; removing = false; editing = false; feedback = receipt; Taps.commit() }
         }
@@ -322,5 +346,10 @@ extension WallServices {
         var cost_usd: Double?
         var last: Last?
         var problem: String?
+        var problem_code: String?       // "needs_workspace" and others, see brain/ask.py
+        var state: String?              // "off" when asking is switched off on the wall
+        /// Off: the wall has no Asker. An Asker always reports its model and
+        /// workspace; the wall's stand-in for a switched-off feature does not.
+        var isOff: Bool { state == "off" || (ready != true && model == nil && workspace_set == nil) }
     }
 }

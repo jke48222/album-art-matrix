@@ -14,6 +14,8 @@ struct AskPage: View {
     @State private var answer: String?
     @State private var answerWasShown = false
     @State private var requestedWall = true
+    /// The wall's reason an answer that asked for the wall stayed here.
+    @State private var answerReason: String?
     @State private var problem: String?
     @State private var onWall = true
     @State private var status: AskStatus?
@@ -28,12 +30,15 @@ struct AskPage: View {
     private var typed: String { question.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var pending: Bool { busy || status?.pending == true }
     private var connected: Bool { wall.link.isLive }
+    /// False only when the wall says it cannot show answers. An older wall
+    /// sends nothing, so the toggle works as before there.
+    private var canShow: Bool { status?.can_show != false }
     private var history: [AskStatus.Item] {
         (status?.history ?? []).filter { !($0.q == submittedQuestion && $0.a == answer) }
     }
 
     var body: some View {
-        MessagePage(title: "Ask the wall", eyebrow: "A CONVERSATION WITH YOUR ROOM", tint: violet) {
+        MessagePage(title: "Ask the wall", eyebrow: "QUESTIONS AND ANSWERS", tint: violet) {
             if answer == nil { introduction }
             connectionStatus
             if let answer { answerCard(answer) }
@@ -72,10 +77,10 @@ struct AskPage: View {
     private var introduction: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(typeSize.isAccessibilitySize ? "A little clarity." : "A little\nclarity.")
+                Text(typeSize.isAccessibilitySize ? "Ask a question" : "Ask a\nquestion")
                     .font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(46)).foregroundStyle(Ink.ink)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("Your music. Your room.\nWhatever's on your mind.")
+                Text("Ask about your music, the wall or anything else.")
                     .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -124,12 +129,15 @@ struct AskPage: View {
                     problem = nil
                 }
             Rectangle().fill(Ink.hairline).frame(height: 1)
-            Toggle(isOn: $onWall) {
+            // Shown off, not changed, on a wall that cannot show answers, so
+            // the owner's choice comes back if the wall gains the voice.
+            Toggle(isOn: Binding(get: { onWall && canShow }, set: { onWall = $0 })) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Answer on the wall").font(.ui(15, .medium)).foregroundStyle(Ink.ink)
-                    Text("You'll also have a copy here.").font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text(canShow ? "You'll also have a copy here." : "This wall cannot show answers. They stay here.")
+                        .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
-            }.tint(violet).disabled(pending)
+            }.tint(violet).disabled(pending || !canShow)
             MessageAction(title: pending ? "Waiting for the wall…" : "Ask the wall", symbol: "arrow.up", tint: violet,
                           enabled: connected && !statusFailed && status?.ready == true && !typed.isEmpty && !pending,
                           busy: pending, action: ask)
@@ -167,7 +175,7 @@ struct AskPage: View {
             Text(text).font(.ui(typeSize.isAccessibilitySize ? 17 : 20, .medium)).foregroundStyle(Ink.ink)
                 .fixedSize(horizontal: false, vertical: true).textSelection(.enabled)
             readButton(text)
-            Label(answerWasShown ? "Sent to the wall" : (requestedWall ? "Saved here · the wall is busy" : "Only shown here"),
+            Label(answerWasShown ? "Sent to the wall" : (requestedWall ? MessageReply.keptHere(reason: answerReason) : "Only shown here"),
                   systemImage: answerWasShown ? "checkmark.circle.fill" : "text.bubble")
                 .font(.ui(12)).foregroundStyle(violet).fixedSize(horizontal: false, vertical: true)
         }.padding(20).background(violet.opacity(0.075), in: RoundedRectangle(cornerRadius: 24))
@@ -231,17 +239,18 @@ struct AskPage: View {
     private func ask() {
         guard connected, status?.ready == true, !typed.isEmpty, !pending else { return }
         typing = false; busy = true; problem = nil
-        let host = wall.host, draft = typed, show = onWall, request = UUID()
+        let host = wall.host, draft = typed, show = onWall && canShow, request = UUID()
         requestID = request
         Task {
             let result = await AskStatus.ask(host: host, text: draft, onWall: show)
             guard host == wall.host, request == requestID else { return }
             if result.accepted, let text = result.answer, !text.isEmpty {
                 answer = text; submittedQuestion = draft; answerWasShown = result.shown == true; requestedWall = show
+                answerReason = result.reason
                 if typed == draft { question = "" }
                 Taps.landed()
             } else {
-                problem = result.error ?? "The wall returned no answer. Your question is still here; try again."
+                problem = result.error ?? "The wall returned no answer. Your question is still here. Try again."
                 Taps.error()
             }
             await refresh(host: host, duringMutation: true)
@@ -275,14 +284,17 @@ struct NotePage: View {
     private let gold = Color(hex: 0xEBC57F)
     private var typed: String { String(PixelFont.normalize(text).trimmingCharacters(in: .whitespacesAndNewlines).prefix(120)) }
     private var connected: Bool { wall.link.isLive }
-    private var previewKey: String { "\(wall.host)|\(typed)|\(wall.state.color)|\(wall.state.speed)|\(phase)|\(previewRetry)" }
+    /// The ink the wall will draw this note in: main.py uses the album's first
+    /// colour when match_art is on and it has one, else the chosen colour.
+    private var noteInk: String { wall.state.matchArt ? (wall.state.artColors.first ?? wall.state.color) : wall.state.color }
+    private var previewKey: String { "\(wall.host)|\(typed)|\(noteInk)|\(wall.state.speed)|\(phase)|\(previewRetry)" }
 
     var body: some View {
-        MessagePage(title: "Notes", eyebrow: "SOMETHING FOR THE ROOM", tint: gold) {
+        MessagePage(title: "Notes", eyebrow: "A MESSAGE ON THE WALL", tint: gold) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(typeSize.isAccessibilitySize ? "Leave a little light." : "Leave a\nlittle light.").font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(43)).foregroundStyle(Ink.ink)
+                Text(typeSize.isAccessibilitySize ? "Leave a note" : "Leave a\nnote").font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(43)).foregroundStyle(Ink.ink)
                     .fixedSize(horizontal: false, vertical: true)
-                Text("A few words, for a little while. Then back to your wall.").font(.ui(15)).foregroundStyle(Ink.dim)
+                Text("A short message on the wall for a set time. Then the wall goes back to what it was showing.").font(.ui(15)).foregroundStyle(Ink.dim)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !connected {
@@ -320,14 +332,15 @@ struct NotePage: View {
 
     private var draftPreview: some View {
         VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                Color(hex: 0x070807)
+            // The empty state grows with its text (it truncated at large sizes
+            // in a fixed 110 pt frame); the pixel preview keeps a fixed height.
+            Group {
                 if let preview {
                     Image(uiImage: preview).resizable().interpolation(.none).scaledToFit()
                 } else if typed.isEmpty {
                     HStack(spacing: 12) {
                         Image(systemName: "text.alignleft").font(.system(size: 24, weight: .light))
-                        Text("Your words, in lights").font(.ui(14))
+                        Text("Type a note to preview it").font(.ui(14)).fixedSize(horizontal: false, vertical: true)
                     }.foregroundStyle(Ink.dim).padding(20)
                 } else {
                     VStack(spacing: 12) {
@@ -336,7 +349,10 @@ struct NotePage: View {
                             .font(.ui(14)).multilineTextAlignment(.center)
                     }.foregroundStyle(Ink.dim).padding(20)
                 }
-            }.frame(maxWidth: .infinity).frame(height: typed.isEmpty ? (typeSize.isAccessibilitySize ? 110 : 80) : (typeSize.isAccessibilitySize ? 140 : 196))
+            }.frame(maxWidth: .infinity)
+                .frame(minHeight: typed.isEmpty ? (typeSize.isAccessibilitySize ? 110 : 80) : nil)
+                .frame(height: typed.isEmpty ? nil : (typeSize.isAccessibilitySize ? 140 : 196))
+                .background(Color(hex: 0x070807))
                 .clipShape(RoundedRectangle(cornerRadius: 20))
                 .accessibilityLabel(typed.isEmpty ? "Empty note preview" : "Draft note rendered using the wall's pixels")
             HStack(alignment: .firstTextBaseline) {
@@ -403,6 +419,12 @@ struct NotePage: View {
                 Text("Returns to the previous face when time is up. Choosing another face takes the note down.")
                     .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }.disabled(busy)
+            // A note takes the panel, so the wall stops a running timer or a
+            // ringing alarm to show it. Said before the tap, not after.
+            if ["counting", "ringing"].contains(wall.state.timerStatus) {
+                Label("Sending a note ends the running timer.", systemImage: "timer")
+                    .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+            }
             MessageAction(title: busy ? "Waiting for the wall…" : (countdown == nil ? "Put it on the wall" : "Replace the current note"),
                           symbol: "arrow.up.right", tint: gold, enabled: connected && !typed.isEmpty && !busy, busy: busy) { send(clear: false) }
         }.padding(20).messageSurface()
@@ -466,7 +488,7 @@ struct NotePage: View {
             request.httpMethod = "POST"
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONSerialization.data(withJSONObject: ["text": message, "style": "across", "colors": [],
-                "color": wall.state.color, "speed": wall.state.speed, "phase": phase])
+                "color": noteInk, "speed": wall.state.speed, "phase": phase])
             let (data, response) = try await URLSession.shared.data(for: request)
             guard !Task.isCancelled, key == previewKey else { return }
             guard (response as? HTTPURLResponse)?.statusCode == 200,

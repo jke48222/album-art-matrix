@@ -107,7 +107,7 @@ def test_single_teacher_admission_includes_manual_jobs(tmp_path, marks):
     job = threading.Thread(target=lambda: teacher.learn_named("One", "Artist"))
     job.start()
     assert entered.wait(3)
-    assert teacher.status()["learning"] == "Artist — One"
+    assert teacher.status()["learning"] == "One by Artist"
     with pytest.raises(TeachBusy):
         teacher.learn_named("Two", "Artist")
     release.set(); job.join(3)
