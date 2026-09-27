@@ -1,0 +1,343 @@
+{
+  "name": "tetris",
+  "phase": "lost",
+  "status": {
+    "running": true,
+    "seq": 42,
+    "session_id": "qa-arcade-001",
+    "on_wall": true,
+    "game": {
+      "name": "tetris",
+      "title": "Tetris",
+      "players": [
+        "You"
+      ],
+      "over": true,
+      "won": false,
+      "winner": null,
+      "message": "8 lines. 1260 points. The stack reached the top.",
+      "started": 1790578080,
+      "finished": 1790578200,
+      "seq": 1,
+      "voice": true,
+      "well": [
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "",
+          "Z",
+          ""
+        ],
+        [
+          "",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "S",
+          "S",
+          "Z",
+          "Z"
+        ],
+        [
+          "J",
+          "",
+          "",
+          "",
+          "O",
+          "O",
+          "",
+          "S",
+          "S",
+          "Z"
+        ],
+        [
+          "J",
+          "J",
+          "J",
+          "",
+          "O",
+          "O",
+          "L",
+          "L",
+          "L",
+          "L"
+        ]
+      ],
+      "piece": {
+        "kind": "T",
+        "x": 3,
+        "y": 5,
+        "r": 0,
+        "cells": [
+          [
+            4,
+            5
+          ],
+          [
+            3,
+            6
+          ],
+          [
+            4,
+            6
+          ],
+          [
+            5,
+            6
+          ]
+        ]
+      },
+      "ghost_y": null,
+      "score": 1260,
+      "lines": 8,
+      "level": 1
+    },
+    "scores": {
+      "You": {
+        "played": 12,
+        "won": 3,
+        "streak": 0,
+        "best": 2
+      }
+    },
+    "voice_words": [
+      "left",
+      "right",
+      "rotate",
+      "down",
+      "drop",
+      "again"
+    ]
+  },
+  "list": [
+    {
+      "name": "pong",
+      "title": "Pong",
+      "blurb": "A quiet court. Slide your paddle, or choose calibrated tilt. First to seven.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": false
+    },
+    {
+      "name": "snake",
+      "title": "Snake",
+      "blurb": "The phone is the remote. Eat, grow, do not hit the wall.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "tetris",
+      "title": "Tetris",
+      "blurb": "The phone is the remote: left, right, rotate, drop.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    }
+  ]
+}

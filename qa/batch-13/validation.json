@@ -1,0 +1,226 @@
+{
+  "batch": 13,
+  "base": "8bf3600",
+  "implemented_units": [
+    "G18",
+    "G19",
+    "S01",
+    "S02",
+    "S03"
+  ],
+  "validated_at": "2026-09-27T08:47:02.047952+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed"
+  },
+  "tests": {
+    "python_full_suite": 1488,
+    "native_interactions": 7,
+    "game_models_and_http": 52,
+    "apple_music_models": 41,
+    "playback_identity": 99,
+    "ordered_game_input": "passed",
+    "arcade_lifecycle_cancellation": "passed",
+    "symbols": {
+      "checked": 102,
+      "missing": [],
+      "passed": 102
+    }
+  },
+  "native_screens": [
+    {
+      "case": "appleMusic",
+      "state": "room-live",
+      "file": "after/appleMusic/room-live.png",
+      "sha256": "efee4f562026d99155d10b4c133c48e529c86187f69267cab1a99aa9b5318a72"
+    },
+    {
+      "case": "appleMusic",
+      "state": "room-large",
+      "file": "after/appleMusic/room-large.png",
+      "sha256": "53c5bca941155f879845921232a508c4689df2e1a445885aaf6e65c802c04ca7"
+    },
+    {
+      "case": "appleMusic",
+      "state": "room-offline",
+      "file": "after/appleMusic/room-offline.png",
+      "sha256": "41bbb1790a816ee37fcf8c65950bba52b0c634c66c6a8de0bef738770b014ad9"
+    },
+    {
+      "case": "appleMusic-denied",
+      "state": "room-live",
+      "file": "after/appleMusic-denied/room-live.png",
+      "sha256": "e771bdda1c632dbe5a921f7cd7b854dddebc7d564c8c21b413d36a85c8ad2e1b"
+    },
+    {
+      "case": "appleMusic-offline",
+      "state": "room-live",
+      "file": "after/appleMusic-offline/room-live.png",
+      "sha256": "9efeb81d2c1fd097db609eeacaa179b82a9e9037350a56cba2f1f47baa3282fd"
+    },
+    {
+      "case": "appleMusic-paused",
+      "state": "room-live",
+      "file": "after/appleMusic-paused/room-live.png",
+      "sha256": "16740dfa814547b2b36130ad00870ae8fc3ab1611a5805abe68b6e395d546292"
+    },
+    {
+      "case": "appleMusic-playing",
+      "state": "room-live",
+      "file": "after/appleMusic-playing/room-live.png",
+      "sha256": "f37645ec52d0c9af52228585aff329fba8988251eb49216883f0c8837265e203"
+    },
+    {
+      "case": "appleMusic-restricted",
+      "state": "room-live",
+      "file": "after/appleMusic-restricted/room-live.png",
+      "sha256": "3f5b47266f01ea2bf0af763ba8160cce408e2ce384da8fc66aca67ca48c8ec6e"
+    },
+    {
+      "case": "services",
+      "state": "room-live",
+      "file": "after/services/room-live.png",
+      "sha256": "10ba43f06172cac3d883383f48244a71a7e12d6f78d632c6a173f34c5b1ff7e2"
+    },
+    {
+      "case": "services",
+      "state": "room-large",
+      "file": "after/services/room-large.png",
+      "sha256": "f2d4fb5c062997dbd35cb7c0003e69ae4d1aa16182e65c3fc542d003b9bc35ac"
+    },
+    {
+      "case": "services",
+      "state": "room-offline",
+      "file": "after/services/room-offline.png",
+      "sha256": "99480ff807afa808e054a744419cd0ae8f6f1e1685495814f70486df153e7f5b"
+    },
+    {
+      "case": "snake",
+      "state": "room-live",
+      "file": "after/snake/room-live.png",
+      "sha256": "da65f937bbe921d1c5eed9710563927968494274571188168c844681796a0f29"
+    },
+    {
+      "case": "snake",
+      "state": "room-large",
+      "file": "after/snake/room-large.png",
+      "sha256": "70d13ed47d12c8e7c17aca8c1bcf4040ef145a303c51408261e5ce1d0c7923dc"
+    },
+    {
+      "case": "snake",
+      "state": "room-offline",
+      "file": "after/snake/room-offline.png",
+      "sha256": "dadd0b72c2d18bca1c96fad0bb823db6f6f88b466390a28613004e9321fb3a00"
+    },
+    {
+      "case": "snake-lost",
+      "state": "room-live",
+      "file": "after/snake-lost/room-live.png",
+      "sha256": "ef827cf49d122176d9c916c4e76f09405fb9a49f8a259a1456dbe5c5694aae23"
+    },
+    {
+      "case": "snake-paused",
+      "state": "room-live",
+      "file": "after/snake-paused/room-live.png",
+      "sha256": "b99978f522b17d899c47df2dd563e0764f161567a36274ab75d4d0346630bea3"
+    },
+    {
+      "case": "snake-ready",
+      "state": "room-live",
+      "file": "after/snake-ready/room-live.png",
+      "sha256": "c12a60b1942d0a5cdef68b2a9f761cf7cc1d0e22ee250997062a91430f8ed53f"
+    },
+    {
+      "case": "spotify",
+      "state": "room-live",
+      "file": "after/spotify/room-live.png",
+      "sha256": "99db5802418857a92db3ee0f6a9d64934291a01f14f1feeb1891ee069ebc79ba"
+    },
+    {
+      "case": "spotify",
+      "state": "room-large",
+      "file": "after/spotify/room-large.png",
+      "sha256": "8ce805477a4ebc6e97ed7a439be4f9776e36b9df11d5773ce1f608ab90f3f2b2"
+    },
+    {
+      "case": "spotify",
+      "state": "room-offline",
+      "file": "after/spotify/room-offline.png",
+      "sha256": "16a1c94eebe1befe16157b81c59174bfb6be39654a6681991321f7b9b067dc90"
+    },
+    {
+      "case": "spotify-expired",
+      "state": "room-live",
+      "file": "after/spotify-expired/room-live.png",
+      "sha256": "3a33be6b441e5a4ef7b0d6aa7edbaca81987f1915e00aafea402956673bacf20"
+    },
+    {
+      "case": "spotify-unavailable",
+      "state": "room-live",
+      "file": "after/spotify-unavailable/room-live.png",
+      "sha256": "8949690e24b2d3c7e85fc9891c3c2ad95ac5440857ceb731a8e45564140c06b8"
+    },
+    {
+      "case": "spotify-unlinked",
+      "state": "room-live",
+      "file": "after/spotify-unlinked/room-live.png",
+      "sha256": "fb3458c0f4caeeae32c715d2f87794b02b439bd5fd5ed1afa9e1f1e7985ed4c2"
+    },
+    {
+      "case": "tetris",
+      "state": "room-live",
+      "file": "after/tetris/room-live.png",
+      "sha256": "710d1faa2fae173a04dae8355e88d715d352aea2f1718c960e7dff4b510e91ca"
+    },
+    {
+      "case": "tetris",
+      "state": "room-large",
+      "file": "after/tetris/room-large.png",
+      "sha256": "a51b129e3b610b74b50f6f3e01e9f831e209f4f6b1e71c617b7c01b48865d43a"
+    },
+    {
+      "case": "tetris",
+      "state": "room-offline",
+      "file": "after/tetris/room-offline.png",
+      "sha256": "1f7fe1f16abb9e94d4bb574af837a846eb96e4e0aeb9e407487056bc93f452ad"
+    },
+    {
+      "case": "tetris-lost",
+      "state": "room-live",
+      "file": "after/tetris-lost/room-live.png",
+      "sha256": "e04cab59721da2879425eed66055f7bb6e1d406babe8db2b53ba883415da16ec"
+    },
+    {
+      "case": "tetris-paused",
+      "state": "room-live",
+      "file": "after/tetris-paused/room-live.png",
+      "sha256": "d3cdf5a9f486afd42e1ab600fd2b845c70ecbd8637df9cdc30f1818417522400"
+    },
+    {
+      "case": "tetris-ready",
+      "state": "room-live",
+      "file": "after/tetris-ready/room-live.png",
+      "sha256": "d40c3c5e04aff506bff5e0c3eed596265a3ec8965add53d07f3e501f17a284e1"
+    }
+  ],
+  "all_screens_and_native_tests_match_app": {
+    "Tessera.debug.dylib": "aa29379142966d1a1300e85bd1f009ceb4e5615dd5b81e3deed5782d4d3ce944",
+    "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87"
+  },
+  "wall_renderer": {
+    "states": 8,
+    "frames": 48,
+    "sizes": [
+      64,
+      192,
+      512
+    ]
+  },
+  "deployment": "Wall deployed; two games and services verified on managed runtime. Off restored and QA scores removed. Phone installation pending disconnected iPhone18ProMax/CoreDevice4016.",
+  "limitations": [
+    "Physical iPhone permission prompt and real Spotify OAuth require user interaction; automated tests use isolated service fixtures.",
+    "Physical LED colour and on-device touch review remain open."
+  ],
+  "tracking_semantics": "IDs indicate finished implementation; roadmap checkboxes await physical review."
+}

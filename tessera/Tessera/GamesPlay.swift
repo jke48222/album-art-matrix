@@ -1,84 +1,61 @@
-// The games that are played with the body, the ear or a clip: Heardle's
-// player, the sliding tiles, the reaction button, the whistle bird's
-// slider, the yes and no of twenty questions, the quiz card, the arcade's
-// paddles and remotes. Each takes the game's JSON state and a `send`.
-
 import SwiftUI
-import AVFoundation
-import CoreMotion
 
-struct SnakeBoard: View {
-    @Environment(WallSession.self) private var wall
-    let game: GameStatus.Game
-    let accent: Color
-    let send: ([String: Any]) -> Void
-
-    var body: some View {
-        VStack(spacing: 12) {
-            PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
-                .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
-                .gesture(DragGesture(minimumDistance: 12).onEnded { v in
-                    let dx = v.translation.width, dy = v.translation.height
-                    send(["dir": abs(dx) > abs(dy) ? (dx > 0 ? "right" : "left") : (dy > 0 ? "down" : "up")])
-                })
-            DPad(send: send)
-            Text("Swipe or press. Score \(game.state["score"].int ?? 0).").font(.ui(12)).foregroundStyle(Ink.dim)
-            if game.over { ActionPill(title: "Again", filled: true) { send(["again": true]) } }
-        }
-    }
-}
-
-struct DPad: View {
-    let send: ([String: Any]) -> Void
-    var body: some View {
-        VStack(spacing: 6) {
-            key("chevron.up", "up")
-            HStack(spacing: 6) { key("chevron.left", "left"); key("chevron.down", "down"); key("chevron.right", "right") }
-        }
-    }
-    private func key(_ symbol: String, _ dir: String) -> some View {
-        Button { send(["dir": dir]) } label: {
-            Image(systemName: symbol).font(.system(size: 20, weight: .bold)).foregroundStyle(Ink.ink)
-                .frame(width: 64, height: 48)
-                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
-        }
-        .buttonStyle(PressStyle(scale: 0.92))
-    }
-}
-
-struct TetrisBoard: View {
-    @Environment(WallSession.self) private var wall
-    let game: GameStatus.Game
-    let accent: Color
-    let send: ([String: Any]) -> Void
+/// Thumb-sized arcade controls share feedback and availability, not game state.
+struct ArcadeKey: View {
+    let title: String
+    let symbol: String
+    let accessibilityTitle: String
+    var tint: Color = Ink.ink
+    var prominent = false
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var enabled
 
     var body: some View {
-        VStack(spacing: 12) {
-            PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
-                .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: Round.card, style: .continuous))
-                .gesture(DragGesture(minimumDistance: 12).onEnded { v in
-                    let dx = v.translation.width, dy = v.translation.height
-                    if abs(dx) > abs(dy) { send(["move": dx > 0 ? "right" : "left"]) }
-                    else { send(["move": dy > 0 ? "drop" : "rotate"]) }
-                })
-            HStack(spacing: 6) {
-                pad("chevron.left", "left"); pad("arrow.clockwise", "rotate"); pad("chevron.right", "right")
-                pad("chevron.down", "down"); pad("arrow.down.to.line", "drop")
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: symbol).font(.system(size: 18, weight: .semibold))
+                if !title.isEmpty {
+                    Text(title).font(.ui(12, .semibold)).fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Text("Score \(game.state["score"].int ?? 0)  ·  \(game.state["lines"].int ?? 0) lines  ·  level \(game.state["level"].int ?? 1)")
-                .font(.ui(12)).foregroundStyle(Ink.dim)
-            if game.over { ActionPill(title: "Again", filled: true) { send(["again": true]) } }
+            .foregroundStyle(prominent ? Ink.ground : tint)
+            .padding(.horizontal, 6).padding(.vertical, 10)
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .background(prominent ? tint : Ink.plaster, in: RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(tint.opacity(prominent ? 0 : 0.18), lineWidth: 1))
+            .contentShape(RoundedRectangle(cornerRadius: 14))
         }
+        .buttonStyle(PressStyle(scale: reduceMotion ? 1 : 0.96))
+        .accessibilityLabel(accessibilityTitle)
+        .opacity(enabled ? 1 : 0.4)
     }
+}
 
-    private func pad(_ symbol: String, _ move: String) -> some View {
-        Button { send(["move": move]) } label: {
-            Image(systemName: symbol).font(.system(size: 18, weight: .bold)).foregroundStyle(Ink.ink)
-                .frame(maxWidth: .infinity, minHeight: 48)
-                .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster))
-        }
-        .buttonStyle(PressStyle(scale: 0.92))
+struct ArcadeRoundControl: View {
+    let name: String
+    let phase: String
+    let tint: Color
+    let send: ([String: Any]) -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.isEnabled) private var enabled
+
+    var body: some View {
+        Button {
+            send([phase == "ready" ? "start" : phase == "paused" ? "resume" : "pause": true])
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: phase == "playing" ? "pause.fill" : "play.fill")
+                Text(phase == "ready" ? "Start \(name)" : phase == "paused" ? "Resume \(name)" : "Pause \(name)")
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if phase == "paused" { Image(systemName: "arrow.turn.down.right") }
+            }
+            .font(.ui(15, .semibold))
+            .foregroundStyle(phase == "playing" ? tint : Ink.ground)
+            .padding(.horizontal, 16).padding(.vertical, 12).frame(minHeight: 48)
+            .background(phase == "playing" ? Ink.plaster : tint, in: RoundedRectangle(cornerRadius: 14))
+        }.buttonStyle(PressStyle(scale: reduceMotion ? 1 : 0.96)).keyboardShortcut(.space, modifiers: [])
+            .opacity(enabled ? 1 : 0.4)
     }
 }

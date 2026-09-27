@@ -67,7 +67,8 @@ def test_snake(tmp_path):
     g = host.game
     clock = [0.0]
     g._clock = lambda: clock[0]
-    g.last_step = 0.0
+    g.last_step = g.last_sample = 0.0
+    assert host.move(None, {"start": True})["started"]
     assert host.hear("left") and g.next_dir == (1, 0)                    # no reversing
     assert host.hear("up")["dir"] == (0, -1)
     clock[0] = 0.25
@@ -80,11 +81,14 @@ def test_snake(tmp_path):
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
         greenish = (f[..., 1] > 60) & (f[..., 1] > f[..., 0]) & (f[..., 1] > f[..., 2])
-        assert greenish.sum() >= 3 * (size // 32) ** 2
+        assert greenish.sum() >= 3 * (size // 40) ** 2
         save(f, "snake", size, scale)
-    clock[0] = 10.0                                                        # straight into the top wall
-    g.step()
-    assert g.over and g.score >= 1 and g.message.endswith("Say again.")
+    for _ in range(40):                                                # visible steps into the top wall
+        clock[0] += 0.1
+        g.step()
+        if g.over:
+            break
+    assert g.over and g.score >= 1 and g.reason == "wall"
     again = host.move(None, {"again": True})
     assert again["running"] and not host.game.over and host.game.score == 0    # the host starts it over
 
@@ -97,7 +101,8 @@ def test_tetris(tmp_path):
     g = host.game
     clock = [0.0]
     g._clock = lambda: clock[0]
-    g.last_fall = 0.0
+    g.last_fall = g.last_sample = 0.0
+    assert host.move(None, {"start": True})["started"]
     first = g.piece["kind"]
     kinds = {first}
     for _ in range(6):

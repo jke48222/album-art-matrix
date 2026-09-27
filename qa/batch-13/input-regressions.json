@@ -1,0 +1,10 @@
+{
+  "ordered_commands": {
+    "passed": true,
+    "scope": "Ordered command buffer: all assertions passed"
+  },
+  "arcade_lifecycle": {
+    "passed": true,
+    "scope": "Arcade lifecycle: cancellation, coalescing and rescheduling passed"
+  }
+}

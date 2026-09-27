@@ -1,0 +1,62 @@
+{
+  "running": true,
+  "seq": 2,
+  "game": {
+    "name": "snake",
+    "title": "Snake",
+    "players": [
+      "Tessera QA Batch13"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Go.",
+    "started": 1790497407,
+    "finished": null,
+    "seq": 0,
+    "voice": true,
+    "body": [
+      [
+        16,
+        16
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        14,
+        16
+      ]
+    ],
+    "food": [
+      16,
+      18
+    ],
+    "score": 0,
+    "n": 32
+  },
+  "session_id": "42a36e6be9c3415aacf4ba72a89d53ff",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "up",
+    "down",
+    "left",
+    "right",
+    "again"
+  ],
+  "dir": [
+    0,
+    1
+  ]
+}

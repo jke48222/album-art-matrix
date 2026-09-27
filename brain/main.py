@@ -200,6 +200,7 @@ def build_sources(cfg: dict, ctrl):
         print("[main] posters: " + ("TMDB key set; a show on the Mac gets its poster"
                                     if ctrl.posters.ready
                                     else "no TMDB key yet; set one from the phone"))
+    ctrl.source_order = [source.name for source in sources]
     return sources
 
 

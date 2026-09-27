@@ -9,6 +9,8 @@ import json
 import os
 import re
 import threading
+import tempfile
+from contextlib import nullcontext
 
 PATH = os.path.expanduser("~/.config/album-art-matrix/services.json")
 
@@ -63,23 +65,29 @@ class Services:
         try:
             with open(PATH) as fh:
                 saved = json.load(fh)
+            if not isinstance(saved, dict):
+                raise ValueError("invalid service store")
             for s, keys in FIELDS.items():
+                section = saved.get(s)
+                if not isinstance(section, dict):
+                    continue
                 for k in keys:
-                    v = (saved.get(s) or {}).get(k)
+                    v = section.get(k)
                     if isinstance(v, str):
                         self.data[s][k] = v.strip()
-        except (FileNotFoundError, json.JSONDecodeError, OSError):
+        except (ValueError, OSError):
             pass
 
     def get(self, section: str, key: str) -> str:
         with self._lock:
             return self.data[section][key]
 
-    def update(self, patch: dict):
+    def update(self, patch: dict, transaction=None):
         """Apply {section: {key: value}}. Returns (changed, rejected), and
         writes the file when anything changed."""
         changed, rejected = {}, {}
         with self._lock:
+            candidate = {section: dict(values) for section, values in self.data.items()}
             for s, vals in (patch or {}).items():
                 if s not in FIELDS or not isinstance(vals, dict):
                     rejected[s] = vals
@@ -93,17 +101,28 @@ class Services:
                     if v and not re.match(pattern, v):
                         rejected[f"{s}.{k}"] = v
                         continue
-                    if self.data[s][k] != v:
-                        self.data[s][k] = v
+                    if candidate[s][k] != v:
+                        candidate[s][k] = v
                         changed.setdefault(s, {})[k] = v
             if changed:
-                self._save()
+                # Adapters may stage a reversible credential change. Publish
+                # neither values nor side effects until the disk commit succeeds.
+                with transaction(changed, candidate) if transaction else nullcontext():
+                    self._save(candidate)
+                self.data = candidate
         return changed, rejected
 
-    def _save(self):
-        os.makedirs(os.path.dirname(PATH), exist_ok=True)
-        tmp = PATH + ".tmp"
-        with open(tmp, "w") as fh:
-            json.dump(self.data, fh, indent=2)
-        os.chmod(tmp, 0o600)
-        os.replace(tmp, PATH)
+    def _save(self, data):
+        directory = os.path.dirname(PATH)
+        os.makedirs(directory, exist_ok=True)
+        fd, temporary = tempfile.mkstemp(prefix=".services-", dir=directory)
+        try:
+            with os.fdopen(fd, "w") as fh:
+                os.fchmod(fh.fileno(), 0o600)
+                json.dump(data, fh, indent=2)
+                fh.flush()
+                os.fsync(fh.fileno())
+            os.replace(temporary, PATH)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)

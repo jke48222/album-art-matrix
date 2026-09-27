@@ -129,18 +129,24 @@ final class StandIn {
         // this used to run fifteen times a second: the main thread hitched
         // on someone else's XPC and the whole app read as "not flowing".
         // A track changes on the scale of minutes; once a second is honest.
-        guard Date().timeIntervalSince(lastPoll) > 1.0 || lastArtKey.isEmpty else { return }
+        guard Date().timeIntervalSince(lastPoll) > 1.0 else { return }
         lastPoll = Date()
         guard MPMediaLibrary.authorizationStatus() == .authorized else {
-            if art == nil { makeFallbackArt() }
+            if art == nil || !lastArtKey.isEmpty { makeFallbackArt() }
             return
         }
-        let item = MPMusicPlayerController.systemMusicPlayer.nowPlayingItem
-        guard let item else {
-            if art == nil { makeFallbackArt() }
+        let player = MPMusicPlayerController.systemMusicPlayer
+        guard let item = player.nowPlayingItem else {
+            if art == nil || !lastArtKey.isEmpty { makeFallbackArt() }
             return
         }
-        let key = "\(item.persistentID)"
+        let key = "\(item.persistentID)|\(item.playbackStoreID)|\(item.title ?? "")|\(item.artist ?? "")|\(item.albumTitle ?? "")"
+        let position = player.currentPlaybackTime
+        let duration = item.playbackDuration
+        state.songAt = position.isFinite && position >= 0 ? position : nil
+        state.songOf = duration.isFinite && duration > 0 ? duration : nil
+        state.songPlaying = player.playbackState == .playing
+        state.songStamped = Date()
         state.title = item.title
         state.artist = item.artist
         state.album = item.albumTitle
@@ -161,7 +167,7 @@ final class StandIn {
             LocalJournal.append(title: state.title, artist: state.artist,
                                 album: state.album, frame: px)
         } else {
-            makeFallbackArt()
+            makeFallbackArt(clearTrack: false)
         }
     }
 
@@ -176,7 +182,7 @@ final class StandIn {
 
     /// Something to look at when there is no track and no library access: a
     /// field the wall's own palette, not a picture pretending to be a sleeve.
-    private func makeFallbackArt() {
+    private func makeFallbackArt(clearTrack: Bool = true) {
         var px = [UInt8](repeating: 0, count: 64 * 64 * 3)
         for y in 0..<64 {
             for x in 0..<64 {
@@ -191,8 +197,13 @@ final class StandIn {
         art = px
         artColors = ["#e8b04b", "#8a5a2a"]
         state.artColors = artColors
-        state.title = nil
-        state.artist = nil
+        state.shownSeq &+= 1
+        finishCache = nil
+        if clearTrack {
+            state.title = nil; state.artist = nil; state.album = nil
+            state.songAt = nil; state.songOf = nil; state.songStamped = nil; state.songPlaying = false
+            lastArtKey = ""
+        }
     }
 
     // MARK: - Frames

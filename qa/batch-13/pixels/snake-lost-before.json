@@ -1,0 +1,152 @@
+{
+  "name": "snake",
+  "phase": "lost",
+  "status": {
+    "running": true,
+    "seq": 42,
+    "session_id": "qa-arcade-001",
+    "on_wall": true,
+    "game": {
+      "name": "snake",
+      "title": "Snake",
+      "players": [
+        "You"
+      ],
+      "over": true,
+      "won": false,
+      "winner": null,
+      "message": "15 fruit collected. The trail reached the edge.",
+      "started": 1790578080,
+      "finished": 1790578200,
+      "seq": 1,
+      "voice": true,
+      "body": [
+        [
+          31,
+          12
+        ],
+        [
+          30,
+          12
+        ],
+        [
+          29,
+          12
+        ],
+        [
+          28,
+          12
+        ],
+        [
+          27,
+          12
+        ],
+        [
+          26,
+          12
+        ],
+        [
+          25,
+          12
+        ],
+        [
+          24,
+          12
+        ],
+        [
+          23,
+          12
+        ],
+        [
+          23,
+          13
+        ],
+        [
+          23,
+          14
+        ],
+        [
+          23,
+          15
+        ],
+        [
+          23,
+          16
+        ],
+        [
+          23,
+          17
+        ],
+        [
+          24,
+          17
+        ],
+        [
+          25,
+          17
+        ],
+        [
+          26,
+          17
+        ],
+        [
+          27,
+          17
+        ]
+      ],
+      "food": [
+        23,
+        10
+      ],
+      "score": 15,
+      "n": 32
+    },
+    "scores": {
+      "You": {
+        "played": 12,
+        "won": 3,
+        "streak": 0,
+        "best": 2
+      }
+    },
+    "voice_words": [
+      "up",
+      "down",
+      "left",
+      "right",
+      "again"
+    ]
+  },
+  "list": [
+    {
+      "name": "pong",
+      "title": "Pong",
+      "blurb": "A quiet court. Slide your paddle, or choose calibrated tilt. First to seven.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": false
+    },
+    {
+      "name": "snake",
+      "title": "Snake",
+      "blurb": "The phone is the remote. Eat, grow, do not hit the wall.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "tetris",
+      "title": "Tetris",
+      "blurb": "The phone is the remote: left, right, rotate, drop.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    }
+  ]
+}

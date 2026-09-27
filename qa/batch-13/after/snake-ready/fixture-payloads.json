@@ -1,0 +1,111 @@
+{
+  "name": "snake",
+  "phase": "ready",
+  "status": {
+    "running": true,
+    "seq": 42,
+    "session_id": "qa-arcade-001",
+    "on_wall": true,
+    "game": {
+      "name": "snake",
+      "title": "Snake",
+      "players": [
+        "You"
+      ],
+      "over": false,
+      "won": false,
+      "winner": null,
+      "message": "Start when you\u2019re ready.",
+      "started": 1790578080,
+      "finished": null,
+      "seq": 0,
+      "voice": true,
+      "body": [
+        [
+          16,
+          16
+        ],
+        [
+          15,
+          16
+        ],
+        [
+          14,
+          16
+        ]
+      ],
+      "food": [
+        21,
+        14
+      ],
+      "score": 0,
+      "n": 32,
+      "phase": "ready",
+      "reason": "",
+      "direction": "right",
+      "queued": 0,
+      "step_seconds": 0.16,
+      "grid": {
+        "x": 0.09375,
+        "y": 0.171875,
+        "size": 0.8125
+      },
+      "sample_time": 100.0
+    },
+    "scores": {
+      "You": {
+        "played": 12,
+        "won": 3,
+        "streak": 0,
+        "best": 2
+      }
+    },
+    "voice_words": [
+      "up",
+      "down",
+      "left",
+      "right",
+      "start",
+      "pause",
+      "resume",
+      "again"
+    ]
+  },
+  "list": [
+    {
+      "name": "pong",
+      "title": "Pong",
+      "blurb": "A quiet court. Slide your paddle, or choose calibrated tilt. First to seven.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": false
+    },
+    {
+      "name": "snake",
+      "title": "Snake",
+      "blurb": "Follow the fruit. Find your rhythm. Leave yourself a way out.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "tetris",
+      "title": "Tetris",
+      "blurb": "Seven shapes. One clear thought. Make room for what comes next.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    }
+  ],
+  "renderer_root": "/private/tmp/tessera-weather-release-source",
+  "options": {
+    "seed": 13,
+    "step": 0.16
+  }
+}

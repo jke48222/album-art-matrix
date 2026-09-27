@@ -12,7 +12,16 @@ import UIKit
 // MARK: - What the wall says about its services
 
 struct WallServices: Decodable {
-    struct Spotify: Decodable { var client_id: String; var linked: Bool }
+    struct Spotify: Decodable {
+        var client_id: String
+        var linked: Bool
+        var state: String?
+        var problem: String?
+        var checked_at: Double?
+        var retry_after: Double?
+        var account_name: String?
+        var can_retry: Bool?
+    }
     struct Lastfm: Decodable { var user: String; var key_set: Bool? }
     /// Reading needs the username. Writing, the records the ear names, needs
     /// the user token; the rest is the wall's scrobbler saying how that goes.
@@ -202,10 +211,11 @@ struct WallServices: Decodable {
     var mac: Mac?
     var claude: Claude?
     var ears: Bool
+    var source_order: [String]?
     var rejected: [String]?              // field names the wall would not take
 
     private enum Keys: String, CodingKey {
-        case spotify, lastfm, listenbrainz, discogs, tmdb, google, images, airplay, hearing, mac, claude, ears, rejected
+        case spotify, lastfm, listenbrainz, discogs, tmdb, google, images, airplay, hearing, mac, claude, ears, source_order, rejected
     }
 
     /// Each block is read on its own: a wall running a different brain
@@ -226,6 +236,7 @@ struct WallServices: Decodable {
         mac = try? c.decode(Mac.self, forKey: .mac)
         claude = try? c.decode(Claude.self, forKey: .claude)
         ears = (try? c.decode(Bool.self, forKey: .ears)) ?? false
+        source_order = try? c.decode([String].self, forKey: .source_order)
         rejected = try? c.decode([String].self, forKey: .rejected)
     }
 
@@ -240,11 +251,17 @@ struct WallServices: Decodable {
         }
         guard let (data, resp) = try? await URLSession.shared.data(for: req),
               (resp as? HTTPURLResponse)?.statusCode == 200 else { return nil }
+        guard let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              ["spotify", "lastfm", "listenbrainz", "hearing", "claude", "airplay", "images", "discogs"].contains(where: { object[$0] is [String: Any] }) else { return nil }
         return try? JSONDecoder().decode(WallServices.self, from: data)
     }
 
     static func read(host: String) async -> WallServices? {
         await call(host: host, path: "/services")
+    }
+
+    static func retrySpotify(host: String) async -> WallServices? {
+        await call(host: host, path: "/spotify/retry", body: [:])
     }
 
     /// Hand the wall new details. Comes back with what the wall now has,
@@ -263,7 +280,7 @@ struct WallServices: Decodable {
         guard let current = await read(host: host) else { return nil }
         var patch: [String: Any] = [:]
         if !DeveloperKeys.spotifyClientID.isEmpty,
-           current.spotify.client_id != DeveloperKeys.spotifyClientID {
+           current.spotify.client_id.isEmpty {
             patch["spotify"] = ["client_id": DeveloperKeys.spotifyClientID]
         }
         var lastfm: [String: String] = [:]
@@ -381,507 +398,6 @@ struct Problem: View {
 }
 
 // MARK: - The hub
-
-struct ServicesPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-    @Binding var musicConnected: Bool
-    @Binding var musicRefused: Bool
-
-    var body: some View {
-        SetupPage("Services",
-                  blurb: "Connect what you play from. Apple Music is read on this phone. Everything else is read by the wall, and set up from here.") {
-            SetupGroup("Connected here", note: nil) {
-                appleRow
-            }
-            .padding(.top, -12)
-
-            SetupGroup("Read by the wall", note: wallNote) {
-                NavigationLink {
-                    SpotifyPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Spotify", subtitle: spotifyLine,
-                             leading: { ServiceMark(service: .spotify) }) {
-                        StateValue(spotifyState, done: services?.spotify.linked == true)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    LastfmPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Last.fm", subtitle: lastfmLine,
-                             leading: { ServiceMark(service: .lastfm) }) {
-                        StateValue(lastfmOn ? "Connected" : "Set up", done: lastfmOn)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    ListenBrainzPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "ListenBrainz", subtitle: listenbrainzLine,
-                             leading: { GlyphMark(symbol: "waveform") }) {
-                        StateValue(listenbrainzOn ? "Connected" : "Set up", done: listenbrainzOn)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    HearingPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "The wall's ears", subtitle: earsLine,
-                             leading: { GlyphMark(symbol: "ear") }) {
-                        StateValue(earsState, done: services?.hearing?.listening == true)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    ClaudePage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Claude", subtitle: claudeLine,
-                             leading: { GlyphMark(symbol: "text.bubble") }) {
-                        StateValue(services?.claude?.isReady == true ? "Connected" : "Set up",
-                                   done: services?.claude?.isReady == true)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    DiscogsPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Discogs", subtitle: discogsLine,
-                             leading: { GlyphMark(symbol: "opticaldisc") }) {
-                        StateValue(discogsOn ? "Connected" : "Set up", done: discogsOn)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    PostersPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Posters", subtitle: postersLine,
-                             leading: { GlyphMark(symbol: "tv") }) {
-                        StateValue(services?.tmdb?.key_set == true ? "Connected" : "Set up",
-                                   done: services?.tmdb?.key_set == true)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    PicturesPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Pictures", subtitle: picturesLine,
-                             leading: { GlyphMark(symbol: "photo") }) {
-                        let on = services?.google?.key_set == true && services?.google?.cx_set == true
-                        StateValue(on ? "Google" : "The web", done: on)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    ImagesPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "Images", subtitle: imagesLine,
-                             leading: { GlyphMark(symbol: "paintbrush") }) {
-                        StateValue(services?.images?.ready == true ? "Connected" : "Set up",
-                                   done: services?.images?.ready == true)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-                Rule()
-                NavigationLink {
-                    AirPlayPage(accent: accent, services: $services)
-                } label: {
-                    SetupRow(title: "AirPlay", subtitle: airplayLine,
-                             leading: { GlyphMark(symbol: "airplayaudio") }) {
-                        StateValue(airplayState.text, done: airplayState.done)
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-            }
-
-            SetupGroup("Other players", note: otherNote) {
-                otherRow(.tidal, "Reports through Last.fm. In Tidal: Settings, then Connect to Last.fm.")
-                Rule()
-                SetupRow(title: "Deezer", subtitle: "Reports through Last.fm once linked in Safari.",
-                         leading: { ServiceMark(service: .deezer) }) {
-                    ActionPill(title: "Link", filled: false) {
-                        openURL(URL(string: "https://www.deezer.com/account/share")!)
-                    }
-                }
-                Rule()
-                otherRow(.soundcloud, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
-                Rule()
-                otherRow(.youtubeMusic, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
-                Rule()
-                otherRow(.amazonMusic, "In a computer's browser with Web Scrobbler, from a Mac, or out loud.")
-            }
-
-            SetupGroup("A Mac, if you use one", note: "Optional. A Mac running the reporter passes along whatever it plays: Spotify's app, TIDAL, a browser tab on YouTube Music.") {
-                NavigationLink {
-                    AddressesPage(accent: accent, onChange: {})
-                } label: {
-                    SetupRow(title: "Your Mac", subtitle: macLine,
-                             leading: { GlyphMark(symbol: "desktopcomputer") }) {
-                        Value("Addresses")
-                    }
-                }
-                .buttonStyle(PressStyle(scale: 0.99))
-            }
-        }
-        .task { services = await WallServices.seeded(host: wall.host) }
-    }
-
-    private var appleRow: some View {
-        SetupRow(title: musicRefused ? "Apple Music is off in Settings" : "Apple Music",
-                 subtitle: musicRefused ? "Allow it there and it comes back."
-                                        : "What you play on this phone.",
-                 leading: { ServiceMark(service: .appleMusic) }) {
-            if musicRefused {
-                ActionPill(title: "Open Settings") { Service.openSettings() }
-            } else if musicConnected {
-                Done(text: "Connected")
-            } else {
-                ActionPill(title: "Connect") {
-                    StandIn.requestMusicAccess {
-                        wall.push.restart()
-                        musicConnected = Service.appleMusicAuthorized
-                        musicRefused = Service.appleMusicRefused
-                    }
-                }
-            }
-        }
-    }
-
-    private func otherRow(_ svc: Service, _ line: String) -> some View {
-        SetupRow(title: svc.name, subtitle: line, leading: { ServiceMark(service: svc) }) { EmptyView() }
-    }
-
-    // MARK: Words for the rows
-
-    private var lastfmOn: Bool {
-        guard let lf = services?.lastfm else { return false }
-        return !lf.user.isEmpty && lf.key_set == true
-    }
-    private var listenbrainzOn: Bool { !(services?.listenbrainz?.user ?? "").isEmpty }
-    private var airplayState: (text: String, done: Bool) {
-        guard let a = services?.airplay else { return ("Set up", false) }
-        switch a.state {
-        case "playing": return ("Playing", true)
-        case "paused": return ("Paused", true)
-        default: return (a.running == true ? "Ready" : "Set up", a.running == true)
-        }
-    }
-    private var airplayLine: String {
-        guard let a = services?.airplay else { return "The wall as an AirPlay receiver called Wall." }
-        if let from = a.connected_from, !from.isEmpty, a.state != "idle" {
-            return "From \(from)" + (a.last.map { ": \($0)" } ?? "") + "."
-        }
-        if a.running == true { return "Ready. Pick Wall in the AirPlay menu." }
-        return "The wall as an AirPlay receiver called Wall. Needs shairport-sync on the Pi."
-    }
-    private var imagesLine: String {
-        guard let i = services?.images else { return "Say \"create a purple elephant\" and one appears." }
-        if let p = i.problem, i.ready { return p }
-        if i.ready {
-            let n = i.images ?? 0
-            let who = i.provider == "google" ? "Imagen" : "OpenAI"
-            return n == 0 ? "\(who), ready. Say \"create a purple elephant\"." : "\(who). \(n) drawn so far."
-        }
-        return "Say \"create a purple elephant\" and one appears."
-    }
-    private var postersLine: String {
-        guard let t = services?.tmdb else { return "What the Mac watches, as its poster on the wall." }
-        if let p = t.problem, t.key_set { return p }
-        if t.key_set {
-            if let l = t.last { return "Last: \(l.title)" + (l.year.map { ", \($0)" } ?? "") + "." }
-            return "Ready. Play an episode in a browser on the Mac."
-        }
-        return "What the Mac watches, as its poster on the wall."
-    }
-    private var picturesLine: String {
-        guard let g = services?.google else { return "\"Show me the Eiffel Tower\": a picture, on the wall." }
-        if g.key_set && g.cx_set {
-            if let l = g.last { return "Google. Last: \(l.title)." }
-            return "Google Images, ready."
-        }
-        if let l = g.last { return "The web, then Wikipedia. Last: \(l.title)." }
-        return "The web, then Wikipedia. Add a Google key for Google Images."
-    }
-    private var discogsOn: Bool {
-        guard let d = services?.discogs else { return false }
-        return !d.user.isEmpty && d.token_set == true
-    }
-    private var discogsLine: String {
-        guard let d = services?.discogs else { return "Your record shelf, so the wall knows what you own on vinyl." }
-        if let p = d.problem, discogsOn { return p }
-        if discogsOn {
-            let n = d.releases ?? 0
-            return n == 0 ? "Reading \(d.user)'s shelf." : "\(n) record\(n == 1 ? "" : "s") on \(d.user)'s shelf."
-        }
-        return "Your record shelf, so the wall knows what you own on vinyl."
-    }
-
-    private var wallNote: String {
-        services == nil
-            ? "The wall is not answering, so these cannot be set right now."
-            : "Set up from this phone. The wall keeps the details."
-    }
-
-    private var spotifyReady: Bool {
-        !DeveloperKeys.spotifyClientID.isEmpty || !(services?.spotify.client_id ?? "").isEmpty
-    }
-    private var spotifyLine: String {
-        guard let sp = services?.spotify else { return "Any device." }
-        if sp.linked { return "The wall follows this account on any device." }
-        if spotifyReady { return "Sign in once. Free accounts go through Last.fm." }
-        return "Any device. Set up in a couple of minutes."
-    }
-    private var spotifyState: String {
-        guard let sp = services?.spotify else { return spotifyReady ? "Sign in" : "Set up" }
-        return sp.linked ? "Connected" : (spotifyReady ? "Sign in" : "Set up")
-    }
-
-    private var claudeLine: String {
-        guard let c = services?.claude else { return "Ask the wall anything; the answer is drawn on the panel." }
-        if let p = c.problem, c.isReady { return p }
-        if c.isReady { return "Ask the wall, by voice or Siri. \(c.answers ?? 0) answered." }
-        return "Ask the wall anything; the answer is drawn on the panel."
-    }
-
-    private var lastfmLine: String {
-        lastfmOn ? "Following \(services!.lastfm.user)."
-                 : "Spotify, Tidal and Deezer report through it."
-    }
-    private var listenbrainzLine: String {
-        guard listenbrainzOn, let lb = services?.listenbrainz else {
-            return "The open ledger. Username only, no key."
-        }
-        return lb.valid == true ? "Following \(lb.user). The ear's records are written there."
-                                : "Following \(lb.user)."
-    }
-
-    private var earsLine: String {
-        guard let h = services?.hearing else { return "Anything played out loud in the room, named by Shazam." }
-        if let heard = h.heard { return "Hearing \(heard.artist), \(heard.title)." }
-        if !h.on { return "Off. Anything played out loud in the room, when on." }
-        if h.listening { return h.gate_open ? "Listening to the room." : "Listening. The room is quiet." }
-        if h.mic == nil { return "Waiting for a microphone on the wall." }
-        return "Anything played out loud in the room."
-    }
-    private var earsState: String {
-        guard let h = services?.hearing else { return "Set up" }
-        if h.heard != nil { return "Heard" }
-        if !h.on { return "Off" }
-        return h.listening ? "Listening" : (h.mic == nil ? "No mic" : "Waiting")
-    }
-
-    private var otherNote: String {
-        "SoundCloud, YouTube Music and Amazon Music have no way to tell any phone app what they play. In a computer's browser, the free Web Scrobbler extension reports them to Last.fm or ListenBrainz, and the wall reads those. On a Mac running the reporter the wall reads them directly; out loud, the wall's ears pick them up."
-    }
-
-    private var macLine: String {
-        guard let m = services?.mac, !m.endpoint.isEmpty else { return "Not set." }
-        switch m.answering {
-        case true: return "Answering at \(m.endpoint)."
-        case false: return "Not answering at \(m.endpoint)."
-        default: return m.endpoint
-        }
-    }
-}
-
-// MARK: - Spotify
-
-struct SpotifyPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var clientID = ""
-    @State private var busy = false
-    @State private var problem: String?
-    @State private var copied: String?
-    @State private var spotify = SpotifyLink()
-
-    private static let redirects = ["tessera://spotify", "http://127.0.0.1:8888/callback"]
-
-    private var linked: Bool { services?.spotify.linked == true }
-    private var baked: Bool { !DeveloperKeys.spotifyClientID.isEmpty }
-    private var lastfmOn: Bool {
-        guard let lf = services?.lastfm else { return false }
-        return !lf.user.isEmpty && lf.key_set == true
-    }
-    private var savedID: String { services?.spotify.client_id ?? "" }
-    private var typedID: String { clientID.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-    private var blurb: String {
-        baked ? "The wall follows what this account plays, on any device: phone, laptop, speaker. Sign in once."
-              : "The wall follows what this account plays, on any device. It needs an app id of your own: Spotify's word for a key that says which app is asking. Made once, in Safari, on this phone."
-    }
-
-    var body: some View {
-        SetupPage("Spotify", blurb: blurb) {
-            if linked {
-                SetupGroup("Connected", note: "Disconnect forgets the account on the wall. The app id stays, so signing in again is one tap.") {
-                    SetupRow(title: "Any device", subtitle: "Phone, laptop, speaker: the wall follows this account.",
-                             leading: { ServiceMark(service: .spotify) }) {
-                        ActionPill(title: busy ? "One moment" : "Disconnect", filled: false) { unlink() }
-                            .disabled(busy)
-                    }
-                }
-                .padding(.top, -12)
-            } else if baked {
-                SetupGroup("Premium accounts", note: "Once. Spotify asks which account; the wall gets the keys and follows it from then on. Spotify allows this route only for Premium accounts.") {
-                    SetupRow(title: "Sign in to Spotify",
-                             subtitle: spotify.problem ?? (services == nil ? "The wall is not answering right now." : "Any device this account plays on."),
-                             leading: { ServiceMark(service: .spotify) }) {
-                        ActionPill(title: spotify.busy ? "Signing in" : "Sign in") { signIn() }
-                            .disabled(spotify.busy || services == nil)
-                    }
-                }
-                .padding(.top, -12)
-                Problem(text: problem)
-
-                SetupGroup("Free accounts", note: "Spotify refuses its own API to free accounts, but it reports to Last.fm on any plan, and the wall reads Last.fm within seconds. Two steps, both free.") {
-                    SetupRow(title: "Link Spotify on last.fm", subtitle: "Settings, then Applications, then Connect.",
-                             leading: { ServiceMark(service: .lastfm) }) {
-                        ActionPill(title: "Link", filled: false) {
-                            openURL(URL(string: "https://www.last.fm/settings/applications")!)
-                        }
-                    }
-                    Rule()
-                    NavigationLink {
-                        LastfmPage(accent: accent, services: $services)
-                    } label: {
-                        SetupRow(title: "Tell the wall your Last.fm name",
-                                 subtitle: lastfmOn ? "Done. Following \(services!.lastfm.user)." : "One field.",
-                                 leading: { GlyphMark(symbol: "person") }) {
-                            StateValue(lastfmOn ? "Connected" : "Set up", done: lastfmOn)
-                        }
-                    }
-                    .buttonStyle(PressStyle(scale: 0.99))
-                }
-            } else {
-                SetupGroup("1. Make the app id", note: "Free, about two minutes, and it needs Spotify Premium. Spotify allows one app id per account and five listeners on it, which is plenty for a wall. Name it anything.") {
-                    SetupRow(title: "Spotify for Developers", subtitle: "Opens in Safari. Sign in, then Create app.") {
-                        ActionPill(title: "Open") {
-                            openURL(URL(string: "https://developer.spotify.com/dashboard")!)
-                        }
-                    }
-                }
-                .padding(.top, -12)
-
-                SetupGroup("2. Give it these two addresses", note: "Under Redirect URIs, add both, exactly as written. Copy one, paste it into the form, come back for the other.") {
-                    ForEach(Self.redirects, id: \.self) { uri in
-                        HStack(spacing: 12) {
-                            Text(uri)
-                                .font(.machine(13))
-                                .foregroundStyle(Ink.ink)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                            Spacer()
-                            if copied == uri {
-                                Done(text: "Copied")
-                            } else {
-                                ActionPill(title: "Copy", filled: false) { copy(uri) }
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 56)
-                        if uri != Self.redirects.last { Rule() }
-                    }
-                }
-
-                SetupGroup("3. Paste the Client ID", note: "It is on the app's settings page. Not the client secret: the wall never needs that, and should never have it.") {
-                    KeyField(placeholder: "Client ID", text: $clientID)
-                    Rule()
-                    SaveLine(title: "Save to the wall",
-                             enabled: !typedID.isEmpty && typedID != savedID && services != nil,
-                             busy: busy,
-                             done: (!savedID.isEmpty && typedID == savedID) ? "On the wall" : nil,
-                             accent: accent) { save() }
-                }
-
-                if !savedID.isEmpty {
-                    SetupGroup("4. Sign in", note: "Once. Spotify asks which account; the wall gets the keys and follows it from then on.") {
-                        SetupRow(title: "Sign in to Spotify", subtitle: spotify.problem ?? "Any device this account plays on.",
-                                 leading: { ServiceMark(service: .spotify) }) {
-                            ActionPill(title: spotify.busy ? "Signing in" : "Sign in") { signIn() }
-                                .disabled(spotify.busy)
-                        }
-                    }
-                }
-
-                Problem(text: problem)
-                Text("No Premium? Link Spotify to Last.fm instead; that route needs no app id.")
-                    .font(.ui(12)).foregroundStyle(Ink.faint)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 4)
-            }
-        }
-        .onAppear { clientID = savedID }
-        .onChange(of: savedID) { _, fresh in if clientID.isEmpty { clientID = fresh } }
-    }
-
-    private func copy(_ uri: String) {
-        UIPasteboard.general.string = uri
-        copied = uri
-        Taps.detent(intensity: 0.4)
-        Task {
-            try? await Task.sleep(for: .seconds(2))
-            if copied == uri { copied = nil }
-        }
-    }
-
-    private func save() {
-        let id = typedID
-        guard !id.isEmpty, !busy else { return }
-        busy = true
-        Task {
-            let (fresh, why) = await ServiceSave.send(["spotify": ["client_id": id]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit() }
-            busy = false
-        }
-    }
-
-    private func signIn() {
-        Task {
-            // A baked-in id reaches the wall on its own; make sure before the
-            // tokens go over, since the wall refreshes them with that id.
-            if baked, savedID != DeveloperKeys.spotifyClientID {
-                services = await WallServices.seeded(host: wall.host)
-            }
-            let id = baked ? DeveloperKeys.spotifyClientID : savedID
-            guard !id.isEmpty else { problem = "The wall is not answering right now."; return }
-            if await spotify.connect(clientID: id, wall: wall.host) {
-                services = await WallServices.read(host: wall.host)
-                Taps.commit()
-            }
-        }
-    }
-
-    private func unlink() {
-        busy = true
-        Task {
-            if let fresh = await WallServices.unlinkSpotify(host: wall.host) {
-                services = fresh
-                Taps.commit()
-            } else {
-                problem = "The wall is not answering right now."
-            }
-            busy = false
-        }
-    }
-}
-
-// MARK: - Last.fm
 
 struct LastfmPage: View {
     @Environment(WallSession.self) private var wall

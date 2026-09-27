@@ -1,0 +1,69 @@
+{
+  "batch": 13,
+  "units": ["G18", "G19"],
+  "task_intent": "Redesign Tessera arcade games and music service connections.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "researched_at": "2026-09-27",
+  "references": [
+    {
+      "unit": "G18",
+      "source": "Mobbin",
+      "app": "Blank Street",
+      "url": "https://mobbin.com/screens/9149206c-707b-4f72-8f7e-861361ca7a39",
+      "query": "A snake game playing screen with a dark game board, score and directional controls",
+      "image_inspected": true,
+      "observed": "A pale checkerboard, a small green snake with eyes, score above the board, and large separate Pause and End Game controls.",
+      "applied": ["Restrained checkerboard garden and a directional head with two eyes", "Score and phase sit outside the playable grid", "Explicit start and pause; separate accessible directional controls"]
+    },
+    {
+      "unit": "G19",
+      "source": "Mobbin",
+      "app": "Quizlet",
+      "url": "https://mobbin.com/screens/ceac50c6-02e5-48f8-b57c-1bab0880746b",
+      "query": "A falling block puzzle game playing screen with a tall colorful board, next piece preview and score",
+      "image_inspected": true,
+      "observed": "An ordered pale square grid with red and blue dimensional blocks, a separate upcoming purple shape, and minimal score/navigation chrome.",
+      "applied": ["Distinct inset well, softly bevelled blocks, and a permanent next-piece study", "Quiet surrounding space gives the active piece and landing outline priority", "Colour-independent letters and ghost outlines supplement piece colours"]
+    },
+    {
+      "unit": "G19",
+      "source": "Mobbin",
+      "app": "Duolingo",
+      "url": "https://mobbin.com/screens/32ee1c70-7f9d-494b-bd0d-7871cb911650",
+      "image_inspected": true,
+      "observed": "A rotated music lesson with notation and a keyboard, not a falling-block puzzle.",
+      "applied": [],
+      "excluded_reason": "Returned by the search but did not inform this game."
+    },
+    {
+      "units": ["G18", "G19"],
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+      "applied": ["Controls at least 44 points with visible and haptic press feedback", "Board gestures supplement visible controls", "Arrow keys map to directions; pause uses Space; Tetris hard drop uses Return"]
+    },
+    {
+      "units": ["G18", "G19"],
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/designing-for-games",
+      "applied": ["Compact artwork at accessibility text sizes keeps controls reachable", "VoiceOver board summaries and explicit custom actions", "Received game state is drawn without speculative animation; Reduce Motion removes control scaling"]
+    },
+    {
+      "unit": "G19",
+      "source": "The Tetris Company",
+      "url": "https://www.tetris.com/products/merchandise/tetris-retro-mini-arcade-game",
+      "applied": ["Ten cleared lines advance a level and increase falling speed", "Complete rows clear; a stack reaching the top ends the round", "Dedicated movement and rotation controls"]
+    },
+    {
+      "unit": "G19",
+      "source": "The Tetris Company",
+      "url": "https://www.tetris.com/products/video-game/tetris-beat",
+      "applied": ["Persistent ghost landing position gives deliberate placement feedback", "Separate rotation and immediate drop actions"]
+    }
+  ],
+  "composition": {
+    "snake": "Normalized square garden at x=6/64, y=11/64, side=52/64 with the full 32×32 grid. Header and score never cover play cells.",
+    "tetris": "Normalized 10×20 well at x=4/64, y=2/64 with 3/64 cells, plus next/score/lines/level sidebar. Native and Python use identical positions and piece colours.",
+    "adaptations": "True64 omits inset block letters and the fine well grid. Compact 3×5 HUD glyphs preserve all labels and values. Larger renders retain the same geometry; software RGB cannot certify the physical LEDs."
+  }
+}

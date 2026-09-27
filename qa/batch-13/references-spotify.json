@@ -1,0 +1,17 @@
+{
+  "unit": "S03",
+  "task_intent": "Redesign Tessera arcade games and music service connections.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "references": [
+    {"url":"https://mobbin.com/screens/05996e11-1575-498f-9801-3ce2f4bd7e32", "source":"Spotify · Apps and devices", "inspected":true, "applied":"A direct service action with concise supporting copy, flat section hierarchy and secondary connection details."},
+    {"url":"https://mobbin.com/screens/3cbfb008-a262-46b0-b74c-7b28d09f9139", "source":"Spotify · Account", "inspected":true, "applied":"Actual account identity and connection state lead account management; destructive actions stay separate from the primary connection."},
+    {"url":"https://mobbin.com/screens/684dd5bf-f23e-474b-a451-5996714a234a", "source":"Sonos · Personalized listening", "inspected":true, "applied":"A restrained illustration of a personal music account reaching room hardware; integrated on the page rather than another popup."},
+    {"url":"https://mobbin.com/screens/3e6cb40e-0acc-401f-8bd6-667d9bb98cba", "source":"Sonos · Connect music service", "inspected":true, "applied":"One decisive connection action, strong heading and large deliberate breathing room, retaining Tessera's native typography."},
+    {"url":"https://developer.spotify.com/documentation/web-api/tutorials/code-pkce-flow", "applied":"PKCE S256, exact redirect and state validation, secret-free exchange, single-use cancellable authentication continuation."},
+    {"url":"https://developer.spotify.com/documentation/web-api/tutorials/refreshing-tokens", "applied":"Preserve refresh tokens when refresh omits a replacement; expired grants require explicit reauthorization instead of retry loops."},
+    {"url":"https://developer.spotify.com/documentation/web-api/concepts/quota-modes", "applied":"403 guidance distinguishes app-owner Premium requirements and listener allowlisting instead of incorrectly blaming every listener's subscription."},
+    {"url":"https://developer.spotify.com/blog/2026-07-23-web-api-quota-updates", "applied":"Avoid obsolete one-app quota claims; respect Retry-After and expose request limits without a retry storm."},
+    {"url":"https://developer.spotify.com/documentation/web-api/concepts/redirect_uri", "applied":"Show the exact native callback address for setup; desktop authorization validates its explicit loopback path and state before accepting callbacks."}
+  ]
+}

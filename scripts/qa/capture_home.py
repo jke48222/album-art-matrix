@@ -12,6 +12,7 @@ import json
 import hashlib
 import plistlib
 import math
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -209,6 +210,9 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 encoded = base64.b64encode(renderer.frame_at(t).tobytes()).decode()
                 self.response(200,json.dumps({"px":encoded}).encode(),"application/json")
                 return
+            if path.startswith("/services") and "/services" in wall.studies:
+                self.response(200, json.dumps(wall.studies["/services"]).encode(), "application/json")
+                return
             # Acknowledge only inside this fixture. Never forward writes anywhere.
             self.response(200, b"{}", "application/json")
 
@@ -241,6 +245,9 @@ def wall_snapshot(host: str, output: Path) -> tuple[dict, bytes]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--launch-environment", action="append", default=[])
+    parser.add_argument("--connections-state", choices=("unlinked","connected","expired","refused","unavailable"))
+    parser.add_argument("--arcade-games-state", choices=("ready","playing","paused","lost","won"))
     parser.add_argument("--app", type=Path, help="Optional simulator .app to install before capture")
     parser.add_argument("--simulator", default="9108AFCE-E437-42FF-A946-C41349BE6540")
     parser.add_argument("--bundle", default="com.jalenedusei.tessera")
@@ -357,6 +364,15 @@ def main() -> int:
         feature = next(a for a in args.launch_argument if a in NAMES)
         configure(wall, feature, args.motion_games_state, args.renderer_root)
         (output / "fixture-payloads.json").write_text(json.dumps(wall.motion_game_fixture, indent=2) + "\n")
+    if args.connections_state:
+        from connections_fixtures import configure
+        payload = configure(wall, args.connections_state)
+        (output / "fixture-services.json").write_text(json.dumps(payload, indent=2)+"\n")
+    if args.arcade_games_state:
+        from arcade_games_fixtures import configure, NAMES
+        feature = next((a for a in args.launch_argument if a in NAMES), "snake")
+        configure(wall, feature, args.arcade_games_state, args.renderer_root)
+        (output / "fixture-payloads.json").write_text(json.dumps(wall.arcade_game_fixture, indent=2)+"\n")
     captures = []
     try:
         for name in states:
@@ -431,12 +447,24 @@ def main() -> int:
             wall.load(state, frame)
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")
+            for assignment in args.launch_environment:
+                key, value = assignment.split("=", 1)
+                if not key.startswith("TESSERA_QA_"): raise ValueError("Only QA environment keys are supported")
+                os.environ["SIMCTL_CHILD_" + key] = value
             command("xcrun", "simctl", "launch", "--terminate-running-process", args.simulator,
                     args.bundle, "-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES",
                     "-intro.style", "none", "-design", design, "-wall.host", fixture_host,
                     "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO",
                     *args.launch_argument)
             time.sleep(args.settle)
+            # Cold launches can be delayed while Xcode indexes or installs an extension.
+            # Wait for a real state receipt before taking the proof, never accept a blank launch.
+            for _ in range(30):
+                with wall.lock:
+                    reached = any(r == {"method": "GET", "path": "/state"} for r in wall.requests)
+                if reached:
+                    break
+                time.sleep(0.5)
             if variant == "offline":
                 with wall.lock:
                     wall.available = False

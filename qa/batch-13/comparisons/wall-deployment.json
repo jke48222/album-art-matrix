@@ -1,0 +1,60 @@
+{
+  "status": "deployed",
+  "dependency_review": "Compared all changed runtime files and their shared renderer dependencies with the deployed source. All new game modules import before managed restart; backups retained.",
+  "base": "8bf3600",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "b63f538975b18d283d2eddf024dbdb5c24beb58c67bcca9d5661efeb16fb6fd0",
+      "after_sha256": "18b5b53c4b26aaf99ca8e73a6c51716cf5910c642826db6321f3b595808ff536"
+    },
+    {
+      "path": "brain/games/arcade.py",
+      "before_sha256": "354ecd0e3f0da8423052cac58f8bbd1e505098dd65faf912a85c643c6e142332",
+      "after_sha256": "c3c1a0b9454083c2e46cde2cbce24122c5a8ed5c8f834605fead8f2874adb067"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "2b5da5327c3fde914e722de26b87ceaccb6ec2dc2d49a9e5f19c0483f7fa4254",
+      "after_sha256": "f49d1fc2f792f854cc193414cf5f14f8a2cfa1fadcc59a7c28459b11c121e2ac"
+    },
+    {
+      "path": "brain/nowplaying/spotify.py",
+      "before_sha256": "968cc43774145474556ecb421f6f1addc1f2cbea5217dab931be97392695ed0a",
+      "after_sha256": "2e559eca10294349c1809945c9271fa94ea239edca9addd0ae31ffaca08e2d70"
+    },
+    {
+      "path": "brain/services.py",
+      "before_sha256": "3795eba152d04300a925526fd2fe029aa199f2e30c43598c9156ba5786893730",
+      "after_sha256": "eb1a6ee6ecfe383675087a7386430c304713d812d9bc3ff71b3040b37734dd18"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "3452098",
+  "current_pid": "1026679",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 72,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 56.8,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 5,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}

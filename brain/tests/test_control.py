@@ -321,3 +321,13 @@ def test_display_preview_endpoints(api):
     assert all(len(base64.b64decode(value)) == 64*64*3 for value in shots.values())
     from brain.art.effects import Ambient
     assert base64.b64decode(shots['gradient']) == Ambient(64, 'gradient','#e5a343','#215059',2).frame_at(8).tobytes()
+
+
+def test_services_reports_actual_configured_source_order_without_inventing_defaults(api):
+    _, empty = api.get('/services')
+    assert empty['source_order'] == []
+    api.ctrl.source_order = ['spotify', 'phone', 'ears']
+    _, configured = api.get('/services')
+    assert configured['source_order'] == ['spotify', 'phone', 'ears']
+    configured['source_order'].append('lastfm')
+    assert api.ctrl.source_order == ['spotify', 'phone', 'ears']

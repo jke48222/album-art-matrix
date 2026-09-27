@@ -1,0 +1,55 @@
+{
+  "passed": true,
+  "cases": [
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testAppleDeniedExplainsRecovery]' passed (5.045 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testApplePausedStateDoesNotClaimPlaying]' passed (5.112 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testLeavingArcadePausesTheRound]' passed (4.260 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testOverviewOpensOneSpotifyDestination]' passed (6.675 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testSnakeStartsTurnsPausesAndResumes]' passed (10.964 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testSpotifyRetriesAnOutageInline]' passed (8.442 seconds).",
+    "Test Case '-[ConnectionsInteractionTests.ConnectionsInteractionTests testTetrisStartsRotatesDropsAndPauses]' passed (11.229 seconds)."
+  ],
+  "app": "/private/tmp/tessera-batch13-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+  "app_sha256": {
+    "Tessera.debug.dylib": "aa29379142966d1a1300e85bd1f009ceb4e5615dd5b81e3deed5782d4d3ce944",
+    "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87"
+  },
+  "scope": "Real XCUITest taps/type input on production Swift; local HTTP fixture uses production Python arcade rules and synthetic service responses. No physical phone or microphone claim.",
+  "xcode_summary": {
+    "devicesAndConfigurations": [
+      {
+        "device": {
+          "architecture": "arm64",
+          "deviceId": "9108AFCE-E437-42FF-A946-C41349BE6540",
+          "deviceName": "iPhone 17 Pro",
+          "modelName": "iPhone 17 Pro",
+          "osBuildNumber": "23F77",
+          "osVersion": "26.5",
+          "platform": "iOS Simulator"
+        },
+        "expectedFailures": 0,
+        "failedTests": 0,
+        "passedTests": 7,
+        "skippedTests": 0,
+        "testPlanConfiguration": {
+          "configurationId": "1",
+          "configurationName": "Test Scheme Action"
+        }
+      }
+    ],
+    "environmentDescription": "ConnectionsInteractionTests \u00b7 Built with macOS 27.0",
+    "expectedFailures": 0,
+    "failedTests": 0,
+    "finishTime": 1790498478.325,
+    "passedTests": 7,
+    "result": "Passed",
+    "runtimeWarnings": [],
+    "skippedTests": 0,
+    "startTime": 1790498418.265,
+    "statistics": [],
+    "testFailures": [],
+    "title": "Test - ConnectionsInteractionTests",
+    "topInsights": [],
+    "totalTestCount": 7
+  }
+}

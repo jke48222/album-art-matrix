@@ -17,6 +17,8 @@ struct GameScreen: View {
     @State private var version = 0
     @State private var operation = UUID()
     @State private var confirmEnd = false
+    @State private var activeRequest: Task<GameStatus, Error>?
+    @State private var pendingCommands = GameCommandBuffer()
     @State private var pendingSteer = GameSteeringBuffer()
     @State private var pendingCourtCommand: [String: Any]?
     @State private var pendingCourtSession: String?
@@ -30,7 +32,7 @@ struct GameScreen: View {
     private var pollingInterval: Double {
         guard onWall, game?.over == false else { return 1 }
         switch name {
-        case "whistlebird", "pong": return 0.1
+        case "whistlebird", "pong", "snake", "tetris": return 0.1
         case "quiz", "pictionary", "heardle", "twentyq": return 0.25
         case "reaction": return 0.08
         case "reveal": return 0.25
@@ -45,7 +47,7 @@ struct GameScreen: View {
                 if let g = game {
                     if onWall {
                         WallStrip(colour: accent, message: g.over ? "Your finished board." : "Your moves appear here and on the wall.",
-                                  compact: ["connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "sliding", "reveal", "reaction", "whistlebird", "heardle", "twentyq", "quiz", "pictionary", "pong"].contains(g.name))
+                                  compact: ["connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "sliding", "reveal", "reaction", "whistlebird", "heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris"].contains(g.name))
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
                             MessageNotice(title: "Your board is saved", detail: "The wall is showing something else. Bring this game back when you're ready.", symbol: "square.grid.3x3", tint: accent)
@@ -64,8 +66,8 @@ struct GameScreen: View {
                     board(g).id(status?.session_id ?? "\(g.name)-\(g.state["started"].int ?? 0)")
                         .environment(\.gameSessionID, status?.session_id)
                         .environment(\.gameCanInteract, canSteer && onWall && scenePhase == .active)
-                        .disabled(!(["whistlebird", "pong"].contains(g.name) ? canSteer : canSend) || !onWall)
-                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong"].contains(g.name) {
+                        .disabled(!(["whistlebird", "pong", "snake", "tetris"].contains(g.name) ? canSteer : canSend) || !onWall)
+                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris"].contains(g.name) {
                         Text(g.message).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     }
                     if g.over { result(g) }
@@ -73,7 +75,7 @@ struct GameScreen: View {
                         if !wordless.contains(g.name) { wordHand(g) }
                         if g.voice == true { microphone }
                     }
-                    if sending && !["whistlebird", "pong"].contains(name) { HStack(spacing: 10) { ProgressView(); Text("Updating your wall…").font(.ui(13)).foregroundStyle(Ink.dim) }.accessibilityElement(children: .combine) }
+                    if sending && !["whistlebird", "pong", "snake", "tetris"].contains(name) { HStack(spacing: 10) { ProgressView(); Text("Updating your wall…").font(.ui(13)).foregroundStyle(Ink.dim) }.accessibilityElement(children: .combine) }
                     if let text = problem ?? speech.problem { MessageProblem(text: text) }
                     if !g.over {
                         Button("Finish this game") { confirmEnd = true }.font(.ui(13)).foregroundStyle(Ink.dim).frame(minHeight: 44)
@@ -106,12 +108,12 @@ struct GameScreen: View {
                     try? await Task.sleep(for: .seconds(pollingInterval))
                 }
             }
-            .onAppear { chosenPlayer = me }
-            .onDisappear { pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false }
-            .onChange(of: chosenPlayer) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil }
-            .onChange(of: scenePhase) { _, next in if next != .active { pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil } }
-            .onChange(of: wall.host) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false; readFailed = true; typed = "" }
-            .onChange(of: status?.session_id) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); typed = ""; chosenPlayer = game?.players.first ?? "You" }
+            .onAppear { chosenPlayer = me; GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }
+            .onDisappear { pauseArcade(); pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false }
+            .onChange(of: chosenPlayer) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil }
+            .onChange(of: scenePhase) { _, next in if next == .active { GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }; if next != .active { pauseArcade(); pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil } }
+            .onChange(of: wall.host) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false; readFailed = true; typed = "" }
+            .onChange(of: status?.session_id) { _, _ in pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); typed = ""; chosenPlayer = game?.players.first ?? "You" }
     }
 
     @ViewBuilder private func board(_ g: GameStatus.Game) -> some View {
@@ -211,6 +213,11 @@ struct GameScreen: View {
     }
 
     private func post(_ move: [String: Any]) {
+        if ["snake", "tetris"].contains(name), sending {
+            guard canSteer, onWall, game?.over == false else { return }
+            if !pendingCommands.offer(move, session: status?.session_id) { problem = "Let the wall catch up, then try again." }
+            return
+        }
         if name == "pong", move["paddle"] == nil, sending {
             guard canSteer, onWall, game?.over == false else { return }
             pendingCourtCommand = move; pendingCourtSession = status?.session_id
@@ -225,6 +232,7 @@ struct GameScreen: View {
                 return
             }
         }
+        if ["snake", "tetris"].contains(name) { GameArcadeLifecycle.shared.cancel(host: wall.host, session: status?.session_id) }
         perform("move", ["player": me, "move": move])
     }
     private func send() {
@@ -244,6 +252,10 @@ struct GameScreen: View {
         }
         perform("move", ["player": me, "move": move], clearDraft: true)
     }
+    private func pauseArcade() {
+        guard ["snake", "tetris"].contains(name), game?.over == false, let session = status?.session_id else { return }
+        GameArcadeLifecycle.shared.pause(host: wall.host, session: session, player: me, after: activeRequest)
+    }
     private func perform(_ action: String, _ body: [String: Any], clearDraft: Bool = false, leaving: Bool = false) {
         guard canSend else { return }
         let host = wall.host, token = UUID(), draft = typed
@@ -251,9 +263,11 @@ struct GameScreen: View {
         var body = body
         if let session = status?.session_id { body["session_id"] = session }
         operation = token; version += 1; sending = true; problem = nil; speech.stop()
+        let request = Task { try await GameLink.perform(host: host, action, body, timeout: steering || ["snake", "tetris"].contains(name) ? 2 : 30) }
+        activeRequest = request
         Task {
             do {
-                let next = try await GameLink.perform(host: host, action, body, timeout: steering ? 2 : 30)
+                let next = try await request.value
                 guard operation == token, host == wall.host else { return }
                 status = next; readFailed = false
                 if clearDraft && typed == draft { typed = "" }
@@ -262,9 +276,17 @@ struct GameScreen: View {
             } catch {
                 guard operation == token, host == wall.host else { return }
                 problem = error.localizedDescription
-                pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil
+                pendingCommands.clear(); pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil
             }
-            version += 1; sending = false
+            version += 1; sending = false; activeRequest = nil
+            while let command = pendingCommands.take(session: status?.session_id) {
+                guard canSteer, onWall, game?.over == false else { pendingCommands.clear(); break }
+                let phase = game?.state["phase"].string ?? ""
+                let valid = command["start"] as? Bool == true ? phase == "ready"
+                    : command["resume"] as? Bool == true ? phase == "paused"
+                    : phase == "playing"
+                if valid { post(command); return }
+            }
             if let command = pendingCourtCommand, pendingCourtSession == status?.session_id {
                 pendingCourtCommand = nil; pendingCourtSession = nil
                 let phase = game?.state["phase"].string ?? ""

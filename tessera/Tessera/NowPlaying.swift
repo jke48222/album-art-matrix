@@ -24,6 +24,8 @@ final class NowPlayingPush {
     private(set) var lastSent: Date?
     private(set) var lastTitle: String?
     private(set) var running = false
+    private(set) var lastWallReceipt: MusicPushReceipt?
+    private(set) var lastWallError: String?
 
     /// The wall. Set by WallSession, which owns the address.
     @ObservationIgnored var wallHost = ""
@@ -36,11 +38,21 @@ final class NowPlayingPush {
     @ObservationIgnored private let pushSession = UUID().uuidString
     @ObservationIgnored private var sequence = 0
     private var sample: LocalPlaybackSample?
+    @ObservationIgnored private var deliveryGate = MusicPushDeliveryGate()
+    @ObservationIgnored private var sends: [String: Task<Void, Never>] = [:]
+    @ObservationIgnored private var pendingSends: [String: PushPayload] = [:]
+    private struct PushPayload {
+        let data: Data
+        let title: String
+        let artist: String
+        let playing: Bool
+        let sequence: Int
+    }
 
     func refine(_ state: inout WallState) { sample?.apply(to: &state) }
 
     private var targets: [String] {
-        [wallHost, host].filter { !$0.isEmpty }
+        Array(Set([wallHost, host].filter { !$0.isEmpty })).sorted()
     }
 
     /// The broadcast extension (TesseraEars) runs as its own process and
@@ -95,12 +107,17 @@ final class NowPlayingPush {
     }
 
     func stop() {
+        let wasRunning = running
         running = false
+        deliveryGate.reset()
+        sends.values.forEach { $0.cancel() }; sends.removeAll(); pendingSends.removeAll()
+        sample = nil; lastKey = ""
+        lastSent = nil; lastTitle = nil; lastWallReceipt = nil; lastWallError = nil
         timer?.cancel(); timer = nil
         stopKeepAlive()
         for o in observers { NotificationCenter.default.removeObserver(o) }
         observers = []
-        music.endGeneratingPlaybackNotifications()
+        if wasRunning { music.endGeneratingPlaybackNotifications() }
     }
 
     func restart() { stop(); start() }
@@ -109,7 +126,17 @@ final class NowPlayingPush {
 
     private func post(force: Bool) {
         guard running, !targets.isEmpty else { return }
-        guard let item = music.nowPlayingItem else { return }
+        guard MPMediaLibrary.authorizationStatus() == .authorized else { stop(); return }
+        guard let item = music.nowPlayingItem else {
+            sample = nil
+            if !lastKey.isEmpty {
+                lastKey = ""; sequence &+= 1
+                if let data = try? JSONSerialization.data(withJSONObject: ["session": pushSession, "sequence": sequence, "track": "", "playing": false]) {
+                    enqueue(PushPayload(data: data, title: "", artist: "", playing: false, sequence: sequence))
+                }
+            }
+            return
+        }
         let playing = music.playbackState == .playing
         let position = music.currentPlaybackTime
         sample = LocalPlaybackSample(title: item.title ?? "", artist: item.artist ?? "",
@@ -119,7 +146,7 @@ final class NowPlayingPush {
         // A pause is news. It used to be swallowed here, so the wall kept the
         // last "playing" for its whole forty seconds and the room's arm went
         // on tracking a song that had stopped.
-        let key = "\(item.persistentID)|\(playing)"
+        let key = "\(item.persistentID)|\(item.playbackStoreID)|\(item.title ?? "")|\(item.artist ?? "")|\(playing)"
         guard force || key != lastKey || Date().timeIntervalSince(lastSent ?? .distantPast) > 4 else { return }
         lastKey = key
 
@@ -147,22 +174,46 @@ final class NowPlayingPush {
         }
 
         guard let data = try? JSONSerialization.data(withJSONObject: body) else { return }
-        let title = item.title
+        enqueue(PushPayload(data: data, title: item.title ?? "", artist: item.artist ?? "", playing: playing, sequence: sequence))
+    }
+
+    private func enqueue(_ payload: PushPayload) {
+        let generation = deliveryGate.generation
         for target in targets {
-            guard let url = URL(string: "http://\(target)/push") else { continue }
-            var req = URLRequest(url: url)
-            req.httpMethod = "POST"
-            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            req.httpBody = data
-            req.timeoutInterval = 4
-            Task {
-                if let (_, response) = try? await URLSession.shared.data(for: req),
-                   let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) {
-                    await MainActor.run {
-                        self.lastSent = Date()
-                        self.lastTitle = title
+            pendingSends[target] = payload
+            guard sends[target] == nil else { continue }
+            sends[target] = Task { [weak self] in
+                guard let self else { return }
+                while !Task.isCancelled, self.running, generation == self.deliveryGate.generation,
+                      let next = self.pendingSends.removeValue(forKey: target) {
+                    guard self.targets.contains(target), let url = URL(string: "http://\(target)/push") else { break }
+                    var request = URLRequest(url: url)
+                    request.httpMethod = "POST"
+                    request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    request.httpBody = next.data
+                    request.timeoutInterval = 4
+                    do {
+                        let (_, response) = try await URLSession.shared.data(for: request)
+                        guard !Task.isCancelled, self.running,
+                              self.deliveryGate.accept(generation: generation, target: target, sequence: next.sequence, currentTargets: self.targets) else { break }
+                        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
+                            if target == self.wallHost { self.lastWallError = "The wall could not accept this music update." }
+                            continue
+                        }
+                        let now = Date()
+                        self.lastSent = now; self.lastTitle = next.title
+                        if target == self.wallHost {
+                            self.lastWallReceipt = MusicPushReceipt(host: target, title: next.title, artist: next.artist, playing: next.playing, received: now)
+                            self.lastWallError = nil
+                        }
+                    } catch {
+                        guard !Task.isCancelled, self.running, generation == self.deliveryGate.generation,
+                              self.targets.contains(target) else { break }
+                        if target == self.wallHost { self.lastWallError = "The wall hasn’t received this music update. Try again when it’s reachable." }
                     }
                 }
+                // A stopped sender must never clear a newer sender for the same host.
+                if generation == self.deliveryGate.generation { self.sends[target] = nil }
             }
         }
     }

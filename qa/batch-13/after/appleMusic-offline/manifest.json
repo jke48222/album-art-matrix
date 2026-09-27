@@ -1,0 +1,48 @@
+{
+  "captured_at": "2026-09-27T08:44:03.156207+00:00",
+  "simulator": "9108AFCE-E437-42FF-A946-C41349BE6540",
+  "bundle": "com.jalenedusei.tessera",
+  "app": null,
+  "fixture_only": true,
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "frame": "room-live-frame.png",
+      "mode": "art",
+      "state_reads": 6,
+      "fixture_writes": [],
+      "app": null,
+      "launch_arguments": [
+        "-settings",
+        "-settings-page",
+        "services",
+        "-service-page",
+        "appleMusic"
+      ],
+      "library_game_state": null,
+      "word_games_state": null,
+      "motion_games_state": null,
+      "party_games_state": null,
+      "installed_app_identity": {
+        "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+        "files_sha256": {
+          "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+          "Tessera.debug.dylib": "aa29379142966d1a1300e85bd1f009ceb4e5615dd5b81e3deed5782d4d3ce944"
+        },
+        "production_code_file": "Tessera.debug.dylib"
+      },
+      "captured_at": "2026-09-27T08:44:03.005659+00:00",
+      "dynamic_type": "large"
+    }
+  ],
+  "installed_app_identity": {
+    "source": "Actual installed simulator bundle, resolved by simctl get_app_container",
+    "files_sha256": {
+      "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87",
+      "Tessera.debug.dylib": "aa29379142966d1a1300e85bd1f009ceb4e5615dd5b81e3deed5782d4d3ce944"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "interaction_scope": "Rendering and network-state transitions; no simulated touches"
+}

@@ -1,0 +1,11 @@
+{
+  "snake": {
+    "api_moves": "passed",
+    "frame_sha256": "b662a1795ed83c5d7d94b7ac783d8d155a9b4da1f20c990b54e94586faee415b"
+  },
+  "tetris": {
+    "api_moves": "passed",
+    "frame_sha256": "15a46f2e5d5dc02a116bcb47d2f1fe5e0954ca62cd131a93b3d4f093ddd81dae"
+  },
+  "restored_mode": "off"
+}

@@ -1,0 +1,81 @@
+{
+  "unit": "S02",
+  "feature": "Apple Music connection",
+  "task_intent": "Redesign Tessera arcade games and music service connections.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "researched_at": "2026-09-27",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/68822c9a-6612-4bff-8e2a-b03d6a5e081d",
+      "app": "Apple Music",
+      "image_inspected": true,
+      "observed": "The account screen groups Apps with Access separately from account and discovery settings.",
+      "applied": "Music-library permission, iPhone playback and wall delivery are distinct states; permission never masquerades as an Apple Account login or a confirmed wall connection."
+    },
+    {
+      "url": "https://mobbin.com/screens/7ccc50a9-1965-438c-9570-3b50dba7342b",
+      "app": "Apple Music",
+      "image_inspected": true,
+      "observed": "Short explanatory copy sits directly beside the account setting it explains.",
+      "applied": "Denied and managed-restriction states give their own immediate explanation and route to Settings without duplicate popups."
+    },
+    {
+      "url": "https://mobbin.com/screens/a8a69900-a2e3-4b64-a964-f9a9dc9aed19",
+      "app": "Apple Music",
+      "image_inspected": true,
+      "observed": "An account identity block is distinct from account-management actions.",
+      "applied": "A clear Apple Music masthead and playback identity lead into permission-management actions. No account name is invented or requested."
+    },
+    {
+      "url": "https://mobbin.com/screens/33af76b3-c892-42c6-bec6-0a399cf51098",
+      "app": "Amazon Alexa",
+      "image_inspected": true,
+      "observed": "Published service marks identify music connections within a unified grid.",
+      "applied": "Reuse Tessera’s existing Apple Music mark rather than draw a substitute brand symbol."
+    },
+    {
+      "url": "https://mobbin.com/screens/8474beb3-3f89-4f7c-a9bc-5a6ee7e1202e",
+      "app": "Locket",
+      "image_inspected": true,
+      "observed": "Dark service rows use a compact Apple Music icon and one clear Connect action.",
+      "applied": "A single prominent permission action, then an inline current-playback card once access is granted."
+    },
+    {
+      "url": "https://mobbin.com/screens/5eda9498-453e-438c-94d6-b4e65b2b38e4",
+      "app": "Live Nation",
+      "image_inspected": true,
+      "observed": "Linked music accounts use simple service identity and concise connection copy.",
+      "applied": "Plain language about what is read on this iPhone, with no developer-token or OAuth ceremony for an on-device media permission."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://developer.apple.com/documentation/mediaplayer/mpmedialibrary/authorizationstatus()",
+      "applied": "Read actual authorization before querying the media player, distinguish not determined, denied, restricted and authorized, and request permission only after the user’s button press."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/mediaplayer/mpmusicplayercontroller/nowplayingitem",
+      "applied": "A missing now-playing item is a real empty state, not proof that nothing is playing anywhere. The UI explains that only this iPhone’s system player is read; cached wall metadata is never presented as phone playback."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/mediaplayer/mpmediaitem/playbackstoreid",
+      "applied": "Use a validated catalogue identifier for specific song links; local-library items without an ID receive a generic Open Music action."
+    },
+    {
+      "url": "https://marketing.services.apple/apple-music-identity-guidelines",
+      "applied": "Use the existing unmodified Listen on Apple Music badge only for a specific song destination, preserve its proportions and clear space, and distinguish Apple Music from the Music app."
+    },
+    {
+      "url": "https://music.apple.com/us/song/nights/1146195720",
+      "applied": "Verified the regional-independent https://music.apple.com/song/1146195720 route with an HTTP redirect to this canonical song. The production link builder permits only bounded ASCII numeric catalogue IDs."
+    }
+  ],
+  "implementation": {
+    "permission": "Production MPMediaLibrary authorization; no account password, developer token, fabricated OAuth or subscription assumption.",
+    "playback": "Direct MPMusicPlayerController read while the page is active, with cached artwork scoped to the actual song identity.",
+    "wall_delivery": "Only a recent matching-host, matching-song and matching-playback ACK confirms delivery. Mac-reporter success cannot claim that the wall received a song.",
+    "fixtures": "DEBUG-only TESSERA_QA_APPLE_MUSIC states are explicitly marked Preview and never mutate real permissions or wall reporting.",
+    "existing_assets": ["AppleMusicMark", "ListenOnAppleMusic"]
+  }
+}

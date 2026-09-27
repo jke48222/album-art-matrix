@@ -1,0 +1,79 @@
+{
+  "running": true,
+  "seq": 7,
+  "game": {
+    "name": "snake",
+    "title": "Snake",
+    "players": [
+      "Tessera QA Batch13"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Round paused. Your board is saved.",
+    "started": 1790497791,
+    "finished": null,
+    "seq": 3,
+    "voice": true,
+    "body": [
+      [
+        16,
+        16
+      ],
+      [
+        15,
+        16
+      ],
+      [
+        14,
+        16
+      ]
+    ],
+    "food": [
+      9,
+      8
+    ],
+    "score": 0,
+    "n": 32,
+    "phase": "paused",
+    "reason": "",
+    "direction": "right",
+    "queued": 1,
+    "step_seconds": 0.16,
+    "grid": {
+      "x": 0.09375,
+      "y": 0.171875,
+      "size": 0.8125
+    },
+    "sample_time": 33695.24855209
+  },
+  "session_id": "3f853f0ef10842ab9d04fe30267ac362",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    },
+    "Tessera QA Batch13": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "up",
+    "down",
+    "left",
+    "right",
+    "start",
+    "pause",
+    "resume",
+    "again"
+  ],
+  "paused": true
+}

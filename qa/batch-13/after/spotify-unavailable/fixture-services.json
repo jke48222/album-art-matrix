@@ -1,0 +1,42 @@
+{
+  "spotify": {
+    "client_id": "1234567890abcdef1234567890abcdef",
+    "linked": true,
+    "state": "unavailable",
+    "problem": "Spotify is temporarily unavailable.",
+    "can_retry": true
+  },
+  "lastfm": {
+    "user": "",
+    "key_set": false
+  },
+  "listenbrainz": {
+    "user": "",
+    "token_set": false
+  },
+  "ears": false,
+  "hearing": {
+    "on": false,
+    "tools": false,
+    "listening": false,
+    "state": "off",
+    "gate_open": false
+  },
+  "airplay": {
+    "running": false,
+    "state": "off"
+  },
+  "mac": {
+    "endpoint": "",
+    "answering": false
+  },
+  "source_order": [
+    "phone",
+    "airplay",
+    "applemusic",
+    "spotify",
+    "lastfm",
+    "listenbrainz",
+    "ears"
+  ]
+}

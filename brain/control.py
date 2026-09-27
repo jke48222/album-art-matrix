@@ -691,8 +691,8 @@ class ControlState:
             "attempts": 0, "matches": 0, "settings": {},
             "problem": "this wall has no ears"}
         return {
-            "spotify": {"client_id": sp.client_id if sp else "",
-                        "linked": bool(sp and sp.linked)},
+            "spotify": (sp.status() if sp and hasattr(sp, "status") else
+                        {"client_id": sp.client_id if sp else "", "linked": bool(sp and sp.linked)}),
             "lastfm": {"user": lf.user if lf else "",
                        "key_set": bool(lf and lf.api_key)},
             # reading needs the username; writing (the ear's listens) needs
@@ -741,6 +741,7 @@ class ControlState:
             "mac": {"endpoint": (ap.endpoint if ap else ""),
                     "answering": (ap.answering if ap else None)},
             "ears": bool(hearing["tools"] and hearing["mic"]),
+            "source_order": list(getattr(self, "source_order", [])),
         }
 
     def apply_services(self, patch: dict) -> dict:
@@ -749,9 +750,17 @@ class ControlState:
         store = self.services_store
         if store is None:
             return {"services": "not available"}
-        changed, rejected = store.update(patch)
-        if "spotify" in changed and self.spotify:
-            self.spotify.set_client_id(store.get("spotify", "client_id"))
+        transactional_spotify = self.spotify and hasattr(self.spotify, "client_id_transaction")
+        if transactional_spotify:
+            from contextlib import nullcontext
+            def credential_transaction(changed, candidate):
+                return (self.spotify.client_id_transaction(candidate["spotify"]["client_id"])
+                        if "spotify" in changed else nullcontext())
+            changed, rejected = store.update(patch, transaction=credential_transaction)
+        else:
+            changed, rejected = store.update(patch)
+            if "spotify" in changed and self.spotify:
+                self.spotify.set_client_id(store.get("spotify", "client_id"))
         if "lastfm" in changed and self.lastfm:
             self.lastfm.configure(store.get("lastfm", "api_key"),
                                   store.get("lastfm", "user"))
@@ -2091,40 +2100,63 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 patch = self._body()
                 if patch is None:
                     return
-                rejected = ctrl.apply_services(patch)
+                try:
+                    rejected = ctrl.apply_services(patch)
+                except OSError:
+                    self._json(503, {"error": "the wall could not save these service details; try again"})
+                    return
                 resp = ctrl.services()
                 if rejected:
                     resp["rejected"] = sorted(rejected)   # names only, never values
                 self._json(200, resp)
                 return
 
-            if self.path.startswith("/spotify/tokens"):
+            if self.path == "/spotify/tokens":
                 tokens = self._body()
                 if tokens is None:
                     return
-                # The phone sends the app id the tokens belong to; a wall
-                # that has none (or another) takes it first, since refresh
-                # only works with the id that issued them.
-                cid = tokens.pop("client_id", None)
-                if isinstance(cid, str) and cid.strip() and ctrl.spotify is not None \
-                        and cid.strip() != ctrl.spotify.client_id:
-                    ctrl.apply_services({"spotify": {"client_id": cid.strip()}})
                 if ctrl.spotify is None or not ctrl.spotify.client_id:
-                    self._json(409, {"error": "the wall has no Spotify app id yet"})
+                    self._json(409, {"error": "save a Spotify app ID on the wall before signing in"})
                     return
-                if not tokens.get("access_token") or not tokens.get("refresh_token"):
-                    self._json(400, {"error": "access_token and refresh_token needed"})
+                cid = tokens.get("client_id")
+                if cid is not None and (not isinstance(cid, str) or cid.strip() != ctrl.spotify.client_id):
+                    self._json(409, {"error": "the Spotify app ID changed; sign in again"})
                     return
-                ctrl.spotify.accept_tokens(tokens)
+                try:
+                    ctrl.spotify.accept_tokens(tokens, client_id=cid.strip() if isinstance(cid, str) else ctrl.spotify.client_id)
+                except ValueError:
+                    self._json(400, {"error": "Spotify sent invalid credentials; sign in again"})
+                    return
+                except OSError:
+                    self._json(503, {"error": "the wall could not save the Spotify connection; try again"})
+                    return
                 ctrl.dirty.set()
-                print("[control] Spotify linked from the phone")
                 self._json(200, ctrl.services())
                 return
 
-            if self.path.startswith("/spotify/unlink"):
-                if ctrl.spotify is not None:
-                    ctrl.spotify.unlink()
-                    print("[control] Spotify unlinked from the phone")
+            if self.path == "/spotify/unlink":
+                if self._body() is None:
+                    return
+                try:
+                    if ctrl.spotify is not None:
+                        ctrl.spotify.unlink()
+                except OSError:
+                    self._json(503, {"error": "the wall could not forget the Spotify connection; try again"})
+                    return
+                ctrl.dirty.set()
+                self._json(200, ctrl.services())
+                return
+
+            if self.path == "/spotify/retry":
+                if self._body() is None:
+                    return
+                if ctrl.spotify is None:
+                    self._json(404, {"error": "Spotify is not available on this wall"})
+                    return
+                if not ctrl.spotify.retry():
+                    self._json(409, {"error": "Spotify needs sign-in or more time before retrying"})
+                    return
+                ctrl.nudge()
                 self._json(200, ctrl.services())
                 return
 

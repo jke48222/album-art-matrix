@@ -1,0 +1,29 @@
+{
+  "snake": {
+    "api_moves": "passed",
+    "frame_sha256": "6cdae44749072b25055c972013a16e0a6d5f5ecc2f7d81bda6bec8e06909cf39"
+  },
+  "tetris": {
+    "api_moves": "passed",
+    "frame_sha256": "a77bc13b85593e43c2dc04e25fec0ee13b098cc44fee7804b3062e2a8afc8517"
+  },
+  "services": {
+    "source_order": [
+      "phone",
+      "airplay",
+      "applemusic",
+      "posters",
+      "spotify",
+      "lastfm",
+      "listenbrainz",
+      "ears"
+    ],
+    "spotify_state": "unlinked"
+  },
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "managed_services": [
+    "active",
+    "active"
+  ]
+}

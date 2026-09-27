@@ -1,0 +1,15 @@
+{
+  "status": "not installed",
+  "device": "iPhone 18 Pro Max",
+  "device_id": "1BED2E47-0A74-5F9E-A99A-61408BF6382C",
+  "signed_build": "passed",
+  "signature_verification": "passed",
+  "app": "/tmp/tessera-batch13-phone/Build/Products/Debug-iphoneos/Tessera.app",
+  "app_sha256": {
+    "Tessera.debug.dylib": "4e0a60f26369ba87b5a731a116a8fcea69c87ff3f97733b71f971dc8b2247d8f",
+    "Tessera": "b4a95cf579b6af3ba9f511055783cba89a737527014a491092220dccddaa8549"
+  },
+  "reason": "CoreDevice reports target unavailable and no trusted connectivity; install when reconnected.",
+  "error_code": 4016,
+  "launch": "User prefers opening the installed app himself."
+}
