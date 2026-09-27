@@ -1,0 +1,50 @@
+{
+  "running": true,
+  "seq": 1,
+  "game": {
+    "name": "heardle",
+    "title": "Heardle",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "1 second. Say the song.",
+    "started": 1790491617,
+    "finished": null,
+    "seq": 0,
+    "voice": true,
+    "seconds": 1,
+    "step": 0,
+    "steps": [
+      1,
+      2,
+      4,
+      7,
+      11,
+      16
+    ],
+    "preview": "http://127.0.0.1:65359/clip.wav",
+    "tries": [],
+    "turn": "Tessera QA Batch 12",
+    "playing": false,
+    "answer": null
+  },
+  "session_id": "cd6c99b0092d47ed8bfcffa1296bf041",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 1,
+      "streak": 1,
+      "best": 1,
+      "last": 1789509562
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "skip"
+  ]
+}

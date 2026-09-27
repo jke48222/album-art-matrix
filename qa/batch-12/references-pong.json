@@ -1,0 +1,88 @@
+{
+  "unit": "G17",
+  "feature": "Pong",
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine five Tessera music, conversation and arcade games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "mobbin_query": "A tennis match scoreboard with two opposing players and a court",
+  "mobbin": [
+    {
+      "app": "Apple TV",
+      "screen_id": "562607f7-848c-4f7f-922c-f1619ae1c03b",
+      "mobbin_url": "https://mobbin.com/screens/562607f7-848c-4f7f-922c-f1619ae1c03b",
+      "image_inspected": true,
+      "observed": "A football field occupies the main image. Two opposing team marks and large scores sit together below it, with a small Final status between them and action controls beneath.",
+      "applied": "Give the court an uninterrupted geometric stage; place opposing scores in a separate top band and ready/serve/paused/final labels beneath the scores. Keep all phone controls outside the playable rectangle."
+    },
+    {
+      "app": "Box Box Club",
+      "screen_id": "ef660f52-730c-4f4c-999c-ef6656275068",
+      "mobbin_url": "https://mobbin.com/screens/ef660f52-730c-4f4c-999c-ef6656275068",
+      "image_inspected": true,
+      "observed": "An opposed-driver comparison uses orange and teal halves with separate names and numbers; the shared comparison remains visually centred between the competitors.",
+      "applied": "Use restrained mint and blue identities for the left and right paddles and scores, with explicit LEFT/RIGHT player names so colour is never the only cue."
+    },
+    {
+      "app": "theScore",
+      "screen_id": "bc93136f-e9d5-4459-a725-012fe731ae69",
+      "mobbin_url": "https://mobbin.com/screens/bc93136f-e9d5-4459-a725-012fe731ae69",
+      "image_inspected": true,
+      "observed": "A dark tennis match list separates opponent names, event names and court metadata using a restrained text hierarchy.",
+      "applied": "Keep rally length, target score and point feedback subordinate to the court and primary paddle controls."
+    }
+  ],
+  "primary_web": [
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+      "title": "Apple Human Interface Guidelines \u2014 Game controls",
+      "applied": "Offer direct dragging on the court plus visible Up/Down buttons, a native height slider and VoiceOver adjustable control. Keep controls outside gameplay, at least 44 points high, with press feedback and a compact largest-text layout."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/gestures/",
+      "title": "Apple Human Interface Guidelines \u2014 Gestures",
+      "applied": "Make touch the immediate default; keep tilt optional because motion and posture cannot be required of every player. Direct touch takes over from tilt immediately."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/coremotion/cmmotionmanager",
+      "title": "Apple Developer Documentation \u2014 CMMotionManager",
+      "applied": "Use the app's sole motion manager at a controlled update interval. Calibrate the current attitude and paddle position over twelve samples, smooth small changes and guard queued callbacks with a session token."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/coremotion/cmmotionmanager/startdevicemotionupdates()",
+      "title": "Apple Developer Documentation \u2014 Device-motion updates",
+      "applied": "Stop device-motion updates on disable, background, navigation, connection loss, player change and match completion. Do not automatically restart tilt when a screen or connection returns."
+    },
+    {
+      "url": "https://box2d.org/documentation/md_simulation.html",
+      "title": "Box2D \u2014 Simulation",
+      "applied": "Use a fixed 120Hz accumulator and sweep to each first contact within a step, then integrate the remaining time after reflection. Include the ball's full radius at paddles and court edges, bound rally speed and pause after a long frame delay instead of skipping unseen physics. No Box2D dependency was added."
+    }
+  ],
+  "assets": "Original SwiftUI Canvas court and production Python RGB renderer share normalized geometry and palette. No third-party images are shipped as application assets.",
+  "validation": {
+    "command": "python -m pytest brain/tests/test_arcade.py brain/tests/test_pong_batch.py -q",
+    "passed": 54,
+    "render_sizes": [
+      64,
+      192,
+      512
+    ],
+    "covered": [
+      "explicit ready/serve",
+      "finite inputs and clocks",
+      "selected-player ownership",
+      "fixed-step equivalence",
+      "fast swept collision",
+      "ball-edge and simultaneous corner contacts",
+      "bounded rally speed",
+      "nonretroactive paddle input",
+      "point and serve transitions",
+      "wall-mode freeze",
+      "pause/resume countdown",
+      "complete and restart metadata",
+      "normalized RGB geometry"
+    ],
+    "scope": "Root integration owns native builds, simulator interactions and captures, wall and iPhone deployment, and physical panel review. Software RGB renders do not certify LED colour."
+  }
+}

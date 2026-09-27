@@ -33,116 +33,292 @@ DIRS = {"up": (0, -1), "down": (0, 1), "left": (-1, 0), "right": (1, 0)}
 class Pong(Game):
     name = "pong"
     title = "Pong"
-    blurb = "Your phone is the paddle: tilt it. First to seven."
+    blurb = "A quiet court. Slide your paddle, or choose calibrated tilt. First to seven."
     min_players = 1
     max_players = 2
     by_voice = False
 
-    def setup(self):
-        self.rng = random.Random(self.options.get("seed"))
-        self.to = int(self.options.get("to", 7))
-        self.paddles = [0.5, 0.5]                # 0 top .. 1 bottom, centre of each paddle
-        self.pad_h = 0.22
-        self.score = [0, 0]
-        self.last_t = time.monotonic()
-        self._clock = time.monotonic
-        self.trail: list[list[float]] = []
-        self.serve(self.rng.choice((-1, 1)))
-        self.message = "Tilt to move."
+    STEP = 1 / 120
+    MAX_DELAY = 1.0
+    BALL_R = 1.15 / 64
+    COURT_TOP, COURT_BOTTOM = 0.22, 0.94
+    PAD_X, PAD_W = 0.055, 0.018
+    COLOURS = {"ground": (12, 23, 28), "court": (16, 33, 39), "line": (58, 80, 81),
+               "left": (149, 207, 181), "right": (133, 183, 222), "ball": (247, 201, 100),
+               "white": (255, 255, 255), "dim": (163, 177, 172), "trail": (102, 90, 59)}
 
-    def serve(self, direction: int):
-        self.ball = [0.5, 0.5]
-        ang = self.rng.uniform(-0.6, 0.6)
-        speed = 0.45
+    @staticmethod
+    def _finite(value):
         import math
-        self.vel = [direction * speed * math.cos(ang), speed * math.sin(ang)]
-        self.wait_until = self._clock() + 1.0
+        if type(value) not in (int, float):
+            return False
+        try:
+            return math.isfinite(value)
+        except OverflowError:
+            return False
 
-    def apply(self, move: dict, player: str) -> dict:
-        if "paddle" in move:
-            try:
-                y = max(0.0, min(1.0, float(move["paddle"])))
-            except (TypeError, ValueError):
-                return {"error": "paddle from 0 to 1"}
-            side = 0 if player == self.players[0] else 1 if len(self.players) > 1 else 0
-            if "side" in move and move["side"] in (0, 1):
-                side = int(move["side"])
-            self.paddles[side] = y
-            return {"paddle": y, "side": side}
-        if move.get("again"):
-            self.score = [0, 0]
-            self.over = False
-            self.serve(1)
+    def _now(self):
+        value = self._clock()
+        return float(value) if self._finite(value) and value >= 0 else None
+
+    def setup(self):
+        target = self.options.get("to", 7)
+        if type(target) is not int or not 1 <= target <= 21:
+            raise ValueError("Choose a winning score from 1 to 21.")
+        self.to = target
+        self.rng = random.Random(self.options.get("seed"))
+        self._clock = getattr(self, "_clock", time.monotonic)
+        now = self._now()
+        if now is None:
+            raise ValueError("The court clock is unavailable.")
+        self.pad_h = 0.22
+        self.paddles = [0.5, 0.5]
+        self.score = [0, 0]
+        self.ball, self.vel = [0.5, 0.5], [0.0, 0.0]
+        self.trail = []
+        self.last_t = now
+        self.accumulator = 0.0
+        self.wait_until = now
+        self.phase = "ready"
+        self.paused_phase = "ready"
+        self.paused_remaining = 0.0
+        self.next_direction = self.rng.choice((-1, 1))
+        self.ai_error = self.rng.uniform(-0.065, 0.065)
+        self.rally = self.longest_rally = self.point_number = 0
+        self.last_point = None
+        self.over = self.won = False
+        self.winner = self.finished = None
+        self.started = time.time()
+        self.message = "Find your position. Serve when you’re ready."
+
+    def serve(self, direction=1):
+        import math
+        if self.over or direction not in (-1, 1):
+            return False
+        now = self._now()
+        if now is None:
+            return False
+        self.ball = [0.5, 0.5]
+        angle = self.rng.uniform(-0.55, 0.55)
+        self.vel = [direction * .45 * math.cos(angle), .45 * math.sin(angle)]
+        self.next_direction = direction
+        self.trail = []
+        self.rally = 0
+        self.phase = "serve"
+        self.wait_until = now + 1.0
+        self.last_t = now
+        self.accumulator = 0.0
+        self.ai_error = self.rng.uniform(-0.065, 0.065)
+        self.message = "Serve coming. Keep your paddle ready."
+        self.changed()
+        return True
+
+    def apply(self, move, player):
+        if not isinstance(move, dict) or not move:
+            return {"error": "Choose a paddle position, serve, pause or resume."}
+        if set(move) == {"again"} and move["again"] is True:
+            self.setup()
             self.changed()
             return {"again": True}
-        return {"error": "paddle, or again"}
+        if self.over:
+            return {"error": "This match is finished. Start another from the results."}
+        if set(move) in ({"paddle"}, {"paddle", "side"}):
+            value = move["paddle"]
+            if not self._finite(value) or not 0 <= value <= 1:
+                return {"error": "Paddle position must be a number from 0 to 1."}
+            if player not in self.players:
+                return {"error": "Choose a player in this match."}
+            side = self.players.index(player)
+            if "side" in move and (type(move["side"]) is not int or move["side"] != side):
+                return {"error": "Move the paddle for your selected player."}
+            if self._now() is None:
+                return {"error": "The court clock is unavailable."}
+            self.step()  # New input never changes the preceding physics interval.
+            if self.over:
+                return {"error": "This match just finished."}
+            y = min(1 - self.pad_h / 2, max(self.pad_h / 2, float(value)))
+            self.paddles[side] = y
+            self.changed()
+            return {"paddle": y, "side": side}
+        if set(move) == {"serve"} and move["serve"] is True:
+            if self.phase != "ready":
+                return {"error": "A serve is already in progress."}
+            return {"served": True} if self.serve(self.next_direction) else {"error": "The court clock is unavailable."}
+        if set(move) == {"pause"} and move["pause"] is True:
+            self.step()
+            if self.over:
+                return {"error": "This match is finished."}
+            if self.phase not in ("serve", "rally", "point"):
+                return {"error": "The court is already at rest."}
+            self._pause("Match paused. Your court is saved.")
+            return {"paused": True}
+        if set(move) == {"resume"} and move["resume"] is True:
+            now = self._now()
+            if self.phase != "paused" or now is None:
+                return {"error": "There is no paused rally to resume."}
+            self.phase = self.paused_phase
+            self.wait_until = now + self.paused_remaining
+            self.last_t, self.accumulator = now, 0.0
+            self.message = "Back on court."
+            self.changed()
+            return {"resumed": True}
+        return {"error": "Choose one paddle, serve, pause or resume command."}
+
+    def _pause(self, message):
+        now = self._now()
+        self.paused_phase = self.phase
+        self.paused_remaining = max(0.0, self.wait_until - (now if now is not None else self.last_t))
+        self.phase, self.accumulator = "paused", 0.0
+        self.message = message
+        self.changed()
+
+    def _point(self, scorer):
+        self.score[scorer] += 1
+        self.last_point = scorer
+        self.point_number += 1
+        self.trail = []
+        self.vel = [0.0, 0.0]
+        self.next_direction = -1 if scorer == 0 else 1
+        if self.score[scorer] >= self.to:
+            self.phase = "finished"
+            winner = self.players[scorer] if len(self.players) == 2 else None
+            who = self.players[scorer] if scorer < len(self.players) else "The wall"
+            self.finish(won=scorer == 0 if len(self.players) == 1 else True, winner=winner,
+                        message=f"Match to {who}. {max(self.score)}–{min(self.score)}.")
+        else:
+            self.phase = "point"
+            self.wait_until = (self._now() or self.last_t) + 1.2
+            who = self.players[scorer] if scorer < len(self.players) else "The wall"
+            self.message = f"Point to {who}. {self.score[0]}–{self.score[1]}."
+            self.changed()
+
+    def _advance(self, duration):
+        import math
+        half = self.pad_h / 2
+        if len(self.players) == 1:
+            target = min(1 - half, max(half, self.ball[1] + self.ai_error))
+            delta = target - self.paddles[1]
+            self.paddles[1] += max(-.65 * duration, min(.65 * duration, delta))
+        radius_y = self.BALL_R / (self.COURT_BOTTOM - self.COURT_TOP)
+        left = self.PAD_X + self.PAD_W / 2 + self.BALL_R
+        right = 1 - left
+        remaining = duration
+        for _ in range(5):
+            if remaining <= 1e-10 or self.phase != "rally":
+                break
+            x, y = self.ball
+            vx, vy = self.vel
+            events = []
+            if vy < 0:
+                events.append((max(0., (radius_y - y) / vy), "top"))
+            elif vy > 0:
+                events.append((max(0., (1 - radius_y - y) / vy), "bottom"))
+            if vx < 0:
+                events.append((max(0., (left - x) / vx), "left"))
+            elif vx > 0:
+                events.append((max(0., (right - x) / vx), "right"))
+            travel, event = min(events, default=(remaining + 1, ""))
+            if travel > remaining:
+                self.ball = [x + vx * remaining, y + vy * remaining]
+                break
+            self.ball = [x + vx * travel, y + vy * travel]
+            remaining -= travel
+            if event in ("top", "bottom"):
+                self.ball[1] = radius_y if event == "top" else 1 - radius_y
+                self.vel[1] = -vy
+            else:
+                side = 0 if event == "left" else 1
+                self.ball[0] = left if side == 0 else right
+                offset = self.ball[1] - self.paddles[side]
+                if abs(offset) > half + radius_y:
+                    self._point(1 - side)
+                    break
+                speed = min(1.2, max(.45, math.hypot(vx, vy) * 1.04))
+                angle = max(-1, min(1, offset / half)) * .95
+                self.vel = [(1 if side == 0 else -1) * speed * math.cos(angle), speed * math.sin(angle)]
+                self.rally += 1
+                self.longest_rally = max(self.longest_rally, self.rally)
+        self.trail.append(list(self.ball))
+        del self.trail[:-9]
 
     def step(self):
-        now = self._clock()
-        dt = min(0.05, max(0.0, now - self.last_t))
-        self.last_t = now
-        if self.over or now < self.wait_until:
+        now = self._now()
+        if now is None or now < self.last_t:
             return
-        # the wall's own paddle, when there is one player: it follows the ball, imperfectly
-        if len(self.players) < 2:
-            target = self.ball[1] + self.rng.uniform(-0.06, 0.06)
-            self.paddles[1] += (target - self.paddles[1]) * min(1.0, 3.5 * dt)
-        x, y = self.ball
-        x += self.vel[0] * dt
-        y += self.vel[1] * dt
-        if y <= 0.0 or y >= 1.0:
-            self.vel[1] = -self.vel[1]
-            y = max(0.0, min(1.0, y))
-        for side, px in ((0, 0.04), (1, 0.96)):
-            if (side == 0 and x <= px and self.vel[0] < 0) or (side == 1 and x >= px and self.vel[0] > 0):
-                py = self.paddles[side]
-                if abs(y - py) <= self.pad_h / 2:
-                    self.vel[0] = -self.vel[0] * 1.05
-                    self.vel[1] += (y - py) / (self.pad_h / 2) * 0.25
-                    x = px
-                else:
-                    self.score[1 - side] += 1
-                    if max(self.score) >= self.to:
-                        winner = self.players[self.score.index(max(self.score))] if len(self.players) > 1 else None
-                        won = self.score[0] > self.score[1]
-                        self.finish(won=won, winner=winner, message=f"{self.score[0]} to {self.score[1]}.")
-                    else:
-                        self.message = f"{self.score[0]} to {self.score[1]}."
-                        self.serve(1 if side == 0 else -1)
-                        self.changed()
-                    return
-        self.ball = [x, y]
-        self.trail.append([x, y])
-        del self.trail[:-6]
+        previous, self.last_t = self.last_t, now
+        dt = now - previous
+        if self.over or self.phase in ("ready", "paused"):
+            return
+        ctrl = getattr(self.host, "ctrl", None)
+        if ctrl is not None and getattr(self.host, "game", None) is self and ctrl.get().get("mode") != "game":
+            self._pause("Your match is saved while the wall shows something else. Return to the court to resume.")
+            return
+        if dt > self.MAX_DELAY:
+            # Preserve countdown time from before a delayed frame, too.
+            remaining = max(0.0, self.wait_until - previous)
+            self._pause("The court paused while the wall caught up. Resume when you’re ready.")
+            self.paused_remaining = remaining
+            return
+        if self.phase == "point":
+            if now >= self.wait_until:
+                self.serve(self.next_direction)
+            return
+        if self.phase == "serve":
+            if now < self.wait_until:
+                return
+            self.phase = "rally"
+            self.message = "Keep the rally alive."
+            dt = max(0.0, now - max(previous, self.wait_until))
+            self.changed()
+        self.accumulator += dt
+        while self.accumulator + 1e-10 >= self.STEP and self.phase == "rally":
+            self.accumulator = max(0.0, self.accumulator - self.STEP)
+            self._advance(self.STEP)
+        if self.phase != "rally":
+            self.accumulator = 0.0
 
-    def state(self) -> dict:
+    def state(self):
         self.step()
-        return {"ball": [round(self.ball[0], 3), round(self.ball[1], 3)], "paddles": [round(p, 3) for p in self.paddles],
-                "score": self.score, "to": self.to}
+        now = self._now()
+        return {"ball": [round(v, 5) for v in self.ball], "velocity": list(self.vel),
+                "paddles": [round(p, 5) for p in self.paddles], "score": list(self.score), "to": self.to,
+                "phase": self.phase, "rally": self.rally, "longest_rally": self.longest_rally,
+                "point_number": self.point_number, "last_point": self.last_point,
+                "serve_remaining": round(max(0., self.wait_until - (now if now is not None else self.last_t)), 3) if self.phase == "serve" else 0,
+                "sample_time": now if now is not None else self.last_t,
+                "trail": [list(p) for p in self.trail], "paddle_height": self.pad_h,
+                "court_top": self.COURT_TOP, "court_bottom": self.COURT_BOTTOM,
+                "ball_radius": self.BALL_R, "paddle_x": self.PAD_X, "paddle_width": self.PAD_W,
+                "opponent": self.players[1] if len(self.players) == 2 else "The wall"}
 
-    def frame_at(self, size: int, t: float):
+    def frame_at(self, size, t):
+        from .board import rect, text_centred
         self.step()
         c = blank(size)
-        s = scale_for(size)
-        for k in range(0, size, 4 * s):
-            fill(c, size // 2 - (0 if s == 1 else 1), k, s, 2 * s, FAINT)
-        ph = int(self.pad_h * size)
-        for side, x in ((0, s), (1, size - 2 * s)):
-            y = int(self.paddles[side] * size) - ph // 2
-            rounded(c, x, max(0, y), s, ph, INK, 1 if s == 1 else 1)
-        for i, (tx, ty) in enumerate(self.trail[:-1]):
-            f = (i + 1) / max(1, len(self.trail))
-            fill(c, int(tx * (size - 2 * s)), int(ty * (size - 2 * s)), 2 * s, 2 * s, mix(BLACK, YELLOW, 0.35 * f))
-        bx, by = int(self.ball[0] * (size - 2 * s)), int(self.ball[1] * (size - 2 * s))
-        if s > 1:
-            glow(c, bx + s, by + s, 5 * s, YELLOW, 0.3)
-        fill(c, bx, by, 2 * s, 2 * s, YELLOW)
-        text_right(c, str(self.score[0]), size // 2 - 4 * s, 2 * s, DIM, 2 if s == 1 else 3)
-        text(c, str(self.score[1]), size // 2 + 4 * s, 2 * s, DIM, 2 if s == 1 else 3)
-        if self._clock() < self.wait_until and not self.over:
-            disc(c, size / 2, size / 2, 2 * s, mix(INK, BLACK, 0.4))
-        if self.over:
-            banner(c, size, self.message, INK, (40, 40, 44))
+        colours = self.COLOURS
+        c[:] = colours["ground"]
+        top, bottom = self.COURT_TOP * size, self.COURT_BOTTOM * size
+        court_h = bottom - top
+        margin = round(size * .025)
+        fill(c, margin, round(top), size - margin * 2, round(court_h), colours["court"])
+        rect(c, margin, round(top), size - margin * 2, round(court_h), colours["line"], max(1, round(size / 256)))
+        for index in range(10):
+            fill(c, round(size * .5), round(top + court_h * (index / 10 + .02)), max(1, round(size / 256)), max(1, round(court_h * .045)), colours["line"])
+        scale = max(1, int(size * .12 / 7))
+        text_centred(c, str(self.score[0]), round(size * .28), round(size * .035), colours["left"], scale)
+        text_centred(c, str(self.score[1]), round(size * .72), round(size * .035), colours["right"], scale)
+        for side in (0, 1):
+            px = self.PAD_X if side == 0 else 1 - self.PAD_X
+            colour = colours["left"] if side == 0 else colours["right"]
+            rounded(c, round((px - self.PAD_W / 2) * size), round(top + (self.paddles[side] - self.pad_h / 2) * court_h),
+                    max(1, round(self.PAD_W * size)), max(1, round(self.pad_h * court_h)), colour, max(1, round(size / 256)))
+        for index, (x, y) in enumerate(self.trail[:-1]):
+            opacity = (index + 1) / max(1, len(self.trail)) * .65
+            disc(c, x * size, top + y * court_h, max(1, self.BALL_R * size * .6), mix(colours["court"], colours["trail"], opacity))
+        disc(c, self.ball[0] * size, top + self.ball[1] * court_h, max(1, self.BALL_R * size), colours["ball"])
+        if self.phase in ("ready", "serve", "paused", "finished"):
+            label = {"ready": "READY", "serve": "SERVE", "paused": "PAUSED", "finished": "FINAL"}[self.phase]
+            text_centred(c, label, size // 2, round(size * .14), colours["white"], max(1, size // 192))
         return c
 
 @register

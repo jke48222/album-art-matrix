@@ -1,0 +1,58 @@
+{
+  "units": ["G14", "G16"],
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine five Tessera music, conversation and arcade games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "references": [
+    {
+      "unit": "G14",
+      "source": "Mobbin",
+      "app": "ChatGPT",
+      "url": "https://mobbin.com/screens/8cf567ec-633b-4d0b-81b8-4e05de5fdb9c",
+      "image_inspected": true,
+      "observed": "User and assistant turns have distinct hierarchy, thinking status sits inline, and the previous exchange remains available during a response.",
+      "applied": "A numbered question card sits above persistent yes/sort-of/no controls, with an acknowledged conversation trail. Provider thinking and retry stay inline without losing previously recorded answers."
+    },
+    {
+      "unit": "G16",
+      "source": "Mobbin",
+      "app": "Headspace",
+      "url": "https://mobbin.com/screens/19144eaf-4d48-472c-b732-f6fa87ecefb7",
+      "image_inspected": true,
+      "observed": "A broad illustrative canvas takes priority, while the activity title, one clear action and elapsed/total timing remain separate and legible.",
+      "applied": "The streamed Pictionary picture is the central full-resolution canvas. The guess field, timer and drawing status stay outside it; completed art remains unobscured."
+    },
+    {
+      "unit": "G14",
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/feedback",
+      "observed": "Inline feedback communicates current status, success, failure and recoverable mistakes without interrupting the surrounding task.",
+      "applied": "Answers receive their own receipt and question token; stale answers are rejected. Provider failures preserve the round and offer one explicit retry instead of recording a loss."
+    },
+    {
+      "unit": "G16",
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+      "observed": "Unknown-duration work should use indeterminate activity feedback; known-duration activity can expose meaningful progress, with actionable recovery for a stalled operation.",
+      "applied": "Drawing uses a pencil motif and activity indicator until a partial image arrives. The real round timer starts with that first image, continues through final generation, and freezes at completion. Failed generation can retry without starting a phantom timer."
+    },
+    {
+      "units": ["G14", "G16"],
+      "source": "Apple Human Interface Guidelines",
+      "url": "https://developer.apple.com/design/human-interface-guidelines/writing",
+      "observed": "Action labels should make the next action clear, and copy should account for the available screen space.",
+      "applied": "Explicit answer, retry and guess labels accompany symbols. Larger text stacks controls and presents the complete question; wall microcopy shortens at64 while the complete question remains available through paged lines."
+    }
+  ],
+  "implementation": {
+    "twentyq": "Async provider requests commit under the host lock only while the game owns its session; generation IDs discard stale completions. Native answers send question_id; legacy tokenless answers remain supported. Full history is retained and expands inline.",
+    "pictionary": "Provider callbacks publish copied512px masters with ownership checks. Late partials/finals/errors cannot reopen finished rounds; retries retain the secret, strict whole-name matching supports ordinary plurals, and correct answers freeze elapsed time."
+  },
+  "validation": {
+    "python_tests": "65 passed across test_twentyq.py, test_pictionary.py and test_conversation_batch.py",
+    "swift_syntax": "Both owned Swift files passed swiftc frontend parse",
+    "true_pixel_sizes_inspected": [64, 192, 512],
+    "states_inspected": ["question", "thinking", "provider error", "guessed", "drawing", "playing sketch", "finished art"]
+  }
+}

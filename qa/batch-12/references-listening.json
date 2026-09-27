@@ -1,0 +1,85 @@
+{
+  "batch": 12,
+  "units": ["G13", "G15"],
+  "task_intent": "Refine five Tessera music, conversation and arcade games with expressive native boards and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "researched_at": "2026-09-27",
+  "features": {
+    "G13": {
+      "query": "Music guessing game with a short audio clip player, attempt progress and typed song answer",
+      "mobbin": [
+        {
+          "app": "Deezer",
+          "url": "https://mobbin.com/screens/c3dbe857-56e2-4391-a937-ddf595924290",
+          "image_inspected": true,
+          "observed": "The listening quiz separates its large time indicator from the answer controls and round count.",
+          "applied": "A finite listening window on a record face, six compact equal-width hint segments, and direct playback and answer controls. No oversized proportional bars."
+        },
+        {
+          "app": "Cleo AI",
+          "url": "https://mobbin.com/screens/1ba9e49e-12f7-4d04-b0bb-789b1751b1d1",
+          "image_inspected": true,
+          "observed": "An audio readiness screen places a single clear action beneath a headphone illustration.",
+          "applied": "One unmistakable listen action with explicit loading, cancel, retry and playback states."
+        },
+        {
+          "app": "Alan",
+          "url": "https://mobbin.com/screens/39960abd-b76b-4662-a2e5-3e05036feaae",
+          "image_inspected": true,
+          "observed": "A question is paired with deliberate selectable answers and a clearly inactive Check action.",
+          "applied": "Composer action visibly requires a meaningful answer; submitted text remains until a matching server receipt."
+        }
+      ],
+      "primary": [
+        {
+          "url": "https://developer.apple.com/documentation/avfoundation/avplayer",
+          "applied": "Observe media position and actual time-control state; clip using the item's forwardPlaybackEndTime rather than a wall-clock sleep begun before buffering."
+        },
+        {
+          "url": "https://developer.apple.com/documentation/avfaudio/handling-audio-interruptions",
+          "applied": "Stop and release the owned audio session on interruption, route loss, scene change and feature exit; do not resume audio unexpectedly."
+        }
+      ],
+      "composition": "The native board displays the actual 512px production wall artwork. The same record face and six-step geometry render at true 64 and 192 pixels. Controls and accessible history remain outside the artwork."
+    },
+    "G15": {
+      "query": "Multiplayer trivia question screen with answer input, countdown, player scores and revealed answer",
+      "mobbin": [
+        {
+          "app": "Deezer",
+          "url": "https://mobbin.com/screens/c3dbe857-56e2-4391-a937-ddf595924290",
+          "image_inspected": true,
+          "observed": "Round progress and countdown remain visible above the answers.",
+          "applied": "Persistent question number and remaining seconds anchor the question card, with a progress rule reflecting the configured duration."
+        },
+        {
+          "app": "Yubo",
+          "url": "https://mobbin.com/screens/0df53845-1879-4027-8e20-60ecef3f669c",
+          "image_inspected": true,
+          "observed": "A guessing screen separates correctness and points from the text composer.",
+          "applied": "Locked-answer receipts, a distinct answer reveal card and player score rows. Correctness and score changes publish together at reveal."
+        },
+        {
+          "app": "NBA",
+          "url": "https://mobbin.com/screens/ff913374-40ca-42d8-93c7-a32541d041ee",
+          "image_inspected": true,
+          "observed": "A compact progress rail and timer lead into a full readable question and stacked responses.",
+          "applied": "A full native question with readable Dynamic Type, an inline answer composer and a responsive vertical score list for up to eight players."
+        }
+      ],
+      "primary": [
+        {
+          "url": "https://acf-quizbowl.com/rules/gameplay/",
+          "applied": "Inspiration for explicit answer judgment, scorekeeping and tie handling. Tessera is not implementing or claiming compliance with ACF tournament rules; its timed pub quiz reports an honest draw instead of choosing an arbitrary winner."
+        }
+      ],
+      "composition": "Native and wall use the same ink-blue question card, upper question number/countdown, gold duration rule, question text and mint answer reveal. At 64 pixels the actual question scrolls through a readable multiline region; long words wrap without dropping letters. Final scoreboards preserve all players."
+    }
+  },
+  "validation": {
+    "rgb_review": "Inspected production RGB at 64, 192 and 512 pixels without smoothing, including scrolling question content and eight-player score bounds.",
+    "native_review": "Inspected normal and AX5 Heardle and Pub Quiz captures from the integration build. Core controls remain reachable; large text uses full-width composer buttons.",
+    "hardware_note": "Software RGB inspection does not certify physical LED colour. Parent task owns device deployment and hardware review."
+  }
+}

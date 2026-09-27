@@ -1,0 +1,948 @@
+{
+  "baseline": "8251028 + qa/batch-12/baseline-wall.patch (actual deployed files)",
+  "sizes": [
+    64,
+    192,
+    512
+  ],
+  "options": {
+    "heardle": {
+      "title": "Prism Studies",
+      "artist": "Tessera Studio",
+      "preview": "http://127.0.0.1:65359/clip.wav"
+    },
+    "twentyq": {},
+    "quiz": {
+      "set": 0,
+      "seconds": 20
+    },
+    "pictionary": {
+      "word": "lighthouse",
+      "seconds": 60
+    },
+    "pong": {
+      "seed": 12,
+      "to": 7
+    }
+  },
+  "frames": [
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "heardle-playing-before-64.png",
+      "rgb_sha256": "40ef1375b6f14ddb38204fd322586699e939c5285ea7a2a6648b9aebc7ac150b"
+    },
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "heardle-playing-before-192.png",
+      "rgb_sha256": "f66f396b5b8770fc1c94f64c0f87937354a0b5dad97dd7dec990cd598daf3143"
+    },
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "heardle-playing-before-512.png",
+      "rgb_sha256": "9c445ce1a6a67ad279177f35a926f8878d0a5adabb63ee989b2004dcd38795f3"
+    },
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "heardle-playing-after-64.png",
+      "rgb_sha256": "422e9caccbc297791dd6e110cc803a3c0376b79714628d7bbbffe7c461102400"
+    },
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "heardle-playing-after-192.png",
+      "rgb_sha256": "9c27e519b7ed47aa2e40e011463812cb7b3835fd66fcfa99d037f7af606d7068"
+    },
+    {
+      "game": "heardle",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "heardle-playing-after-512.png",
+      "rgb_sha256": "f1985bffe12ac78c51b5ced66052bc6a2413735751b2e5942ccf9e055e070a8a"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "heardle-won-before-64.png",
+      "rgb_sha256": "482b57502477f979c58d61a128947a6a93a14e03bda9ba69e9cb252e44419400"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "heardle-won-before-192.png",
+      "rgb_sha256": "8eaccd60e5d8e32bb03f45abdac5724d1b213c1c1654951c3819417a49a2b3e1"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "heardle-won-before-512.png",
+      "rgb_sha256": "517eaba519a1af7475b63ad5a70fe77adf958db8fc4dcba16fd19ac46f93441b"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "heardle-won-after-64.png",
+      "rgb_sha256": "5100ca262caf2b5571de3266c8d2ed447292e12617de80f194b270de7a4e8616"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "heardle-won-after-192.png",
+      "rgb_sha256": "fe163f6a7196f7580dc20a72b5f7c418c8d83c366904bce1c9f924a17c58f3f7"
+    },
+    {
+      "game": "heardle",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "heardle-won-after-512.png",
+      "rgb_sha256": "ecd9ea705f985d8e3775f84de1a2a0adec652136b2b715c856b0534cd75ba7f0"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "heardle-ready-before-64.png",
+      "rgb_sha256": "c06b18fb1ce2d81e3bdc908aee6ce8b3ebad05dd5201f26832eeb038018c2bab"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "heardle-ready-before-192.png",
+      "rgb_sha256": "e8f486a394962a4accc9f23cc479e4db4e14e8567bccc68027eda53a039646cc"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "heardle-ready-before-512.png",
+      "rgb_sha256": "edcfd7688aef58108a4fcb871402cbd5b8429ed960c82ab4f4af6f47b8348c6c"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "heardle-ready-after-64.png",
+      "rgb_sha256": "877b5e68c3429e78b0a772d7fcef7e9a3c8edbd9f67cb5a7a099ca9bc188472b"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "heardle-ready-after-192.png",
+      "rgb_sha256": "1d1ec9859c37d947048365316137be50624b6bea4b1b76c4c46ec857d1c06489"
+    },
+    {
+      "game": "heardle",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "heardle-ready-after-512.png",
+      "rgb_sha256": "38519a38c08b537d17b65429e59c08f5c0bb67e0fa24c0e390d4bf21767f8987"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "before",
+      "side": 64,
+      "file": "heardle-lost-before-64.png",
+      "rgb_sha256": "554825cc1ef1724f3aafd56023ba317e8890251b76bed806d0b9d367e6fcec9f"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "before",
+      "side": 192,
+      "file": "heardle-lost-before-192.png",
+      "rgb_sha256": "27ec66ae8340e068800aa0ff224a6ddd6459456438d842f4f8234674e1550dfd"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "before",
+      "side": 512,
+      "file": "heardle-lost-before-512.png",
+      "rgb_sha256": "a5ad00f209b0ceb5c3dc68c020a4c5e79bdb3444880469b1e260316171e518bb"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "after",
+      "side": 64,
+      "file": "heardle-lost-after-64.png",
+      "rgb_sha256": "5100ca262caf2b5571de3266c8d2ed447292e12617de80f194b270de7a4e8616"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "after",
+      "side": 192,
+      "file": "heardle-lost-after-192.png",
+      "rgb_sha256": "fe163f6a7196f7580dc20a72b5f7c418c8d83c366904bce1c9f924a17c58f3f7"
+    },
+    {
+      "game": "heardle",
+      "state": "lost",
+      "version": "after",
+      "side": 512,
+      "file": "heardle-lost-after-512.png",
+      "rgb_sha256": "ecd9ea705f985d8e3775f84de1a2a0adec652136b2b715c856b0534cd75ba7f0"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "twentyq-playing-before-64.png",
+      "rgb_sha256": "77870ea4fbbe1e57fc73a2b73fead16562181b2372a948a4a9e137494bfddd91"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "twentyq-playing-before-192.png",
+      "rgb_sha256": "05d270138b2680c90af01fbd7ff33934f8580bfe58de61f5e7f8016d79682da4"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "twentyq-playing-before-512.png",
+      "rgb_sha256": "97b49dacb84dd3d89e79e9d8ce840b6afdaa8ce20cb19493de004096ac57aa39"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "twentyq-playing-after-64.png",
+      "rgb_sha256": "55d0a10c0acf84cf66224f6fe2174fd5004c121af761e779201431cb928552d4"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "twentyq-playing-after-192.png",
+      "rgb_sha256": "320ada5410c809840a0ede9d5431ce2ab46149ce0036a5a68d14af58f095262d"
+    },
+    {
+      "game": "twentyq",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "twentyq-playing-after-512.png",
+      "rgb_sha256": "f6924131fe0e24302c1afbf519f0a1ff395d6b45512b0dcc49b65da3bed66922"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "twentyq-won-before-64.png",
+      "rgb_sha256": "a48ed8e83bd44561461a77e6974c5ab18816b5fbce0a625f3a9554a5d6153e0a"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "twentyq-won-before-192.png",
+      "rgb_sha256": "c90ba9655d8cddf455e86b1182f6e33ac3b929aa17981b23e574ee94416415b5"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "twentyq-won-before-512.png",
+      "rgb_sha256": "80e5252c33d90bc282dc2ff31efa79720108109deb456a0cde964707279a94e2"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "twentyq-won-after-64.png",
+      "rgb_sha256": "dc9c5c324453b96f1a3e1b65a41d2a73c982b73efce5e2ce3754b58327a436d7"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "twentyq-won-after-192.png",
+      "rgb_sha256": "6c6f062aac28dfa4bb50e8b9e91f6ecc5632b00ca943fea873e0519918be84d4"
+    },
+    {
+      "game": "twentyq",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "twentyq-won-after-512.png",
+      "rgb_sha256": "1951fa519bd201ac9c697a424b71b7299f8bbf9f0ad93a7cd595deeaa7a535ff"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "before",
+      "side": 64,
+      "file": "twentyq-loading-before-64.png",
+      "rgb_sha256": "b67cdde7719d381659826be83f13dd59372edca814eb1d5bf25e51407acd1366"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "before",
+      "side": 192,
+      "file": "twentyq-loading-before-192.png",
+      "rgb_sha256": "5ce5994d59b727a21fd948eabcd8438b16a5c7c24f59e0025e868e8d33c2fbc4"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "before",
+      "side": 512,
+      "file": "twentyq-loading-before-512.png",
+      "rgb_sha256": "10e3d4648a0877619082a1c53e0446a8f01c8b912c7f82aa8e646d84953225d5"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "after",
+      "side": 64,
+      "file": "twentyq-loading-after-64.png",
+      "rgb_sha256": "374acd697d23d77ca065bff9921aab106bf4f5caf31efa30f090d7b136638a0e"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "after",
+      "side": 192,
+      "file": "twentyq-loading-after-192.png",
+      "rgb_sha256": "c5465c5471085a345f764fa874b0e4f0c63990bd8b3eb1fc2e991d33807a5ba6"
+    },
+    {
+      "game": "twentyq",
+      "state": "loading",
+      "version": "after",
+      "side": 512,
+      "file": "twentyq-loading-after-512.png",
+      "rgb_sha256": "a377554a50ef17deb33cf1a5b9cd5cb4cb61a648d88ae1707a4836881855ab19"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "before",
+      "side": 64,
+      "file": "twentyq-error-before-64.png",
+      "rgb_sha256": "85031b6212fd8c9288190a5426b7f02f0a0aeb39c2160acea93b4e888b84fb8b"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "before",
+      "side": 192,
+      "file": "twentyq-error-before-192.png",
+      "rgb_sha256": "5ce5994d59b727a21fd948eabcd8438b16a5c7c24f59e0025e868e8d33c2fbc4"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "before",
+      "side": 512,
+      "file": "twentyq-error-before-512.png",
+      "rgb_sha256": "10e3d4648a0877619082a1c53e0446a8f01c8b912c7f82aa8e646d84953225d5"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "after",
+      "side": 64,
+      "file": "twentyq-error-after-64.png",
+      "rgb_sha256": "1438ecb13d44462fcd9d0131a9c52d2c5bd0051b11530caf43a9b6b009e3f4a1"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "after",
+      "side": 192,
+      "file": "twentyq-error-after-192.png",
+      "rgb_sha256": "ae0f2368d01e3ce1b425ccd92370c17b60d43de463fbc34d29c678244e4c840b"
+    },
+    {
+      "game": "twentyq",
+      "state": "error",
+      "version": "after",
+      "side": 512,
+      "file": "twentyq-error-after-512.png",
+      "rgb_sha256": "9efc132d92b019ada5663a6fae0d7c5049c36e062aa2ebc5fe0c103f50600a95"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "quiz-playing-before-64.png",
+      "rgb_sha256": "00697642e5c1da1a592532649c57b58ba38442c26993851786ee45fc75e774a7"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "quiz-playing-before-192.png",
+      "rgb_sha256": "a78c2294e18acb2f94105cb92b2460d407b8e20382d5d956b7e10f8b5aa19f02"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "quiz-playing-before-512.png",
+      "rgb_sha256": "aab499a3d460dec53e7323d98a8a9aca320042095da05b021193fe9a22fb21b7"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "quiz-playing-after-64.png",
+      "rgb_sha256": "e49d5f21c4926dbff6d2fcc89ae981c7b6996c51fa3e8528fb254ee7e881945e"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "quiz-playing-after-192.png",
+      "rgb_sha256": "4a30d95169a74c498c9d93d94ca1490f0bd01a3656dadcff9f02570d68412267"
+    },
+    {
+      "game": "quiz",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "quiz-playing-after-512.png",
+      "rgb_sha256": "f1befc5774558dfbca2c54072efe33044269bbfd37ba6127b3864ba1e598c68d"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "quiz-won-before-64.png",
+      "rgb_sha256": "4864252703ab11f04dedcf768cd4a225961582e0770adc6b7cd8f1958614f107"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "quiz-won-before-192.png",
+      "rgb_sha256": "93a4ff0c7fc0bf04b5853b609a29304d08df997266707b5b7fc92dca57c3e261"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "quiz-won-before-512.png",
+      "rgb_sha256": "1145cab9285cf75cf6b930ed6880f13bf5867ad0dc0d00169440d9a70def4e1c"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "quiz-won-after-64.png",
+      "rgb_sha256": "65ce3c65981d50661838d4ad9ea9e02847e080323c5c596bdd92599fe6917773"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "quiz-won-after-192.png",
+      "rgb_sha256": "570f1ea91c82cd30b32ff908f28ebf94fff0a75b2a83fd896027a0bbd04912d9"
+    },
+    {
+      "game": "quiz",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "quiz-won-after-512.png",
+      "rgb_sha256": "288548cb6ab60165fb008b20845c141c7c699488ff7eb8f7dbfdc6953d3bf820"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "before",
+      "side": 64,
+      "file": "quiz-answer-before-64.png",
+      "rgb_sha256": "523f728cf534acf7d6788ecb0ecf0e32f805e26a8b62fa0c3b969c6b27ec47b3"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "before",
+      "side": 192,
+      "file": "quiz-answer-before-192.png",
+      "rgb_sha256": "5ab13bf412a348320e77a8d0870f61cb011b46743a92777737071b1c50888242"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "before",
+      "side": 512,
+      "file": "quiz-answer-before-512.png",
+      "rgb_sha256": "f380c9f0490526b0d069b4418c33e82dd8b6f882c563cf65466f75f9105c66ab"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "after",
+      "side": 64,
+      "file": "quiz-answer-after-64.png",
+      "rgb_sha256": "2cf4cd8f236a35a63088aafd8d0fe81988bccf116ba441a53f5bcb83cd183086"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "after",
+      "side": 192,
+      "file": "quiz-answer-after-192.png",
+      "rgb_sha256": "a7152c9f64831be13553ad11b88a71c16aae35714c8d1eb139e74b8356d6f741"
+    },
+    {
+      "game": "quiz",
+      "state": "answer",
+      "version": "after",
+      "side": 512,
+      "file": "quiz-answer-after-512.png",
+      "rgb_sha256": "cfc56571eee4acffd74a620d8f53fb6d90bb45c3c8f6637313937c1a39e33b0a"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "pictionary-playing-before-64.png",
+      "rgb_sha256": "43cd8cf6c5612bc5f5a225a7783498d3a20b0f1a018b8876a228b54dc215192f"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "pictionary-playing-before-192.png",
+      "rgb_sha256": "efbaba8dbf8f1b3022a9147781e9ad4fb8451a6ba47c2a3f9d9bc7d1afa4e491"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "pictionary-playing-before-512.png",
+      "rgb_sha256": "43c060ea044c439694096089f35a7ad5ea2166529f98364990eed950dedf3640"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "pictionary-playing-after-64.png",
+      "rgb_sha256": "acb4f004a91e227722fcc6d942bba4d04aa3e15cc4da3b8be7929ab7a22ee15f"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "pictionary-playing-after-192.png",
+      "rgb_sha256": "9f8c14e26530c3e40884a029f5c8dcab5b935d583754ebe15108fdb8bebc4bfe"
+    },
+    {
+      "game": "pictionary",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "pictionary-playing-after-512.png",
+      "rgb_sha256": "7e6f04b6c4a66320e2da3dfb4549e5966cd2a311f190c4b10b37af0a8f794eae"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "pictionary-won-before-64.png",
+      "rgb_sha256": "1c94243706dc499d5b54bf2c0a2f2ac13a3ff0667c434a2d4e136fb4c284cf8d"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "pictionary-won-before-192.png",
+      "rgb_sha256": "3e49754102d0c12d6588a9e0575a76ec9f9dfb422756619430a270908281555b"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "pictionary-won-before-512.png",
+      "rgb_sha256": "24df516e9530c7af80bf14619fbfece00f081a665db3d57ebddd9bf84762c87b"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "pictionary-won-after-64.png",
+      "rgb_sha256": "c727feeb5bf5968e5f7eafd56bc22d8774dc2739b82f9b0387ae75d51e081f00"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "pictionary-won-after-192.png",
+      "rgb_sha256": "722232d54896a0d477c1bd58c3c64588eb74841d89b6f8e080f5193477581901"
+    },
+    {
+      "game": "pictionary",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "pictionary-won-after-512.png",
+      "rgb_sha256": "127a93ca17cf9b1efaf897a9691d2db541e1005f45ec7b69a27a7bdd34ded6f6"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "before",
+      "side": 64,
+      "file": "pictionary-loading-before-64.png",
+      "rgb_sha256": "896556d08a694717e9991551c4d36cb476392abacef4daab81bf8a921f7b2e78"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "before",
+      "side": 192,
+      "file": "pictionary-loading-before-192.png",
+      "rgb_sha256": "0bbad07a283378a7332665036ca4b84ed5662460ca79ec54b1ab8275f7564f28"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "before",
+      "side": 512,
+      "file": "pictionary-loading-before-512.png",
+      "rgb_sha256": "354ff717c8ebc6b879d4e9bc0851659345aa9d86d0ae856fa2e1c87cbf168763"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "after",
+      "side": 64,
+      "file": "pictionary-loading-after-64.png",
+      "rgb_sha256": "ebb4afe6b9cead5c4c835662fdb9ecb3399f17954a5723c9d30cc16154d7f8f6"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "after",
+      "side": 192,
+      "file": "pictionary-loading-after-192.png",
+      "rgb_sha256": "89daca03dfc26ec333a0f4546425872249928fcf1647834e0ce4fddc850e1194"
+    },
+    {
+      "game": "pictionary",
+      "state": "loading",
+      "version": "after",
+      "side": 512,
+      "file": "pictionary-loading-after-512.png",
+      "rgb_sha256": "d6481ee3fb0da7ce6984dd89d6d9ddbb4cfd3eaaa243dd63b41125d95b42e6ab"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "before",
+      "side": 64,
+      "file": "pictionary-error-before-64.png",
+      "rgb_sha256": "896556d08a694717e9991551c4d36cb476392abacef4daab81bf8a921f7b2e78"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "before",
+      "side": 192,
+      "file": "pictionary-error-before-192.png",
+      "rgb_sha256": "0bbad07a283378a7332665036ca4b84ed5662460ca79ec54b1ab8275f7564f28"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "before",
+      "side": 512,
+      "file": "pictionary-error-before-512.png",
+      "rgb_sha256": "354ff717c8ebc6b879d4e9bc0851659345aa9d86d0ae856fa2e1c87cbf168763"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "after",
+      "side": 64,
+      "file": "pictionary-error-after-64.png",
+      "rgb_sha256": "26cbeeb4108145bdffe9dfb65512dfb40431c8c8c56dfc85230253bd131b3f22"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "after",
+      "side": 192,
+      "file": "pictionary-error-after-192.png",
+      "rgb_sha256": "92fb261a5ed44877a4b2cf4eb0e29be64314dd31598d3511c3b4cd591f0b1593"
+    },
+    {
+      "game": "pictionary",
+      "state": "error",
+      "version": "after",
+      "side": 512,
+      "file": "pictionary-error-after-512.png",
+      "rgb_sha256": "dd421201c8e1ef69c99908ff58732ef08ef4574818173537b09093c3698b03f3"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "before",
+      "side": 64,
+      "file": "pictionary-lost-before-64.png",
+      "rgb_sha256": "2d7e15c4ca7a21c7f2769d10409453ab2026cb7b7484e60be27089b31096b093"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "before",
+      "side": 192,
+      "file": "pictionary-lost-before-192.png",
+      "rgb_sha256": "b37f32796a457022ba0c424c7bf055b02b5ade1a9085cd063eea25d8aa7bc2f6"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "before",
+      "side": 512,
+      "file": "pictionary-lost-before-512.png",
+      "rgb_sha256": "3c2635365a1d82c13024142efd9199d265fb242a529bd1cfd87140cb0af7e730"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "after",
+      "side": 64,
+      "file": "pictionary-lost-after-64.png",
+      "rgb_sha256": "c727feeb5bf5968e5f7eafd56bc22d8774dc2739b82f9b0387ae75d51e081f00"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "after",
+      "side": 192,
+      "file": "pictionary-lost-after-192.png",
+      "rgb_sha256": "722232d54896a0d477c1bd58c3c64588eb74841d89b6f8e080f5193477581901"
+    },
+    {
+      "game": "pictionary",
+      "state": "lost",
+      "version": "after",
+      "side": 512,
+      "file": "pictionary-lost-after-512.png",
+      "rgb_sha256": "127a93ca17cf9b1efaf897a9691d2db541e1005f45ec7b69a27a7bdd34ded6f6"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "pong-playing-before-64.png",
+      "rgb_sha256": "a18a2725072515b67cac10524458f019283aecc6e1d0c0adfb8b75e38041276f"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "pong-playing-before-192.png",
+      "rgb_sha256": "f1425b4e542778224422a4fde6ed8adc73bb11aad58d5e09af27ab76e53451d5"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "pong-playing-before-512.png",
+      "rgb_sha256": "2cb4c4bc4bd8ab5d9701b8d4a2c68c81262f82edcf6ab47a3a4a501cf54f4470"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "pong-playing-after-64.png",
+      "rgb_sha256": "322c7c3b390f742218b9d1a566c30dd0ad35ce8b0c1bc95ee5012aae14c10476"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "pong-playing-after-192.png",
+      "rgb_sha256": "99652fb85367d9a041babe0bf917ccd8b751744fef73a768fd0cb820b4540031"
+    },
+    {
+      "game": "pong",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "pong-playing-after-512.png",
+      "rgb_sha256": "5bc82fefcef2a1da21e10fab219eafbdf5d6b6dd920a53c0c7dfec717e9e2333"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "pong-won-before-64.png",
+      "rgb_sha256": "e4da40cf6afb6bb7f864052d08f28345c13434333613d6b4cc981026c5961820"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "pong-won-before-192.png",
+      "rgb_sha256": "78b6e108f823ee0c1fb5bfcddab723ec527189221f1c69585c324f6b8a67b8f9"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "pong-won-before-512.png",
+      "rgb_sha256": "e257a79a29b230029c8d75039da7d1bf31587b20faf7f5a46063e0acb0a95343"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "pong-won-after-64.png",
+      "rgb_sha256": "ec7a479af9980a434b723c53edbff7175aed1b304313ea0a0e570def361fa729"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "pong-won-after-192.png",
+      "rgb_sha256": "aa9ab0d942b851bf6e8372cc78d4fd4e3274afb2f35342272b3e0ffa9019cb34"
+    },
+    {
+      "game": "pong",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "pong-won-after-512.png",
+      "rgb_sha256": "cdf804051569623b517b714072807bbc3cdfdad027c46104e9d0021407cd6b41"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "before",
+      "side": 64,
+      "file": "pong-ready-before-64.png",
+      "rgb_sha256": "bad64e67dbf6099142cb901d5546d7061379f3942188d385c7f54f104f404bd2"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "before",
+      "side": 192,
+      "file": "pong-ready-before-192.png",
+      "rgb_sha256": "833a7316e6213428f3a3192e3279fd4ab4ec5e9cd7537c002580e2dbb1f9dd11"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "before",
+      "side": 512,
+      "file": "pong-ready-before-512.png",
+      "rgb_sha256": "f2fb5e674866b4501db85b8f0397884c33278745f294dddc1d92c27563ea898b"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "after",
+      "side": 64,
+      "file": "pong-ready-after-64.png",
+      "rgb_sha256": "dd99e8f28af8910a0d5350a04f36ac2f831a36f96adcbb28fc7d665170448763"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "after",
+      "side": 192,
+      "file": "pong-ready-after-192.png",
+      "rgb_sha256": "a4515baae7e7c2b31f1fb2c15c8f75276f511df139478870c888f7615fef8e89"
+    },
+    {
+      "game": "pong",
+      "state": "ready",
+      "version": "after",
+      "side": 512,
+      "file": "pong-ready-after-512.png",
+      "rgb_sha256": "0c33e7567e1d36aa5b922cf1ec3b1aa3ed7a1b4f11760fc9b503c7bf60c32474"
+    }
+  ],
+  "cases": 19,
+  "notes": [
+    "Actual production renderers; deterministic data/time; original authored sleeve.",
+    "Before baseline uses the actual deployed wall files, including their prior source detail limit.",
+    "The phone places input controls outside the shared board."
+  ]
+}

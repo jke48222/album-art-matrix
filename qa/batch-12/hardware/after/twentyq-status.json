@@ -1,0 +1,50 @@
+{
+  "running": true,
+  "seq": 8,
+  "game": {
+    "name": "twentyq",
+    "title": "Twenty questions",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Is it a living thing?",
+    "started": 1790492792,
+    "finished": null,
+    "seq": 2,
+    "voice": true,
+    "number": 1,
+    "max": 20,
+    "question": "Is it a living thing?",
+    "question_id": "d63255bdab644dcc9fcf495f83ec5711",
+    "is_guess": false,
+    "history": [],
+    "thinking": false,
+    "phase": "question",
+    "problem": null,
+    "can_retry": false,
+    "receipt": 0,
+    "last_answer": null,
+    "answer": null
+  },
+  "session_id": "eb8c599e644d4d829971baa95b4a549a",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 3,
+      "won": 0,
+      "streak": 0,
+      "best": 0,
+      "last": 1789509181
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "yes",
+    "no",
+    "sort of"
+  ]
+}

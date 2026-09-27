@@ -1,0 +1,67 @@
+{
+  "running": true,
+  "seq": 3,
+  "game": {
+    "name": "heardle",
+    "title": "Heardle",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "2 seconds now.",
+    "started": 1790492791,
+    "finished": null,
+    "seq": 1,
+    "voice": true,
+    "seconds": 2,
+    "step": 1,
+    "steps": [
+      1,
+      2,
+      4,
+      7,
+      11,
+      16
+    ],
+    "preview": "http://127.0.0.1:65359/clip.wav",
+    "tries": [
+      {
+        "text": "Night Window",
+        "who": "Tessera QA Batch 12",
+        "skipped": false,
+        "hit": false
+      }
+    ],
+    "turn": "Tessera QA Batch 12",
+    "playing": false,
+    "playback_position": 0.0,
+    "frame_step": 0,
+    "answer": null
+  },
+  "session_id": "b674b0a2e09c430484bedafade7a230a",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 1,
+      "streak": 1,
+      "best": 1,
+      "last": 1789509562
+    },
+    "Tessera QA Batch 12": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "skip"
+  ],
+  "hit": false,
+  "seconds": 2
+}

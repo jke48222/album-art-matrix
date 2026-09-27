@@ -1,0 +1,16 @@
+{
+  "heardle": {
+    "side": 64,
+    "sha256": "c06b18fb1ce2d81e3bdc908aee6ce8b3ebad05dd5201f26832eeb038018c2bab"
+  },
+  "quiz": {
+    "side": 64,
+    "sha256": "daf6bb898dd9bb4fa053c05e9c43aae51febc91496ec4bbcd21bd35e32d9003d"
+  },
+  "pong": {
+    "side": 64,
+    "sha256": "0a64fd85a1a8f4ddca8bd24e3fa2e5bffdae8897fb1bd1736fa73efe2381a050"
+  },
+  "restored_mode": "off",
+  "limitations": "Live managed-runtime RGB frames for three provider-free games. Twenty Questions and Pictionary before states are deterministic production renderer captures, not physical baseline captures. Physical LED colour not certified."
+}

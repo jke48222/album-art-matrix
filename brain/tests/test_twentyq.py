@@ -5,6 +5,7 @@ the guess, the twentieth question, the face at 64 and 192.
 """
 import os
 import sys
+import time
 
 from PIL import Image
 
@@ -39,15 +40,29 @@ def scripted(monkeypatch, turns):
     return asker
 
 
+def wait_question(game):
+    for _ in range(300):
+        if not game.thinking:
+            return
+        time.sleep(0.005)
+    raise AssertionError("question provider did not complete")
+
+
 def test_knocks_and_whistles_answer(tmp_path, monkeypatch):
     asker = scripted(monkeypatch, [{"question": "Is it alive?"}, {"question": "Is it an animal?"},
                                    {"guess": "a cat"}])
     host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
     st = host.start("twentyq", {"asker": asker})
     g = host.game
+    wait_question(g)
+    st = host.status()
     assert st["game"]["question"] == "Is it alive?" and st["game"]["number"] == 1
-    assert host.event("knock", {"t": 1.0}) is True and g.current == "Is it an animal?"
-    assert host.event("whistle", {"kind": "up"}) is True and g.current == "Is it a cat?"
+    assert host.event("knock", {"t": 1.0}) is True
+    wait_question(g)
+    assert g.current == "Is it an animal?"
+    assert host.event("whistle", {"kind": "up"}) is True
+    wait_question(g)
+    assert g.current == "Is it a cat?"
     assert st["game"]["is_guess"] is False and host.status()["game"]["is_guess"] is True
     assert asker.seen[-1] == [("Is it alive?", "yes"), ("Is it an animal?", "no")]
     assert host.hear("yes")["got_it"] and g.over and g.won and g.message == "a cat, in 3."
@@ -58,9 +73,11 @@ def test_twenty_and_out(tmp_path, monkeypatch):
     host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
     host.start("twentyq", {"asker": asker})
     g = host.game
+    wait_question(g)
     for i in range(20):
         host.move(None, {"answer": "no"})
-    assert g.over and not g.won and "You win" in g.message
+        wait_question(g)
+    assert g.over and not g.won and "Your secret stays safe" in g.message
     assert "over" in host.move(None, {"answer": "no"})["error"]
 
 
@@ -74,6 +91,7 @@ def test_the_face_at_both_sizes(tmp_path, monkeypatch):
     for size, scale in ((64, 4), (192, 2)):
         host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
         host.start("twentyq", {"asker": asker})
+        wait_question(host.game)
         f = host.frame_at(size)
         assert f.shape == (size, size, 3) and ((f[..., 0] > 200) & (f[..., 1] > 200)).sum() > 10
         if OUT:

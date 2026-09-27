@@ -30,8 +30,8 @@ def test_pong(tmp_path):
     clock = [0.0]
     g._clock = lambda: clock[0]
     g.last_t = 0.0
-    g.wait_until = 0.0
-    assert host.move("Sam", {"paddle": 0.9})["side"] == 1 and g.paddles[1] == 0.9
+    assert host.move("Sam", {"paddle": 0.9})["side"] == 1 and g.paddles[1] == 0.89
+    assert host.move("Jalen", {"serve": True})["served"]
     # nobody moves: the ball scores against somebody within a few seconds
     for _ in range(400):
         clock[0] += 0.03
@@ -47,14 +47,15 @@ def test_pong(tmp_path):
     assert g.over and max(g.score) == 2
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
-        assert ((f[..., 0] > 150) & (f[..., 1] > 130) & (f[..., 2] < 90)).sum() >= 4   # the ball
+        assert (f == g.COLOURS["ball"]).all(axis=2).sum() >= 3   # the complete gold ball
         save(f, "pong", size, scale)
     solo = GameHost(FakeCtrl(), path=str(tmp_path / "g2.json"))
     solo.start("pong", {"seed": 2})
     s = solo.game
-    s._clock = lambda: clock[0]; s.last_t = clock[0]; s.wait_until = clock[0]
+    s._clock = lambda: clock[0]; s.last_t = clock[0]
+    assert solo.move(None, {"serve": True})["served"]
     before = s.paddles[1]
-    for _ in range(20):
+    for _ in range(60):
         clock[0] += 0.03
         s.step()
     assert s.paddles[1] != before                                         # the wall's paddle moves itself

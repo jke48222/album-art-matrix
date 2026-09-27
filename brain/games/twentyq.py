@@ -3,16 +3,19 @@
 Think of something. The wall asks yes-or-no questions, up to twenty, and
 tries to guess it. Answer with the frame: one knock for yes, a whistle
 for no (or say "yes", "no", "sort of", or tap on the phone). The wall
-shows the question number and, at 192, the question; the phone shows the
-question too. Claude asks the questions and makes the guesses, given the
-whole history each turn, so it needs the Claude key. A guess is a
-question too: knock if it is right.
+shares a numbered question card with the phone; small panels page longer
+questions without dropping words. Claude prepares each turn asynchronously
+from the acknowledged history. Failed turns can be retried without losing
+answers. A guess is a question too: knock if it is right.
 """
 from __future__ import annotations
 
+import math
+import threading
+import uuid
+
 from . import Game, register
-from .board import (BLACK, DIM, GREEN, HONEY, INK, banner, blank, breathe, header, mix,
-                    scale_for, text_centred, fit_text, wrap_text)
+from .board import blank, disc, fill, text_centred, text_scrolled, wrap_text
 
 MAX_Q = 20
 
@@ -52,7 +55,7 @@ def ask_claude(asker, history: list[tuple[str, str]], salt: float = 0.0) -> dict
 class TwentyQuestions(Game):
     name = "twentyq"
     title = "Twenty questions"
-    blurb = "Think of a thing. The wall asks; knock for yes, whistle for no."
+    blurb = "Think of something. Answer the wall's questions in twenty turns."
     min_players = 1
     max_players = 4
 
@@ -60,105 +63,179 @@ class TwentyQuestions(Game):
         self.asker = self.options.get("asker") or getattr(getattr(self.host, "ctrl", None), "asker", None)
         if self.asker is None or not getattr(self.asker, "ready", False):
             raise RuntimeError("Twenty questions needs the Claude key (Services > Claude)")
+        self._lock = getattr(self.host, "_lock", threading.RLock())
+        self._host_generation = getattr(self.host, "_generation", None)
+        self._request = 0
         self.history: list[tuple[str, str]] = []
-        self.current: str | None = None
-        self.guessing: str | None = None
-        self.last_answer: str | None = None
-        self.message = "Think of something. Knock when you have it."
+        self.current = self.guessing = self.question_id = None
+        self.last_answer = None
+        self.receipt = 0
+        self.problem = None
         self.thinking = False
-        self._next()
+        with self._lock:
+            self._next()
+
+    def _owned(self):
+        if self.over:
+            return False
+        if self.host is None or not hasattr(self.host, "game"):
+            return True
+        return self.host.game is self or (getattr(self.host, "_generation", None) == self._host_generation
+                                         and getattr(self.host, "_starting", None) == self.name)
 
     def _next(self):
+        """Caller holds the host's lock; provider work never holds that lock."""
+        self._request += 1
+        request, history = self._request, list(self.history)
+        self.current = self.guessing = self.question_id = None
+        self.problem = None
         self.thinking = True
-        try:
-            turn = ask_claude(self.asker, self.history)
-        except Exception as exc:
-            print(f"[games] twenty questions: {exc}", flush=True)
-            turn = None
-        self.thinking = False
-        if turn is None:
-            self.finish(won=False, message="The wall lost its train of thought.")
-            return
-        if "guess" in turn:
-            self.guessing = turn["guess"]
-            self.current = f"Is it {turn['guess']}?"
-        else:
-            self.guessing = None
-            self.current = turn["question"]
-        self.message = self.current
+        self.message = "Finding the next question. Your answers are saved."
         self.changed()
+        threading.Thread(target=self._ask, args=(request, history), name="twentyq-question", daemon=True).start()
 
-    def answer(self, a: str) -> dict:
-        if self.over:
-            return {"error": "the game is over"}
-        if self.current is None:
-            return {"error": "no question yet"}
-        a = {"y": "yes", "n": "no", "sort of": "sort of", "maybe": "sort of", "kind of": "sort of"}.get(a, a)
-        if a not in ("yes", "no", "sort of"):
-            return {"error": "yes, no or sort of"}
-        self.last_answer = a
-        self.history.append((self.current, a))
-        if self.guessing is not None and a == "yes":
-            self.finish(won=True, message=f"{self.guessing}, in {len(self.history)}.")
-            return {"answered": a, "got_it": True}
-        if len(self.history) >= MAX_Q:
-            self.finish(won=False, message="Twenty questions and the wall could not guess. You win.")
-            return {"answered": a, "got_it": False}
-        self._next()
-        return {"answered": a, "question": self.current}
+    def _ask(self, request, history):
+        try:
+            turn = ask_claude(self.asker, history)
+            if not isinstance(turn, dict):
+                raise ValueError("empty question")
+            question, guess = turn.get("question", ""), turn.get("guess", "")
+            if not isinstance(question, str) or not isinstance(guess, str):
+                raise ValueError("invalid question")
+            question, guess = " ".join(question.split()), " ".join(guess.split())
+            if bool(question) == bool(guess) or len(question) > 180 or len(guess) > 80:
+                raise ValueError("one concise question is required")
+            current = f"Is it {guess}?" if guess else question
+            if any(current.casefold().rstrip("?.! ") == old.casefold().rstrip("?.! ") for old, _ in history):
+                raise ValueError("repeated question")
+        except Exception as exc:
+            print(f"[games] twenty questions provider: {type(exc).__name__}", flush=True)
+            with self._lock:
+                if request != self._request or not self._owned():
+                    return
+                self.thinking = False
+                self.problem = "The next question couldn't be prepared. Your answers are saved."
+                self.message = "Try the next question again."
+                self.changed()
+            return
+        with self._lock:
+            if request != self._request or not self._owned():
+                return
+            self.current, self.guessing = current, guess or None
+            self.question_id = uuid.uuid4().hex
+            self.thinking = False
+            self.message = current
+            self.changed()
+
+    def answer(self, answer: str, question_id: str | None = None) -> dict:
+        with self._lock:
+            if self.over:
+                return {"error": "the game is over"}
+            if self.thinking or self.current is None or self.problem:
+                return {"error": "wait for the next question"}
+            if question_id is not None and question_id != self.question_id:
+                return {"error": "That question changed. Answer the one now on the wall."}
+            if not isinstance(answer, str):
+                return {"error": "yes, no or sort of"}
+            answer = answer.lower().strip()
+            answer = {"y": "yes", "n": "no", "maybe": "sort of", "kind of": "sort of"}.get(answer, answer)
+            if answer not in ("yes", "no", "sort of"):
+                return {"error": "yes, no or sort of"}
+            self.receipt += 1
+            self.last_answer = {"question_id": self.question_id, "answer": answer, "number": len(self.history) + 1}
+            self.history.append((self.current, answer))
+            if self.guessing and answer == "yes":
+                self.finish(won=True, message=f"{self.guessing}, in {len(self.history)}.")
+                return {"answered": answer, "got_it": True, "receipt": self.receipt}
+            if len(self.history) >= MAX_Q:
+                self.finish(won=False, message="Twenty questions. Your secret stays safe.")
+                return {"answered": answer, "got_it": False, "receipt": self.receipt}
+            self._next()
+            return {"answered": answer, "thinking": True, "receipt": self.receipt}
+
+    def finish(self, won=False, winner=None, message=None):
+        with self._lock:
+            if self.over:
+                return
+            self._request += 1
+            self.thinking = False
+            super().finish(won, winner, message)
 
     def apply(self, move: dict, player: str) -> dict:
-        a = str(move.get("answer") or "").lower().strip()
-        return self.answer(a)
+        with self._lock:
+            if self.over:
+                return {"error": "the game is over"}
+            if not isinstance(move, dict):
+                return {"error": "answer yes, no or sort of"}
+            if "retry" in move:
+                if set(move) != {"retry"} or move["retry"] is not True:
+                    return {"error": "retry must be true"}
+                if self.thinking or not self.problem:
+                    return {"error": "there is no failed question to retry"}
+                self._next()
+                return {"retrying": True}
+            if set(move) - {"answer", "question_id"} or "answer" not in move:
+                return {"error": "answer yes, no or sort of"}
+            if "question_id" in move and (not isinstance(move["question_id"], str) or not move["question_id"]):
+                return {"error": "a valid question identifier is required"}
+            return self.answer(move["answer"], move.get("question_id"))
 
     def hear(self, text: str, player: str) -> dict | None:
-        t = text.lower().strip(" .!")
-        words = {"yes": "yes", "yeah": "yes", "yep": "yes", "correct": "yes", "no": "no", "nope": "no",
-                 "sort of": "sort of", "kind of": "sort of", "maybe": "sort of", "sometimes": "sort of"}
-        if t in words:
-            return self.answer(words[t])
-        return None
+        if not isinstance(text, str):
+            return None
+        spoken = text.lower().strip(" .!")
+        answers = {"yes": "yes", "yeah": "yes", "yep": "yes", "correct": "yes", "no": "no", "nope": "no",
+                   "sort of": "sort of", "kind of": "sort of", "maybe": "sort of", "sometimes": "sort of"}
+        with self._lock:
+            return self.answer(answers[spoken], self.question_id) if spoken in answers else None
 
     def event(self, kind: str, info: dict) -> bool:
-        if kind == "knock":
-            r = self.answer("yes")
-            return "error" not in r
-        if kind == "whistle":
-            r = self.answer("no")
-            return "error" not in r
-        return kind == "double"
+        with self._lock:
+            if self.over:
+                return False
+            if kind in ("knock", "whistle"):
+                return "error" not in self.answer("yes" if kind == "knock" else "no", self.question_id)
+            return kind == "double"
 
     def state(self) -> dict:
-        return {"number": len(self.history) + (0 if self.over else 1), "max": MAX_Q,
-                "question": self.current, "is_guess": self.guessing is not None,
-                "history": [{"q": q, "a": a} for q, a in self.history], "thinking": self.thinking}
+        with self._lock:
+            return {"number": min(MAX_Q, len(self.history) + (0 if self.over else 1)), "max": MAX_Q,
+                    "question": self.current, "question_id": self.question_id, "is_guess": self.guessing is not None,
+                    "history": [{"q": q, "a": a} for q, a in self.history], "thinking": self.thinking,
+                    "phase": "finished" if self.over else "thinking" if self.thinking else "error" if self.problem else "question",
+                    "problem": self.problem, "can_retry": bool(self.problem) and not self.thinking and not self.over,
+                    "receipt": self.receipt, "last_answer": dict(self.last_answer) if self.last_answer else None,
+                    "answer": self.guessing if self.over and self.won else None}
 
     def voice_words(self) -> list[str]:
         return ["yes", "no", "sort of"]
 
     def frame_at(self, size: int, t: float):
-        c = blank(size)
-        s = scale_for(size)
-        big = size > 96
-        n = len(self.history) + (0 if self.over else 1)
-        if self.over:
-            text_centred(c, "GOT IT" if self.won else "YOU WIN", size // 2, size // 2 - 9 * s, GREEN if self.won else HONEY, s)
-            text_centred(c, fit_text(self.guessing or "", size - 4, s) if self.won else f"{len(self.history)} asked",
-                         size // 2, size // 2 + 2 * s, INK, s)
-            banner(c, size, f"in {len(self.history)}", INK, mix(GREEN, BLACK, 0.55) if self.won else (40, 40, 30))
-            return c
-        big_s = 3 * s if not big else 4
-        text_centred(c, str(n), size // 2, 8 if not big else 34, INK, big_s)
-        q_col = HONEY if self.guessing else mix(DIM, INK, breathe(t, 2.0))
-        text_centred(c, "?", size // 2, 36 if not big else 76, q_col, 2 * s)
-        if big and self.current:
-            lines = wrap_text(self.current, size - 16, 1)[:4]
-            y = size - 14 - 9 * len(lines)
-            for ln in lines:
-                text_centred(c, ln, size // 2, y, INK if self.guessing else DIM, 1)
-                y += 9
-        elif not big and self.thinking:
-            text_centred(c, "...", size // 2, size - 10, DIM, 1)
-        header(c, size, "TWENTY QUESTIONS", f"{n} of {MAX_Q}", s, accent=HONEY)
-        return c
-
+        with self._lock:
+            state = self.state()
+            canvas = blank(size); canvas[:] = (16, 14, 12)
+            paper, gold, muted = (240, 231, 211), (223, 185, 101), (150, 144, 127)
+            scale = max(1, round(size * .038 / 7))
+            number = f"{state['number']:02d}"
+            text_centred(canvas, number, round(size * .5), round(size * .075), gold, max(1, round(size * .14 / 7)))
+            label = "FOUND IT" if self.over and self.won else ("KEPT" if size < 128 else "SECRET KEPT") if self.over else "THINKING" if self.thinking else "RETRY" if self.problem else "A GUESS" if self.guessing else "QUESTION"
+            text_centred(canvas, label, size // 2, round(size * .265), muted, scale)
+            content = (self.guessing if self.won else "You kept your secret.") if self.over else self.current
+            if content:
+                question_scale = max(1, round(size * .06 / 7))
+                lines = wrap_text(content.upper(), round(size * .84), question_scale)
+                rows = max(1, int(size * .39 / (9 * question_scale)))
+                pages = max(1, math.ceil(len(lines) / rows))
+                page = int(max(0, t) / 4) % pages
+                for offset, line_ in enumerate(lines[page * rows:(page + 1) * rows]):
+                    text_scrolled(canvas, line_, round(size * .08), round(size * .39) + offset * 9 * question_scale,
+                                  round(size * .84), t, paper, question_scale)
+            else:
+                for index in range(3):
+                    disc(canvas, size * (.40 + index * .10), size * .51, max(1, size * .017), gold if self.thinking else muted)
+                if self.problem:
+                    text_centred(canvas, "TRY AGAIN", size // 2, round(size * .65), paper, scale)
+            for index in range(MAX_Q):
+                x = round(size * (.07 + index * .86 / (MAX_Q - 1)))
+                fill(canvas, x, round(size * .9), max(1, round(size * .021)), max(2, round(size * .026)), gold if index < len(self.history) else (55, 48, 38))
+            return canvas

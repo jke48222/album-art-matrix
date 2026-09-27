@@ -1,0 +1,328 @@
+{
+  "name": "quiz",
+  "phase": "won",
+  "status": {
+    "running": true,
+    "seq": 42,
+    "session_id": "qa-party-001",
+    "on_wall": true,
+    "game": {
+      "name": "quiz",
+      "title": "Pub quiz",
+      "players": [
+        "You"
+      ],
+      "over": true,
+      "won": true,
+      "winner": null,
+      "message": "You 1",
+      "started": 1790491680,
+      "finished": 1790491800,
+      "seq": 21,
+      "voice": true,
+      "theme": "Records and record players",
+      "number": 10,
+      "count": 10,
+      "question_id": 11,
+      "question": "",
+      "phase": "done",
+      "seconds": 20.0,
+      "seconds_left": 0.0,
+      "reveal_seconds_left": 0.0,
+      "frame_step": 0,
+      "scores": {
+        "You": 1
+      },
+      "answered": {},
+      "answer": null,
+      "leaders": [
+        "You"
+      ],
+      "tied": false,
+      "results": [
+        {
+          "question": "How many revolutions a minute does an LP turn at?",
+          "answer": "33",
+          "answered": {
+            "You": {
+              "text": "33",
+              "right": true
+            }
+          }
+        },
+        {
+          "question": "What does the A in A-side stand for?",
+          "answer": "nothing",
+          "answered": {}
+        },
+        {
+          "question": "Which Beatles album has the zebra crossing on its cover?",
+          "answer": "abbey road",
+          "answered": {}
+        },
+        {
+          "question": "Frank Ocean's 2016 album, spelt Blond on the cover, is called what?",
+          "answer": "blonde",
+          "answered": {}
+        },
+        {
+          "question": "What is the small hole in the middle of a record for?",
+          "answer": "the spindle",
+          "answered": {}
+        },
+        {
+          "question": "Which band's album Rumours came out in 1977?",
+          "answer": "fleetwood mac",
+          "answered": {}
+        },
+        {
+          "question": "What colour is the label on most Motown records?",
+          "answer": "black",
+          "answered": {}
+        },
+        {
+          "question": "A record with about four songs, longer than a single, is an what?",
+          "answer": "ep",
+          "answered": {}
+        },
+        {
+          "question": "Which Pink Floyd album has a prism on the cover?",
+          "answer": "the dark side of the moon",
+          "answered": {}
+        },
+        {
+          "question": "What material are most records made of?",
+          "answer": "vinyl",
+          "answered": {}
+        }
+      ]
+    },
+    "scores": {
+      "You": {
+        "played": 12,
+        "won": 9,
+        "streak": 3,
+        "best": 5
+      }
+    },
+    "voice_words": [
+      "33",
+      "thirty three",
+      "33 and a third",
+      "thirty three",
+      "nothing",
+      "it does not stand for anything",
+      "no",
+      "abbey road",
+      "blonde",
+      "blond",
+      "the spindle",
+      "spindle",
+      "fleetwood mac",
+      "black",
+      "blue",
+      "black and blue",
+      "ep",
+      "e p",
+      "extended play",
+      "the dark side of the moon",
+      "dark side of the moon",
+      "vinyl",
+      "pvc",
+      "polyvinyl chloride",
+      "plastic"
+    ]
+  },
+  "list": [
+    {
+      "name": "wordle",
+      "title": "Wordle",
+      "blurb": "Six guesses at a five-letter word. Say it or type it.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "sudoku",
+      "title": "Sudoku",
+      "blurb": "The grid on the wall, the digits from the phone. Easy, medium or hard.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "connections",
+      "title": "Connections",
+      "blurb": "Sixteen words, four groups of four. Four mistakes allowed.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "spellingbee",
+      "title": "Spelling Bee",
+      "blurb": "Seven letters, one in the middle. Say words of four or more.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "letterboxed",
+      "title": "Letter Boxed",
+      "blurb": "Twelve letters round a square. Chain words until all are used.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": true
+    },
+    {
+      "name": "strands",
+      "title": "Strands",
+      "blurb": "A grid of letters hiding a themed set. Say a word; the wall lights its path.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "crossword",
+      "title": "Mini crossword",
+      "blurb": "Five by five. Follow a clue, find a word, make the crossings meet.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "contexto",
+      "title": "Contexto",
+      "blurb": "Follow meaning toward the secret word. Rank one is the answer.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "sliding",
+      "title": "Sliding puzzle",
+      "blurb": "A sleeve you have played, in blocks. Slide them back.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "reveal",
+      "title": "Cover reveal",
+      "blurb": "A sleeve sharpens over thirty seconds. First to name it wins.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "heardle",
+      "title": "Heardle",
+      "blurb": "A song you have played, a second at a time. Name it in six.",
+      "players": [
+        1,
+        6
+      ],
+      "voice": true
+    },
+    {
+      "name": "quiz",
+      "title": "Pub quiz",
+      "blurb": "Ten questions, one answer each. A room full of good guesses.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "pictionary",
+      "title": "AI pictionary",
+      "blurb": "A picture takes shape. Name it before the minute runs out.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "twentyq",
+      "title": "Twenty questions",
+      "blurb": "Think of something. Answer the wall's questions in twenty turns.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "reaction",
+      "title": "Reaction knock",
+      "blurb": "Wait for the signal. Knock the wall or tap the phone. Find your rhythm in five rounds.",
+      "players": [
+        1,
+        6
+      ],
+      "voice": true
+    },
+    {
+      "name": "whistlebird",
+      "title": "Whistle bird",
+      "blurb": "A little night flight. Whistle or slide through the openings.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": false
+    },
+    {
+      "name": "pong",
+      "title": "Pong",
+      "blurb": "A quiet court. Slide your paddle, or choose calibrated tilt. First to seven.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": false
+    },
+    {
+      "name": "snake",
+      "title": "Snake",
+      "blurb": "The phone is the remote. Eat, grow, do not hit the wall.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "tetris",
+      "title": "Tetris",
+      "blurb": "The phone is the remote: left, right, rotate, drop.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    }
+  ]
+}

@@ -258,6 +258,7 @@ def main() -> int:
     parser.add_argument("--discovery-state", choices=("ready","result","thinking","missing-key","failed","quiet","faint","listening"))
     parser.add_argument("--library-game-state", choices=("ready","empty","learning","failed","result"))
     parser.add_argument("--word-games-state", choices=("ready","playing","error","won","lost","hint","empty"))
+    parser.add_argument("--party-games-state", choices=("ready","playing","answer","paused","loading","error","won","lost"))
     parser.add_argument("--motion-games-state", choices=("ready","playing","red","green","error","won","lost","empty"))
     parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
@@ -346,6 +347,11 @@ def main() -> int:
         feature = next(a for a in args.launch_argument if a in NAMES)
         configure(wall, feature, args.word_games_state, args.renderer_root)
         (output / "fixture-payloads.json").write_text(json.dumps(wall.word_game_fixture, indent=2) + "\n")
+    if args.party_games_state:
+        from party_games_fixtures import configure, NAMES
+        feature = next(a for a in args.launch_argument if a in NAMES)
+        configure(wall, feature, args.party_games_state, args.renderer_root)
+        (output / "fixture-payloads.json").write_text(json.dumps(wall.party_game_fixture, indent=2) + "\n")
     if args.motion_games_state:
         from motion_games_fixtures import configure, NAMES
         feature = next(a for a in args.launch_argument if a in NAMES)
@@ -448,7 +454,7 @@ def main() -> int:
                              "mode": state["mode"], "state_reads": reads, "fixture_writes": writes,
                              "app": str(args.app) if args.app else None,
                              "launch_arguments": args.launch_argument,
-                             "library_game_state": args.library_game_state, "word_games_state": args.word_games_state, "motion_games_state": args.motion_games_state,
+                             "library_game_state": args.library_game_state, "word_games_state": args.word_games_state, "motion_games_state": args.motion_games_state, "party_games_state": args.party_games_state,
                              "installed_app_identity": installed_identity,
                              "captured_at": datetime.now(timezone.utc).isoformat(),
                              "dynamic_type": "AX5" if variant == "large" else "large"})

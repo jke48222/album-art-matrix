@@ -1,0 +1,46 @@
+diff --git a/brain/games/arcade.py b/brain/games/arcade.py
+index 54ddd92..6ebbabd 100644
+--- a/brain/games/arcade.py
++++ b/brain/games/arcade.py
+@@ -26,2 +26,3 @@ from . import Game, register
+-from .board import (BLACK, BLUE, DIM, EDGE, FAINT, GREEN, INK, ORANGE, PURPLE, RED, WHITE, YELLOW,
+-                    banner, blank, disc, fill, glow, mix, outline, rounded, scale_for, text, text_right, tile)
++from .board import (BLACK, BLUE, CYAN, DIM, EDGE, FAINT, GREEN, INK, ORANGE, PURPLE, RED, SLATE, WHITE, YELLOW,
++                    banner, blank, disc, fill, glow, header, mix, outline, rounded, scale_for, text, text_centred,
++                    text_right, tile)
+diff --git a/brain/games/heardle.py b/brain/games/heardle.py
+index 86b6c5e..95aa2c0 100644
+--- a/brain/games/heardle.py
++++ b/brain/games/heardle.py
+@@ -24 +24 @@ from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, SLATE2, WHITE, YELLOW, b
+-                    header, mix, rounded, scale_for, text_centred, fit_text)
++                    header, mix, rounded, scale_for, text, text_centred, fit_text)
+diff --git a/brain/games/pictionary.py b/brain/games/pictionary.py
+index 6387bec..92cd64a 100644
+--- a/brain/games/pictionary.py
++++ b/brain/games/pictionary.py
+@@ -21,2 +21,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, GREEN, INK, WHITE, YELLOW, banner, blank, breathe, disc, header, mix,
+-                    progress, scale_for, text_centred)
++from .board import (BLACK, DIM, GREEN, INK, WHITE, YELLOW, banner, blank, breathe, disc, fill, header, mix,
++                    progress, scale_for, text_centred, fit_text)
+diff --git a/brain/games/quiz.py b/brain/games/quiz.py
+index cb36700..aadcf29 100644
+--- a/brain/games/quiz.py
++++ b/brain/games/quiz.py
+@@ -14,0 +15 @@ import random
++import re
+@@ -18,2 +19,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, FAINT, GREEN, INK, RED, YELLOW, arc, blank, header, mix,
+-                    scale_for, scoreboard, text_centred, fit_text, wrap_text)
++from .board import (BLACK, DIM, EDGE, FAINT, GREEN, INK, RED, WHITE, YELLOW, arc, banner, blank, fill, header, mix,
++                    progress, scale_for, scoreboard, text, text_centred, fit_text, wrap_text, text_right)
+diff --git a/brain/games/twentyq.py b/brain/games/twentyq.py
+index 3ef2c93..f3beab2 100644
+--- a/brain/games/twentyq.py
++++ b/brain/games/twentyq.py
+@@ -14,2 +14,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, GREEN, HONEY, INK, banner, blank, breathe, header, mix,
+-                    scale_for, text_centred, fit_text, wrap_text)
++from .board import (BLACK, DIM, GREEN, HONEY, INK, RED, WHITE, YELLOW, banner, blank, breathe, fill, header, mix,
++                    scale_for, text, text_centred, fit_text, wrap_text)

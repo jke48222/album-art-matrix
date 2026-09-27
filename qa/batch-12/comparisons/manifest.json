@@ -1,0 +1,927 @@
+{
+  "base": "8251028",
+  "generated_at": "2026-09-27T07:24:22.339603+00:00",
+  "units": [
+    "G13",
+    "G14",
+    "G15",
+    "G16",
+    "G17"
+  ],
+  "processing": "Complete native screenshots scaled equally, not retouched. Before left, after right.",
+  "scope": "Rendering and fixture API states. The native-interactions receipt verifies simulator touch input and audio clip timing. No spoken-recognition or physical LED certification.",
+  "comparisons": [
+    {
+      "unit": "G13",
+      "title": "Heardle",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-12/before/heardle/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-12/after/heardle/room-live.png",
+      "before_sha256": "b70c3d187f6814a17be499893177b77bbd56d901880f313a5e7d68a9542027c9",
+      "after_sha256": "b3aae2174c589bdce8428168ebabf03f1b75611897437a88ce77f5ff2596ba75",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-12/comparisons/heardle.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "0e436d081cbc9b453aec487897123b012e3a2e080fafbda36b148c883a4e8035"
+    },
+    {
+      "unit": "G14",
+      "title": "Twenty Questions",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-12/before/twentyq/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-12/after/twentyq/room-live.png",
+      "before_sha256": "6b7d3c529e6d0f9bef6a13951db622bff17b819ddd88e39d7a786932d80d4167",
+      "after_sha256": "a43e70f7d71dab1b9119a03ba71628e9210fd8bae2166f2c291691ed3d10f848",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-12/comparisons/twentyq.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "2a14add10235f8960a825eab352762d2a65fc8f6cdba0856f6fe00bdab2a18bb"
+    },
+    {
+      "unit": "G15",
+      "title": "Pub Quiz",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-12/before/quiz/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-12/after/quiz/room-live.png",
+      "before_sha256": "f3f16893698e3f372748959496554a82604bd36b6bd9ce663a1ad0f017b9b5e5",
+      "after_sha256": "fec8a9259a5e9a797b7b9e48f65cdeace2c6fb57196a3c6986618533426da1db",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-12/comparisons/quiz.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "ae2483c1c589f46d1e62eb546966bed918f0f81175f8076dba11137753ebe0a4"
+    },
+    {
+      "unit": "G16",
+      "title": "AI Pictionary",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-12/before/pictionary/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-12/after/pictionary/room-live.png",
+      "before_sha256": "39703e03edf85f2bf44aa23e0e92814590047913186234527084bfcf363fe14b",
+      "after_sha256": "218bc7d4da2d3f60c9da9f05357e439d50a06a9a4b38c243a7bce1d74732e359",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-12/comparisons/pictionary.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5efcea48afb079c81e175a3b713971391aab618a80674132fb2cb8882a1e51fc"
+    },
+    {
+      "unit": "G17",
+      "title": "Pong",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-12/before/pong/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-12/after/pong/room-live.png",
+      "before_sha256": "7824939cfaff35b207a2ec941789c71f110ed5fd2bd068944778969d3eb7ff8c",
+      "after_sha256": "0bb5c7b86752235feadcff40e0b8a0c26747c0fe4641a5b5748f6adb9e621fe0",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-12/comparisons/pong.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "3ea81dd20e567fec63414530176e795bb1abecac69cac88392635abaa05a0a4b"
+    }
+  ],
+  "pixel_comparisons": [
+    {
+      "case": "heardle-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-playing-before-64.png",
+      "after": "heardle-playing-after-64.png",
+      "before_sha256": "f6ee86aeecc512d0d4ac371cd351f001cf5c60828429e75643f67df586159657",
+      "after_sha256": "452835d4f343d605985a4a6e5ec0d0b033476d511dd91d1bd40720a3a31410c8",
+      "output": "heardle-playing-64-comparison.png",
+      "output_sha256": "fd390d78ac351f1609adf707bc57b85aa7c2f855523051c650ed0133ffd80ba7"
+    },
+    {
+      "case": "heardle-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-playing-before-192.png",
+      "after": "heardle-playing-after-192.png",
+      "before_sha256": "ffe611ed4634bb11905b27fd0693c089203e644476e7cc0215cb5f824cdb3d57",
+      "after_sha256": "37b676eb6917851327166abc99d0189d45257410e8f92b240e5d3b34cedc0af3",
+      "output": "heardle-playing-192-comparison.png",
+      "output_sha256": "4975fb7a52562a33fb2cae3814f056ff84678ad88c21a50a9924ac03daebc9d6"
+    },
+    {
+      "case": "heardle-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-playing-before-512.png",
+      "after": "heardle-playing-after-512.png",
+      "before_sha256": "1d351445c1c607f92cc28e1bd475aecfc47a5b462a08262d34a6af17dc78dfaa",
+      "after_sha256": "6cfdfab46a1ed6ea3fdc9b1acbe95628146f45b167d4af96d8c7fc36a16cfae6",
+      "output": "heardle-playing-512-comparison.png",
+      "output_sha256": "03bb39ffc4d1433c4b2ea71df837a8f6e8fa728efb4c7af3382513cf63283364"
+    },
+    {
+      "case": "heardle-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-won-before-64.png",
+      "after": "heardle-won-after-64.png",
+      "before_sha256": "5c7f6d0585b6cd76cb43b60afe16761da82c4820e243ac6853493006bdfc4656",
+      "after_sha256": "2d08b943a6db90419e3c90289e7ba456d54ff9e235ac61fc0ca59bf5b903631d",
+      "output": "heardle-won-64-comparison.png",
+      "output_sha256": "91869692b87559cb15ee16ebafb62737c0c446abd0f813b4f7b3ca17e58b9a6c"
+    },
+    {
+      "case": "heardle-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-won-before-192.png",
+      "after": "heardle-won-after-192.png",
+      "before_sha256": "ee36576d7f7086a7840b21935b9761829c0346d571ef080dd3104e8c8f64e3f9",
+      "after_sha256": "9ec90548b42c42f149ec7659f0ec095e4f339796d2b1cc2c37cb5f359903cf04",
+      "output": "heardle-won-192-comparison.png",
+      "output_sha256": "5fc90a5028277e69c494c031d94b525ee8ed9c0e94f00d65058db1fa660957ca"
+    },
+    {
+      "case": "heardle-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-won-before-512.png",
+      "after": "heardle-won-after-512.png",
+      "before_sha256": "19e1d3fde77114e151c2e7ee3fc26b46e038e41a0d19637354df006d263f6cca",
+      "after_sha256": "93e706d25df48ca9234ec616f79b5a3b7c63b480cbd2f35b2441a707ce8b04e7",
+      "output": "heardle-won-512-comparison.png",
+      "output_sha256": "f670559e0c2295151db7e8ed6abfa8eacb5395ac9b616794ba3094530263b9b5"
+    },
+    {
+      "case": "heardle-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-ready-before-64.png",
+      "after": "heardle-ready-after-64.png",
+      "before_sha256": "05799f25c40c6622f44d900bdfe459657fd9515d82807d28a4a53ab0c31ae863",
+      "after_sha256": "d2c155cc1532c7a87601c579a5aeed006d2824c67e361a313a40db8261dcf6e0",
+      "output": "heardle-ready-64-comparison.png",
+      "output_sha256": "367003e58c77d5f2358c524b6cea69b209419081fc18d0ca428854bcba0ee6f1"
+    },
+    {
+      "case": "heardle-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-ready-before-192.png",
+      "after": "heardle-ready-after-192.png",
+      "before_sha256": "710c2741b7544f0fb2438184d028373b847cc75cf009e91292d40847d3074e23",
+      "after_sha256": "174154535f6eac6e9f7b8a72e1d1fe6497a6b9b0dc6d4076edffe19d9eda1bb9",
+      "output": "heardle-ready-192-comparison.png",
+      "output_sha256": "41067ca33e7c2c7212c54af30e57e968e9cc79d85582d8d30cc7c414e8e17baa"
+    },
+    {
+      "case": "heardle-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-ready-before-512.png",
+      "after": "heardle-ready-after-512.png",
+      "before_sha256": "a42ed813c1a2c363224a4c5d9c849f8b356888ccfdf9b22f38a0a93abea34860",
+      "after_sha256": "2db3b038e043eaa629ef5a1365a85819a6522bc6771effeb029a52e7305969d2",
+      "output": "heardle-ready-512-comparison.png",
+      "output_sha256": "ece753c907fa3070f17eae835665f8204db1791975176c0919550e532871bcc0"
+    },
+    {
+      "case": "heardle-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-lost-before-64.png",
+      "after": "heardle-lost-after-64.png",
+      "before_sha256": "0becd08a8f7a9bd8ce4e603e937c6738b03839269ab2ff3bece002439f6431a3",
+      "after_sha256": "2d08b943a6db90419e3c90289e7ba456d54ff9e235ac61fc0ca59bf5b903631d",
+      "output": "heardle-lost-64-comparison.png",
+      "output_sha256": "55259279895a953141fc933fac2a72d993a52071abbafa95e6f88c07eaceb07a"
+    },
+    {
+      "case": "heardle-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-lost-before-192.png",
+      "after": "heardle-lost-after-192.png",
+      "before_sha256": "499848bb8b4de5fbe11a68cbe5691b7f1911e5f6947c2e281f23de7c290eb8e6",
+      "after_sha256": "9ec90548b42c42f149ec7659f0ec095e4f339796d2b1cc2c37cb5f359903cf04",
+      "output": "heardle-lost-192-comparison.png",
+      "output_sha256": "8716fa33315f8f1d45c86adb11621366b2a2b2d1c1d8465237437ab5ab7326e9"
+    },
+    {
+      "case": "heardle-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "heardle-lost-before-512.png",
+      "after": "heardle-lost-after-512.png",
+      "before_sha256": "e2530ecef0ec44299f2fa1e064761ef81e33a74eb60d3224235db5fa122e2522",
+      "after_sha256": "93e706d25df48ca9234ec616f79b5a3b7c63b480cbd2f35b2441a707ce8b04e7",
+      "output": "heardle-lost-512-comparison.png",
+      "output_sha256": "e1fd2db364136fbc4674379a1175fd780a93ab9ed117a447d4ae88584bd95f90"
+    },
+    {
+      "case": "twentyq-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-playing-before-64.png",
+      "after": "twentyq-playing-after-64.png",
+      "before_sha256": "e69dfe1bac71743b7d15d6a8f2c49ec7407fea6f5b8b443b10944c0468159843",
+      "after_sha256": "5ba95ec3b737b71d1d1f5174585e693a30928bd5865954eac5f7979a415cda76",
+      "output": "twentyq-playing-64-comparison.png",
+      "output_sha256": "ffdb5a4d24a02f6c4aa624b93016c9f1bad9f6d6a7ffa01967f83264f442ae1f"
+    },
+    {
+      "case": "twentyq-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-playing-before-192.png",
+      "after": "twentyq-playing-after-192.png",
+      "before_sha256": "852356b744a8426dacafdbcd3c92bb25afb8c04f96b7e82e65eb11a9aff3f6a5",
+      "after_sha256": "a9dd26c96aadf7f7c8c5949cd85958e6780d8e1b181f215a462bb37dba63d239",
+      "output": "twentyq-playing-192-comparison.png",
+      "output_sha256": "fecb9f772d412404e1761c7ce04ae8ba7188e69dc1b7aca0c47c28287c738d20"
+    },
+    {
+      "case": "twentyq-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-playing-before-512.png",
+      "after": "twentyq-playing-after-512.png",
+      "before_sha256": "2491407603cfcfcf14e2ccca9ffe30ddb0a99e7327cab53d5e421cb98c3d1979",
+      "after_sha256": "9604ae7b323ca80f3b1741ee649dfb84a13d692e56e86bf99f45d144e7e750a5",
+      "output": "twentyq-playing-512-comparison.png",
+      "output_sha256": "588eb1c4402915a243d74e5f6323ae7052bcbeb68784ef8809a25532d4c61512"
+    },
+    {
+      "case": "twentyq-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-won-before-64.png",
+      "after": "twentyq-won-after-64.png",
+      "before_sha256": "33cc12556256e65e5aa7596efd5d077f8e48e4a5c3eae65f5d07110a07850e22",
+      "after_sha256": "14e7346456195b3ecba966092b5d4e167c93a5af2f54a9772440a911abe33e51",
+      "output": "twentyq-won-64-comparison.png",
+      "output_sha256": "b4caa37af7876cf7e11f5a993d3187e2b506240e58bb9db6a1a50018fa5d1343"
+    },
+    {
+      "case": "twentyq-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-won-before-192.png",
+      "after": "twentyq-won-after-192.png",
+      "before_sha256": "2e4a52a4830e26a0edbb2db271470ba43400849b99ebb11b145d945c3c22cc32",
+      "after_sha256": "cde16cd9b18a2a1a4e7c9490cdcff9e1a7a07914b666800656b4f24a41a5b0f8",
+      "output": "twentyq-won-192-comparison.png",
+      "output_sha256": "8a55306d6ca82aab670eeeffe64841b76930074ac95c52676eda14c8ad8a2b9a"
+    },
+    {
+      "case": "twentyq-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-won-before-512.png",
+      "after": "twentyq-won-after-512.png",
+      "before_sha256": "413178a534e68e15d9a92a527654538572ad7722361d965dd941f0cdccc3be3e",
+      "after_sha256": "4e20528b7af61e9b76a8687061ff1a2135cf50d95f288543bd8c437388225006",
+      "output": "twentyq-won-512-comparison.png",
+      "output_sha256": "073bfe74b51cb187b2198ffa7ef46de12b2ca81e34a2e7ab5565ef01c5381ead"
+    },
+    {
+      "case": "twentyq-loading",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-loading-before-64.png",
+      "after": "twentyq-loading-after-64.png",
+      "before_sha256": "2c3fd4b6f7ac62ebb4fd16b55f2ad77a945beafcb2fb25e8d629e1787114493c",
+      "after_sha256": "b1b9018a2f9bea78a200179f48a4711f78d16e43c09e8b27643ebd0a7af6bf80",
+      "output": "twentyq-loading-64-comparison.png",
+      "output_sha256": "0f5aa4f3bb35cc0152039c216d99635ddda193208cbb0f40cd7eaa8999dcd1cb"
+    },
+    {
+      "case": "twentyq-loading",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-loading-before-192.png",
+      "after": "twentyq-loading-after-192.png",
+      "before_sha256": "77b0643442013141faafe588a7db1ea6392057677d40243f03701a2d84d0d33b",
+      "after_sha256": "1066f9e89ba5b21c55c834d5ee728b50df248447efd20e2af24f839a3f96d302",
+      "output": "twentyq-loading-192-comparison.png",
+      "output_sha256": "58225dd3c6d7823ff94f57bf753467fee1ed52c292804bfd189560e24715eca6"
+    },
+    {
+      "case": "twentyq-loading",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-loading-before-512.png",
+      "after": "twentyq-loading-after-512.png",
+      "before_sha256": "22117be44fc0afce54d0dee3f221a555daf348468b21414f96065a4f4459eb6f",
+      "after_sha256": "6f4c9c9bc68a2aa65a1ec081160ac2eeb885f075736dc553ac33e5a77a201023",
+      "output": "twentyq-loading-512-comparison.png",
+      "output_sha256": "de3857afe330036a7c55b4457a8af76836520f022fcc8f19ad3d38cefdc5b74d"
+    },
+    {
+      "case": "twentyq-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-error-before-64.png",
+      "after": "twentyq-error-after-64.png",
+      "before_sha256": "170ddbd3c9b4b6f8a09f044d6211da464b0c37857b098ad6c2eed61950b1b7d4",
+      "after_sha256": "bf662061b09fac352508ffd6425e5d5df7652ce0427924ea2a5c8655f06ad6e7",
+      "output": "twentyq-error-64-comparison.png",
+      "output_sha256": "30152c71037f274dce7242debbbcb8b0bef94a788a42960303a458b909a12358"
+    },
+    {
+      "case": "twentyq-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-error-before-192.png",
+      "after": "twentyq-error-after-192.png",
+      "before_sha256": "77b0643442013141faafe588a7db1ea6392057677d40243f03701a2d84d0d33b",
+      "after_sha256": "ba54959444e781ec3f0c09380205fb7e33d9c633820f9e39c880978075f14fd7",
+      "output": "twentyq-error-192-comparison.png",
+      "output_sha256": "c96767ef38e2d0bea0c3cc02f1cde3324ce6cd71bae8fa33d8750e5032aeb874"
+    },
+    {
+      "case": "twentyq-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "twentyq-error-before-512.png",
+      "after": "twentyq-error-after-512.png",
+      "before_sha256": "22117be44fc0afce54d0dee3f221a555daf348468b21414f96065a4f4459eb6f",
+      "after_sha256": "e14c06902edeedc7c2d132909da0ffe109cdeb2d4ec02e1995ec59b03454ab75",
+      "output": "twentyq-error-512-comparison.png",
+      "output_sha256": "4ae76cb78d8c0dbf2d0b4d3696c01178364854c415de8df21f885a057428ced6"
+    },
+    {
+      "case": "quiz-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-playing-before-64.png",
+      "after": "quiz-playing-after-64.png",
+      "before_sha256": "2e6fa1eea1a8471166fefe0ea99a53fd92c68a512b80ef7775d21c02b1e3dcce",
+      "after_sha256": "03fead3ccbcc4d581dc38b8b9d7ed025c2f3fe14bb66a0c196b43c3ebee4c080",
+      "output": "quiz-playing-64-comparison.png",
+      "output_sha256": "7660f930809a45127d2dabb963803bd25fcbe4619e4475a07323f1b6107fc930"
+    },
+    {
+      "case": "quiz-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-playing-before-192.png",
+      "after": "quiz-playing-after-192.png",
+      "before_sha256": "368f5fbce483a6d9b1ccbbb0168613a21b3ae62cdae4a43b2378d4637a6cb8e7",
+      "after_sha256": "845f404778eeb130f8513f73457f3b6a1b4d0b075641168cbf9bef8f85cc6835",
+      "output": "quiz-playing-192-comparison.png",
+      "output_sha256": "0b5172981ee0db73621703e4faa78c5258693401db830a6aeba4ca863e9d37cc"
+    },
+    {
+      "case": "quiz-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-playing-before-512.png",
+      "after": "quiz-playing-after-512.png",
+      "before_sha256": "3aa3c813c87cb014569b5076bb5769a48990b9015a2f7bb1cfdd28485356b92a",
+      "after_sha256": "081c6cca7335bf1e4fcc82da875f5094191516b4061032da2f658f1a250cb8ce",
+      "output": "quiz-playing-512-comparison.png",
+      "output_sha256": "20e6815cd137ed99aa63a89b5dbfbd7bee5e7f90f0caabccb7182394b8d5721b"
+    },
+    {
+      "case": "quiz-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-won-before-64.png",
+      "after": "quiz-won-after-64.png",
+      "before_sha256": "850a7ea93670953b0e7e55f42bc06d3890ee26a6cad21b0949442bd2ca1a0b68",
+      "after_sha256": "3f969e5abdef8bfa8617c928d5f79c4415dd47a8b39e97eb7b29b83973927c03",
+      "output": "quiz-won-64-comparison.png",
+      "output_sha256": "02331d851f993a7237e415ab1dde8f657ef8f10fdbc3354a1ed7deb7f04ad1f8"
+    },
+    {
+      "case": "quiz-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-won-before-192.png",
+      "after": "quiz-won-after-192.png",
+      "before_sha256": "24db3dd0f15f1ef2836550f025d7939462a0ed134f3f9374a6e250ebfee8caee",
+      "after_sha256": "1bde073821e1be62c45ff982de09ccfc6b7fc51dbcfe692b6cddffa0d8579015",
+      "output": "quiz-won-192-comparison.png",
+      "output_sha256": "5b3f18898932040a95d0affa67f3f52a83b01a95aa30512dfb336b7029e245a2"
+    },
+    {
+      "case": "quiz-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-won-before-512.png",
+      "after": "quiz-won-after-512.png",
+      "before_sha256": "0ad48fa8ff7859bfcc8ae3729d512ed689c554c098418de72c1a6d2fd4c1089c",
+      "after_sha256": "fc18cd02f27704a90f892cc060b55a5d7b519e74226de179a00453c6d56ad3f4",
+      "output": "quiz-won-512-comparison.png",
+      "output_sha256": "25ef33986381f589454272a8990652ae6c59236187bdc5ee6cf5915da72d4132"
+    },
+    {
+      "case": "quiz-answer",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-answer-before-64.png",
+      "after": "quiz-answer-after-64.png",
+      "before_sha256": "e252ea50cf0e705c78dafe40199891db1f461c95a19bb55c6cc4829aa4979509",
+      "after_sha256": "1fee5890a612702080455a403673f8e4500f2ad76b20fb03dabefbee1a7c4ff7",
+      "output": "quiz-answer-64-comparison.png",
+      "output_sha256": "c885aaed7cf529e5066d3a8e39a48c7a928b5ed99c5afa2bfd4f53df4612d3d8"
+    },
+    {
+      "case": "quiz-answer",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-answer-before-192.png",
+      "after": "quiz-answer-after-192.png",
+      "before_sha256": "29dc4edb07dc23f190767aea5c2e4f0a1e0df4c0c2fa10f49a19e43c495d6054",
+      "after_sha256": "95d844931ec73a1da65c3d173448fa6120fa0a20b6f4637d5aae7154f879cd5a",
+      "output": "quiz-answer-192-comparison.png",
+      "output_sha256": "4a051acf69b53d2bfc88e52f727bb5492a50e4f898791d9ccd1266289f7a81fd"
+    },
+    {
+      "case": "quiz-answer",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "quiz-answer-before-512.png",
+      "after": "quiz-answer-after-512.png",
+      "before_sha256": "2add7e95c18e440414fda7037a5ec124dfbc69f025dd685f70b39bd38d6424cc",
+      "after_sha256": "224bb897fbe988546d6253f02076809ab8398453b13abc610b11d4f25faf9218",
+      "output": "quiz-answer-512-comparison.png",
+      "output_sha256": "2e6e010fb4a1118f796f7b09d195b4ae028b7eab2d2f79666c83736660410520"
+    },
+    {
+      "case": "pictionary-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-playing-before-64.png",
+      "after": "pictionary-playing-after-64.png",
+      "before_sha256": "f5ea738bd70b88a33749f269844e2060387214db289ec00d436b5a4bf7371b09",
+      "after_sha256": "fa51a683ee6144f166e3325c16231ee90e1edb6ea1c7a13a56e2a3f74bcbe57c",
+      "output": "pictionary-playing-64-comparison.png",
+      "output_sha256": "ab74484bd82bc302bf477e847c274c127adb3c06a060092f216022df7516b979"
+    },
+    {
+      "case": "pictionary-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-playing-before-192.png",
+      "after": "pictionary-playing-after-192.png",
+      "before_sha256": "9c9f85c66cf70611fb5f6d6929479b0f202d9d3d293182315f53a2fd3e28409b",
+      "after_sha256": "d51cda151102533b91372e4b559c787a8be192b22df51eefa7d5f324e88a4864",
+      "output": "pictionary-playing-192-comparison.png",
+      "output_sha256": "3c0bdc79ae06474d93bbd20f6a9ed40fcd9cc467dd904fcf968e567b9c51c22d"
+    },
+    {
+      "case": "pictionary-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-playing-before-512.png",
+      "after": "pictionary-playing-after-512.png",
+      "before_sha256": "9c71ef4d73d19c1a882d7e0fbc9c0c61ca542071badf785bcc3993c752362ed8",
+      "after_sha256": "4d971d3ab2a00e5580169a2ed02a284938402bf66edfda8bc29dd4311790dbf5",
+      "output": "pictionary-playing-512-comparison.png",
+      "output_sha256": "0a4c89d3a21477cb20246fdb731707b80ef3aa00a1d3783adc95ea448a5d0454"
+    },
+    {
+      "case": "pictionary-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-won-before-64.png",
+      "after": "pictionary-won-after-64.png",
+      "before_sha256": "14ea95c2c3a830bcb0483f53c6fc92529e1d419f005fd62da51708a0de0604f5",
+      "after_sha256": "99c4198a13efdc496bfb10f0083c74af5681aa6f33ac97ca072d3168b93e7625",
+      "output": "pictionary-won-64-comparison.png",
+      "output_sha256": "18fe03921e62656564bee31f46c0f2186e81c38918370bd2ab06815e0c9619dd"
+    },
+    {
+      "case": "pictionary-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-won-before-192.png",
+      "after": "pictionary-won-after-192.png",
+      "before_sha256": "9b1c342380336eb393e2eaf715ae8cf3e7036069f8e252af09913dc6d9186397",
+      "after_sha256": "e23a87e7262d241242b72bccaeee685739c89b0c8e32d99af6f9f2fd6d0fa14f",
+      "output": "pictionary-won-192-comparison.png",
+      "output_sha256": "0ac50bc4cfbcc5cb5af520c4444ecacecc39721d507b7becfe35a9d4694967a8"
+    },
+    {
+      "case": "pictionary-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-won-before-512.png",
+      "after": "pictionary-won-after-512.png",
+      "before_sha256": "ef6483a93946e48679969710c7715d964049180aef873335bfaf46e25da60875",
+      "after_sha256": "b27eb0ecb8a37e3c1425c508578fae74e6cb22d67cc6a5d3b811678ff2b14b49",
+      "output": "pictionary-won-512-comparison.png",
+      "output_sha256": "e3b1cde7e0b7c39c45dbb8c825206e4e8f1d476f6a6e7390ef2036b1d6a5a807"
+    },
+    {
+      "case": "pictionary-loading",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-loading-before-64.png",
+      "after": "pictionary-loading-after-64.png",
+      "before_sha256": "becb3f14b72b684fb8219bf9e99fb572d9fe45e432debb6dcce4c591bf812ccc",
+      "after_sha256": "2f2d51cff1ca16f830f548d909d5b217f30633bd1137272b3b6ca4a82ac783cd",
+      "output": "pictionary-loading-64-comparison.png",
+      "output_sha256": "a77cd98912662ebf7ce9a80fd15c694280835d98c00e720a69be83ff1c21497a"
+    },
+    {
+      "case": "pictionary-loading",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-loading-before-192.png",
+      "after": "pictionary-loading-after-192.png",
+      "before_sha256": "d78ecf559ff3b8c1fbdaf073ab7aa662bfd6c582a62178440758d71ed49dd20b",
+      "after_sha256": "cb3cc6ff20eb005eed6adef2da1ad072edeb13dab8179fff616be8bbaa4e02dd",
+      "output": "pictionary-loading-192-comparison.png",
+      "output_sha256": "6f602ce5b8dcc1dd67f075966bb6825af280c4d1822500d244b2ea9ba05d924d"
+    },
+    {
+      "case": "pictionary-loading",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-loading-before-512.png",
+      "after": "pictionary-loading-after-512.png",
+      "before_sha256": "62cdc4fd1654be11057549e3074e279ae8fb5bdd49b2381e44d8bd8f0b430b49",
+      "after_sha256": "009049350b91a39959a890fb7a1c41350997b960764e423154c99bce759c5dec",
+      "output": "pictionary-loading-512-comparison.png",
+      "output_sha256": "a583408bd46480fae625ca61c8680ed92cf0ec1450249d36d98ec0ebb4022dea"
+    },
+    {
+      "case": "pictionary-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-error-before-64.png",
+      "after": "pictionary-error-after-64.png",
+      "before_sha256": "becb3f14b72b684fb8219bf9e99fb572d9fe45e432debb6dcce4c591bf812ccc",
+      "after_sha256": "72b92a950f1de4982d708faf2540e7177b5c1add659124943056bf36ec942a73",
+      "output": "pictionary-error-64-comparison.png",
+      "output_sha256": "f0b29a5cd73b55fba45d59fc1d6a848588dc2d239eafe89af9223473c192dd98"
+    },
+    {
+      "case": "pictionary-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-error-before-192.png",
+      "after": "pictionary-error-after-192.png",
+      "before_sha256": "d78ecf559ff3b8c1fbdaf073ab7aa662bfd6c582a62178440758d71ed49dd20b",
+      "after_sha256": "5b6b2a6d3d8c9e7880803abaa2a5462ce776067a5031c63ccbe2a69b4d9963a2",
+      "output": "pictionary-error-192-comparison.png",
+      "output_sha256": "1b8c997135708dd8fd966d005a24f293752ea516644e019a19452836f27c7313"
+    },
+    {
+      "case": "pictionary-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-error-before-512.png",
+      "after": "pictionary-error-after-512.png",
+      "before_sha256": "62cdc4fd1654be11057549e3074e279ae8fb5bdd49b2381e44d8bd8f0b430b49",
+      "after_sha256": "98d0c772c2dbbb24113a61cc026c52d9469e0ede1608781cd74b7f867f93ac14",
+      "output": "pictionary-error-512-comparison.png",
+      "output_sha256": "a45b8c9e76379a4548392a7932454a814425887e6d481fcfa0153ebd72995b8b"
+    },
+    {
+      "case": "pictionary-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-lost-before-64.png",
+      "after": "pictionary-lost-after-64.png",
+      "before_sha256": "28730875deff634596bdd0d1d603e723dee3dea30772d303d45834ac8ff3540f",
+      "after_sha256": "99c4198a13efdc496bfb10f0083c74af5681aa6f33ac97ca072d3168b93e7625",
+      "output": "pictionary-lost-64-comparison.png",
+      "output_sha256": "0afaa7483ae4190c10471102bef1fbc011fc11103a2c60da1d16f5fb7396752a"
+    },
+    {
+      "case": "pictionary-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-lost-before-192.png",
+      "after": "pictionary-lost-after-192.png",
+      "before_sha256": "951a9114f8023b061915530b1c2811a7c9360260ce3d1e840d260a948d777327",
+      "after_sha256": "e23a87e7262d241242b72bccaeee685739c89b0c8e32d99af6f9f2fd6d0fa14f",
+      "output": "pictionary-lost-192-comparison.png",
+      "output_sha256": "d3c40bab3fa9f59943b764a170cadc57a115ce6d29cc657cd23f84d4a87f519a"
+    },
+    {
+      "case": "pictionary-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pictionary-lost-before-512.png",
+      "after": "pictionary-lost-after-512.png",
+      "before_sha256": "79c9348e63c79c834189e6035e4b15ab72e807c26905436a93b9c8b713fb1e95",
+      "after_sha256": "b27eb0ecb8a37e3c1425c508578fae74e6cb22d67cc6a5d3b811678ff2b14b49",
+      "output": "pictionary-lost-512-comparison.png",
+      "output_sha256": "2d8fcd617f44dcdc6f4611004caa4d3d9c55474598255801b56ec2c34c594e66"
+    },
+    {
+      "case": "pong-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-playing-before-64.png",
+      "after": "pong-playing-after-64.png",
+      "before_sha256": "14a3de98b24608fba66880378c2210597f9f7d3df20dc6df3c87f5eb09cc0df5",
+      "after_sha256": "133d872db19f161a56682e0110058ab3f06d9135495d15a352f4fa11a7f14f2f",
+      "output": "pong-playing-64-comparison.png",
+      "output_sha256": "f9170f57bfad1d24c70ccacc54d7eeecbb499c98588d5f554822c374d803e6ab"
+    },
+    {
+      "case": "pong-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-playing-before-192.png",
+      "after": "pong-playing-after-192.png",
+      "before_sha256": "20e9a219211e70f5914aca193c330e8fa4f62abf4533f9b3424a4e5ef9c387f9",
+      "after_sha256": "66c14f10e197b33b0b59c30ff3b8c6a184cc6abbb56ef560da8123607a2a42ae",
+      "output": "pong-playing-192-comparison.png",
+      "output_sha256": "e91b892d15b5d435402efb0f8b22ac81e935aedf3b4ff46f07d33a4de48936ce"
+    },
+    {
+      "case": "pong-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-playing-before-512.png",
+      "after": "pong-playing-after-512.png",
+      "before_sha256": "65f4c47af2d377d999e3fed9e0921b83ec002a0b215794b87a7f17407e7297c5",
+      "after_sha256": "6c514cb6fa0bb6e5e521026cb76f0655df95badc6f1eef61c208602c2f47ec99",
+      "output": "pong-playing-512-comparison.png",
+      "output_sha256": "5dc927d063da39875fa366ea335c5b268c5ec6c7dc5123ba0775f8f6b56eedd1"
+    },
+    {
+      "case": "pong-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-won-before-64.png",
+      "after": "pong-won-after-64.png",
+      "before_sha256": "6b2d68a530425e5c8552642afdc2413af112a377eebf6eb79b098db108e9df4b",
+      "after_sha256": "0fb783b17119ac0be2114185c0ae2353cc96d4882a294644df0be2c0ccaf0ca4",
+      "output": "pong-won-64-comparison.png",
+      "output_sha256": "0bc0a889cdd37ab7cdfb7099ab53b67979e6428ee882bbc265f5b57fc1fb187a"
+    },
+    {
+      "case": "pong-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-won-before-192.png",
+      "after": "pong-won-after-192.png",
+      "before_sha256": "6f51f937876999e5ceb3e6d6142e0a8a27d85b090782e4997f6f9cf0d7174278",
+      "after_sha256": "883ebfe6757a538aef568ba4c9aec16a6fa2d92fafab18990fd1d0d47624a763",
+      "output": "pong-won-192-comparison.png",
+      "output_sha256": "d80e40f26abb9e72a13128d4a2bf9dc0f61a9b42018233ba631f70758c698a6f"
+    },
+    {
+      "case": "pong-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-won-before-512.png",
+      "after": "pong-won-after-512.png",
+      "before_sha256": "26333ae2483790181c3701eef3b74ac9719c3eb88d971ed8f6dd19d43b3ceac6",
+      "after_sha256": "46c0273a772c0a8feed5ce5b62c24dc5510d79fa606b2aec4e6e6c12d72191fd",
+      "output": "pong-won-512-comparison.png",
+      "output_sha256": "e6463905c35a3c3f7abeedbbe6c9e30a8f15e4290878f68673be56a89dcc5151"
+    },
+    {
+      "case": "pong-ready",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-ready-before-64.png",
+      "after": "pong-ready-after-64.png",
+      "before_sha256": "aa01fd8aade533d7647a573a0b1b418a36af316ffe4c817b0628bbbac0140959",
+      "after_sha256": "6e365f310e5363a20ae181d44b867fb881d776ed77eee57cb6a887295d7cc9e7",
+      "output": "pong-ready-64-comparison.png",
+      "output_sha256": "46a3c3a781d8974534761c7d9f10b00dde64fcc75377052ad02d51c671b1c2e6"
+    },
+    {
+      "case": "pong-ready",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-ready-before-192.png",
+      "after": "pong-ready-after-192.png",
+      "before_sha256": "bc1ec3505877eb413cd5f3389a16de303eafc1e88b5f0d2b27b467730c59040a",
+      "after_sha256": "bedd1f2c5d71cd338d3c9d93903ff5ee11057e03191d8e38c29aabe7aaf3bb28",
+      "output": "pong-ready-192-comparison.png",
+      "output_sha256": "407fb0ce25cbd43c5680da92abe58115c3e963049d7dbb8a48ab39f4cec91d14"
+    },
+    {
+      "case": "pong-ready",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "pong-ready-before-512.png",
+      "after": "pong-ready-after-512.png",
+      "before_sha256": "8b8a94c4c328a675ae6d3754a7c1280a4960855b5c26afda11788b81bffbddf5",
+      "after_sha256": "6fe240b5eaa2a9d117e0cb02e2eec86d4397acd1b9a9956a8d732f9eff6a267a",
+      "output": "pong-ready-512-comparison.png",
+      "output_sha256": "11f49cd09d6d8fe11925341c46b65e27f2845eb7f8e7fa5dabea070dad35b171"
+    }
+  ],
+  "puzzle_manifest": "../puzzles/manifest.json",
+  "motion": [
+    "twentyq-question-motion.gif",
+    "quiz-question-motion.gif"
+  ],
+  "extra_native_states": 15,
+  "deployment_note": "Wall deployed and verified with all five games, including configured live question and image providers; Off restored and temporary scores removed. Signed iPhone18ProMax build ready, but installation remains blocked by disconnected device/CoreDevice4016.",
+  "validation_present": true,
+  "references": [
+    "https://acf-quizbowl.com/rules/gameplay/",
+    "https://box2d.org/documentation/md_simulation.html",
+    "https://developer.apple.com/design/human-interface-guidelines/feedback",
+    "https://developer.apple.com/design/human-interface-guidelines/game-controls",
+    "https://developer.apple.com/design/human-interface-guidelines/gestures/",
+    "https://developer.apple.com/design/human-interface-guidelines/progress-indicators",
+    "https://developer.apple.com/design/human-interface-guidelines/writing",
+    "https://developer.apple.com/documentation/avfaudio/handling-audio-interruptions",
+    "https://developer.apple.com/documentation/avfoundation/avplayer",
+    "https://developer.apple.com/documentation/coremotion/cmmotionmanager",
+    "https://developer.apple.com/documentation/coremotion/cmmotionmanager/startdevicemotionupdates()",
+    "https://mobbin.com/screens/0df53845-1879-4027-8e20-60ecef3f669c",
+    "https://mobbin.com/screens/19144eaf-4d48-472c-b732-f6fa87ecefb7",
+    "https://mobbin.com/screens/1ba9e49e-12f7-4d04-b0bb-789b1751b1d1",
+    "https://mobbin.com/screens/39960abd-b76b-4662-a2e5-3e05036feaae",
+    "https://mobbin.com/screens/562607f7-848c-4f7f-922c-f1619ae1c03b",
+    "https://mobbin.com/screens/8cf567ec-633b-4d0b-81b8-4e05de5fdb9c",
+    "https://mobbin.com/screens/bc93136f-e9d5-4459-a725-012fe731ae69",
+    "https://mobbin.com/screens/c3dbe857-56e2-4391-a937-ddf595924290",
+    "https://mobbin.com/screens/ef660f52-730c-4f4c-999c-ef6656275068",
+    "https://mobbin.com/screens/ff913374-40ca-42d8-93c7-a32541d041ee"
+  ]
+}

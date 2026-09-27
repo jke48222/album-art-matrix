@@ -1,0 +1,60 @@
+{
+  "status": "deployed",
+  "dependency_review": "Compared all changed runtime files and their shared renderer dependencies with the deployed source. All new game modules import before managed restart; backups retained.",
+  "base": "8251028",
+  "files": [
+    {
+      "path": "brain/games/arcade.py",
+      "before_sha256": "fb1a505277d06688bf901f8960756fe7612d559fa711861fc55eeff09c07665c",
+      "after_sha256": "354ecd0e3f0da8423052cac58f8bbd1e505098dd65faf912a85c643c6e142332"
+    },
+    {
+      "path": "brain/games/heardle.py",
+      "before_sha256": "a6389eb9b0319be40a3809e716a3635348be734ba2687ee24211d65006124788",
+      "after_sha256": "fb3ccc37362b0afb9783c5636fddb0f018c6b9434d605f12dccc72b4c3210c50"
+    },
+    {
+      "path": "brain/games/pictionary.py",
+      "before_sha256": "f554f58a88a044c725f09ce40bdfc28c42905596fc610c32bd5887399b929883",
+      "after_sha256": "09c383414f580ef619774c5b0d4db2818c962e3e1f501b8c8aef72a5907d5535"
+    },
+    {
+      "path": "brain/games/quiz.py",
+      "before_sha256": "ae10dda3210acf9ea68e05504023828f269e61eb81db88a7eb8af86ffbc06060",
+      "after_sha256": "aebd73730dc9592f5944a6fabd352292a9191e4475b6ce4d1f590e8d2d6259a5"
+    },
+    {
+      "path": "brain/games/twentyq.py",
+      "before_sha256": "957d5134fc1df3d1d3e6fc4de6eb57b98c86bf6993c97f564f83d8dad8d999b5",
+      "after_sha256": "fba73e649b56338030fdf4572ee8077b314c128f0f31e815c2a58ceecf2d0ad7"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2346486",
+  "current_pid": "3420560",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 71,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 57.3,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 4,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}

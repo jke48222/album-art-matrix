@@ -1,0 +1,84 @@
+{
+  "running": true,
+  "seq": 14,
+  "game": {
+    "name": "quiz",
+    "title": "Pub quiz",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Answer: 33.",
+    "started": 1790492802,
+    "finished": null,
+    "seq": 2,
+    "voice": true,
+    "theme": "Records and record players",
+    "number": 1,
+    "count": 10,
+    "question_id": 1,
+    "question": "How many revolutions a minute does an LP turn at?",
+    "phase": "answer",
+    "seconds": 20.0,
+    "seconds_left": 0.0,
+    "reveal_seconds_left": 4.0,
+    "frame_step": 0,
+    "scores": {
+      "Tessera QA Batch 12": 1
+    },
+    "answered": {
+      "Tessera QA Batch 12": {
+        "text": "33",
+        "right": true
+      }
+    },
+    "answer": "33",
+    "leaders": [],
+    "tied": false,
+    "results": null
+  },
+  "session_id": "c3031b4622684f06bb7f77f0c7e68f52",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "Tessera QA Batch 12": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "33",
+    "thirty three",
+    "33 and a third",
+    "thirty three",
+    "nothing",
+    "it does not stand for anything",
+    "no",
+    "abbey road",
+    "blonde",
+    "blond",
+    "the spindle",
+    "spindle",
+    "fleetwood mac",
+    "black",
+    "blue",
+    "black and blue",
+    "ep",
+    "e p",
+    "extended play",
+    "the dark side of the moon",
+    "dark side of the moon",
+    "vinyl",
+    "pvc",
+    "polyvinyl chloride",
+    "plastic"
+  ],
+  "right": true,
+  "answered": 1,
+  "question_id": 1
+}

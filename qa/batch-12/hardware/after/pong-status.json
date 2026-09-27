@@ -1,0 +1,81 @@
+{
+  "running": true,
+  "seq": 33,
+  "game": {
+    "name": "pong",
+    "title": "Pong",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Match paused. Your court is saved.",
+    "started": 1790492837,
+    "finished": null,
+    "seq": 3,
+    "voice": false,
+    "ball": [
+      0.5,
+      0.5
+    ],
+    "velocity": [
+      0.44976898783213426,
+      0.014417266885836846
+    ],
+    "paddles": [
+      0.35,
+      0.5
+    ],
+    "score": [
+      0,
+      0
+    ],
+    "to": 7,
+    "phase": "paused",
+    "rally": 0,
+    "longest_rally": 0,
+    "point_number": 0,
+    "last_point": null,
+    "serve_remaining": 0,
+    "sample_time": 28740.948495738,
+    "trail": [],
+    "paddle_height": 0.22,
+    "court_top": 0.22,
+    "court_bottom": 0.94,
+    "ball_radius": 0.01796875,
+    "paddle_x": 0.055,
+    "paddle_width": 0.018,
+    "opponent": "The wall"
+  },
+  "session_id": "a74d578fabcc4e61af36b19bd0286a9a",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    },
+    "Tessera QA Batch 12": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": {
+    "game": "pictionary",
+    "title": "AI pictionary",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "won": true,
+    "winner": null,
+    "message": "Tessera QA Batch 12: lighthouse, at 20.9 s.",
+    "at": 1790492836
+  },
+  "voice_words": [],
+  "paused": true
+}

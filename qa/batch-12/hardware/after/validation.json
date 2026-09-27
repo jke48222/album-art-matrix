@@ -1,0 +1,39 @@
+{
+  "heardle": {
+    "side": 64,
+    "sha256": "d9eeaa3ce8041b2b1379d2353a486ee6358f22c155891d463f4b40f39cbadc9d",
+    "detail_endpoint": 512,
+    "provider": "deterministic original QA content"
+  },
+  "twentyq": {
+    "side": 64,
+    "sha256": "76a013fc58212cf7bee8669f52cf2cab6974ef7815910f032718ae837e7d8d8a",
+    "detail_endpoint": 512,
+    "provider": "configured live provider"
+  },
+  "quiz": {
+    "side": 64,
+    "sha256": "2cf4cd8f236a35a63088aafd8d0fe81988bccf116ba441a53f5bcb83cd183086",
+    "detail_endpoint": 512,
+    "provider": "deterministic original QA content"
+  },
+  "pictionary": {
+    "side": 64,
+    "sha256": "7ed8101787f14c7ca78ad76a74eda4e6806b7924cf39ee70dc96ab46dec8e6a6",
+    "detail_endpoint": 512,
+    "provider": "configured live provider"
+  },
+  "pong": {
+    "side": 64,
+    "sha256": "89c7ec086f1f6cfe46c1fedc311f9deb839373e55246d760840d980b1aa66516",
+    "detail_endpoint": 512,
+    "provider": "deterministic original QA content"
+  },
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "limitations": "Managed runtime RGB, real API moves and configured question/image providers. Physical LED colour and physical phone audio/touch not certified."
+}

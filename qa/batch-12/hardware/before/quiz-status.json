@@ -1,0 +1,63 @@
+{
+  "running": true,
+  "seq": 3,
+  "game": {
+    "name": "quiz",
+    "title": "Pub quiz",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Records and record players",
+    "started": 1790491619,
+    "finished": null,
+    "seq": 0,
+    "voice": true,
+    "theme": "Records and record players",
+    "number": 1,
+    "count": 10,
+    "question": "How many revolutions a minute does an LP turn at?",
+    "phase": "question",
+    "seconds_left": 20.0,
+    "scores": {
+      "Tessera QA Batch 12": 0
+    },
+    "answered": {},
+    "answer": null,
+    "results": null
+  },
+  "session_id": "57f0d6a2623642ebb78fd20f665f6698",
+  "on_wall": true,
+  "starting": null,
+  "scores": {},
+  "last": null,
+  "voice_words": [
+    "33",
+    "thirty three",
+    "33 and a third",
+    "thirty three",
+    "nothing",
+    "it does not stand for anything",
+    "no",
+    "abbey road",
+    "blonde",
+    "blond",
+    "spindle",
+    "spindle",
+    "fleetwood mac",
+    "black",
+    "blue",
+    "black and blue",
+    "ep",
+    "e p",
+    "extended play",
+    "dark side of the moon",
+    "dark side of the moon",
+    "vinyl",
+    "pvc",
+    "polyvinyl chloride",
+    "plastic"
+  ]
+}

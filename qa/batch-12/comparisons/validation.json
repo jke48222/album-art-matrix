@@ -1,0 +1,470 @@
+{
+  "batch": 12,
+  "implemented_units": [
+    "G13",
+    "G14",
+    "G15",
+    "G16",
+    "G17"
+  ],
+  "base": "82510287640ce533879af2197c028f976a6c90a9",
+  "validated_at": "2026-09-27T07:23:14.720954+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed",
+    "signature": "passed"
+  },
+  "tests": {
+    "python_full_suite": {
+      "passed": 1273,
+      "duration_s": 159.37
+    },
+    "python_scoped_integration": {
+      "passed": 196
+    },
+    "python_final_listening_regressions": {
+      "passed": 58
+    },
+    "native_interactions": {
+      "passed": 9,
+      "receipt": "native-interactions.json"
+    },
+    "game_models_and_http": {
+      "checks": [
+        {
+          "name": "active session identity retained",
+          "passed": true
+        },
+        {
+          "name": "wall destination retained",
+          "passed": true
+        },
+        {
+          "name": "player identity and order retained",
+          "passed": true
+        },
+        {
+          "name": "opaque board data retained",
+          "passed": true
+        },
+        {
+          "name": "keyboard state retained",
+          "passed": true
+        },
+        {
+          "name": "game scoring retained",
+          "passed": true
+        },
+        {
+          "name": "legacy idle response remains valid",
+          "passed": true
+        },
+        {
+          "name": "legacy active response remains valid",
+          "passed": true
+        },
+        {
+          "name": "empty acknowledgement is rejected",
+          "passed": true
+        },
+        {
+          "name": "running without a game is rejected",
+          "passed": true
+        },
+        {
+          "name": "stopped with an active game is rejected",
+          "passed": true
+        },
+        {
+          "name": "negative sequence is rejected",
+          "passed": true
+        },
+        {
+          "name": "overflow sequence is rejected",
+          "passed": true
+        },
+        {
+          "name": "wrong sequence type is rejected",
+          "passed": true
+        },
+        {
+          "name": "missing required sequence is rejected",
+          "passed": true
+        },
+        {
+          "name": "positive infinity cannot become Int",
+          "passed": true
+        },
+        {
+          "name": "negative infinity cannot become Int",
+          "passed": true
+        },
+        {
+          "name": "NaN cannot become Int",
+          "passed": true
+        },
+        {
+          "name": "rounded upper Int boundary is rejected",
+          "passed": true
+        },
+        {
+          "name": "minimum Int boundary is safe",
+          "passed": true
+        },
+        {
+          "name": "ordinary integer survives",
+          "passed": true
+        },
+        {
+          "name": "negative array index is safe",
+          "passed": true
+        },
+        {
+          "name": "missing key is safe",
+          "passed": true
+        },
+        {
+          "name": "booleans are not numeric moves",
+          "passed": true
+        },
+        {
+          "name": "steering coalesces to the latest position",
+          "passed": true
+        },
+        {
+          "name": "steering is consumed exactly once",
+          "passed": true
+        },
+        {
+          "name": "old steering cannot enter a new session",
+          "passed": true
+        },
+        {
+          "name": "stalled steering expires",
+          "passed": true
+        },
+        {
+          "name": "leaving the screen clears steering",
+          "passed": true
+        },
+        {
+          "name": "nonfinite steering never queues",
+          "passed": true
+        },
+        {
+          "name": "steering stays in the flight area",
+          "passed": true
+        },
+        {
+          "name": "catalogue preserves all cards",
+          "passed": true
+        },
+        {
+          "name": "solo game has one player",
+          "passed": true
+        },
+        {
+          "name": "party game permits eight players",
+          "passed": true
+        },
+        {
+          "name": "party destination category",
+          "passed": true
+        },
+        {
+          "name": "duplicate game IDs are rejected",
+          "passed": true
+        },
+        {
+          "name": "unbounded player counts are rejected",
+          "passed": true
+        },
+        {
+          "name": "status request reads matching session",
+          "passed": true
+        },
+        {
+          "name": "error-only status cannot replace a board",
+          "passed": true
+        },
+        {
+          "name": "malformed status cannot replace a board",
+          "passed": true
+        },
+        {
+          "name": "failed HTTP write preserves server reason",
+          "passed": true
+        },
+        {
+          "name": "failed write cannot replace caller snapshot",
+          "passed": true
+        },
+        {
+          "name": "empty200 cannot confirm a move",
+          "passed": true
+        },
+        {
+          "name": "badJSON200 cannot confirm a move",
+          "passed": true
+        },
+        {
+          "name": "JSONerror200 cannot confirm a move",
+          "passed": true
+        },
+        {
+          "name": "acknowledged move supplies newer sequence",
+          "passed": true
+        },
+        {
+          "name": "acknowledged move retains session",
+          "passed": true
+        },
+        {
+          "name": "cancelled transport cannot acknowledge a move",
+          "passed": true
+        },
+        {
+          "name": "empty host prevents write",
+          "passed": true
+        },
+        {
+          "name": "POST failures are never retried",
+          "passed": true
+        },
+        {
+          "name": "session and move survive HTTP serialization",
+          "passed": true
+        },
+        {
+          "name": "cancelled request was issued only once",
+          "passed": true
+        }
+      ],
+      "failed": 0,
+      "passed": 52
+    },
+    "audio_transport": {
+      "passed": true,
+      "assertions": 7
+    },
+    "playback_identity": 99,
+    "symbols": {
+      "checked": 95,
+      "missing": [],
+      "passed": 95
+    }
+  },
+  "native_screens": [
+    {
+      "case": "heardle",
+      "state": "room-live",
+      "image": "after/heardle/room-live.png",
+      "sha256": "b3aae2174c589bdce8428168ebabf03f1b75611897437a88ce77f5ff2596ba75"
+    },
+    {
+      "case": "heardle",
+      "state": "room-large",
+      "image": "after/heardle/room-large.png",
+      "sha256": "f0123ea90873225926ba9a025706020d5320d7cafe9f6e6c9a2e93b34ddd1999"
+    },
+    {
+      "case": "heardle",
+      "state": "room-offline",
+      "image": "after/heardle/room-offline.png",
+      "sha256": "5aa07942d485fb84cc5684ddd1e32e48b2c330765059cf27990643a381244e86"
+    },
+    {
+      "case": "heardle-lost",
+      "state": "room-live",
+      "image": "after/heardle-lost/room-live.png",
+      "sha256": "6a3a48b14c452117a24073bf8833f937317abc5a7081a6a765605fc5e1c36c9d"
+    },
+    {
+      "case": "heardle-ready",
+      "state": "room-live",
+      "image": "after/heardle-ready/room-live.png",
+      "sha256": "2e6064e3f44689c0b041a623ab4cdc8cdbb00165c65382445bc7cb237c514a40"
+    },
+    {
+      "case": "heardle-won",
+      "state": "room-live",
+      "image": "after/heardle-won/room-live.png",
+      "sha256": "bb18c7730001f02578c4a4057257907614ccfeabaa3a451db4308b76875da460"
+    },
+    {
+      "case": "pictionary",
+      "state": "room-live",
+      "image": "after/pictionary/room-live.png",
+      "sha256": "218bc7d4da2d3f60c9da9f05357e439d50a06a9a4b38c243a7bce1d74732e359"
+    },
+    {
+      "case": "pictionary",
+      "state": "room-large",
+      "image": "after/pictionary/room-large.png",
+      "sha256": "d8d216e99de32df2cf9c928aeb76d4e25f46746c31974b060eb0851e7bf96e75"
+    },
+    {
+      "case": "pictionary",
+      "state": "room-offline",
+      "image": "after/pictionary/room-offline.png",
+      "sha256": "ecf9d33b2ec0f7356440fe07c1b970432f9b625c6d961ee402da724a44dc939a"
+    },
+    {
+      "case": "pictionary-error",
+      "state": "room-live",
+      "image": "after/pictionary-error/room-live.png",
+      "sha256": "ff5567adb902418347dd9d62879abfa3e264c5841e8d6603cd56ea434b6e417d"
+    },
+    {
+      "case": "pictionary-loading",
+      "state": "room-live",
+      "image": "after/pictionary-loading/room-live.png",
+      "sha256": "e7c5d9ab4c64dda062baeaa460b52ea6d43ce2627a9a1665c8656717921f64fe"
+    },
+    {
+      "case": "pictionary-lost",
+      "state": "room-live",
+      "image": "after/pictionary-lost/room-live.png",
+      "sha256": "ade6a62b3e3d199c9ece3461f06c0484679b4534ccd3be67cea89b98f257b33b"
+    },
+    {
+      "case": "pictionary-won",
+      "state": "room-live",
+      "image": "after/pictionary-won/room-live.png",
+      "sha256": "a2a443194e68ebfb7500db116fb9936f1f25d09c6cbdf182d0d73b5dc8986759"
+    },
+    {
+      "case": "pong",
+      "state": "room-live",
+      "image": "after/pong/room-live.png",
+      "sha256": "0bb5c7b86752235feadcff40e0b8a0c26747c0fe4641a5b5748f6adb9e621fe0"
+    },
+    {
+      "case": "pong",
+      "state": "room-large",
+      "image": "after/pong/room-large.png",
+      "sha256": "b6db4c2cb2569507025cde895049392dcdedc98699852a26d8cd969ce43ff41f"
+    },
+    {
+      "case": "pong",
+      "state": "room-offline",
+      "image": "after/pong/room-offline.png",
+      "sha256": "42bf0d9739a90dece8bb96847ea91fbe6dc5f044c7eb8a0f7bea343258280cd6"
+    },
+    {
+      "case": "pong-paused",
+      "state": "room-live",
+      "image": "after/pong-paused/room-live.png",
+      "sha256": "8504928f905c29dbdbe44f0ac6cddf899628ea8eddc2eb44f616521e0d85c4e3"
+    },
+    {
+      "case": "pong-ready",
+      "state": "room-live",
+      "image": "after/pong-ready/room-live.png",
+      "sha256": "e7129492cc31a46057f77784fd71f1886b6a957ce9636a3fa4bca0b30ff07104"
+    },
+    {
+      "case": "pong-won",
+      "state": "room-live",
+      "image": "after/pong-won/room-live.png",
+      "sha256": "b8071ec05dd6b0b0792f08513b121edc52584527cc13c1f24d60e9ba77abb1d0"
+    },
+    {
+      "case": "quiz",
+      "state": "room-live",
+      "image": "after/quiz/room-live.png",
+      "sha256": "fec8a9259a5e9a797b7b9e48f65cdeace2c6fb57196a3c6986618533426da1db"
+    },
+    {
+      "case": "quiz",
+      "state": "room-large",
+      "image": "after/quiz/room-large.png",
+      "sha256": "822f4265eae6e0cc8630065f653cf3bde37546bc9507e531c8fcfce4f975396c"
+    },
+    {
+      "case": "quiz",
+      "state": "room-offline",
+      "image": "after/quiz/room-offline.png",
+      "sha256": "13a7b6bd538f84d7dbf8a57a48c76d8d12ce06ee0f6a7e1444adf556970c7332"
+    },
+    {
+      "case": "quiz-answer",
+      "state": "room-live",
+      "image": "after/quiz-answer/room-live.png",
+      "sha256": "80956fe69591f06aca871ad19171dfa2bb33dc9f7b9ba8a24ea644cd0679d42d"
+    },
+    {
+      "case": "quiz-won",
+      "state": "room-live",
+      "image": "after/quiz-won/room-live.png",
+      "sha256": "7284fff0cba9c2c1c2a970b574e5e44862833f9c56ef7ee536866937469a6f6a"
+    },
+    {
+      "case": "twentyq",
+      "state": "room-live",
+      "image": "after/twentyq/room-live.png",
+      "sha256": "a43e70f7d71dab1b9119a03ba71628e9210fd8bae2166f2c291691ed3d10f848"
+    },
+    {
+      "case": "twentyq",
+      "state": "room-large",
+      "image": "after/twentyq/room-large.png",
+      "sha256": "857c54f8d2867d667b538d72e20dd87bc426cb03ff486fee86892c64cb90ce06"
+    },
+    {
+      "case": "twentyq",
+      "state": "room-offline",
+      "image": "after/twentyq/room-offline.png",
+      "sha256": "f778e7df164b10348647226500f519bf47611d43cae3f8657769c87af89f0205"
+    },
+    {
+      "case": "twentyq-error",
+      "state": "room-live",
+      "image": "after/twentyq-error/room-live.png",
+      "sha256": "35bbd8948ea1c862559ed9598bd2c5d28a31841073d873e62026e2d77a1088e5"
+    },
+    {
+      "case": "twentyq-loading",
+      "state": "room-live",
+      "image": "after/twentyq-loading/room-live.png",
+      "sha256": "99c0fba796fe1220be5ae31a71146256e8a1d3b2576f2a13e800e9fedc746b93"
+    },
+    {
+      "case": "twentyq-won",
+      "state": "room-live",
+      "image": "after/twentyq-won/room-live.png",
+      "sha256": "30d75fd9fc412abe22203d52da17e5772d1ad773f5586c722b66d7242beef316"
+    }
+  ],
+  "all_final_captures_and_interactions_match_app": {
+    "Tessera.debug.dylib": "107571136e707e78f3063629938902265cc5e2533a62b1212ceafcb2c285418e",
+    "Tessera": "d08200d5b61eb784ae2a225cec90fa713c416bd435873b8bdb072b3c6534fb87"
+  },
+  "wall_renderer": {
+    "cases": 19,
+    "frames": 114,
+    "native_sizes": [
+      64,
+      192,
+      512
+    ],
+    "manifest": "puzzles/manifest.json",
+    "motion": [
+      "puzzles/twentyq-question-motion.gif",
+      "puzzles/quiz-question-motion.gif"
+    ]
+  },
+  "visual_review": [
+    "Reviewed all five normal and largest-text layouts; input controls fit without clipping.",
+    "Corrected TwentyQuestions/Pictionary oversized AX headings and Pong Down label wrapping.",
+    "Reviewed production RGB without smoothing at64/192/512, including lossless long-word wrapping and complete question motion.",
+    "Finished art remains unobscured; question/provider failures retain the round with inline retry."
+  ],
+  "deployment_summary": "Wall deployed and verified with all five games, including configured live question and image providers; Off restored and temporary scores removed. Signed iPhone18ProMax build ready, but installation remains blocked by disconnected device/CoreDevice4016.",
+  "remaining": [
+    "Install on the iPhone18ProMax when reconnected.",
+    "Physical phone tilt/headphones and LED colour require an in-room check."
+  ],
+  "tracking_semantics": "IDs mark implemented production code. Roadmap checkboxes remain open until physical review is complete."
+}

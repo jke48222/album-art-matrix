@@ -1,0 +1,45 @@
+{
+  "running": true,
+  "seq": 5,
+  "game": {
+    "name": "pong",
+    "title": "Pong",
+    "players": [
+      "Tessera QA Batch 12"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Tilt to move.",
+    "started": 1790491620,
+    "finished": null,
+    "seq": 0,
+    "voice": false,
+    "ball": [
+      0.5,
+      0.5
+    ],
+    "paddles": [
+      0.5,
+      0.5
+    ],
+    "score": [
+      0,
+      0
+    ],
+    "to": 7
+  },
+  "session_id": "7f4a713bb69d40929f05b54556e05950",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": []
+}

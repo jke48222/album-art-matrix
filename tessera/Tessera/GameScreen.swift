@@ -18,22 +18,26 @@ struct GameScreen: View {
     @State private var operation = UUID()
     @State private var confirmEnd = false
     @State private var pendingSteer = GameSteeringBuffer()
+    @State private var pendingCourtCommand: [String: Any]?
+    @State private var pendingCourtSession: String?
+    @State private var clipTransport = GameClipTransport()
     @FocusState private var typing: Bool
     private var game: GameStatus.Game? { status?.game?.name == name ? status?.game : nil }
     private var me: String { !chosenPlayer.isEmpty ? chosenPlayer : game?.players.first(where: { $0 == player }) ?? game?.players.first ?? "You" }
     private var onWall: Bool { wall.state.displayedMode == "game" && status?.on_wall != false }
     private var canSend: Bool { wall.link.isLive && !readFailed && !sending && game != nil }
-    private var canSteer: Bool { wall.link.isLive && !readFailed && game != nil }
+    private var canSteer: Bool { wall.link.isLive && !readFailed && scenePhase == .active && game != nil }
     private var pollingInterval: Double {
         guard onWall, game?.over == false else { return 1 }
         switch name {
-        case "whistlebird": return 0.1
+        case "whistlebird", "pong": return 0.1
+        case "quiz", "pictionary", "heardle", "twentyq": return 0.25
         case "reaction": return 0.08
         case "reveal": return 0.25
         default: return 1
         }
     }
-    private var wordless: Set<String> { ["wordle", "sudoku", "connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "reveal", "sliding", "reaction", "whistlebird", "twentyq", "pong", "snake", "tetris"] }
+    private var wordless: Set<String> { ["wordle", "sudoku", "connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "heardle", "quiz", "pictionary", "reveal", "sliding", "reaction", "whistlebird", "twentyq", "pong", "snake", "tetris"] }
 
     var body: some View {
         ScrollView {
@@ -41,7 +45,7 @@ struct GameScreen: View {
                 if let g = game {
                     if onWall {
                         WallStrip(colour: accent, message: g.over ? "Your finished board." : "Your moves appear here and on the wall.",
-                                  compact: ["connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "sliding", "reveal", "reaction", "whistlebird"].contains(g.name))
+                                  compact: ["connections", "spellingbee", "letterboxed", "strands", "crossword", "contexto", "sliding", "reveal", "reaction", "whistlebird", "heardle", "twentyq", "quiz", "pictionary", "pong"].contains(g.name))
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
                             MessageNotice(title: "Your board is saved", detail: "The wall is showing something else. Bring this game back when you're ready.", symbol: "square.grid.3x3", tint: accent)
@@ -59,8 +63,9 @@ struct GameScreen: View {
                     }
                     board(g).id(status?.session_id ?? "\(g.name)-\(g.state["started"].int ?? 0)")
                         .environment(\.gameSessionID, status?.session_id)
-                        .disabled(!(g.name == "whistlebird" ? canSteer : canSend) || !onWall)
-                    if !g.message.isEmpty && !g.over {
+                        .environment(\.gameCanInteract, canSteer && onWall && scenePhase == .active)
+                        .disabled(!(["whistlebird", "pong"].contains(g.name) ? canSteer : canSend) || !onWall)
+                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong"].contains(g.name) {
                         Text(g.message).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     }
                     if g.over { result(g) }
@@ -68,7 +73,7 @@ struct GameScreen: View {
                         if !wordless.contains(g.name) { wordHand(g) }
                         if g.voice == true { microphone }
                     }
-                    if sending && name != "whistlebird" { HStack(spacing: 10) { ProgressView(); Text("Updating your wall…").font(.ui(13)).foregroundStyle(Ink.dim) }.accessibilityElement(children: .combine) }
+                    if sending && !["whistlebird", "pong"].contains(name) { HStack(spacing: 10) { ProgressView(); Text("Updating your wall…").font(.ui(13)).foregroundStyle(Ink.dim) }.accessibilityElement(children: .combine) }
                     if let text = problem ?? speech.problem { MessageProblem(text: text) }
                     if !g.over {
                         Button("Finish this game") { confirmEnd = true }.font(.ui(13)).foregroundStyle(Ink.dim).frame(minHeight: 44)
@@ -102,9 +107,11 @@ struct GameScreen: View {
                 }
             }
             .onAppear { chosenPlayer = me }
-            .onDisappear { pendingSteer.clear(); speech.stop(); operation = UUID(); version += 1; sending = false }
-            .onChange(of: wall.host) { _, _ in pendingSteer.clear(); speech.stop(); operation = UUID(); version += 1; sending = false; readFailed = true; typed = "" }
-            .onChange(of: status?.session_id) { _, _ in pendingSteer.clear(); speech.stop(); typed = ""; chosenPlayer = game?.players.first ?? "You" }
+            .onDisappear { pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false }
+            .onChange(of: chosenPlayer) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil }
+            .onChange(of: scenePhase) { _, next in if next != .active { pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil } }
+            .onChange(of: wall.host) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); operation = UUID(); version += 1; sending = false; readFailed = true; typed = "" }
+            .onChange(of: status?.session_id) { _, _ in pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil; speech.stop(); typed = ""; chosenPlayer = game?.players.first ?? "You" }
     }
 
     @ViewBuilder private func board(_ g: GameStatus.Game) -> some View {
@@ -117,15 +124,15 @@ struct GameScreen: View {
         case "strands": StrandsBoard(game: g, accent: accent, send: post)
         case "crossword": CrosswordBoard(game: g, accent: accent, send: post)
         case "contexto": ContextoBoard(game: g, accent: accent, send: post)
-        case "heardle": HeardleBoard(game: g, accent: accent, send: post)
+        case "heardle": HeardleBoard(game: g, accent: accent, playerName: me, send: post, playback: reportPlayback)
         case "reveal": RevealBoard(game: g, accent: accent, send: post)
         case "sliding": SlidingBoard(game: g, accent: accent, send: post)
         case "reaction": ReactionBoard(game: g, accent: accent, send: post)
         case "whistlebird": WhistleBirdBoard(game: g, accent: accent, send: post)
         case "twentyq": TwentyQBoard(game: g, accent: accent, send: post)
-        case "quiz": QuizBoard(game: g, accent: accent)
-        case "pictionary": PictionaryBoard(game: g, accent: accent)
-        case "pong": PongBoard(game: g, accent: accent, send: post)
+        case "quiz": QuizBoard(game: g, accent: accent, playerName: me, send: post)
+        case "pictionary": PictionaryBoard(game: g, accent: accent, send: post)
+        case "pong": PongBoard(game: g, accent: accent, player: me, send: post)
         case "snake": SnakeBoard(game: g, accent: accent, send: post)
         case "tetris": TetrisBoard(game: g, accent: accent, send: post)
         default: WallBoard()
@@ -194,8 +201,23 @@ struct GameScreen: View {
         default: "Your move"
         }
     }
+    private var steeringKey: String { name == "pong" ? "paddle" : "y" }
+
+    private func reportPlayback(_ origin: GameClipOrigin, _ playing: Bool, _ position: Double) {
+        let move: [String: Any] = ["played": playing, "position": position, "step": origin.step]
+        clipTransport.send(host: origin.host, session: origin.session, player: origin.player, move: move) { detail in
+            if wall.host == origin.host && status?.session_id == origin.session && game?.over == false && game?.state["step"].int == origin.step { problem = detail }
+        }
+    }
+
     private func post(_ move: [String: Any]) {
-        if name == "whistlebird", let y = move["y"] as? Double {
+        if name == "pong", move["paddle"] == nil, sending {
+            guard canSteer, onWall, game?.over == false else { return }
+            pendingCourtCommand = move; pendingCourtSession = status?.session_id
+            pendingSteer.clear()
+            return
+        }
+        if ["whistlebird", "pong"].contains(name), let y = move[steeringKey] as? Double {
             guard canSteer, onWall, game?.over == false, y.isFinite else { return }
             if sending {
                 // Keep only the newest finger position; never replay a drag backlog.
@@ -225,7 +247,7 @@ struct GameScreen: View {
     private func perform(_ action: String, _ body: [String: Any], clearDraft: Bool = false, leaving: Bool = false) {
         guard canSend else { return }
         let host = wall.host, token = UUID(), draft = typed
-        let steering = action == "move" && name == "whistlebird" && (body["move"] as? [String: Any])?["y"] != nil
+        let steering = action == "move" && ["whistlebird", "pong"].contains(name) && (body["move"] as? [String: Any])?[steeringKey] != nil
         var body = body
         if let session = status?.session_id { body["session_id"] = session }
         operation = token; version += 1; sending = true; problem = nil; speech.stop()
@@ -240,10 +262,18 @@ struct GameScreen: View {
             } catch {
                 guard operation == token, host == wall.host else { return }
                 problem = error.localizedDescription
-                pendingSteer.clear()
+                pendingSteer.clear(); pendingCourtCommand = nil; pendingCourtSession = nil
             }
             version += 1; sending = false
-            if let y = pendingSteer.take(session: status?.session_id) { post(["y": y]) }
+            if let command = pendingCourtCommand, pendingCourtSession == status?.session_id {
+                pendingCourtCommand = nil; pendingCourtSession = nil
+                let phase = game?.state["phase"].string ?? ""
+                let valid = (command["serve"] as? Bool == true && phase == "ready")
+                    || (command["resume"] as? Bool == true && phase == "paused")
+                    || (command["pause"] as? Bool == true && ["serve", "rally", "point"].contains(phase))
+                if valid && canSteer && onWall && game?.over == false { post(command); return }
+            }
+            if let y = pendingSteer.take(session: status?.session_id) { post([steeringKey: y]) }
         }
     }
 }

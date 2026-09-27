@@ -3,7 +3,12 @@ import SwiftUI
 private struct GameSessionKey: EnvironmentKey {
     static let defaultValue: String? = nil
 }
+private struct GameInteractionKey: EnvironmentKey { static let defaultValue = true }
 extension EnvironmentValues {
+    var gameCanInteract: Bool {
+        get { self[GameInteractionKey.self] }
+        set { self[GameInteractionKey.self] = newValue }
+    }
     var gameSessionID: String? {
         get { self[GameSessionKey.self] }
         set { self[GameSessionKey.self] = newValue }
