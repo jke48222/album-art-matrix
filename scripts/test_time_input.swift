@@ -32,6 +32,11 @@ struct TimeInputChecks {
         check("Civil 7 AM remains seven despite phone travel", TimeInput.date("07:00").timeIntervalSince1970 == 978332400)
         check("Spoken duration units are complete", TimeInput.duration(3661) == "1 hour, 1 minute, 1 second")
         check("Spoken duration plurals", TimeInput.duration(7382) == "2 hours, 3 minutes, 2 seconds")
+        check("Finished timer puts the duration after the verb", TimeInput.finished(after: 600) == "Finished after 10 minutes")
+        check("Finished timer reads a compound duration", TimeInput.finished(after: 5400) == "Finished after 1 hour, 30 minutes")
+        check("Finished timer with no total says no number", TimeInput.finished(after: 0) == "Countdown finished")
+        check("Finished timer can name itself", TimeInput.finished(after: 60, subject: "Timer") == "Timer finished after 1 minute")
+        check("Named timer with no total", TimeInput.finished(after: 0, subject: "Timer") == "Timer finished")
         let failures = checks.filter { !($0["passed"] as! Bool) }.count
         let report: [String: Any] = ["passed": checks.count - failures, "failed": failures, "checks": checks]
         FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]))

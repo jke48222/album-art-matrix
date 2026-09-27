@@ -4,6 +4,7 @@ struct GameScreen: View {
     @Environment(WallSession.self) private var wall
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
     let accent: Color
     let name: String
     @Binding var status: GameStatus?
@@ -77,7 +78,7 @@ struct GameScreen: View {
                         .disabled(!(["whistlebird", "pong", "snake", "tetris"].contains(g.name) ? canSteer : canSend) || !onWall)
                     // These boards already show their own status, so the wall's
                     // message line would repeat it.
-                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris", "contexto", "sliding", "reveal", "reaction", "whistlebird"].contains(g.name) {
+                    if !g.message.isEmpty && !g.over && !["heardle", "twentyq", "quiz", "pictionary", "pong", "snake", "tetris", "contexto", "sliding", "reveal", "reaction", "whistlebird"].contains(g.name) && !namesFoundGroup(g) {
                         Text(g.message).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     }
                     if g.over { result(g) }
@@ -162,9 +163,13 @@ struct GameScreen: View {
         }
     }
     private func result(_ g: GameStatus.Game) -> some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(headline(g)).font(.display(29)).foregroundStyle(Ink.ink)
-            Text(g.message).font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+        let title = headline(g)
+        let note = resultNote(g, title: title)
+        return VStack(alignment: .leading, spacing: 16) {
+            // Said once per screen: a board whose own heading already gives
+            // the outcome keeps it, and the card goes straight to the scores.
+            if title != boardHeading(g) { Text(title).font(.display(29)).foregroundStyle(Ink.ink) }
+            if let note { Text(note).font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true) }
             if let scores = status?.scores {
                 ForEach(g.players, id: \.self) { person in
                     if let score = scores[person] {
@@ -190,6 +195,42 @@ struct GameScreen: View {
         if g.players.count > 1 { return g.winner.map { "\($0) won" } ?? "Round over" }
         if ["pong", "snake", "tetris", "whistlebird", "reaction", "quiz"].contains(g.name) { return "Game over" }
         return g.won ? "Solved" : "Not solved"
+    }
+    /// The finished heading each board shows above its own result, where it
+    /// matches a headline this card could repeat. Reveal and Sliding show
+    /// theirs only below accessibility sizes.
+    private func boardHeading(_ g: GameStatus.Game) -> String? {
+        switch g.name {
+        case "crossword": return g.won ? "Solved" : nil
+        case "reveal": return typeSize.isAccessibilitySize ? nil : g.won ? "Solved" : "Answer"
+        case "sliding": return typeSize.isAccessibilitySize ? nil : "Solved"
+        case "pictionary": return "Round over"
+        default: return nil
+        }
+    }
+    /// The wall's closing line, unless it only repeats the headline, as an
+    /// older wall's "Solved." does. Reveal and Sliding already show the time
+    /// or the move count on the board.
+    private func resultNote(_ g: GameStatus.Game, title: String) -> String? {
+        let line = g.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bare = { (text: String) in text.trimmingCharacters(in: CharacterSet(charactersIn: ".!? ")).lowercased() }
+        guard !line.isEmpty, bare(line) != bare(title), !["reveal", "sliding"].contains(g.name) else { return nil }
+        // "Solved. Every number in its place." under a "Solved" headline:
+        // keep only what the headline does not already say.
+        if let stop = line.firstIndex(where: { ".!?".contains($0) }), bare(String(line[...stop])) == bare(title) {
+            let rest = line[line.index(after: stop)...].trimmingCharacters(in: .whitespaces)
+            return rest.isEmpty ? nil : rest
+        }
+        return line
+    }
+    /// After a found group the wall's line is that group's theme, which the
+    /// board already shows on the group's tile.
+    private func namesFoundGroup(_ g: GameStatus.Game) -> Bool {
+        guard g.name == "connections" else { return false }
+        let line = g.message.trimmingCharacters(in: CharacterSet(charactersIn: ".!? ")).lowercased()
+        return g.state["found"].array.contains {
+            ($0["theme"].string ?? "").trimmingCharacters(in: CharacterSet(charactersIn: ".!? ")).lowercased() == line
+        }
     }
     /// Wall errors arrive as short lowercase phrases, such as "not in the
     /// list". Show them as sentences.

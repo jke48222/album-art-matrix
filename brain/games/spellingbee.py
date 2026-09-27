@@ -167,7 +167,24 @@ class SpellingBee(Game):
         # travels through it, so "MOVING UP" is never cut to "UP".
         rank = "QUEEN BEE" if self.over else state["rank"].upper()
         top = max(1, round(2 * unit))
-        text_scrolled(c, rank, margin, top, size - 2 * margin - text_width(str(self.points), font) - max(2, round(3 * unit)), t, honey, font, height=7)
+        room = size - 2 * margin - text_width(str(self.points), font) - max(2, round(3 * unit))
+        if self.over and text_width(rank, font) > room:
+            # A finished game holds still. "QUEEN" fits beside the score
+            # where "QUEEN BEE" would travel for as long as the board is up.
+            rank = "QUEEN"
+        if text_width(rank, font) > room:
+            # A travelling rank keeps a letter's width clear of the score and
+            # fades at its right edge, so a letter the box cuts never runs
+            # into the digits.
+            room -= 6 * font
+            text_scrolled(c, rank, margin, top, room, t, honey, font, height=7)
+            edge = margin + room
+            for step, keep in enumerate((0.35, 0.7)):
+                column = edge - 1 - step
+                if 0 <= column < size:
+                    c[top:top + 7 * font, column] = (c[top:top + 7 * font, column] * keep).astype(c.dtype)
+        else:
+            text_scrolled(c, rank, margin, top, room, t, honey, font, height=7)
         text_right(c, str(self.points), size - margin, top, paper, font)
         progress(c, margin, round(12 * unit), size - 2 * margin, max(1, round(unit)),
                  self.points / max(1, self.total), honey, (55, 48, 36))

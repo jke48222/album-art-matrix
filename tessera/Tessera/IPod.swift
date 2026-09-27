@@ -886,7 +886,7 @@ struct NowPlayingScreen: View {
         case "nine": "nine"
         case "clock": "clock"
         case "timer": "timer"
-        case "off": "asleep"
+        case "off": "off"
         case "weather": "weather"
         case "frame": "drawing"
         case "clip": "clip"

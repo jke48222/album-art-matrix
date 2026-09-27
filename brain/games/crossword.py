@@ -436,7 +436,10 @@ class Crossword(Game):
         if remaining == 0 and self.grid == self.solution:
             self.wrong.clear()
             self.feedback = {"kind": "solved", "message": "Solved."}
-            self.finish(won=True, message="Solved.")
+            # The phone's board already says "Solved", so the closing line
+            # adds what it does not show: how many checks the solve took.
+            checks = "No checks used." if not self.checks else f"{self.checks} {'check' if self.checks == 1 else 'checks'} used."
+            self.finish(won=True, message=checks)
             return {"solved": True, "filled": len(self.grid)}
         self.message = "Every square is filled. Check the crossings." if remaining == 0 else f"{remaining} {'square' if remaining == 1 else 'squares'} to fill."
         self.feedback = {"kind": kind, "message": message or self.message}

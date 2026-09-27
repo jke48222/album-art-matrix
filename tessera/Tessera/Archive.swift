@@ -418,13 +418,15 @@ struct ArchiveScreen: View {
             Label(text, systemImage: "wifi.slash").font(.ui(13)).foregroundStyle(Ink.dim)
             Button("Try again") { Task { store.retryImages(); await store.load(host: wall.host) } }
                 .font(.ui(14, .semibold)).foregroundStyle(accent.toned(forDark: true)).frame(minHeight: 44)
-                .disabled(store.loading)
+                .disabled(store.loading).opacity(store.loading ? 0.45 : 1)
         }
     }
 
     /// The grid stays readable offline, but it must not pass for live.
     private var offlineNotice: some View {
-        Label(store.lastLoaded.map { "Wall offline. Showing history from \($0.formatted(date: .omitted, time: .shortened))." }
+        // "As of", not "from": the time is when the history was last read,
+        // and the grid below lists sleeves from before it.
+        Label(store.lastLoaded.map { "Wall offline. History as of \($0.formatted(date: .omitted, time: .shortened))." }
               ?? "Wall offline. Showing the last history read.", systemImage: "wifi.slash")
             .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
     }
@@ -504,6 +506,7 @@ private struct WornDetail: View {
     @State private var sent = false
     @State private var problem: String?
     @State private var replayTask: Task<Void, Never>?
+    private var canReplay: Bool { wall.link.isLive || (run.entry.local && wall.link.isStandIn) }
 
     var body: some View {
         NavigationStack {
@@ -538,7 +541,11 @@ private struct WornDetail: View {
                             Text(sending ? "Sending to the wall" : sent ? "Requested on the wall" : "Put on the wall").font(.ui(16, .semibold))
                         }.foregroundStyle(Ink.ground).frame(maxWidth: .infinity, minHeight: 54)
                             .background(accent.toned(forDark: true), in: RoundedRectangle(cornerRadius: 16))
-                    }.buttonStyle(PressStyle()).disabled(sending || sent || (!wall.link.isLive && !(run.entry.local && wall.link.isStandIn)))
+                    }.buttonStyle(PressStyle()).disabled(sending || sent || !canReplay)
+                        // Its own colours override the system's disabled look.
+                        // Dimmed when it cannot reach the wall. A sent request
+                        // keeps full colour, since its label reports success.
+                        .opacity(canReplay || sending || sent ? 1 : 0.45)
                     if !wall.link.isLive && !wall.link.isStandIn {
                         Label("Reconnect to show this sleeve.", systemImage: "wifi.slash").font(.ui(13)).foregroundStyle(Ink.dim)
                     }

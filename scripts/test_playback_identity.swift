@@ -85,7 +85,7 @@ struct PlaybackIdentityTests {
         check("empty identity has no progress", identity.elapsed == nil && identity.duration == nil && !identity.advances)
         state.mode = "off"
         identity = PlaybackIdentity(state: state, link: .live, at: stamp)
-        check("off mode reads plainly", identity.title == "Wall is off")
+        check("off mode with no song names the music, not the power", identity.title == "Nothing playing")
 
         check("clock formats elapsed minutes", PlaybackIdentity.clock(125.9) == "2:05")
         check("clock supports long recordings", PlaybackIdentity.clock(3661) == "1:01:01")

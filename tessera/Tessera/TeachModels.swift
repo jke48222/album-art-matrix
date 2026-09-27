@@ -14,8 +14,15 @@ struct TaughtList: Decodable {
         var last_matched: Int?
         var landmarks: Int?
 
+        /// One line of provenance, such as "Preview, this room". A list joined
+        /// with commas reads as one phrase, so only its first word takes a
+        /// capital, and a source listed twice is shown once.
         var sources: String {
-            how.map { switch $0 { case "ear": "This room"; case "preview": "Preview"; case "told": "By name"; default: "Learned" } }
+            var seen = Set<String>()
+            let labels = how.map { switch $0 { case "ear": "This room"; case "preview": "Preview"; case "told": "By name"; default: "Learned" } }
+                .filter { seen.insert($0).inserted }
+            return labels.enumerated()
+                .map { index, label in index == 0 ? label : label.prefix(1).lowercased() + label.dropFirst() }
                 .joined(separator: ", ")
         }
         func matches(_ query: String) -> Bool {

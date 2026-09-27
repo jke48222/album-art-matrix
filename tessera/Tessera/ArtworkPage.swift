@@ -44,7 +44,7 @@ struct ArtworkPage: View {
                             Label(spin ? "Put Spin on the wall" : "Put album art on the wall", systemImage: spin ? "opticaldisc" : "photo")
                                 .font(.ui(15, .semibold)).foregroundStyle(Ink.ground).frame(maxWidth: .infinity, minHeight: 54)
                                 .background(accent.toned(forDark: true), in: RoundedRectangle(cornerRadius: 16))
-                        }.buttonStyle(PressStyle()).disabled(!canSend)
+                        }.buttonStyle(PressStyle()).disabled(!canSend).opacity(canSend ? 1 : 0.45)
                     }
                 }.padding(24)
             }.background(Ink.ground)
@@ -68,7 +68,7 @@ struct ArtworkPage: View {
                     VStack(spacing: 12) {
                         if original && sleeve.phase == .loading { ProgressView().tint(accent) }
                         else { Image(systemName: spin ? "opticaldisc" : "photo").font(.system(size: 42, weight: .ultraLight)).foregroundStyle(Ink.dim) }
-                        Text(original ? sleeve.phase == .loading ? "Finding the cover" : "Cover unavailable" : wall.state.mode == "off" ? "The wall is asleep" : "Waiting for the wall")
+                        Text(original ? sleeve.phase == .loading ? "Finding the cover" : "Cover unavailable" : wall.state.mode == "off" ? "Wall is off" : "Waiting for the wall")
                             .font(.ui(14)).foregroundStyle(Ink.dim)
                     }.padding(24)
                 }

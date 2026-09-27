@@ -31,7 +31,9 @@ struct SunPage: View {
         RoutinePage(title: "Follow the sun", eyebrow: "BRIGHTNESS BY TIME OF DAY", tint: gold, problem: problem) {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 VStack(alignment: .leading, spacing: 16) {
-                    RoutineEyebrow(text: enabled ? (ready ? "SUNLIGHT PLAN, ACTIVE" : "LAST SUNLIGHT PLAN") : "SUNLIGHT PLAN", tint: gold)
+                    // Without a location the plan changes nothing, so it is
+                    // never called active. The headline says what it needs.
+                    RoutineEyebrow(text: !located ? "SUNLIGHT PLAN" : enabled ? (ready ? "SUNLIGHT PLAN, ACTIVE" : "LAST SUNLIGHT PLAN") : "SUNLIGHT PLAN", tint: gold)
                     Text(phase).font(typeSize.isAccessibilitySize ? .ui(20, .semibold) : .display(30)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
                     SunCourse(progress: course(at: ready ? context.date : wall.state.routineReceivedAt), enabled: enabled, tint: gold)
                         .frame(height: 144).accessibilityHidden(true)

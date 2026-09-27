@@ -62,8 +62,11 @@ struct ConnectionsBoard: View {
 
     private var heading: some View {
         VStack(alignment: .leading, spacing: 5) {
-            Text(game.over ? "All groups" : "Connections")
+            // Short words that wrap between each other at any text size. The
+            // navigation title above already names the game.
+            Text(game.over ? "All groups" : "Find the groups")
                 .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .displayMid(30)).foregroundStyle(Ink.ink)
+                .fixedSize(horizontal: false, vertical: true)
             Text(game.over ? (game.won ? "ALL FOUND" : "REVEALED") : "4 GROUPS OF 4")
                 .font(.machine(8)).tracking(0.6).foregroundStyle(tint).accessibilityHidden(true)
         }

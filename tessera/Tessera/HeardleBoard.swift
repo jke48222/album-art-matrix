@@ -169,7 +169,11 @@ struct HeardleBoard: View {
                     HStack(spacing: 10) {
                         if clip.phase == .loading { ProgressView().tint(Ink.ground) }
                         else { Image(systemName: isActive ? "stop.fill" : clip.phase == .failed ? "arrow.clockwise" : "play.fill") }
-                        Text(clip.phase == .loading ? "Loading. Tap to cancel" : clip.phase == .playing ? "Stop listening" : clip.phase == .failed ? "Retry preview" : "Listen for \(seconds) sec")
+                        // Like Skip, the label is one short word at accessibility
+                        // sizes. The seconds stay in the spoken label.
+                        Text(typeSize.isAccessibilitySize
+                             ? (clip.phase == .loading ? "Cancel" : clip.phase == .playing ? "Stop" : clip.phase == .failed ? "Retry" : "Listen")
+                             : (clip.phase == .loading ? "Loading. Tap to cancel" : clip.phase == .playing ? "Stop listening" : clip.phase == .failed ? "Retry preview" : "Listen for \(seconds) sec"))
                             .fixedSize(horizontal: false, vertical: true)
                     }.font(.ui(16, .semibold)).frame(maxWidth: .infinity, minHeight: 52).padding(.vertical, 4)
                 }.buttonStyle(PressStyle()).foregroundStyle(Ink.ground)

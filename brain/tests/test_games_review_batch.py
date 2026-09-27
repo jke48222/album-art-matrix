@@ -216,7 +216,18 @@ def test_crossword_messages_are_plain():
     assert game.message == f"{len(game.slots)} clues." and game.feedback["message"] == "Choose a clue to start."
     for slot in game.slots:
         game.apply({"slot": slot["id"], "word": "".join(game.solution[c] for c in slot["cells"])}, "You")
-    assert game.over and game.message == "Solved." and game.feedback["message"] == "Solved."
+    assert game.over and game.message == "No checks used." and game.feedback["message"] == "Solved."
+
+
+def test_crossword_closing_line_counts_checks_instead_of_repeating_solved():
+    for checks, line in [(1, "1 check used."), (3, "3 checks used.")]:
+        game = Crossword(None, {"set": 0})
+        game.setup()
+        for _ in range(checks):
+            game.apply({"check": True}, "You")
+        for slot in game.slots:
+            game.apply({"slot": slot["id"], "word": "".join(game.solution[c] for c in slot["cells"])}, "You")
+        assert game.over and game.won and game.message == line
 
 
 # ---- the wall's marks at 64 -----------------------------------------------------------------------
@@ -266,6 +277,26 @@ def test_spelling_bee_wall_shows_the_whole_rank_at_64(monkeypatch):
     monkeypatch.setattr(board, "text_scrolled", lambda canvas, s, *a, **k: (labels.append(s), original(canvas, s, *a, **k)))
     game.frame_at(64, 0)
     assert labels[0] == "MOVING UP"
+
+
+def test_finished_spelling_bee_rank_holds_still_and_a_moving_rank_stays_clear_of_the_score(monkeypatch):
+    from brain.art.pixelfont import text_width
+    game = SpellingBee(None, {"seed": 1})
+    game.setup()
+    game.points = max(1, int(game.total * 0.03))                            # Good Start, wider than its box
+    size, top, margin = 64, 2, 3
+    left_of_score = size - margin - text_width(str(game.points), 1)
+    for t in (0, 1.5, 2.5, 3.5, 5.0, 6.5):
+        frame = game.frame_at(size, t)
+        assert not frame[top:top + 7, left_of_score - 6:left_of_score].any()   # a letter's width of dark
+    for word in game.answers:
+        game.apply({"word": word}, "You")
+    labels = []
+    original = board.text_scrolled
+    monkeypatch.setattr(board, "text_scrolled", lambda canvas, s, *a, **k: (labels.append(s), original(canvas, s, *a, **k)))
+    frames = [game.frame_at(size, t) for t in (0, 2, 4)]
+    assert labels[0] == "QUEEN"
+    assert all(np.array_equal(frames[0][:10], f[:10]) for f in frames[1:])
 
 
 # ---- parked timed games ---------------------------------------------------------------------------

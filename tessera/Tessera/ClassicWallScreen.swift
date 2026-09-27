@@ -91,6 +91,16 @@ struct ClassicWallScreen: View {
         }
         .sheet(isPresented: $showArtwork) { ArtworkPage(spin: wall.state.mode == "cd", accent: accent).environment(wall) }
         .scrollIndicators(.hidden)
+        // The page ends at a fixed line above the navigation bar. Faded over
+        // its last few points, a line of text cut there reads as text leaving
+        // the view, not as stray dashes above the bar.
+        .mask {
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 28)
+            }
+        }
         .clipped()
         .padding(.bottom, 8)
         .background {
@@ -192,8 +202,12 @@ struct ClassicWallScreen: View {
         case .standIn:
             Text("Preview on this phone").font(.ui(12)).foregroundStyle(Ink.dim)
         case .live:
-            Text(isOff ? "Hold the panel to wake it" : dragLight == nil ? "Drag the artwork to dim" : "Release to set the light")
-                .font(.ui(12)).foregroundStyle(Ink.dim)
+            // Off, the panel itself says so and how to wake it. The Wake wall
+            // key beside this is the only other thing the row needs.
+            if !isOff {
+                Text(dragLight == nil ? "Drag the artwork to dim" : "Release to set the light")
+                    .font(.ui(12)).foregroundStyle(Ink.dim)
+            }
         }
     }
 
@@ -217,7 +231,8 @@ struct ClassicWallScreen: View {
 
     private var connectionTitle: String {
         switch wall.link {
-        case .live: isOff ? "Wall is resting" : "Live from the wall"
+        // Off is said once, on the panel. This line is only about the link.
+        case .live: "Live from the wall"
         case .offline: "Last frame from the wall"
         case .standIn: "Your personal preview"
         case .searching: "Connecting"

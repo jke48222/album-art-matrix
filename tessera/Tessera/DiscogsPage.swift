@@ -117,7 +117,7 @@ struct DiscogsPage: View {
             }
             Group {
                 if typeSize.isAccessibilitySize { Text(statusTitle).font(.ui(12, .medium)) }
-                else { Label(statusTitle, systemImage: !wall.link.isLive ? "wifi.slash" : syncing ? "arrow.triangle.2.circlepath" : ready ? "checkmark.circle" : "circle.dotted").font(.ui(14, .medium)) }
+                else { Label(statusTitle, systemImage: !wall.link.isLive ? "wifi.slash" : syncing ? "arrow.triangle.2.circlepath" : dg?.problem != nil ? "exclamationmark.circle" : ready ? "checkmark.circle" : "circle.dotted").font(.ui(14, .medium)) }
             }.foregroundStyle(parchment).fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("discogs.status")
             if !ready && count == 0 && !unknown {
                 Text("Connect Discogs so the wall knows which records and pressings you own.")
@@ -130,7 +130,10 @@ struct DiscogsPage: View {
             VStack(alignment: .leading, spacing: 20) {
                 HStack(alignment: .top) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(savedUser.isEmpty ? "Your collection" : savedUser).font(.ui(15, .medium)).foregroundStyle(Color(hex: 0x534938)).fixedSize(horizontal: false, vertical: true)
+                        // A username has no spaces to wrap at, so it shrinks
+                        // to one line instead of breaking mid-name.
+                        Text(savedUser.isEmpty ? "Your collection" : savedUser).font(.ui(15, .medium)).foregroundStyle(Color(hex: 0x534938))
+                            .lineLimit(1).minimumScaleFactor(0.5).truncationMode(.middle)
                         if dg?.synced_at != nil || count > 0 {
                             Text(count.formatted()).font(typeSize.isAccessibilitySize ? .ui(26, .semibold) : .display(58)).monospacedDigit().lineLimit(1).minimumScaleFactor(0.6)
                             Text(count == 1 ? "record on your wall" : "records on your wall").font(.ui(14)).fixedSize(horizontal: false, vertical: true)
@@ -140,7 +143,9 @@ struct DiscogsPage: View {
                     if !typeSize.isAccessibilitySize { Image(systemName: "arrow.up.right").font(.system(size: 22, weight: .medium)) }
                 }
                 Rectangle().fill(Color(hex: 0x342C20).opacity(0.16)).frame(height: 1)
-                HStack { Text("Open the shelf").font(.ui(16, .semibold)).fixedSize(horizontal: false, vertical: true); Spacer(minLength: 0); Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
+                // A real gap before the chevron: at accessibility sizes the
+                // words fill the row and met the chevron with no space.
+                HStack(spacing: 12) { Text("Open the shelf").font(.ui(16, .semibold)).fixedSize(horizontal: false, vertical: true); Spacer(minLength: 12); Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold)) }
             }.foregroundStyle(Color(hex: 0x252218)).padding(22).frame(maxWidth: .infinity, alignment: .leading)
                 .background(parchment, in: RoundedRectangle(cornerRadius: 20))
         }.buttonStyle(.plain).accessibilityIdentifier("discogs.openShelf")

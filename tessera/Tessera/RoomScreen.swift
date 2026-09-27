@@ -648,7 +648,7 @@ struct RoomWallScreen: View {
                         .lineLimit(1).minimumScaleFactor(0.75)
                     Spacer(minLength: 4)
                     if !typeSize.isAccessibilitySize {
-                        Text(roomCompletion ? "OPEN" : (light.isOff ? "ASLEEP" : "\(roomFaceName), \(Int((wall.state.brightness * 100).rounded()))%"))
+                        Text(roomCompletion ? "OPEN" : (light.isOff ? "OFF" : "\(roomFaceName), \(Int((wall.state.brightness * 100).rounded()))%"))
                             .font(.machine(8)).kerning(0.5)
                     }
                     Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
@@ -660,7 +660,7 @@ struct RoomWallScreen: View {
                 .environment(\.colorScheme, .dark)
             }
             .buttonStyle(PressStyle(scale: 0.98))
-            .accessibilityLabel(roomCompletion ? (wall.state.timerKind == "alarm" ? "Alarm ringing. Open to stop or snooze." : "Timer complete. Open to finish or repeat.") : "\(roomConnectionLabel), \(light.isOff ? "wall asleep" : roomFaceName)")
+            .accessibilityLabel(roomCompletion ? (wall.state.timerKind == "alarm" ? "Alarm ringing. Open to stop or snooze." : "Timer complete. Open to finish or repeat.") : "\(roomConnectionLabel), \(light.isOff ? "wall off" : roomFaceName)")
             .accessibilityHint(wall.link.isLive || wall.link.isStandIn ? "Open wall controls" : "Open connection settings")
         }
         .padding(.horizontal, 24).padding(.top, 62)

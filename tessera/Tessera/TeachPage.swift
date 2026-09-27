@@ -90,15 +90,21 @@ struct TeachPage: View {
     private var hero: some View {
         VStack(alignment: .leading, spacing: 21) {
             HStack(alignment: .top, spacing: 12) {
-                Text(typeSize.isAccessibilitySize ? "Songs the wall knows" : "Songs the\nwall knows")
-                    .font(typeSize.isAccessibilitySize ? .ui(25, .semibold) : .display(38))
-                    .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+                // Two lines at most beside the fingerprint, shrinking rather
+                // than breaking a word when the column runs short.
+                if typeSize.isAccessibilitySize {
+                    Text("Taught songs").font(.ui(25, .semibold))
+                        .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Taught\nsongs").font(.display(38)).foregroundStyle(Ink.ink)
+                        .lineLimit(2).minimumScaleFactor(0.6)
+                }
                 Spacer(minLength: 0)
                 if !typeSize.isAccessibilitySize {
                     TeachFingerprint(tint: mint).frame(width: 80, height: 88).padding(.top, 5).accessibilityHidden(true)
                 }
             }
-            Text("The wall recognizes these songs on its own, before asking Shazam.")
+            Text("These songs are recognized on the wall itself, before Shazam is asked.")
                 .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             HStack(alignment: .firstTextBaseline, spacing: 9) {
                 if loaded {
@@ -122,7 +128,7 @@ struct TeachPage: View {
                 // comma there instead, like the rest of the app.
                 Text(library?.teacher?.learning?.replacingOccurrences(of: " \u{2014} ", with: ", ") ?? "\(cleanTitle) by \(cleanArtist)")
                     .font(.ui(14)).foregroundStyle(mint).fixedSize(horizontal: false, vertical: true)
-                Text("You can leave this page. The wall will keep learning.")
+                Text("You can leave this page. Learning continues on the wall.")
                     .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }.frame(maxWidth: .infinity, alignment: .leading).padding(18).messageSurface()
@@ -250,7 +256,7 @@ struct TeachPage: View {
 
     private var learningSettings: some View {
         VStack(alignment: .leading, spacing: 17) {
-            Text("How the room learns").font(.ui(21, .semibold)).foregroundStyle(Ink.ink)
+            Text("How songs are learned").font(.ui(21, .semibold)).foregroundStyle(Ink.ink)
             VStack(alignment: .leading, spacing: 14) {
                 learningToggle("Recognize my library first", detail: "Ask your own songs before Shazam.", key: "teach")
                 Rule()

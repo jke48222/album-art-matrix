@@ -74,13 +74,18 @@ struct PictionaryBoard: View {
         }
         .onChange(of: game.over) { _, over in if over { writing = false; submitted = nil } }
     }
+    /// A drawing that failed before any picture arrived. The problem line and
+    /// the retry button below explain it, so the heading only names it.
+    private var failed: Bool { !game.over && !ready && !drawing && game.state["problem"].string != nil }
     private var heading: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(game.over ? "Round over" : ready ? "Name the picture" : "Drawing")
+            // Short headings at accessibility sizes keep the countdown on the
+            // same line, so the picture does not move down the screen.
+            Text(game.over ? "Round over" : ready ? (typeSize.isAccessibilitySize ? "Name it" : "Name the picture") : failed ? "Not drawn" : "Drawing")
                 .font(typeSize.isAccessibilitySize ? .custom(Face.uiMedium, size: 17, relativeTo: .body) : .display(31)).foregroundStyle(paper)
                 .fixedSize(horizontal: false, vertical: true)
-            if !typeSize.isAccessibilitySize {
-                Text(game.over ? "The drawing is complete." : ready ? "Name the thing in the drawing." : "The wall is drawing a new picture for this round.")
+            if !typeSize.isAccessibilitySize && !failed {
+                Text(game.over ? "The drawing is complete." : ready ? "Name the thing in the drawing." : "A new picture is being drawn for this round.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }

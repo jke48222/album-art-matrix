@@ -142,7 +142,7 @@ struct VoicePage: View {
             HStack(alignment: .center, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("LIVE WALL").font(.machine(9)).tracking(0.8).foregroundStyle(Ink.dim)
-                    Text(wall.state.mode == "off" ? "The panel is resting" : "Exactly what’s on the panel")
+                    Text(wall.state.mode == "off" ? "The wall is off" : "Exactly what’s on the panel")
                         .font(.ui(13)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)

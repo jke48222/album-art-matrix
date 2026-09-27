@@ -93,6 +93,34 @@
       "passed" : true
     },
     {
+      "name" : "The wall's reason for keeping an answer here decodes",
+      "passed" : true
+    },
+    {
+      "name" : "An answer kept by an off wall says so",
+      "passed" : true
+    },
+    {
+      "name" : "An answer kept by a timer says so",
+      "passed" : true
+    },
+    {
+      "name" : "An answer kept by a wall with no answer face says so",
+      "passed" : true
+    },
+    {
+      "name" : "A busy wall keeps its wording",
+      "passed" : true
+    },
+    {
+      "name" : "An older wall with no reason keeps the old wording",
+      "passed" : true
+    },
+    {
+      "name" : "A wall that cannot show answers says so",
+      "passed" : true
+    },
+    {
       "name" : "Pending and history decode together",
       "passed" : true
     },
@@ -117,6 +145,6 @@
       "passed" : true
     }
   ],
-  "passed" : 29,
-  "total" : 29
+  "passed" : 36,
+  "total" : 36
 }

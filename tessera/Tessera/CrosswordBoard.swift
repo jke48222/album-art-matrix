@@ -137,7 +137,9 @@ struct CrosswordBoard: View {
     private var progress: some View {
         let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 7)) : AnyLayout(HStackLayout(alignment: .firstTextBaseline))
         return layout {
-            Text(game.over ? "SOLVED" : "THE MINI")
+            // The finished card below the grid says "Solved", so the label
+            // stays the puzzle's name and only turns green.
+            Text("THE MINI")
                 .font(.machine(10)).foregroundStyle(game.over ? CrosswordInk.solved : CrosswordInk.cursor)
             if !typeSize.isAccessibilitySize { Spacer() }
             Text("\(filled) / \(total) squares").font(.ui(13, .medium)).monospacedDigit().foregroundStyle(Ink.dim)

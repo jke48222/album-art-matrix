@@ -332,7 +332,13 @@ private struct HomeNavigation: View {
                 Button { select(i) } label: {
                     Group {
                         if typeSize.isAccessibilitySize {
-                            VStack(spacing: 4) { symbol(i); title(i) }
+                            // One row whenever the label fits beside its icon:
+                            // stacked, the bar was twice as tall and cut the
+                            // Wall page's title down to a slice of glyph tops.
+                            ViewThatFits(in: .horizontal) {
+                                HStack(spacing: 9) { symbol(i); title(i) }
+                                VStack(spacing: 4) { symbol(i); title(i) }
+                            }
                         } else {
                             HStack(spacing: 9) { symbol(i); title(i) }
                         }

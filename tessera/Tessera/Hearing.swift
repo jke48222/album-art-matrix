@@ -133,7 +133,7 @@ struct HearingPage: View {
 
     private var hero: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(ears == nil ? "Hearing" : ears?.on == true ? "Hearing is on" : "Hearing is off")
+            Text(headline)
                 .font(typeSize.isAccessibilitySize ? .ui(23, .semibold) : .display(38))
                 .foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 16) {
@@ -153,10 +153,27 @@ struct HearingPage: View {
         }.padding(.bottom, 6)
     }
 
+    /// True when hearing is switched on but cannot work: no microphone, no
+    /// listening tools, or a problem the wall reports. "Hearing is on" above
+    /// "No microphone found" read as a contradiction.
+    private var needsAttention: Bool {
+        guard let h = ears, h.on else { return false }
+        if h.state == "no_mic" || h.state == "no_tools" { return true }
+        return !(h.problem ?? "").isEmpty
+    }
+
+    private var headline: String {
+        guard let h = ears else { return "Hearing" }
+        if !h.on { return "Hearing is off" }
+        return needsAttention ? "Hearing needs attention" : "Hearing is on"
+    }
+
     private var roomStatusLabel: some View {
         HStack(spacing: 8) {
             Circle().fill(readFailed ? Ink.faint : stateColor).frame(width: 7, height: 7)
-            Text(readFailed ? "Reading unavailable" : (ears?.listening == true ? "Live from your wall" : "Microphone standby"))
+            // Listening first: a recognition outage sets a problem while the
+            // microphone keeps capturing, and the level readout stays live.
+            Text(readFailed ? "Reading unavailable" : ears?.listening == true ? "Live from your wall" : needsAttention ? "Not listening" : "Microphone standby")
                 .font(.ui(12, .medium)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -168,13 +185,19 @@ struct HearingPage: View {
 
     private var recognition: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack(alignment: .top, spacing: 14) {
+            // At accessibility sizes the icon goes above the words: beside
+            // them it left a column too narrow for "recognized." to fit whole.
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: 12))
+                : AnyLayout(HStackLayout(alignment: .top, spacing: 14))
+            layout {
                 Image(systemName: ears?.heard == nil ? "ear.badge.waveform" : "checkmark.seal")
                     .font(.system(size: 23, weight: .medium)).foregroundStyle(mint)
                     .frame(width: 46, height: 46).background(mint.opacity(0.09), in: RoundedRectangle(cornerRadius: 14))
                 VStack(alignment: .leading, spacing: 6) {
                     Text(readFailed ? "Listening status unavailable" : stateWords)
                         .font(.ui(18, .semibold)).foregroundStyle(Ink.ink).fixedSize(horizontal: false, vertical: true)
+                        .dynamicTypeSize(...DynamicTypeSize.accessibility3)
                     Text(ears?.heard != nil && ears?.match_source == "local" ? "Matched in your taught library" : "Your library first. Shazam when needed.")
                         .font(.ui(12)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
@@ -224,7 +247,7 @@ struct HearingPage: View {
     }
 
     private var taughtNote: String {
-        guard let t = taught else { return "Songs the wall knows on its own, asked before Shazam." }
+        guard let t = taught else { return "Songs recognized on the wall itself, before Shazam is asked." }
         if !t.available { return "Teaching is off on this wall." }
         if t.songs.isEmpty {
             return "None yet. The wall learns a song's preview when another source names it and the ear keeps missing it, and learns the room's own hearing of a song after fifteen loud seconds."

@@ -173,7 +173,7 @@ class Sliding(Game):
         del self.history[:-200]
         self.moves += 1
         if self.tiles == list(range(self.n * self.n)):
-            self.finish(won=True, message=f"Back in {self.moves} moves.")
+            self.finish(won=True, message=f"Back in {self.moves} {'move' if self.moves == 1 else 'moves'}.")
         else:
             self.message = f"{self.moves} move{'s' if self.moves != 1 else ''}."
             self.changed()

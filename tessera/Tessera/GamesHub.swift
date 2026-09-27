@@ -70,7 +70,7 @@ struct GamesSheetBody: View {
                     let games = remaining.filter { $0.category == group }
                     if !games.isEmpty {
                         VStack(alignment: .leading, spacing: 0) {
-                            Text(group).font(.display(25)).foregroundStyle(Ink.ink).padding(.bottom, 15)
+                            Text(group).font(.display(25)).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.7).padding(.bottom, 15)
                             ForEach(games) { card in
                                 Button { selection = card.name } label: { row(card) }
                                     .buttonStyle(.plain)
@@ -146,9 +146,10 @@ struct GamesSheetBody: View {
         return VStack(alignment: .leading, spacing: 19) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(card.name == "wordle" ? "SIX GUESSES AT A FIVE-LETTER WORD" : "FILL THE GRID")
+                    // A short label: the card's description below says the rest.
+                    Text(card.name == "wordle" ? "GUESS THE WORD" : "FILL THE GRID")
                         .font(.machine(9)).tracking(0.6).foregroundStyle(colour).fixedSize(horizontal: false, vertical: true)
-                    Text(card.title).font(.display(33)).foregroundStyle(Ink.ink)
+                    GameTitle(text: card.title, font: .display(33))
                 }
                 Spacer(minLength: 8)
                 if !typeSize.isAccessibilitySize { GameMotif(name: card.name).frame(width: 108, height: 66).accessibilityHidden(true) }
@@ -170,7 +171,9 @@ struct GamesSheetBody: View {
             GameMotif(name: card.name).scaleEffect(0.52).frame(width: 62, height: 60)
                 .background(GameMotif.colour(card.name).opacity(0.08), in: RoundedRectangle(cornerRadius: 15)).accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
-                Text(card.title).font(.ui(17, .semibold)).foregroundStyle(Ink.ink)
+                // Word-safe: "Connections" is wider than this column at the
+                // largest accessibility sizes.
+                GameTitle(text: card.title, font: .ui(17, .semibold))
                 Text(card.blurb).font(.ui(12)).foregroundStyle(Ink.dim).lineLimit(2)
                 Text(card.playerLabel).font(.machine(9)).foregroundStyle(GameMotif.colour(card.name))
             }
@@ -179,18 +182,32 @@ struct GamesSheetBody: View {
         }.padding(.vertical, 15).contentShape(Rectangle())
     }
     private func activeGame(_ game: GameStatus.Game) -> some View {
-        HStack(spacing: 15) {
-            if status?.on_wall != false && wall.state.displayedMode == "game" {
-                WallBoard().frame(width: 72, height: 72)
-            } else { GameMotif(name: game.name).frame(width: 108, height: 64).scaleEffect(0.66).frame(width: 76, height: 58).accessibilityHidden(true) }
-            VStack(alignment: .leading, spacing: 6) {
-                Text(game.over ? "YOUR LAST GAME" : "PICK UP WHERE YOU LEFT OFF").font(.machine(9)).foregroundStyle(mint)
-                Text(game.title).font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
-                Text(game.over ? "See your result" : "Return to your board").font(.ui(13)).foregroundStyle(Ink.dim)
+        let words = VStack(alignment: .leading, spacing: 6) {
+            Text(game.over ? "YOUR LAST GAME" : "PICK UP WHERE YOU LEFT OFF").font(.machine(9)).foregroundStyle(mint)
+                .fixedSize(horizontal: false, vertical: true)
+            GameTitle(text: game.title, font: .ui(20, .semibold))
+            Text(game.over ? "See your result" : "Return to your board").font(.ui(13)).foregroundStyle(Ink.dim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        let arrow = Image(systemName: "arrow.right").foregroundStyle(mint)
+        // At accessibility sizes the text takes the card's full width below
+        // the board, so the game's name is never cut to "Wo…".
+        return Group {
+            if typeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack { activeThumbnail(game); Spacer(minLength: 8); arrow }
+                    words
+                }
+            } else {
+                HStack(spacing: 15) { activeThumbnail(game); words; Spacer(minLength: 0); arrow }
             }
-            Spacer(minLength: 0)
-            Image(systemName: "arrow.right").foregroundStyle(mint)
-        }.padding(16).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 22))
+        }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Ink.plaster, in: RoundedRectangle(cornerRadius: 22))
+    }
+    @ViewBuilder private func activeThumbnail(_ game: GameStatus.Game) -> some View {
+        if status?.on_wall != false && wall.state.displayedMode == "game" {
+            WallBoard().frame(width: 72, height: 72)
+        } else { GameMotif(name: game.name).frame(width: 108, height: 64).scaleEffect(0.66).frame(width: 76, height: 58).accessibilityHidden(true) }
     }
     private func load(host: String) async {
         do {
@@ -236,7 +253,7 @@ private struct GameDestination: View {
                     GameMotif(name: card.name).frame(height: 110).frame(maxWidth: .infinity)
                         .background(tint.opacity(0.08), in: RoundedRectangle(cornerRadius: 26)).accessibilityHidden(true)
                     VStack(alignment: .leading, spacing: 12) {
-                        Text(card.title).font(.display(typeSize.isAccessibilitySize ? 30 : 42)).foregroundStyle(Ink.ink)
+                        GameTitle(text: card.title, font: .display(typeSize.isAccessibilitySize ? 30 : 42))
                         Text(card.blurb).font(.ui(18)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                         Text("The board lives on your wall. Play here, together in the room.").font(.ui(14)).foregroundStyle(Ink.dim)
                     }
@@ -304,6 +321,41 @@ private struct GameDestination: View {
                 if let latest { status = latest }
             }
             starting = false
+        }
+    }
+}
+
+/// A game's name as a heading, never broken inside a word. It wraps between
+/// words at the largest text size where its longest word still fits the
+/// line, and steps the size down only when a word would not fit. A one-word
+/// name shrinks to its line rather than breaking.
+struct GameTitle: View {
+    let text: String
+    let font: Font
+    private var words: [String] { text.split(separator: " ").map(String.init) }
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            wrapped
+            wrapped.dynamicTypeSize(...DynamicTypeSize.accessibility3)
+            wrapped.dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            wrapped.dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+            Text(text).font(font).foregroundStyle(Ink.ink).lineLimit(1).minimumScaleFactor(0.3)
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        }
+    }
+    /// Reports its longest word's width as its ideal width, so ViewThatFits
+    /// picks it only when every word fits on a line of its own.
+    private var wrapped: some View {
+        ZStack(alignment: .topLeading) {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(words.enumerated()), id: \.offset) { _, word in
+                    Text(word).font(font).lineLimit(1).fixedSize()
+                }
+            }.frame(height: 0, alignment: .top).hidden()
+            Text(text).font(font).foregroundStyle(Ink.ink)
+                .lineLimit(words.count == 1 ? 1 : nil).minimumScaleFactor(words.count == 1 ? 0.4 : 1)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(idealWidth: 0, maxWidth: .infinity, alignment: .leading)
         }
     }
 }

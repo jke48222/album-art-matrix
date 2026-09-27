@@ -34,6 +34,15 @@ enum TimeInput {
         return components.joined(separator: ", ")
     }
 
+    /// The finished timer's line. The duration is a plural phrase ("10
+    /// minutes", "1 hour, 30 minutes"), so it follows the verb: before
+    /// "timer" it read as "10 minutes timer done."
+    static func finished(after total: Int, subject: String? = nil) -> String {
+        let finished = subject.map { "\($0) finished" } ?? "Finished"
+        guard total > 0 else { return subject == nil ? "Countdown finished" : finished }
+        return "\(finished) after \(duration(total))"
+    }
+
     static func date(_ hhmm: String) -> Date {
         let pieces = hhmm.split(separator: ":", omittingEmptySubsequences: false)
         let hour = pieces.count == 2 ? Int(pieces[0]) : nil

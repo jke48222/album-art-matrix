@@ -112,8 +112,9 @@ struct PlaybackIdentity: Equatable {
     private static func emptyTitle(mode: String, link: LinkState) -> String {
         if case .offline = link { return "Nothing playing" }
         if case .searching = link { return "Connecting" }
+        // The card is about music, so an off wall with no song reads as
+        // nothing playing. The panel and the power key already say "off".
         switch mode {
-        case "off": return "Wall is off"
         case "weather": return "Showing the weather"
         case "ambient": return "Showing the lamp"
         case "clock", "timer": return "Showing the clock"

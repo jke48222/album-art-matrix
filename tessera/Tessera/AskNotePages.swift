@@ -47,7 +47,7 @@ struct AskPage: View {
                 HStack(alignment: .top, spacing: 14) {
                     ProgressView().tint(violet).padding(.top, 3)
                     VStack(alignment: .leading, spacing: 5) {
-                        Text("The wall is thinking").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
+                        Text("Getting an answer").font(.ui(16, .semibold)).foregroundStyle(Ink.ink)
                         Text("You can leave this page. The answer will be kept in Recent questions.")
                             .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
                     }
@@ -77,12 +77,19 @@ struct AskPage: View {
     private var introduction: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(alignment: .leading, spacing: 8) {
-                Text(typeSize.isAccessibilitySize ? "Ask a question" : "Ask a\nquestion")
-                    .font(typeSize.isAccessibilitySize ? .ui(22, .semibold) : .display(46)).foregroundStyle(Ink.ink)
-                    .fixedSize(horizontal: false, vertical: true)
+                // Beside the constellation the column is about 200 points, a
+                // little narrower than "question" at 46. Two lines at most and
+                // a shrink, so the word scales down instead of breaking.
+                if typeSize.isAccessibilitySize {
+                    Text("Ask a question").font(.ui(22, .semibold)).foregroundStyle(Ink.ink)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Ask a\nquestion").font(.display(46)).foregroundStyle(Ink.ink)
+                        .lineLimit(2).minimumScaleFactor(0.5)
+                }
                 Text("Ask about your music, the wall or anything else.")
                     .font(.ui(15)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
-            }
+            }.layoutPriority(1)
             Spacer(minLength: 0)
             if !typeSize.isAccessibilitySize {
                 AskConstellation(tint: violet).frame(width: 112, height: 144).accessibilityHidden(true)
@@ -166,7 +173,7 @@ struct AskPage: View {
     private func answerCard(_ text: String) -> some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Label("THE WALL SAYS", systemImage: "sparkle").font(.machine(9)).foregroundStyle(violet)
+                Label("ANSWER", systemImage: "sparkle").font(.machine(9)).foregroundStyle(violet)
                 Spacer()
                 ShareLink(item: text) { Image(systemName: "square.and.arrow.up").frame(width: 44, height: 44) }
                     .foregroundStyle(violet).accessibilityLabel("Share answer")

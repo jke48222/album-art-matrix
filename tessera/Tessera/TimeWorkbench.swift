@@ -35,6 +35,27 @@ struct TimeWorkbench: View {
     private var ready: Bool { wall.link.isLive }
     private var activeTimer: Bool { wall.state.mode == "timer" && wall.state.timerRemaining != nil }
     private var ringing: Bool { wall.state.timerStatus == "ringing" }
+    /// The ringing header claims something is on the wall now, so it needs
+    /// the same proof as the Stop and Snooze card: a live link and the timer
+    /// still up. Offline, the last word from the wall is not "now".
+    private var showsRinging: Bool { ready && activeTimer && ringing }
+    /// At accessibility sizes the header is the short "Time & alarms", so
+    /// only the full header can carry the event's name for the card below.
+    private var headerNamesEvent: Bool { showsRinging && !typeSize.isAccessibilitySize }
+    private var completionTitle: String {
+        let total = wall.state.timerTotal ?? 0
+        if wall.state.timerKind == "alarm" {
+            if headerNamesEvent { return "Stop or snooze" }
+            return ready ? "Alarm ringing" : "Last known: alarm ringing"
+        }
+        return TimeInput.finished(after: total, subject: headerNamesEvent ? nil : "Timer")
+    }
+    private var completionDetail: String {
+        if wall.state.timerKind == "alarm" {
+            return headerNamesEvent ? "Your daily alarm stays set either way." : "Stop or snooze. Your daily alarm stays set either way."
+        }
+        return "Repeat it, or let the wall go back to what it was showing."
+    }
     private var draftSeconds: Int? { TimeInput.seconds(minutes: minutes, seconds: seconds) }
     private var alarmDirty: Bool { alarmEnabled != wall.state.alarmEnabled || TimeInput.civilTime(alarmDate) != wall.state.alarmTime }
     /// What the preview draws. The Alarm tab shows the alarm as it rings
@@ -58,8 +79,8 @@ struct TimeWorkbench: View {
                 Text("Time & alarms").font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
             } else {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(ringing ? "ON THE WALL NOW" : "CLOCK, TIMER AND ALARM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
-                    Text(ringing ? (wall.state.timerKind == "alarm" ? "Alarm ringing" : "Timer done") : "Time and alarms")
+                    Text(showsRinging ? "ON THE WALL NOW" : "CLOCK, TIMER AND ALARM").font(.machine(8)).tracking(0.8).foregroundStyle(ink)
+                    Text(showsRinging ? (wall.state.timerKind == "alarm" ? "Alarm ringing" : "Timer done") : "Time and alarms")
                         .font(.display(34)).foregroundStyle(Ink.ink)
                 }
             }
@@ -149,7 +170,7 @@ struct TimeWorkbench: View {
                     }.foregroundStyle(Ink.dim).padding(24)
                 }
             }.aspectRatio(1, contentMode: .fit)
-                .frame(maxWidth: typeSize.isAccessibilitySize ? 160 : (ringing ? 248 : tab == .clock ? 280 : tab == .alarm ? 156 : 196))
+                .frame(maxWidth: typeSize.isAccessibilitySize ? 160 : (showsRinging ? 248 : tab == .clock ? 280 : tab == .alarm ? 156 : 196))
                 .clipShape(RoundedRectangle(cornerRadius: 22))
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel(useLiveFrame ? "The wall’s actual \(activeTimer ? "timer" : "clock") pixels" : "\(previewFace.capitalized) preview rendered by the wall")
@@ -275,10 +296,14 @@ struct TimeWorkbench: View {
 
     private var completionControls: some View {
         VStack(alignment: .leading, spacing: 16) {
+            // When the header above already says "Alarm ringing" or "Timer
+            // done", this card names what is left to decide, not the event
+            // again. Where the header does not, the card names it.
             VStack(alignment: .leading, spacing: 6) {
-                Text(wall.state.timerKind == "alarm" ? "Alarm ringing." : "\(TimeInput.duration(wall.state.timerTotal ?? 0)) timer done.")
+                Text(completionTitle)
                     .font(.ui(typeSize.isAccessibilitySize ? 16 : 18, .semibold)).foregroundStyle(Ink.ink)
-                Text(wall.state.timerKind == "alarm" ? "Snooze for 5 minutes, or stop the alarm." : "Repeat it, or let the wall go back to what it was showing.")
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(completionDetail)
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
             action(wall.state.timerKind == "alarm" ? "Stop alarm" : "Done", symbol: "checkmark") {
@@ -286,7 +311,7 @@ struct TimeWorkbench: View {
             }
             if wall.state.timerEventID != nil {
                 let alarm = wall.state.timerKind == "alarm"
-                secondaryAction(alarm ? "Snooze for 5 minutes" : "Repeat \(TimeInput.duration(wall.state.timerTotal ?? 0))", symbol: alarm ? "zzz" : "arrow.counterclockwise") {
+                secondaryAction(alarm ? "Snooze for 5 minutes" : "Repeat timer", symbol: alarm ? "zzz" : "arrow.counterclockwise") {
                     guard let event = wall.state.timerEventID else { return }
                     submit(["timer_action": alarm ? "snooze" : "repeat", "timer_id": event],
                            receipt: alarm ? "Alarm snoozed for 5 minutes." : "Timer restarted.")

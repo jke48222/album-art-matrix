@@ -63,8 +63,12 @@
     {
       "name" : "manual provenance",
       "passed" : true
+    },
+    {
+      "name" : "provenance list reads as one phrase",
+      "passed" : true
     }
   ],
   "failed" : 0,
-  "passed" : 16
+  "passed" : 17
 }

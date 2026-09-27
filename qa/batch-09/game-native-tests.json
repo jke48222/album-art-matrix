@@ -97,6 +97,38 @@
       "passed": true
     },
     {
+      "name": "steering coalesces to the latest position",
+      "passed": true
+    },
+    {
+      "name": "steering is consumed exactly once",
+      "passed": true
+    },
+    {
+      "name": "old steering cannot enter a new session",
+      "passed": true
+    },
+    {
+      "name": "stalled steering expires",
+      "passed": true
+    },
+    {
+      "name": "leaving the screen clears steering",
+      "passed": true
+    },
+    {
+      "name": "nonfinite steering never queues",
+      "passed": true
+    },
+    {
+      "name": "steering stays in the flight area",
+      "passed": true
+    },
+    {
+      "name": "final steering survives a slow reply",
+      "passed": true
+    },
+    {
       "name": "catalogue preserves all cards",
       "passed": true
     },
@@ -118,6 +150,10 @@
     },
     {
       "name": "unbounded player counts are rejected",
+      "passed": true
+    },
+    {
+      "name": "games switched off is its own answer",
       "passed": true
     },
     {
@@ -182,5 +218,5 @@
     }
   ],
   "failed": 0,
-  "passed": 45
+  "passed": 54
 }

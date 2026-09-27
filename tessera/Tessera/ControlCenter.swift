@@ -373,17 +373,19 @@ struct ControlCenterPanel: View {
                     PanelCanvas(px: light.isOff ? nil : light.reading.px, duty: value)
                         .frame(width: 106, height: 106)
                         .overlay(Rectangle().strokeBorder(ink.ink.opacity(0.15), lineWidth: 0.5))
-                        .accessibilityLabel(light.isOff ? "Wall is asleep" : "Current wall frame")
+                        .accessibilityLabel(light.isOff ? "Wall is off" : "Current wall frame")
                     Text(wall.link.isLive ? "LIVE PIXELS" : wall.link.isStandIn ? "PHONE PREVIEW" : "LAST FRAME")
                         .font(.machine(7)).kerning(0.6).foregroundStyle(ink.dim)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(light.isOff ? "ASLEEP" : "BRIGHTNESS").font(.machine(9)).kerning(1).foregroundStyle(ink.dim)
-                        .lineLimit(1).minimumScaleFactor(0.8)
-                    // At accessibility sizes the slider below already shows the
-                    // number, so the lit wall does not repeat it here.
-                    if light.isOff || !typeSize.isAccessibilitySize {
+                // At accessibility sizes the slider below already shows the
+                // number, and the header and the face row both name the face,
+                // so a lit wall shows the picture alone here. A caption left
+                // without its number read as "Brightness: Album art".
+                if light.isOff || !typeSize.isAccessibilitySize {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(light.isOff ? "WALL" : "BRIGHTNESS").font(.machine(9)).kerning(1).foregroundStyle(ink.dim)
+                            .lineLimit(1).minimumScaleFactor(0.8)
                         HStack(alignment: .firstTextBaseline, spacing: 3) {
                             Text(light.isOff ? "Off" : "\(Int((value * 100).rounded()))")
                                 .font(.display(typeSize.isAccessibilitySize ? 40 : 58)).foregroundStyle(ink.ink).monospacedDigit()
@@ -391,9 +393,11 @@ struct ControlCenterPanel: View {
                                 .contentTransition(.numericText())
                             if !light.isOff { Text("%").font(.ui(17)).foregroundStyle(ink.dim) }
                         }
+                        if !light.isOff {
+                            Text(faceName(wall.state.mode))
+                                .font(.ui(13)).foregroundStyle(ink.dim).fixedSize(horizontal: false, vertical: true)
+                        }
                     }
-                    Text(light.isOff ? "The wall is off." : faceName(wall.state.mode))
-                        .font(.ui(13)).foregroundStyle(ink.dim).fixedSize(horizontal: false, vertical: true)
                 }
                 if !typeSize.isAccessibilitySize { Spacer(minLength: 0) }
             }
@@ -653,25 +657,33 @@ struct ControlCenterPanel: View {
         .accessibilityAddTraits(on ? [.isButton, .isSelected] : .isButton)
     }
 
-    private func artworkLink(spin: Bool) -> some View {
+    private func artworkLink(spin: Bool, onBoard: Bool = false) -> some View {
         Button { artworkIsSpin = spin; showArtwork = true } label: {
             HStack(spacing: 12) {
                 Image(systemName: spin ? "opticaldisc" : "photo.on.rectangle").font(.system(size: 22, weight: .medium))
                 VStack(alignment: .leading, spacing: 4) {
                     Text(spin ? "View the record" : "View the original cover").font(.ui(16, .semibold))
-                    Text(spin ? "Inspect the live pixels" : "Compare with the live wall").font(.ui(12)).foregroundStyle(ink.dim)
+                    // Full ink at reduced opacity, not the dim ink: over the
+                    // room's own picture the dim line was close to unreadable.
+                    Text(spin ? "Inspect the live pixels" : "Compare with the live wall").font(.ui(12)).foregroundStyle(ink.ink.opacity(0.72))
                 }
                 Spacer(minLength: 4)
                 Image(systemName: "chevron.right").font(.system(size: 13, weight: .semibold))
             }.foregroundStyle(ink.ink).padding(16).frame(maxWidth: .infinity, minHeight: 64)
-                .background(ink.fill, in: RoundedRectangle(cornerRadius: 16))
+                .background {
+                    // On its own it takes the same frosted slab as the face row
+                    // above it: a faint fill let the turntable and speakers show
+                    // straight through. Inside a board it already sits on one.
+                    if onBoard { RoundedRectangle(cornerRadius: 16).fill(ink.fill) }
+                    else { Slab(radius: 20, ink: ink) }
+                }
         }.buttonStyle(PressStyle(scale: 0.98))
     }
 
     private var speedBoard: some View {
         let rpm = rail(key: "rpm") ?? wall.state.rpm
         return board("Spin") {
-            artworkLink(spin: true)
+            artworkLink(spin: true, onBoard: true)
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text(String(format: "%.1f", rpm)).font(.display(28)).foregroundStyle(ink.ink).contentTransition(.numericText())
                 Text("rpm").font(.ui(13)).foregroundStyle(ink.dim)

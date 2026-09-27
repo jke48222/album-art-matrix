@@ -180,7 +180,10 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 self.response(200, json.dumps(payload).encode(), "application/json")
                 return
             payload = (state if path == "/state" else {"entries": wall.journal} if path == "/journal"
-                       else {"releases": wall.shelf} if path == "/shelf" else {})
+                       # The brain answers /shelf with shelf.status() too; token_set
+                       # is how the app tells a running shelf from one switched off.
+                       else {"releases": wall.shelf, "token_set": True, "user": "tessera-listener",
+                             "synced_at": time.time() - 3600, "syncing": False} if path == "/shelf" else {})
             self.response(200, json.dumps(payload).encode(), "application/json")
 
         def do_POST(self) -> None:
@@ -201,7 +204,7 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
                 payload = json.loads(data)
                 size = math.isqrt(len(wall.frame) // 3)
                 if payload.get("face") == "timer":
-                    image = Countdown(size).frame_at(payload.get("remaining_s",600), payload.get("total_s",600))
+                    image = Countdown(size).frame_at(payload.get("remaining_s",600), payload.get("total_s",600), payload.get("kind","countdown"), bool(payload.get("snoozed", False)))
                 else:
                     with patch("brain.art.text_modes.time.localtime", return_value=time.struct_time((2026,9,23,7,30,24,2,266,1))):
                         image = Clock(size, twenty_four=payload.get("twenty_four", True)).frame_at(0)

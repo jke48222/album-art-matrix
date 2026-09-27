@@ -17,7 +17,7 @@ import Foundation
         check("all search words must match", !song.matches("beyonce ocean"))
         check("album included in search", song.matches("Day"))
         check("whitespace-only search includes all", song.matches("   \n  "))
-        check("provenance distinct", song.sources == "Preview, This room")
+        check("provenance distinct", song.sources == "Preview, this room")
         check("artwork identity preserved", song.art_url == "https://example.com/cover.jpg")
         check("actual score preserved", list.last_match?.score == 44)
         check("threshold separate from confidence", list.min_score == 15)
@@ -27,6 +27,8 @@ import Foundation
         check("legacy art optional", legacy.songs[0].art_url == nil)
         check("legacy teacher optional", legacy.teacher == nil)
         check("manual provenance", legacy.songs[0].sources == "By name")
+        let mixed = try JSONDecoder().decode(TaughtList.self, from: Data(#"{"songs":[{"id":"b","title":"Two","artist":"Artist","how":["told","ear","ear","preview"],"matched":0}]}"#.utf8))
+        check("provenance list reads as one phrase", mixed.songs[0].sources == "By name, this room, preview")
         if CommandLine.arguments.count > 1 {
             let output: [String: Any] = ["checks": checks, "passed": checks.count, "failed": 0]
             try JSONSerialization.data(withJSONObject: output, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: CommandLine.arguments[1]))

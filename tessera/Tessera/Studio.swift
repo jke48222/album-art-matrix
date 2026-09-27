@@ -363,13 +363,17 @@ struct StudioScreen: View {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Done") { dismiss() }.font(.ui(15, .medium)).foregroundStyle(Ink.dim)
                     }
-                    ToolbarItemGroup(placement: .principal) {
-                        Button { leaveWords(); clip = []; canvas.undo() } label: {
-                            Image(systemName: "arrow.uturn.backward").frame(width: 32, height: 44)
-                        }.disabled(!canvas.canUndo || showingMade).accessibilityLabel("Undo canvas change")
-                        Button { leaveWords(); clip = []; canvas.redo() } label: {
-                            Image(systemName: "arrow.uturn.forward").frame(width: 32, height: 44)
-                        }.disabled(!canvas.canRedo || showingMade).accessibilityLabel("Redo canvas change")
+                    // One item holding both buttons: the principal slot shows
+                    // only the first of two loose buttons, which hid Redo.
+                    ToolbarItem(placement: .principal) {
+                        HStack(spacing: 26) {
+                            Button { leaveWords(); clip = []; canvas.undo() } label: {
+                                Image(systemName: "arrow.uturn.backward").frame(width: 32, height: 44)
+                            }.disabled(!canvas.canUndo || showingMade).accessibilityLabel("Undo canvas change")
+                            Button { leaveWords(); clip = []; canvas.redo() } label: {
+                                Image(systemName: "arrow.uturn.forward").frame(width: 32, height: 44)
+                            }.disabled(!canvas.canRedo || showingMade).accessibilityLabel("Redo canvas change")
+                        }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Clear") {
@@ -823,7 +827,9 @@ struct StudioScreen: View {
                     .font(.ui(13)).foregroundStyle(Ink.ink).lineLimit(1)
                     .onChange(of: creationTitle) { _, value in if value.count > 80 { creationTitle = String(value.prefix(80)) } }
                 Button(isSaved ? "Saved" : "Save") { saveCreation() }
-                    .font(.ui(13, .semibold)).foregroundStyle(isSaved ? Ink.dim : accent)
+                    // Same condition as .disabled: an explicit colour overrides
+                    // the dimming SwiftUI gives a disabled button.
+                    .font(.ui(13, .semibold)).foregroundStyle(canSend && !isSaved ? accent : Ink.dim)
                     .frame(minWidth: 48, minHeight: 44).disabled(!canSend || isSaved)
             }
             Button {

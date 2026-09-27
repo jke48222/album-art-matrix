@@ -359,13 +359,18 @@ private struct ShelfRecordStack: View {
                 if releases.isEmpty {
                     RoundedRectangle(cornerRadius: 6).fill(Color(hex: 0x26221B))
                         .overlay {
+                            // Printing on a drawn sleeve, hidden from VoiceOver: it
+                            // keeps the sleeve's proportions at every text size
+                            // rather than growing into "THE RECORD S...".
                             VStack(alignment: .leading) {
                                 Text("TESSERA").font(.machine(8)).tracking(2)
                                 Spacer()
                                 ShelfOwnershipGlyph().stroke(tint, lineWidth: 2).frame(width: 55, height: 55)
                                 Spacer()
                                 Text("THE RECORD SHELF").font(.machine(8)).tracking(0.5)
-                            }.foregroundStyle(tint).padding(22).frame(maxWidth: .infinity, alignment: .leading)
+                            }.lineLimit(1).minimumScaleFactor(0.5)
+                                .dynamicTypeSize(...DynamicTypeSize.large)
+                                .foregroundStyle(tint).padding(22).frame(maxWidth: .infinity, alignment: .leading)
                         }.frame(width: side, height: side).rotationEffect(.degrees(-5)).offset(x: -side * 0.13)
                 }
             }.frame(width: geometry.size.width, height: geometry.size.height)
