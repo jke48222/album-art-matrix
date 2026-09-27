@@ -60,7 +60,7 @@ struct ServicesPage: View {
                     Rule()
                     destination("AirPlay", detail: "Send audio to your wall", status: state(services?.airplay?.running == true), symbol: "airplayaudio") { AirPlayPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Your Mac", detail: "Playback from the Mac reporter", status: state(services?.mac?.answering == true), symbol: "desktopcomputer") { AddressesPage(accent: accent, onChange: {}) }
+                    destination("Your Mac", detail: "Playback from the Mac reporter", status: state(services?.mac?.answering == true), symbol: "desktopcomputer") { MacReporterPage(accent: accent, services: $services) }
                 }
                 DisclosureGroup(isExpanded: $showPriority) {
                     VStack(alignment: .leading, spacing: 15) {
@@ -84,9 +84,9 @@ struct ServicesPage: View {
                     Rule()
                     destination("Discogs", detail: "Bring your record shelf along", status: available && services?.discogs?.syncing == true ? "Reading collection" : available && services?.discogs?.problem != nil ? "Needs attention" : state(services?.discogs?.token_set == true && !(services?.discogs?.user ?? "").isEmpty), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Images", detail: "Draw from your imagination", status: state(services?.images?.ready == true), symbol: "paintbrush") { ImagesPage(accent: accent, services: $services) }
+                    destination("Images", detail: "Draw from your imagination", status: !available ? "Not checked" : services?.images?.busy == true ? "Drawing" : services?.images?.problem != nil ? "Needs attention" : services?.images?.ready != true ? "Set up" : services?.images?.verified == true ? "Ready" : "Key saved", symbol: "paintbrush") { ImagesPage(accent: accent, services: $services) }
                     Rule()
-                    destination("Posters", detail: "The films and shows you love", status: state(services?.tmdb?.key_set == true), symbol: "tv") { PostersPage(accent: accent, services: $services) }
+                    destination("Posters", detail: "The films and shows you love", status: !available ? "Not checked" : services?.tmdb?.checking == true ? "Checking" : services?.tmdb?.problem != nil ? "Needs attention" : services?.tmdb?.key_set != true ? "Set up" : services?.tmdb?.verified == true ? "Ready" : "Key saved", symbol: "tv") { PostersPage(accent: accent, services: $services) }
                     Rule()
                     destination("Pictures", detail: "Search the web or your Google provider", status: available ? (services?.google?.key_set == true && services?.google?.cx_set == true ? "Google ready" : "Web search") : "Not checked", symbol: "photo") { PicturesPage(accent: accent, services: $services) }
                 }
@@ -111,6 +111,11 @@ struct ServicesPage: View {
             else if qaRoute == "otherPlayers" { OtherPlayersPage(accent: accent, services: $services) }
             else if qaRoute == "claude" { ClaudePage(accent: accent, services: $services) }
             else if qaRoute == "discogs" { DiscogsPage(accent: accent, services: $services) }
+            else if qaRoute == "posters" { PostersPage(accent: accent, services: $services) }
+            else if qaRoute == "images" { ImagesPage(accent: accent, services: $services) }
+            else if qaRoute == "airplay" { AirPlayPage(accent: accent, services: $services) }
+            else if qaRoute == "homekit" { HomeKitPage(accent: accent) }
+            else if qaRoute == "mac" { MacReporterPage(accent: accent, services: $services) }
             else if qaRoute == "spotify" { SpotifyPage(accent: accent, services: $services) }
             else { AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused) }
         }

@@ -953,7 +953,7 @@ struct AddressesPage: View {
     var onChange: () -> Void
 
     @State private var host = ""
-    @State private var reporter = ""
+    @State private var services: WallServices?
 
     var body: some View {
         SetupPage("Addresses",
@@ -977,27 +977,14 @@ struct AddressesPage: View {
                 .padding(.vertical, 12)
             }
             .padding(.top, -12)
-            SetupGroup("A Mac, if you use one", note: "Optional. A Mac running the reporter can pass along what the Mac is playing.") {
-                field("your-mac.local:8787", text: $reporter, commit: commitReporter)
-                Rule()
-                HStack {
-                    Button("Use this address") { commitReporter() }
-                        .buttonStyle(PressStyle(scale: 0.97))
-                        .font(.ui(13, .semibold))
-                        .foregroundStyle(accent)
-                    Spacer()
-                    if let sent = wall.push.lastSent {
-                        Text("sent \(sent.formatted(date: .omitted, time: .shortened))")
-                            .font(.ui(12)).foregroundStyle(Ink.moss)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
+            NavigationLink { MacReporterPage(accent: accent, services: $services) } label: {
+                SetupRow(title: "Your Mac", subtitle: "Reporter connection and phone forwarding") { Image(systemName: "chevron.right") }
+            }.buttonStyle(.plain)
+
         }
         .onAppear {
             host = wall.host
-            reporter = wall.push.host
+
         }
     }
 
@@ -1021,12 +1008,6 @@ struct AddressesPage: View {
         Task { await wall.pollState() }
     }
 
-    private func commitReporter() {
-        wall.push.host = reporter.trimmingCharacters(in: .whitespaces)
-        Taps.commit()
-        wall.push.restart()
-        onChange()
-    }
 }
 
 struct AboutPage: View {

@@ -408,6 +408,7 @@ class Imaginer:
         self.last: dict | None = None
         self.problem: str | None = None
         self.model_used: str | None = None
+        self.verified = False
         self._last_at = float("-inf")
         self.busy = False
         self.live = LiveDrawing()
@@ -434,8 +435,20 @@ class Imaginer:
                 return
             if provider in PROVIDERS and provider != self.provider:
                 self.provider, self.problem = provider, None
+                # A provider never receives the previous provider's secret.
+                if api_key is None:
+                    self.api_key = ""
+                self.model_used = None
+                self.verified = False
+                if model is None or not str(model).strip():
+                    if provider == "openai":
+                        self.openai_model = "gpt-image-2"
+                    else:
+                        self.google_model = "imagen-4.0-ultra-generate-001"
             if isinstance(api_key, str) and api_key.strip() != self.api_key:
                 self.api_key, self.problem = api_key.strip(), None
+                self.model_used = None
+                self.verified = False
             if quality in QUALITIES:
                 self.quality = quality
             if isinstance(model, str) and model.strip():
@@ -466,6 +479,8 @@ class Imaginer:
                     "model_used": self.model_used, "quality": self.quality, "images": self.count,
                     "cost_usd": round(self.cost_usd, 4), "last": self.last, "busy": self.busy,
                     "problem": self.problem, "live": self.live.public(),
+                    "verified": self.verified, "pending_change": bool(self._pending_config),
+                    "pending_provider": self._pending_config.get("provider"),
                     "job_id": self._job_id, "showing_id": self._showing_id,
                     "on_wall": self._on_wall(),
                     "cooldown_s": round(max(0.0, MIN_GAP_S - (self._pace_clock() - self._last_at)), 1)}
@@ -516,28 +531,52 @@ class Imaginer:
         return f"{prompt.strip().rstrip('.')}. " + PANEL_BRIEF.format(size=size)
 
     # ---- the providers -----------------------------------------------------------------------
+    @staticmethod
+    def _http_error(response) -> RuntimeError:
+        code = response.status_code
+        # Keep the numeric code for model fallback, never echo request URLs,
+        # credentials, or a provider's arbitrary error body to the phone.
+        if code in (401, 403):
+            return RuntimeError(f"{code}: The image provider couldn't accept this key or its permissions.")
+        if code == 429:
+            return RuntimeError("429: The image provider's usage limit was reached. Check billing or try later.")
+        if code == 404:
+            return RuntimeError("404: This image model isn't available to the key.")
+        if code >= 500:
+            return RuntimeError(f"{code}: The image provider is temporarily unavailable.")
+        try:
+            detail = str(response.json().get("error", {}).get("message", "")).lower()
+        except (ValueError, AttributeError, TypeError):
+            detail = ""
+        if code == 400 and ("stream" in detail or "partial_images" in detail) and any(w in detail for w in ("unknown parameter", "unsupported", "not supported")):
+            return RuntimeError("400: unsupported parameter stream or partial_images")
+        if "model" in detail and any(w in detail for w in ("not found", "does not exist", "not supported", "no access")):
+            return RuntimeError(f"{code}: model not supported for this key")
+        return RuntimeError(f"{code}: The image request wasn't accepted. Try a different description or check the provider settings.")
+
+    def _safe_failure(self, exc: Exception) -> str:
+        message = str(exc)
+        # Tests and custom providers can bypass the HTTP adapter. Redact their
+        # strings too; no URL/header/token belongs in public status or logs.
+        if self.api_key:
+            message = message.replace(self.api_key, "[private]")
+        if any(word in message.lower() for word in ("https://", "http://", "authorization", "api_key", "sk-", "aiza")):
+            message = "The image provider couldn't complete this request. Check your key and connection."
+        return f"{type(exc).__name__}: {message[:160]}"
+
     def _http_post(self, url: str, headers: dict, body: dict) -> dict:
-        r = requests.post(url, headers=headers, json=body, timeout=300)
-        if r.status_code >= 400:
-            try:
-                msg = r.json().get("error", {}).get("message") or r.text[:200]
-            except ValueError:
-                msg = r.text[:200]
-            raise RuntimeError(f"{r.status_code}: {msg}")
-        return r.json()
+        with requests.post(url, headers=headers, json=body, timeout=300) as response:
+            if response.status_code >= 400:
+                raise self._http_error(response)
+            return response.json()
 
     def _http_stream(self, url: str, headers: dict, body: dict):
-        """OpenAI's server-sent events for a streamed image: each `data:`
-        line is one event, yielded as a dict."""
-        r = requests.post(url, headers=headers, json=body, timeout=(20, 300), stream=True)
-        if r.status_code >= 400:
-            try:
-                msg = r.json().get("error", {}).get("message") or r.text[:200]
-            except ValueError:
-                msg = r.text[:200]
-            raise RuntimeError(f"{r.status_code}: {msg}")
+        """OpenAI server-sent image events, with credential-safe failures."""
+        response = requests.post(url, headers=headers, json=body, timeout=(20, 300), stream=True)
         try:
-            for line in r.iter_lines(decode_unicode=True):
+            if response.status_code >= 400:
+                raise self._http_error(response)
+            for line in response.iter_lines(decode_unicode=True):
                 if not line or not line.startswith("data:"):
                     continue
                 payload = line[5:].strip()
@@ -548,7 +587,7 @@ class Imaginer:
                 except ValueError:
                     continue
         finally:
-            r.close()
+            response.close()
 
     @staticmethod
     def _missing_model(exc: Exception) -> bool:
@@ -645,9 +684,9 @@ class Imaginer:
             return "describe the picture"
         if len(prompt) > MAX_PROMPT:
             return f"use {MAX_PROMPT} characters or fewer"
-        if not self.ready:
-            return "no image key on the wall yet"
         with self._lock:
+            if not self.ready:
+                return "no image key on the wall yet"
             now = self._pace_clock()
             if self.busy:
                 return "still drawing the last one"
@@ -676,9 +715,9 @@ class Imaginer:
             try:
                 raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
-                self.problem = f"{type(exc).__name__}: {str(exc)[:160]}"
+                self.problem = self._safe_failure(exc)
                 print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
-                raise RuntimeError(f"the image model said no: {str(exc)[:120]}") from exc
+                raise RuntimeError(f"the image model said no: {self.problem}") from exc
             try:
                 img = self._decode(raw)
             except Exception as exc:
@@ -687,6 +726,7 @@ class Imaginer:
             usd = self._cost()
             with self._lock:
                 self.count += 1
+                self.verified = True
                 if usd:
                     self.cost_usd += usd
             return img
@@ -744,11 +784,11 @@ class Imaginer:
             try:
                 raw = self._openai(expanded, partial) if self.provider == "openai" else self._google(expanded)
             except Exception as exc:
-                self.problem = f"{type(exc).__name__}: {str(exc)[:160]}"
+                self.problem = self._safe_failure(exc)
                 print(f"[imagine] {self.provider} {self.model}: {self.problem}", flush=True)
                 self.live.fail(self.problem)
                 self._nudge()
-                return {"error": f"The image model said no: {str(exc)[:120]}"}
+                return {"error": f"The image model said no: {self.problem}"}
             try:
                 img = self._decode(raw)
             except Exception as exc:
@@ -776,6 +816,7 @@ class Imaginer:
                         pass
                 self.index = self.index[:KEEP]
                 self.count += 1
+                self.verified = True
                 if usd:
                     self.cost_usd += usd
                 self.last = {"id": image_id, "prompt": prompt, "usd": usd, "ts": entry["ts"]}

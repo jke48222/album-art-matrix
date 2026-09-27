@@ -1,0 +1,274 @@
+{
+  "batch": 15,
+  "base": "84bbf20",
+  "implemented_units": [
+    "S09",
+    "S10",
+    "S11",
+    "S12",
+    "S13"
+  ],
+  "validated_at": "2026-09-27T11:05:58.505464+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed"
+  },
+  "tests": {
+    "python_full_suite": 1767,
+    "native_interactions": 9,
+    "symbols": {
+      "checked": 137,
+      "missing": [],
+      "passed": 137
+    },
+    "homekit_qr_decode": 5
+  },
+  "native_screens": [
+    {
+      "case": "airplay",
+      "state": "room-live",
+      "file": "after/airplay/room-live.png",
+      "sha256": "78c1609955259532f6a9fa6ebfbe2f90ab4aa22effcbbbb634fa00b0aa61439c"
+    },
+    {
+      "case": "airplay",
+      "state": "room-large",
+      "file": "after/airplay/room-large.png",
+      "sha256": "da6eb005f84ca4456f0587e9948dbd0a02b41b16be8d5ea686db1e7d6f8d339d"
+    },
+    {
+      "case": "airplay",
+      "state": "room-offline",
+      "file": "after/airplay/room-offline.png",
+      "sha256": "95fb588c928091f734e1a9ec0f02d0f102e30e78282c3b10c5a3a92564ddbb6a"
+    },
+    {
+      "case": "airplay-artwork",
+      "state": "room-live",
+      "file": "after/airplay-artwork/room-live.png",
+      "sha256": "d97f6457e93c62cf4daf29ed5a6037c53f0f853f9995338554fee3c4fc69c842"
+    },
+    {
+      "case": "airplay-empty",
+      "state": "room-live",
+      "file": "after/airplay-empty/room-live.png",
+      "sha256": "14d341d158385bac7595e76654a2aca8aa83a58e76d709c451a30f759ef44073"
+    },
+    {
+      "case": "airplay-external",
+      "state": "room-live",
+      "file": "after/airplay-external/room-live.png",
+      "sha256": "14fa31cbfc5719f0a12a2f29095a617925054f93094bb32bdf6f94a4ec540c4f"
+    },
+    {
+      "case": "airplay-notinstalled",
+      "state": "room-live",
+      "file": "after/airplay-notinstalled/room-live.png",
+      "sha256": "ec56bf8622a3f47153dfa04f709005def438fac46d0b4413da9a1db08a495a6a"
+    },
+    {
+      "case": "airplay-paused",
+      "state": "room-live",
+      "file": "after/airplay-paused/room-live.png",
+      "sha256": "9021cfd3d7c88014a5db0d2714c693e806acf287c85e6b66068d172ed284d758"
+    },
+    {
+      "case": "airplay-refused",
+      "state": "room-live",
+      "file": "after/airplay-refused/room-live.png",
+      "sha256": "1e65868fdfb39f717fc57fb37b31a2315d93999122ded0db633218e8a25347e8"
+    },
+    {
+      "case": "airplay-unlinked",
+      "state": "room-live",
+      "file": "after/airplay-unlinked/room-live.png",
+      "sha256": "9d1d3c6d1e533840710f58fe4b268570f8ea0db469234cc15d3abb8cdae72e9e"
+    },
+    {
+      "case": "homekit",
+      "state": "room-live",
+      "file": "after/homekit/room-live.png",
+      "sha256": "41c478d16cfe436a870d525ba8c092519cbbe2f195292bac19102398362e1f45"
+    },
+    {
+      "case": "homekit",
+      "state": "room-large",
+      "file": "after/homekit/room-large.png",
+      "sha256": "bb1fff187fd5677adbd1c0672f07dc4534196fdab1ee44d2ce97a65b1c437682"
+    },
+    {
+      "case": "homekit",
+      "state": "room-offline",
+      "file": "after/homekit/room-offline.png",
+      "sha256": "c80f9810f647b42ff27fd8cbc0e814e3ca6f5b23dd37b2f8c5f38c4f4b498c7b"
+    },
+    {
+      "case": "homekit-disabled",
+      "state": "room-live",
+      "file": "after/homekit-disabled/room-live.png",
+      "sha256": "b5c9503ca8517e4c33bf056ca9dc0b0a725d08bcd1052acd1dc609f446111f5a"
+    },
+    {
+      "case": "homekit-paired",
+      "state": "room-live",
+      "file": "after/homekit-paired/room-live.png",
+      "sha256": "90fbb236f26cda9f83ee17debbcc8675502612e75decd1ea1d958a273e739f20"
+    },
+    {
+      "case": "homekit-refused",
+      "state": "room-live",
+      "file": "after/homekit-refused/room-live.png",
+      "sha256": "bf27de20d3bc57fc7a9cb08612cb26f55c78b52bbb2243092ae6a117f08e446d"
+    },
+    {
+      "case": "homekit-showing",
+      "state": "room-live",
+      "file": "after/homekit-showing/room-live.png",
+      "sha256": "eea53345d95148a67b032a24ce112cb4ce78adf1fa0dd45476cba5c9362aacf8"
+    },
+    {
+      "case": "images",
+      "state": "room-live",
+      "file": "after/images/room-live.png",
+      "sha256": "9921abad2f9b95658bd5eb924725524d92229f679e55ce9691a497b7724409d8"
+    },
+    {
+      "case": "images",
+      "state": "room-large",
+      "file": "after/images/room-large.png",
+      "sha256": "f924ffdbbc0566b27a1cdab8739a57db3ebadc731f70b1f344428db443c0da69"
+    },
+    {
+      "case": "images",
+      "state": "room-offline",
+      "file": "after/images/room-offline.png",
+      "sha256": "122375d6b7a3f53c30cc1a1033c12bd76029e820df7b0241df727e5365e3c082"
+    },
+    {
+      "case": "images-empty",
+      "state": "room-live",
+      "file": "after/images-empty/room-live.png",
+      "sha256": "8a81550ec915a5f52312f99129eb4cb5351e80133b044273a2294d2f5d3754a2"
+    },
+    {
+      "case": "images-google",
+      "state": "room-live",
+      "file": "after/images-google/room-live.png",
+      "sha256": "6c49539031b62e2d81f5abf96a74a556c1e98addb595f51d69120a880e1b5f37"
+    },
+    {
+      "case": "images-refused",
+      "state": "room-live",
+      "file": "after/images-refused/room-live.png",
+      "sha256": "2b057cb7ec69a2b1066a2c0db9b9c52001099d284c5174e009383d06d506581e"
+    },
+    {
+      "case": "images-unlinked",
+      "state": "room-live",
+      "file": "after/images-unlinked/room-live.png",
+      "sha256": "93e27d1a4c3d0ff222cae2861795979926b782b63992c639940c71fdda94a516"
+    },
+    {
+      "case": "mac",
+      "state": "room-live",
+      "file": "after/mac/room-live.png",
+      "sha256": "70f2c10655f88d25b17fb96742e3d292a40fc6d1e2f6d4f58d2e70d5c7c4b983"
+    },
+    {
+      "case": "mac",
+      "state": "room-large",
+      "file": "after/mac/room-large.png",
+      "sha256": "2dc356987b44c615e0e8cefa39920fa481c978b9c3ef41dbef245446dbca912f"
+    },
+    {
+      "case": "mac",
+      "state": "room-offline",
+      "file": "after/mac/room-offline.png",
+      "sha256": "7e2932ae5cd80c03fc3c1b176ace770abd756e62f1a113b05e07a081aa60fb3b"
+    },
+    {
+      "case": "mac-checking",
+      "state": "room-live",
+      "file": "after/mac-checking/room-live.png",
+      "sha256": "672d0364301a9a07acdce85593bcea6f18a4d858f90a7bdb393dae6c42f110ea"
+    },
+    {
+      "case": "mac-empty",
+      "state": "room-live",
+      "file": "after/mac-empty/room-live.png",
+      "sha256": "956b6999d00b86485f6655ad2979a9bddda428d1ecede2e976e25299fda84b3f"
+    },
+    {
+      "case": "mac-refused",
+      "state": "room-live",
+      "file": "after/mac-refused/room-live.png",
+      "sha256": "5026e83ae940cc292d8bbc742a8f38fb381797788ed7d11b7478228e22704b36"
+    },
+    {
+      "case": "mac-unlinked",
+      "state": "room-live",
+      "file": "after/mac-unlinked/room-live.png",
+      "sha256": "6ee6caaca181c2cdbac1a2a1975f6154b8adf0d52cccd15ca61fd590c3b6f5e9"
+    },
+    {
+      "case": "posters",
+      "state": "room-live",
+      "file": "after/posters/room-live.png",
+      "sha256": "f7742c8fc5e316c0de0138dda1913cc03c55a0b6108cf8661689b7bb5d8048c7"
+    },
+    {
+      "case": "posters",
+      "state": "room-large",
+      "file": "after/posters/room-large.png",
+      "sha256": "086f73c8c6ca66f2d99146a678bc92727b5da226d4b0bd37d13661048e45f568"
+    },
+    {
+      "case": "posters",
+      "state": "room-offline",
+      "file": "after/posters/room-offline.png",
+      "sha256": "092b2cce65cfebbf0d989e61422ea3d939eaf73a043ad3f8fa4f5b7a1cca1943"
+    },
+    {
+      "case": "posters-artwork",
+      "state": "room-live",
+      "file": "after/posters-artwork/room-live.png",
+      "sha256": "bd65d8eb47809ff8b8346f454466dbcaee5f56701e70532dc1310f7da5d988a3"
+    },
+    {
+      "case": "posters-checking",
+      "state": "room-live",
+      "file": "after/posters-checking/room-live.png",
+      "sha256": "6ebd5390e51b5bbf3f935483245f7dab6ec5cddd17afea27d912d01851b0cf58"
+    },
+    {
+      "case": "posters-empty",
+      "state": "room-live",
+      "file": "after/posters-empty/room-live.png",
+      "sha256": "c6c04119eb7b46626f3e5592e962d3dcb930c7ce8208da362f7344585ad820f8"
+    },
+    {
+      "case": "posters-refused",
+      "state": "room-live",
+      "file": "after/posters-refused/room-live.png",
+      "sha256": "deeec1e9e311546a41e8a5491b11f33f36d709812851581fbe60f0223520aeac"
+    },
+    {
+      "case": "posters-unlinked",
+      "state": "room-live",
+      "file": "after/posters-unlinked/room-live.png",
+      "sha256": "8f13ada7c08a2408b3f235fe79d470523fbe7119ed3f3a6eb4f72c3a4a7ea9e8"
+    }
+  ],
+  "all_screens_and_native_tests_match_app": {
+    "Tessera.debug.dylib": "f398be18a46e2e40cfc6e59819f1b4d524c048502c6121fdc1e6baf969b708ac",
+    "Tessera": "00a0676abf2d20293330ace491d9b9afd9d9d3eca4d98e3cd206558ae0b7ae00"
+  },
+  "deployment": "Managed wall runtime updated; Mac retry and service states checked on real wall, original mode preserved. Final signed app installed on iPhone18ProMax; user will open it.",
+  "limitations": [
+    "Physical iPhone touch review and live Home pairing remain for the user. Native tests use isolated synthetic statuses and production field validation.",
+    "No paid image request or real credentials edited. QR parity and decode use an authored setup URI.",
+    "Posters and AirPlay image fixtures are authored QA artwork; real provider artwork remains unmodified."
+  ],
+  "tracking_semantics": "IDs indicate finished implementation; roadmap checkboxes await physical review."
+}

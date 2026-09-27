@@ -27,6 +27,8 @@ import os
 import subprocess
 import sys
 import time
+import threading
+import math
 
 from . import NowPlaying, NowPlayingSource
 
@@ -184,8 +186,16 @@ class AppleMusicSource(NowPlayingSource):
 
     phone_age = None                 # seconds since the phone's last push
 
-    def __init__(self, endpoint: str = "", mac=None):
+    def __init__(self, endpoint: str = "", mac=None, remote_only=False):
         self.endpoint = (endpoint or "").rstrip("/")
+        self.remote_only = remote_only
+        self._remote_lock = threading.RLock()
+        self._remote_busy = None
+        self._remote_generation = 0
+        self._remote_checked = None
+        self._remote_state = "saved" if self.endpoint else "unconfigured" if remote_only else "local"
+        self._remote_problem = None
+        self._remote_current = None
         self.mac = mac              # MacMediaSource, when media-control exists
         self.show = None            # a show the Mac is watching (brain/posters.py)
         self.answering = None       # remote mode: did the reporter answer last time
@@ -298,41 +308,112 @@ class AppleMusicSource(NowPlayingSource):
         # one, so the paused sleeve keeps the wall.
         return self._tier2_account(mac_track, mac_artist) or now
 
-    def _remote(self):
-        import requests  # lazy; the Pi venv has it
-        try:
-            resp = requests.get(self.endpoint + "/nowplaying", timeout=8)
-        except requests.RequestException as exc:
+    def configure(self, endpoint):
+        from .reporter_endpoint import normalize_endpoint
+        endpoint = normalize_endpoint(endpoint)
+        with self._remote_lock:
+            if self.endpoint == endpoint and self.remote_only:
+                return
+            self.endpoint = endpoint
+            self.remote_only = True
+            self._remote_generation += 1
+            self._remote_busy = None
+            self._remote_checked = None
+            self._remote_current = None
+            self._remote_problem = None
+            self._remote_state = "saved" if endpoint else "unconfigured"
+            self.answering = None
             self.phone_age = None
-            self.answering = False
-            if not self._warned:
-                print(f"[applemusic] reporter unreachable at {self.endpoint} "
-                      f"({exc.__class__.__name__}) — start "
-                      "scripts/mac_reporter.py on the Mac")
-                self._warned = True
-            return None
-        self._warned = False
-        self.answering = True
-        # How long since the owner's phone last spoke to the reporter.
-        # Presence, not music: the away behaviour reads this.
-        age = resp.headers.get("X-Phone-Age")
-        self.phone_age = float(age) if age is not None else None
-        # a show the Mac is watching rides on the empty answer as a header,
-        # so a brain that does not know about shows sees nothing new
-        self.show = _decode_show(resp.headers.get("X-Mac-Show"))
-        if resp.status_code != 200:
-            return None
+            self.show = None
+
+    def status(self):
+        with self._remote_lock:
+            stale = self._remote_checked is not None and time.time() - self._remote_checked > 30
+            state = "stale" if stale and self.endpoint else self._remote_state
+            now = self._remote_current if not stale else None
+            return {"endpoint": self.endpoint, "answering": None if stale else self.answering,
+                    "state": state, "checked_at": self._remote_checked,
+                    "problem": self._remote_problem,
+                    "current": ({"title": now.title, "artist": now.artist, "album": now.album,
+                                 "art_url": now.art_url, "is_playing": now.is_playing} if now else None)}
+
+    def retry(self):
+        with self._remote_lock:
+            if not self.endpoint:
+                return False
+            claim = (self.endpoint, self._remote_generation)
+            if self._remote_busy == claim:
+                return True
+            self._remote_busy = claim
+            self._remote_state = "checking"
+        threading.Thread(target=self._remote, kwargs={"claim": claim}, daemon=True).start()
+        return True
+
+    def _remote(self, claim=None):
+        import requests
+        with self._remote_lock:
+            if claim is None:
+                if self._remote_busy:
+                    return self._remote_current if self._remote_checked and time.time() - self._remote_checked <= 30 else None
+                claim = (self.endpoint, self._remote_generation)
+                self._remote_busy = claim
+            endpoint, generation = claim
+        now = None
+        age = None
+        show = None
+        answering = False
+        state = "unavailable"
+        problem = "The wall could not reach the reporter. Check its address and keep the Mac awake."
         try:
-            data = resp.json()
-        except ValueError:
-            return None
-        # The reporter decorates its payload (e.g. "tier"); take only the
-        # dataclass's own fields so decoration never breaks this side.
-        return NowPlaying(**{k: v for k, v in data.items()
-                             if k in NowPlaying.__dataclass_fields__})
+            if not endpoint:
+                state, problem = "unconfigured", None
+            else:
+                resp = requests.get(endpoint + "/nowplaying", timeout=8)
+                if resp.status_code in (200, 204):
+                    raw_age = resp.headers.get("X-Phone-Age")
+                    try:
+                        age = float(raw_age) if raw_age is not None else None
+                        if age is not None and (not math.isfinite(age) or age < 0): age = None
+                    except (TypeError, ValueError):
+                        age = None
+                    show = _decode_show(resp.headers.get("X-Mac-Show"))
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        if not isinstance(data, dict) or any(not isinstance(data.get(k), str) for k in ("track_id", "title", "artist", "album")) or not isinstance(data.get("is_playing"), bool):
+                            raise ValueError("Invalid reporter payload")
+                        for key in ("progress_ms", "duration_ms"):
+                            val = data.get(key)
+                            if val is not None and (isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val) or val < 0):
+                                raise ValueError("Invalid reporter timing")
+                        if data.get("art_url") is not None and not isinstance(data["art_url"], str):
+                            raise ValueError("Invalid reporter artwork")
+                        if "clock" in data and data["clock"] not in ("exact", "approx", "unknown"):
+                            raise ValueError("Invalid reporter clock")
+                        for key in ("heard_at",):
+                            val = data.get(key)
+                            if val is not None and (isinstance(val, bool) or not isinstance(val, (int, float)) or not math.isfinite(val)):
+                                raise ValueError("Invalid reporter timestamp")
+                        now = NowPlaying(**{k:v for k,v in data.items() if k in NowPlaying.__dataclass_fields__})
+                    answering, problem = True, None
+                    state = "playing" if now and now.is_playing else "paused" if now else "idle"
+                else:
+                    problem = "That address did not answer as a Mac reporter. Check the hostname and port."
+        except (requests.RequestException, ValueError, TypeError, KeyError):
+            now, age, show = None, None, None
+        finally:
+            with self._remote_lock:
+                if self._remote_busy == claim:
+                    self._remote_busy = None
+                active = generation == self._remote_generation and endpoint == self.endpoint
+                if active:
+                    self.answering, self.phone_age, self.show = answering, age, show
+                    self._remote_state, self._remote_problem = state, problem
+                    self._remote_checked = time.time()
+                    self._remote_current = now
+        return now if active else None
 
     def get_current(self):
-        if self.endpoint:
+        if self.endpoint or self.remote_only:
             return self._remote()
         now = self._local()
         self.show = getattr(self.mac, "show", None) if self.mac is not None else None

@@ -140,7 +140,7 @@ def build_sources(cfg: dict, ctrl):
             print("[main] airplay: " + ("the receiver starts as " + repr(ctrl.get().get("airplay_name", "Wall"))
                                         if ctrl.get().get("airplay_receiver", True) else "the receiver is off"))
         elif name == "applemusic":
-            endpoint = cfg.get("applemusic", {}).get("endpoint", "")
+            endpoint = store.get("mac", "endpoint")
             if endpoint:
                 ctrl.apple = AppleMusicSource(endpoint)
                 sources.append(ctrl.apple)
@@ -155,11 +155,11 @@ def build_sources(cfg: dict, ctrl):
                           "`brew install media-control` adds every other app")
                 ctrl.apple = AppleMusicSource("", mac=mac)
                 sources.append(ctrl.apple)
-            elif account_configured():
-                sources.append(AppleMusicAccountSource())
             else:
-                print("[main] applemusic: no MusicKit credentials on this machine "
-                      "(deploy.sh copies them) — skipping")
+                ctrl.apple = AppleMusicSource("", remote_only=True)
+                sources.append(ctrl.apple)
+                if account_configured():
+                    sources.append(AppleMusicAccountSource())
         elif name == "spotify":
             sp = SpotifySource(store.get("spotify", "client_id"),
                                int(cfg.get("spotify", {}).get("redirect_port", 8888)))
@@ -884,8 +884,10 @@ def main():
                         # (the panel's floor is applied to everything, in
                         # white_balance, so a design needs nothing special)
                         ctrl.finish_base = f
-                        # a pushed picture takes the finish too, as a sleeve does
-                        f = apply_finish(f, s["finish"])
+                        # Pairing modules must stay crisp at their original contrast.
+                        hk = getattr(ctrl, "homekit", None)
+                        if not (hk and hk.is_showing_code()):
+                            f = apply_finish(f, s["finish"])
                         # a design's dim greys are flat tones on purpose: the hard lift
                         sink.show(white_balance(f, eff, hard=True).tobytes(),
                                   pre_wb_img=f)

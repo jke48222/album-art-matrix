@@ -16,6 +16,7 @@ PATH = os.path.expanduser("~/.config/album-art-matrix/services.json")
 
 # section -> key -> pattern a value must match. Empty clears a value.
 FIELDS = {
+    "mac": {"endpoint": r"^.{1,300}$"},
     "spotify": {"client_id": r"^[0-9A-Za-z]{8,64}$"},
     "lastfm": {"api_key": r"^[0-9A-Za-z]{16,64}$",
                "user": r"^[^\s/]{1,64}$"},
@@ -62,6 +63,8 @@ class Services:
                 v = (cfg.get(s) or {}).get(k, "")
                 if isinstance(v, str) and not v.startswith("PASTE"):
                     self.data[s][k] = v.strip()
+        if not self.data["mac"]["endpoint"]:
+            self.data["mac"]["endpoint"] = str((cfg.get("applemusic") or {}).get("endpoint") or "")
         try:
             with open(PATH) as fh:
                 saved = json.load(fh)
@@ -98,12 +101,27 @@ class Services:
                         rejected[f"{s}.{k}"] = v
                         continue
                     v = v.strip()
+                    if s == "mac" and k == "endpoint":
+                        from .nowplaying.reporter_endpoint import normalize_endpoint
+                        try:
+                            v = normalize_endpoint(v)
+                        except ValueError:
+                            rejected["mac.endpoint"] = "Invalid reporter address"
+                            continue
                     if v and not re.match(pattern, v):
                         rejected[f"{s}.{k}"] = v
                         continue
                     if candidate[s][k] != v:
                         candidate[s][k] = v
                         changed.setdefault(s, {})[k] = v
+            if "provider" in changed.get("images", {}):
+                # A credential and model belong to one provider. An omitted or
+                # rejected replacement must never carry a previous key across.
+                for key in ("api_key", "model"):
+                    provided = isinstance(patch.get("images"), dict) and key in patch["images"] and f"images.{key}" not in rejected
+                    if not provided and candidate["images"][key]:
+                        candidate["images"][key] = ""
+                        changed.setdefault("images", {})[key] = ""
             if changed:
                 # Adapters may stage a reversible credential change. Publish
                 # neither values nor side effects until the disk commit succeeds.

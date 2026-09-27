@@ -1,0 +1,155 @@
+{
+  "services": {
+    "spotify": {
+      "client_id": "1234567890abcdef1234567890abcdef",
+      "linked": true,
+      "state": "idle",
+      "problem": null,
+      "can_retry": false
+    },
+    "lastfm": {
+      "user": "",
+      "key_set": false
+    },
+    "listenbrainz": {
+      "user": "",
+      "token_set": false
+    },
+    "ears": false,
+    "hearing": {
+      "on": false,
+      "tools": false,
+      "listening": false,
+      "state": "off",
+      "gate_open": false
+    },
+    "airplay": {
+      "running": true,
+      "pipe_exists": true,
+      "reading": true,
+      "state": "playing",
+      "last": "Into the Quiet \u2014 The Tessera Sessions",
+      "connected_from": "Living room iPhone",
+      "receiver": {
+        "installed": true,
+        "on": true,
+        "name": "Tessera",
+        "running": true,
+        "up_s": 3600,
+        "restarts": 0,
+        "external": false,
+        "controllable": true,
+        "state": "ready",
+        "output": "silent",
+        "protocol": "classic",
+        "port": 5000
+      },
+      "current": {
+        "title": "Into the Quiet",
+        "artist": "The Tessera Sessions",
+        "album": "After the Rain",
+        "is_playing": true,
+        "progress_ms": 83000,
+        "duration_ms": 252000
+      }
+    },
+    "mac": {
+      "endpoint": "http://studio-mac.local:8787",
+      "answering": true,
+      "state": "playing",
+      "checked_at": 1790506985,
+      "current": {
+        "title": "Into the Quiet",
+        "artist": "The Tessera Sessions",
+        "album": "After the Rain",
+        "is_playing": true
+      },
+      "problem": null
+    },
+    "source_order": [
+      "phone",
+      "airplay",
+      "applemusic",
+      "spotify",
+      "lastfm",
+      "listenbrainz",
+      "ears"
+    ],
+    "tmdb": {
+      "key_set": true,
+      "verified": true,
+      "posters": 18,
+      "known": 12,
+      "state": "matched",
+      "checking": false,
+      "checked_at": 1790506985,
+      "last": {
+        "title": "The Quiet Hours",
+        "kind": "tv",
+        "year": 2026,
+        "at": 1790506385
+      }
+    },
+    "images": {
+      "ready": true,
+      "verified": true,
+      "provider": "google",
+      "model": "imagen-4.0-ultra-generate-001",
+      "quality": "medium",
+      "images": 7,
+      "cost_usd": 0.28,
+      "busy": false,
+      "last": {
+        "id": "qa-art",
+        "prompt": "An amber sun over a quiet sea, layers of paper and light",
+        "ts": 1790506085
+      }
+    }
+  },
+  "homekit": {
+    "enabled": true,
+    "ready": true,
+    "name": "Tessera",
+    "paired": false,
+    "code": "031-45-154",
+    "uri": "X-HM://0023ISYWY7OSY",
+    "showing_code": false,
+    "faces": [
+      {
+        "id": 1,
+        "name": "Album art",
+        "mode": "art"
+      },
+      {
+        "id": 2,
+        "name": "Lamp",
+        "mode": "ambient"
+      }
+    ],
+    "television": true,
+    "sensors": true,
+    "qr_modules": [
+      "111111100110101111111",
+      "100000100110101000001",
+      "101110101111101011101",
+      "101110101000001011101",
+      "101110101000101011101",
+      "100000101010101000001",
+      "111111101010101111111",
+      "000000001010100000000",
+      "101111100101001111100",
+      "001100001001100001101",
+      "011011111010111100010",
+      "000110011010000110111",
+      "000011111010011100011",
+      "000000001101010101110",
+      "111111100000100101010",
+      "100000101011100101001",
+      "101110101101111111001",
+      "101110101001101010000",
+      "101110101010101001100",
+      "100000100011111101001",
+      "111111101000101011000"
+    ]
+  }
+}

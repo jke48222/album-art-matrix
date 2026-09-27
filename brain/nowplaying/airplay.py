@@ -1,7 +1,7 @@
 """AirPlay to the wall.
 
-shairport-sync makes the Pi an AirPlay receiver called "Wall". Add it to
-any AirPlay group from an iPhone, a Mac or an Apple TV and the wall is
+shairport-sync makes the Pi an AirPlay receiver called "Wall". Select it
+from a supported sender (iOS speaker groups require AirPlay 2) and the wall is
 handed the exact title, artist, album, artwork and position of whatever is
 playing, with no account, no key and no guessing: the source tells it.
 The wall does not have to make a sound (the dummy output backend), or it
@@ -195,11 +195,14 @@ class AirPlaySource(NowPlayingSource):
             elif c == "PICT":
                 self._picture(d)
             elif c == "pbeg":
+                self._anchor_progress(now)
                 self.playing, self.active = True, True
             elif c in ("prsm", "pffr"):
+                self._anchor_progress(now)
                 self.playing = True
                 self.active = True
             elif c == "pfls":
+                self._anchor_progress(now)
                 self.playing = False
             elif c == "pend":
                 self.playing, self.active = False, False
@@ -263,6 +266,29 @@ class AirPlaySource(NowPlayingSource):
         self.playing = self.active = False
         self._prgr = None
         self.client = self.user_agent = ""
+        # A new sender must never inherit the previous connection's song.
+        # `pend` keeps metadata for a same-stream restart; `disc`/FIFO close
+        # end the connection, including partially delivered metadata.
+        self.title = self.artist = self.album = self.genre = self.persistent = ""
+        self.duration_ms = None
+        self.art_key = ""
+        self._pending = {}
+        self._committed_at = None
+
+    def _anchor_progress(self, now: float):
+        """Capture elapsed playback before a pause, then resume from there.
+
+        A flush does not necessarily include another prgr record. Without
+        this anchor the pause rolled back to the old RTP sample, and resume
+        counted the entire paused interval as listening time.
+        """
+        if self._prgr is not None:
+            start, cur, end, at = self._prgr
+            if self.playing:
+                cur += max(0.0, now - at) * RTP_HZ
+                if end > start:
+                    cur = min(cur, end)
+            self._prgr = (start, cur, end, now)
 
     def _end(self):
         with self._lock:
@@ -332,10 +358,19 @@ class AirPlaySource(NowPlayingSource):
             print(f"[airplay] no artwork came with {title!r}; found its sleeve by name", flush=True)
 
     def status(self) -> dict:
+        # Process discovery can take seconds; never hold up pipe delivery
+        # or the playback clock while checking the operating system.
+        running = _running()
         with self._lock:
             state = "playing" if self.active and self.playing else "paused" if self.active else "idle"
+            current = None
+            if self.active and self.title:
+                position, duration = self.progress()
+                current = {"title": self.title, "artist": self.artist, "album": self.album,
+                           "art_url": self.art_url() or self._looked_up.get((self.title, self.artist)),
+                           "progress_ms": position, "duration_ms": duration, "is_playing": self.playing}
             return {"pipe": self.pipe, "pipe_exists": os.path.exists(self.pipe), "reading": self.reading,
-                    "running": _running(), "state": state, "connected_from": self.client,
+                    "running": running, "state": state, "connected_from": self.client,
                     "user_agent": self.user_agent, "volume": self.volume,
                     "last": (f"{self.title} by {self.artist}" if self.title and self.artist else self.title or None),
-                    "records": self.records, "error": self.error}
+                    "records": self.records, "error": self.error, "current": current}

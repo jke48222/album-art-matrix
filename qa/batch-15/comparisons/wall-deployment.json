@@ -1,0 +1,79 @@
+{
+  "status": "deployed",
+  "base": "84bbf20",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "8d3f06512ba3378283d381792b66f647eedb598d0050e93fd168b4ec356b73b8",
+      "after_sha256": "94bd297fb654e581e56867d0ff354677243e79b3f4caaa788076ec257ff7481f"
+    },
+    {
+      "path": "brain/homekit.py",
+      "before_sha256": "d7d4260037351188a1c0b5dcd2cc5f2c0036e9412f4d51be4b78919e1f96cac5",
+      "after_sha256": "1ce71af7c8587a1dd115ed5343717c1b2b85b377debcaa952cdb6e2e35fe2495"
+    },
+    {
+      "path": "brain/imagine.py",
+      "before_sha256": "7805be0b22bac1a1644aba3003134fc8347f7e1d35e2d685503baf1a9c604ba4",
+      "after_sha256": "5ede0e5fd843b55aa8992ee52f058c861efe270ba79271743194c47a42a7c1d1"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "f49d1fc2f792f854cc193414cf5f14f8a2cfa1fadcc59a7c28459b11c121e2ac",
+      "after_sha256": "4e5745aef33f11d91c0ab8cf009a86cfd864e0340aa7b27cd169e8ae154baeb2"
+    },
+    {
+      "path": "brain/nowplaying/airplay.py",
+      "before_sha256": "72a17c866a8c6f86e16b817c301c83f6805a36db02fc257f58501ca90de7e259",
+      "after_sha256": "ba9a745ba5de444816efe0e22d0e43a66074e50f6ddfddc24c28d416d666a829"
+    },
+    {
+      "path": "brain/nowplaying/applemusic.py",
+      "before_sha256": "39dbd91096e59a1ea83a9b83f7727b75b9d45178f8f9ce5321c472dd90c9d4bf",
+      "after_sha256": "f8565888eef770da55575ecc50b71628645cd552246e3a90dbc9c13564cb5065"
+    },
+    {
+      "path": "brain/nowplaying/receiver.py",
+      "before_sha256": "db5b420b8357fcdb3b87fbfd2f6cbc0fc9e59f62004d71eccd28d18e23ca685c",
+      "after_sha256": "01591f7f461ed1f6737622b3e9c9319df57044fc42751290a840c07eff250f0c"
+    },
+    {
+      "path": "brain/nowplaying/reporter_endpoint.py",
+      "before_sha256": null,
+      "after_sha256": "50a349ee045c2dd1d9855dc8f47f8db6af253ede10ac1593950da1fefc00b7f7"
+    },
+    {
+      "path": "brain/posters.py",
+      "before_sha256": "3456d372583683bc1a9b4872fa26dcbfd8271f2f5a2a23651a7760f4d829e9ca",
+      "after_sha256": "cfc1a38955f767ea2d966a16c580cb5c93505c6b0414759f54538488caba47e2"
+    },
+    {
+      "path": "brain/services.py",
+      "before_sha256": "eb1a6ee6ecfe383675087a7386430c304713d812d9bc3ff71b3040b37734dd18",
+      "after_sha256": "1fc89d04296ada955caab4cf21f42e347eb420bc9cba35bd7b2b887f2d2ac90c"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2052982",
+  "current_pid": "3868099",
+  "mode_before": "off",
+  "mode_after": "off",
+  "health": {
+    "fps": 0.0,
+    "temp_c": 56.2,
+    "throttled": {
+      "now": false,
+      "ever": false
+    },
+    "uptime_s": 7,
+    "loop_age_s": null,
+    "quiet_s": null,
+    "idle": null,
+    "mode": "off",
+    "ytdlp": "2026.08.19"
+  },
+  "pairing": "No real pairing code was saved or displayed; rendering import checked with authored fixture URI."
+}

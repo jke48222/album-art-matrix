@@ -91,57 +91,16 @@ struct WallServices: Decodable {
         var taught: Taught?
         var teacher: Teacher?
     }
-    struct Mac: Decodable { var endpoint: String; var answering: Bool? }
+
     /// Ask the wall: whether a Claude key is on the wall and how asking has gone.
 
 
     /// AirPlay: whether shairport-sync is there and who is sending.
-    struct Airplay: Decodable {
-        struct Receiver: Decodable {
-            var installed: Bool?
-            var version: String?
-            var on: Bool?
-            var name: String?
-            var port: Int?
-            var running: Bool?
-            var up_s: Int?
-            var restarts: Int?
-            var external: Bool?
-            var problem: String?
-        }
-        var receiver: Receiver?
-        var running: Bool?
-        var pipe_exists: Bool?
-        var reading: Bool?
-        var state: String?
-        var connected_from: String?
-        var user_agent: String?
-        var last: String?
-        var error: String?
-    }
+
     /// Imagine: which image model draws, whether its key is on the wall, the bill.
-    struct Images: Decodable {
-        struct Last: Decodable { var id: String; var prompt: String; var usd: Double?; var ts: Int? }
-        var ready: Bool
-        var provider: String?
-        var model: String?
-        var model_used: String?
-        var quality: String?
-        var images: Int?
-        var cost_usd: Double?
-        var last: Last?
-        var busy: Bool?
-        var problem: String?
-    }
+
     /// Posters: whether a TMDB key is on the wall and what it last found.
-    struct Tmdb: Decodable {
-        struct Last: Decodable { var title: String; var kind: String?; var year: Int?; var at: Int? }
-        var key_set: Bool
-        var posters: Int?
-        var known: Int?
-        var last: Last?
-        var problem: String?
-    }
+
     /// Pictures: whether a Google key and search engine are on the wall for
     /// "show me", and what it last found.
     struct Google: Decodable {
@@ -218,6 +177,14 @@ struct WallServices: Decodable {
 
     static func retrySpotify(host: String) async -> WallServices? {
         await call(host: host, path: "/spotify/retry", body: [:])
+    }
+
+    static func retryMac(host: String) async -> WallServices? {
+        await call(host: host, path: "/mac/retry", body: [:])
+    }
+
+    static func checkPosters(host: String, title: String = "") async -> WallServices? {
+        await call(host: host, path: "/posters/check", body: ["title": title])
     }
 
     static func retryLastfm(host: String) async -> WallServices? {
@@ -460,303 +427,6 @@ struct PicturesPage: View {
 
 // MARK: - Posters: the TMDB key, so what the Mac watches gets its poster
 
-struct PostersPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var key = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var tmdb: WallServices.Tmdb? { services?.tmdb }
-    private var ready: Bool { tmdb?.key_set == true }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool {
-        guard services != nil else { return false }
-        let hex = typedKey.count == 32 && typedKey.allSatisfy { $0.isHexDigit }
-        return hex || (typedKey.hasPrefix("eyJ") && typedKey.count > 40)
-    }
-    private var foundLine: String {
-        guard let t = tmdb, t.key_set else { return "Paste your key above." }
-        let n = t.posters ?? 0
-        if n == 0 { return "Nothing looked up yet. Play an episode or a film in a browser on the Mac." }
-        return n == 1 ? "One poster found so far." : "\(n) posters found so far."
-    }
-
-    var body: some View {
-        SetupPage("Posters",
-                  blurb: "When the Mac watches an episode or a film in a browser, macOS names it but offers the browser's icon as the picture, so the wall used to look away. With a key for The Movie Database the wall finds the show's poster and wears that instead, and the night's viewing goes in the journal as a show.") {
-            SetupGroup("Your key", note: "Free. An API key (32 characters) or a read access token from your TMDB account settings, under API. Kept on the wall and used only to look up names.") {
-                KeyField(placeholder: ready ? "TMDB key (one is on the wall)" : "TMDB API key or read access token", text: $key)
-                Rule()
-                SetupRow(title: "Need a key?", subtitle: "Opens TMDB's API settings in Safari. An account takes a minute; the key is under Create.") {
-                    ActionPill(title: "Get a key", filled: false) {
-                        openURL(URL(string: "https://www.themoviedb.org/settings/api")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
-                         accent: accent) { save() }
-            }
-            .padding(.top, -12)
-            Problem(text: problem ?? tmdb?.problem)
-
-            SetupGroup("On the wall", note: "The Mac's reporter passes the name of a show along; the wall asks TMDB for television first, then films, and keeps what it finds for a month. A name TMDB does not know leaves the wall as it was.") {
-                SetupRow(title: "Found", subtitle: foundLine) { EmptyView() }
-                if let l = tmdb?.last {
-                    Rule()
-                    SetupRow(title: "Last poster", subtitle: l.title + (l.year.map { ", \($0)" } ?? "") + (l.kind == "movie" ? ", a film" : ", a series")) {
-                        EmptyView()
-                    }
-                }
-            }
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                if Task.isCancelled { break }
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-            }
-        }
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        Task {
-            let (fresh, why) = await ServiceSave.send(["tmdb": ["api_key": typedKey]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); key = "" }
-            busy = false
-        }
-    }
-}
-
-
 // MARK: - Images: the drawer and its key, for pictures from words
 
-struct ImagesPage: View {
-    @Environment(WallSession.self) private var wall
-    @Environment(\.openURL) private var openURL
-    let accent: Color
-    @Binding var services: WallServices?
-
-    @State private var key = ""
-    @State private var busy = false
-    @State private var problem: String?
-
-    private var im: WallServices.Images? { services?.images }
-    private var ready: Bool { im?.ready == true }
-    private var provider: String { im?.provider ?? "openai" }
-    private var quality: String { im?.quality ?? "medium" }
-    private var modelLine: String {
-        guard let im else { return "" }
-        if let used = im.model_used, !used.isEmpty, used != im.model {
-            return "\(used) (asked for \(im.model ?? ""), which this key cannot reach)"
-        }
-        return im.model ?? ""
-    }
-    private var typedKey: String { key.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSave: Bool { services != nil && typedKey.count >= 20 }
-    private var costLine: String {
-        guard let im else { return "" }
-        let n = im.images ?? 0
-        if n == 0 { return "Nothing drawn yet." }
-        return "\(n) drawn, about $\(String(format: "%.2f", im.cost_usd ?? 0)) in all."
-    }
-
-    var body: some View {
-        SetupPage("Images",
-                  blurb: "\"Create a purple elephant\" draws one on the panel. Claude writes the words out as a prompt made for a panel this size, an image model draws it, and the picture stays up for ten minutes. Every picture is kept on the wall, with its words, under Imagine in Settings.") {
-            SetupGroup("Who draws", note: provider == "google"
-                       ? "Google's Imagen through the Gemini API. About four cents a picture."
-                       : "OpenAI's gpt-image-1 at low quality, which is plenty for a panel. About a cent a picture.") {
-                ChoiceRow(title: "OpenAI", subtitle: "gpt-image-1", value: "openai", selected: provider, accent: accent) { pick($0) }
-                Rule()
-                ChoiceRow(title: "Google", subtitle: "Imagen 4", value: "google", selected: provider, accent: accent) { pick($0) }
-            }
-            .padding(.top, -12)
-
-            SetupGroup("Your key", note: "Kept on the wall and used only to draw. Change the drawer above and paste that drawer's key.") {
-                KeyField(placeholder: ready ? "API key (one is on the wall)" : (provider == "google" ? "Gemini API key" : "OpenAI API key, sk-..."), text: $key)
-                Rule()
-                SetupRow(title: "Need a key?", subtitle: provider == "google" ? "Opens Google AI Studio in Safari." : "Opens the OpenAI platform in Safari.") {
-                    ActionPill(title: "Get a key", filled: false) {
-                        openURL(URL(string: provider == "google" ? "https://aistudio.google.com/apikey"
-                                                                : "https://platform.openai.com/api-keys")!)
-                    }
-                }
-                Rule()
-                SaveLine(title: "Save to the wall", enabled: canSave, busy: busy,
-                         done: (ready && typedKey.isEmpty) ? "Key on the wall" : nil,
-                         accent: accent) { save() }
-            }
-            Problem(text: problem ?? im?.problem)
-
-            SetupGroup("Quality", note: provider == "google"
-                       ? "Imagen Ultra draws every picture; the quality choice is OpenAI's."
-                       : "Medium is a good picture in well under a minute, about four cents on gpt-image-1. High is the most detailed the model makes and takes minutes, about seventeen cents. Low is a cent and rough. The wall shows every picture being drawn either way.") {
-                ChoiceRow(title: "Medium", subtitle: "Good and quick", value: "medium", selected: quality, accent: accent) { pick(quality: $0) }
-                Rule()
-                ChoiceRow(title: "High", subtitle: "Every detail, minutes to draw", value: "high", selected: quality, accent: accent) { pick(quality: $0) }
-                Rule()
-                ChoiceRow(title: "Low", subtitle: "Quick and rough", value: "low", selected: quality, accent: accent) { pick(quality: $0) }
-            }
-
-            SetupGroup("So far", note: "One picture every ten seconds at most.") {
-                SetupRow(title: "Drawing with", subtitle: modelLine) { EmptyView() }
-                Rule()
-                SetupRow(title: "Drawn", subtitle: costLine) { EmptyView() }
-                if let l = im?.last {
-                    Rule()
-                    SetupRow(title: "Last", subtitle: l.prompt) { EmptyView() }
-                }
-            }
-        }
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
-                if Task.isCancelled { break }
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-            }
-        }
-    }
-
-    private func pick(_ who: String) {
-        guard who != provider else { return }
-        Taps.detent(intensity: 0.4)
-        Task {
-            let (fresh, why) = await ServiceSave.send(["images": ["provider": who]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-        }
-    }
-
-    private func pick(quality q: String) {
-        guard q != quality else { return }
-        Taps.detent(intensity: 0.4)
-        Task {
-            let (fresh, why) = await ServiceSave.send(["images": ["quality": q]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-        }
-    }
-
-    private func save() {
-        guard canSave, !busy else { return }
-        busy = true
-        Task {
-            let (fresh, why) = await ServiceSave.send(["images": ["api_key": typedKey, "provider": provider]], to: wall.host)
-            if let fresh { services = fresh }
-            problem = why
-            if why == nil { Taps.commit(); key = "" }
-            busy = false
-        }
-    }
-}
-
-
 // MARK: - AirPlay: the wall as a receiver, and what is coming in
-
-struct AirPlayPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @Binding var services: WallServices?
-    @State private var name = ""
-
-    private var ap: WallServices.Airplay? { services?.airplay }
-    private var rx: WallServices.Airplay.Receiver? { ap?.receiver }
-    private var typedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
-
-    private var receiving: (String, Bool) {
-        guard let ap else { return ("The wall is not answering.", false) }
-        if let rx {
-            if rx.on == false { return ("Off. Turn it on below.", false) }
-            if rx.installed == false { return ("Not installed on the Pi yet: pi/install-airplay.sh.", false) }
-            if rx.external != true && rx.running != true { return (rx.problem ?? "Starting.", false) }
-        } else if ap.running != true {
-            return ("No receiver on this wall.", false)
-        }
-        switch ap.state {
-        case "playing": return ("Playing" + (ap.last.map { ": \($0)" } ?? ""), true)
-        case "paused": return ("Paused" + (ap.last.map { ": \($0)" } ?? ""), true)
-        default: return ("Ready. Pick \u{201C}\(rx?.name ?? "Wall")\u{201D} in the AirPlay menu.", true)
-        }
-    }
-
-    var body: some View {
-        SetupPage("AirPlay",
-                  blurb: "The wall is an AirPlay speaker. Pick it in the AirPlay menu on an iPhone, iPad, Mac or Apple TV and the wall is handed the exact title, artwork and position of whatever plays, from any app. No account and no key. The wall makes no sound of its own, so play to it together with your speaker.") {
-            SetupGroup("Now", note: nil) {
-                SetupRow(title: "Receiving", subtitle: receiving.0) {
-                    StateValue(receiving.1 ? "On" : "Off", done: receiving.1)
-                }
-                if let from = ap?.connected_from, !from.isEmpty, ap?.state != "idle" {
-                    Rule()
-                    SetupRow(title: "From", subtitle: from) { EmptyView() }
-                }
-            }
-            .padding(.top, -12)
-
-            SetupGroup("The speaker", note: "Classic AirPlay, run by the wall itself, so every iPhone, iPad, Mac and Apple TV can choose it. Grouping it with HomePods in the Home app needs AirPlay 2, which needs root on the Pi; see docs/AIRPLAY.md.") {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Be an AirPlay speaker").font(.ui(15)).foregroundStyle(Ink.ink)
-                        Text(speakerLine).font(.ui(12)).foregroundStyle(Ink.dim)
-                    }
-                    Spacer()
-                    Toggle("", isOn: Binding(get: { rx?.on ?? true },
-                                             set: { v in wall.send(["airplay_receiver": v]); Taps.detent(intensity: 0.4); refreshSoon() }))
-                        .labelsHidden().tint(accent)
-                }
-                .padding(.horizontal, 16).padding(.vertical, 12)
-                Rule()
-                KeyField(placeholder: rx?.name ?? "Wall", text: $name)
-                Rule()
-                SaveLine(title: "Use this name", enabled: !typedName.isEmpty && typedName != rx?.name,
-                         busy: false, done: typedName.isEmpty ? (rx?.name).map { "Shown as \u{201C}\($0)\u{201D}" } : nil,
-                         accent: accent) { rename() }
-                if let v = rx?.version {
-                    Rule()
-                    SetupRow(title: "shairport-sync", subtitle: v.components(separatedBy: "-").first ?? v) { EmptyView() }
-                }
-            }
-        }
-        .task {
-            while !Task.isCancelled {
-                if let fresh = await WallServices.read(host: wall.host) { services = fresh }
-                try? await Task.sleep(for: .seconds(2))
-            }
-        }
-    }
-
-    private var speakerLine: String {
-        guard let rx else { return "" }
-        if rx.external == true { return "Run by the Pi's own shairport-sync." }
-        if rx.running == true { return "Up" + (rx.up_s.map { ", \(duration($0))" } ?? "") + ", port \(rx.port ?? 5000)" }
-        if rx.on == false { return "Off" }
-        return rx.problem ?? "Starting"
-    }
-
-    private func duration(_ s: Int) -> String { s < 90 ? "\(s) s" : s < 5400 ? "\(s / 60) min" : "\(s / 3600) h" }
-
-    private func refreshSoon() {
-        let h = wall.host
-        Task {
-            try? await Task.sleep(for: .seconds(1.5))
-            if let fresh = await WallServices.read(host: h) { services = fresh }
-        }
-    }
-
-    private func rename() {
-        guard !typedName.isEmpty else { return }
-        wall.send(["airplay_name": String(typedName.prefix(40))])
-        Taps.commit()
-        name = ""
-        refreshSoon()
-    }
-}

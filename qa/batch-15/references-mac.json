@@ -1,0 +1,46 @@
+{
+  "units": [
+    "S12"
+  ],
+  "task_intent": "Refine Tessera creative and device connection flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/7a61e021-d4de-464f-838e-d3e54bf9138f",
+      "app": "IKEA Home smart",
+      "inspected": true,
+      "applied": "Connection diagram followed by concrete setup steps and inline help."
+    },
+    {
+      "url": "https://mobbin.com/screens/7047e51a-57c3-4ec6-8f82-21a562e3854c",
+      "app": "Eight Sleep",
+      "inspected": true,
+      "applied": "Give the device identity space; lead recovery with actual status."
+    },
+    {
+      "url": "https://mobbin.com/screens/93466664-4080-4a58-b566-6873a9066e55",
+      "app": "Amazon Alexa",
+      "inspected": true,
+      "applied": "Order troubleshooting by visible physical checks."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://support.apple.com/guide/mac-help/find-your-computers-name-and-network-address-mchlp1177/mac",
+      "applied": "Use General, Sharing to find local hostname."
+    },
+    {
+      "url": "https://support.apple.com/en-nz/guide/mac-help/mchla4f49138/mac",
+      "applied": "Explain explicit local-network permission recovery."
+    }
+  ],
+  "source_audit": [
+    "scripts/mac_reporter.py",
+    "brain/nowplaying/applemusic.py",
+    "tessera/Tessera/NowPlaying.swift"
+  ],
+  "limitations": [
+    "No Mac permissions or installed reporter process changed."
+  ]
+}

@@ -1,0 +1,49 @@
+{
+  "unit": "S11",
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine Tessera creative and device connection flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/828b9b4d-3f8a-4926-a2f2-19770d484046",
+      "app": "Sonos",
+      "image_inspected": true,
+      "observed": "Large room identity is followed directly by a single name row; product controls form a separate continuous section below it.",
+      "applied": "Make the advertised receiver name the hero; one inline naming editor beside the receiver toggle, with no duplicate configuration sheet."
+    },
+    {
+      "url": "https://mobbin.com/screens/a93defb7-0d4e-4680-8467-c6ecef6b5d36",
+      "app": "Sonos",
+      "image_inspected": true,
+      "observed": "System information appears below the primary identity, with model and version treated as secondary details rather than onboarding copy.",
+      "applied": "Put protocol and receiver version in one optional details disclosure; keep everyday receiving and naming actions in the main flow."
+    },
+    {
+      "url": "https://mobbin.com/screens/235a0377-fbdb-486f-807f-2645731c3495",
+      "app": "Sonos",
+      "image_inspected": true,
+      "observed": "A prominent named stereo pair and tightly grouped product rows establish ownership and distinguish configuration from the persistent playback bar.",
+      "applied": "Give the receiver a distinct moss instrument panel and label actual incoming music separately from receiver setup; never imply these settings control sender playback."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://support.apple.com/guide/iphone/homepod-and-other-wireless-speakers-iph315e0d58d/ios",
+      "applied": "Same-network guidance, sender-owned AirPlay selection and direct official help; no fake in-app route picker or automatic route selection."
+    },
+    {
+      "url": "https://github.com/mikebrady/shairport-sync/blob/master/CONFIGURATION%20FLAGS.md",
+      "applied": "Classic AirPlay does not offer iOS multi-room or HomePod grouping. The app explicitly identifies the managed dummy output as silent instead of calling the wall an audible speaker. Protocol is derived from the actual managed receiver version; external capabilities remain unknown."
+    },
+    {
+      "url": "https://github.com/mikebrady/shairport-sync-metadata-reader/blob/master/README.md",
+      "applied": "Current artwork and title come only from the active AirPlay metadata source. Anchor progress at flush/pause and resume so elapsed playback does not roll back or count a paused interval. Disconnect clears previous sender metadata."
+    },
+    {
+      "url": "https://github.com/mikebrady/shairport-sync/blob/master/BUILD.md",
+      "applied": "Link directly to receiver installation guidance from optional details; do not offer app controls that pretend to configure an external system service."
+    }
+  ],
+  "wall_content": "This unit adds no new wall renderer. The incoming card shows the active AirPlay source's artwork unchanged, labeled Received over AirPlay, and does not substitute the current wall mode's image. Physical sender selection remains a manual device check."
+}

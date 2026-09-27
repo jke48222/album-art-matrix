@@ -85,42 +85,66 @@ class Posters:
     def __init__(self, api_key: str = "", path: str = PATH, fetch=None, clock=None):
         self.api_key = (api_key or "").strip()
         self.path = path
-        self._fetch = fetch or self._http_get
+        self._fetch = fetch
         self._clock = clock or time.time
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
         self._cache: dict[str, dict] = {}
+        self._generation = 0
+        self._inflight: set[tuple[int, str]] = set()
+        self._checking = False
+        self._retry_at = 0.0
+        self._verified = False
+        self.checked_at = None
+        self.state = "saved" if self.api_key else "unlinked"
         self.count = 0
         self.last: dict | None = None
         self.problem: str | None = None
         self._load()
 
-    # ---- settings ------------------------------------------------------------------------
     @property
     def ready(self) -> bool:
         return bool(self.api_key)
 
+    @property
+    def generation(self) -> int:
+        with self._lock:
+            return self._generation
+
     def configure(self, api_key=None):
-        if api_key is not None and api_key.strip() != self.api_key:
-            self.api_key = api_key.strip()
-            self.problem = None
-            # a new key deserves a fresh look at the misses
-            with self._lock:
+        with self._lock:
+            if isinstance(api_key, str) and api_key.strip() != self.api_key:
+                self.api_key = api_key.strip()
+                self._generation += 1
+                self.problem = None
+                self._verified = False
+                self._checking = False
+                self.checked_at = None
+                self._retry_at = 0
+                self.state = "saved" if self.ready else "unlinked"
                 self._cache = {k: v for k, v in self._cache.items() if v.get("hit")}
                 self._save()
 
     def status(self) -> dict:
-        return {"key_set": self.ready, "posters": self.count, "last": self.last,
-                "known": sum(1 for v in self._cache.values() if v.get("hit")),
-                "problem": self.problem}
+        with self._lock:
+            return {"key_set": self.ready, "posters": self.count,
+                    "last": dict(self.last) if self.last else None,
+                    "known": sum(1 for v in self._cache.values() if v.get("hit")),
+                    "problem": self.problem, "state": self.state,
+                    "checking": self._checking, "verified": self._verified,
+                    "checked_at": self.checked_at,
+                    "retry_after": max(0, int(self._retry_at - self._clock() + 0.999))}
 
-    # ---- disk ----------------------------------------------------------------------------
     def _load(self):
         try:
             with open(self.path) as fh:
                 d = json.load(fh)
-            self._cache = d.get("cache", {})
-            self.count = int(d.get("count", 0))
-            self.last = d.get("last")
+            if not isinstance(d, dict):
+                return
+            cache = d.get("cache", {})
+            self._cache = {k: v for k, v in cache.items() if isinstance(k, str) and isinstance(v, dict)} if isinstance(cache, dict) else {}
+            self.count = max(0, int(d.get("count", 0)))
+            last = d.get("last")
+            self.last = last if isinstance(last, dict) and isinstance(last.get("title"), str) else None
         except (OSError, ValueError, TypeError):
             self._cache = {}
 
@@ -131,40 +155,115 @@ class Posters:
             with open(tmp, "w") as fh:
                 json.dump({"cache": self._cache, "count": self.count, "last": self.last}, fh)
             os.replace(tmp, self.path)
-        except OSError as exc:
-            print(f"[posters] could not save: {exc}", flush=True)
+        except OSError:
+            print("[posters] could not save poster history", flush=True)
 
-    # ---- TMDB ----------------------------------------------------------------------------
-    def _http_get(self, path: str, params: dict):
+    def _http_get(self, path: str, params: dict, api_key: str):
         headers = {"Accept": "application/json"}
         params = dict(params)
-        if self.api_key.startswith("eyJ"):
-            headers["Authorization"] = f"Bearer {self.api_key}"
+        if api_key.startswith("eyJ"):
+            headers["Authorization"] = f"Bearer {api_key}"
         else:
-            params["api_key"] = self.api_key
+            params["api_key"] = api_key
         r = requests.get(API + path, params=params, headers=headers, timeout=12)
-        if r.status_code == 401:
+        if r.status_code in (401, 403):
             raise PermissionError("TMDB rejected the key")
         r.raise_for_status()
         return r.json()
 
-    def _search(self, kind: str, query: str) -> dict | None:
-        data = self._fetch(f"/search/{kind}", {"query": query, "include_adult": "false", "language": "en-US"})
-        for item in data.get("results") or []:
-            if not item.get("poster_path"):
+    def _request(self, path, params, api_key):
+        data = self._fetch(path, params) if self._fetch else self._http_get(path, params, api_key)
+        if not isinstance(data, dict):
+            raise ValueError("invalid TMDB response")
+        return data
+
+    def _search(self, kind: str, query: str, api_key: str) -> dict | None:
+        data = self._request(f"/search/{kind}", {"query": query, "include_adult": "false", "language": "en-US"}, api_key)
+        results = data.get("results")
+        if not isinstance(results, list):
+            raise ValueError("invalid TMDB response")
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            poster = item.get("poster_path")
+            if not isinstance(poster, str) or not re.fullmatch(r"/[A-Za-z0-9._-]+", poster):
+                continue
+            identity = item.get("id")
+            if not isinstance(identity, int) or isinstance(identity, bool) or identity <= 0:
                 continue
             name = item.get("name") if kind == "tv" else item.get("title")
             date = item.get("first_air_date") if kind == "tv" else item.get("release_date")
-            return {"kind": kind, "id": item.get("id"), "name": name or query,
-                    "year": int(date[:4]) if date and date[:4].isdigit() else None,
-                    "poster": IMAGE + item["poster_path"],
-                    "overview": (item.get("overview") or "")[:300]}
+            return {"kind": kind, "id": identity, "name": name if isinstance(name, str) and name else query,
+                    "year": int(date[:4]) if isinstance(date, str) and date[:4].isdigit() else None,
+                    "poster": IMAGE + poster,
+                    "overview": str(item.get("overview") or "")[:300]}
         return None
 
-    def lookup(self, title: str, artist: str = "") -> dict | None:
-        """The poster for a show or film named like this, or None."""
-        if not self.ready:
-            return None
+    def _failure(self, exc: Exception, generation: int):
+        with self._lock:
+            if generation != self._generation:
+                return
+            status = getattr(getattr(exc, "response", None), "status_code", None)
+            if isinstance(exc, PermissionError) or status in (401, 403):
+                self.state, self.problem = "refused", "TMDB couldn't accept this key. Replace it, then check again."
+                delay = 60
+            elif status == 429:
+                self.state, self.problem = "rate_limited", "TMDB is receiving too many requests. Try again shortly."
+                try:
+                    delay = min(3600, max(10, int(exc.response.headers.get("Retry-After", "60"))))
+                except (ValueError, TypeError):
+                    delay = 60
+            else:
+                self.state, self.problem = "unavailable", "TMDB couldn't be reached. Your saved key and poster history are unchanged."
+                delay = 15
+            self.checked_at = self._clock()
+            self._retry_at = self._clock() + delay
+            # Provider exceptions can contain the URL's API key. Never publish them.
+            print(f"[posters] {self.state}", flush=True)
+
+    def check(self, title: str | None = None) -> bool:
+        """Check credentials or look up a title without taking over the wall."""
+        if title is not None and (not isinstance(title, str) or not title.strip() or len(title.strip()) > 240 or not clean_title(title)):
+            return False
+        with self._lock:
+            if not self.ready or self._checking or self._clock() < self._retry_at:
+                return False
+            generation, api_key = self._generation, self.api_key
+            self._checking = True
+            self.state, self.problem = "checking", None
+        def work():
+            try:
+                if title:
+                    self.lookup(title.strip(), force=True, expected_generation=generation)
+                else:
+                    data = self._request("/configuration", {}, api_key)
+                    if not isinstance(data.get("images"), dict):
+                        raise ValueError("invalid TMDB configuration")
+                    with self._lock:
+                        if generation == self._generation:
+                            self.state, self.problem = "ready", None
+                            self._verified = True
+                            self.checked_at = self._clock()
+                            self._retry_at = self._clock() + 3
+            except Exception as exc:
+                self._failure(exc, generation)
+            finally:
+                with self._lock:
+                    if generation == self._generation:
+                        self._checking = False
+                        if self.state == "checking":
+                            self.state = "ready" if self._verified else "saved"
+        try:
+            threading.Thread(target=work, name="posters-check", daemon=True).start()
+        except RuntimeError as exc:
+            self._failure(exc, generation)
+            with self._lock:
+                if generation == self._generation:
+                    self._checking = False
+            return False
+        return True
+
+    def lookup(self, title: str, artist: str = "", *, force=False, expected_generation=None) -> dict | None:
         queries = []
         if artist and artist != "?":
             queries.extend(clean_title(artist))
@@ -176,32 +275,52 @@ class Posters:
         key = "|".join(q.lower() for q in queries)
         now = self._clock()
         with self._lock:
-            c = self._cache.get(key)
-        if c and now - c.get("at", 0) <= (HIT_TTL_S if c.get("hit") else MISS_TTL_S):
-            return c["hit"]
-        hit = None
+            if not self.ready:
+                return None
+            generation, api_key = self._generation, self.api_key
+            if expected_generation is not None and expected_generation != generation:
+                return None
+            cached = self._cache.get(key)
+            if not force and cached and isinstance(cached.get("at"), (int, float)) and now - cached["at"] <= (HIT_TTL_S if cached.get("hit") else MISS_TTL_S):
+                return cached.get("hit")
+            token = (generation, key)
+            if token in self._inflight or now < self._retry_at:
+                return None
+            self._inflight.add(token)
         try:
-            for q in queries:
-                hit = self._search("tv", q) or self._search("movie", q)
+            hit = None
+            for query in queries:
+                for kind in ("tv", "movie"):
+                    with self._lock:
+                        if generation != self._generation:
+                            return None
+                    hit = self._search(kind, query, api_key)
+                    if hit:
+                        break
                 if hit:
                     break
-            self.problem = None
-        except PermissionError as exc:
-            self.problem = str(exc)
-            print(f"[posters] {exc}", flush=True)
-            return None
+            with self._lock:
+                if generation != self._generation:
+                    return None
+                self.problem = None
+                self.state = "matched" if hit else "no_match"
+                self.checked_at = self._clock()
+                self._verified = True
+                if force:
+                    self._retry_at = self._clock() + 3
+                self._cache[key] = {"at": now, "hit": hit}
+                if hit:
+                    self.count += 1
+                    self.last = {"title": hit["name"], "kind": hit["kind"], "year": hit["year"],
+                                 "at": int(now), "poster": hit["poster"], "id": hit["id"], "overview": hit["overview"]}
+                self._save()
+            return hit
         except Exception as exc:
-            print(f"[posters] lookup {queries[0]!r}: {exc}", flush=True)
-            return None                                   # not cached: try again next poll
-        with self._lock:
-            self._cache[key] = {"at": now, "hit": hit}
-            if hit:
-                self.count += 1
-                self.last = {"title": hit["name"], "kind": hit["kind"], "year": hit["year"], "at": int(now)}
-            self._save()
-        print(f"[posters] {queries[0]!r}: " + (f"{hit['kind']} {hit['name']} ({hit['year']})" if hit
-                                              else "nothing on TMDB"), flush=True)
-        return hit
+            self._failure(exc, generation)
+            return None
+        finally:
+            with self._lock:
+                self._inflight.discard(token)
 
 
 class PosterSource(NowPlayingSource):
@@ -223,7 +342,7 @@ class PosterSource(NowPlayingSource):
         seen = show.get("seen")
         if seen is not None and self._clock() - float(seen) > SHOW_FRESH_S:
             return None
-        key = (show.get("title", ""), show.get("artist", ""), show.get("bundle", ""))
+        key = (show.get("title", ""), show.get("artist", ""), show.get("bundle", ""), self.posters.generation)
         if self._last and self._last[0] == key:
             np_ = self._last[1]
             if np_ is None:
@@ -231,7 +350,9 @@ class PosterSource(NowPlayingSource):
         else:
             hit = self.posters.lookup(show.get("title", ""), show.get("artist", ""))
             if hit is None:
-                self._last = (key, None)
+                # Lookup itself caches misses. A network failure must be retried
+                # after its backoff even while the same film keeps playing.
+                self._last = None
                 return None
             np_ = NowPlaying(
                 track_id=f"show:{hit['kind']}:{hit['id']}",

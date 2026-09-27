@@ -1,0 +1,80 @@
+{
+  "batch": 15,
+  "units": [
+    "S09",
+    "S10"
+  ],
+  "research_date": "2026-09-27",
+  "mobbin_images_inspected": true,
+  "S09": [
+    {
+      "url": "https://mobbin.com/screens/b55ee688-b5ed-4977-a941-d3a32b08beb7",
+      "source": "Letterboxd, poster viewer",
+      "observed": "Dominant intact portrait poster, quiet title/year, separated actions.",
+      "applied": "Latest poster match keeps its portrait proportions and film/series metadata, separate from credentials and wall action."
+    },
+    {
+      "url": "https://mobbin.com/screens/74b41ed1-1e47-4cdc-83da-3dea3e56b7b6",
+      "source": "Letterboxd, film detail",
+      "observed": "Strong film title beside portrait artwork, short synopsis, subdued metadata on cinema-dark surface.",
+      "applied": "Gold cinema palette, editorial film title, actual result synopsis and direct TMDB link."
+    },
+    {
+      "url": "https://developer.themoviedb.org/docs/authentication-application",
+      "source": "TMDB official application authentication",
+      "applied": "Accept API key or read access token, store privately, distinguish saved from checked."
+    },
+    {
+      "url": "https://developer.themoviedb.org/docs/search-and-query-for-details",
+      "source": "TMDB official search guide",
+      "applied": "Read-only film/series lookup with actual result identity and poster path."
+    },
+    {
+      "url": "https://developer.themoviedb.org/docs/faq",
+      "source": "TMDB official FAQ",
+      "applied": "TMDB attribution and notice included; raw provider errors never expose query-string API keys."
+    },
+    {
+      "url": "https://www.themoviedb.org/about/logos-attribution",
+      "source": "TMDB approved logos",
+      "applied": "Unmodified official vector TMDB mark in provider credits."
+    }
+  ],
+  "S10": [
+    {
+      "url": "https://mobbin.com/screens/316340eb-d3cb-4a5d-9bb5-ab055d3754cd",
+      "source": "ElevenLabs, generation settings",
+      "observed": "Small set of clear model and output controls, one place for each setting.",
+      "applied": "Provider, actual model and applicable quality live in one service page; creation stays in Imagine."
+    },
+    {
+      "url": "https://mobbin.com/screens/bed9d646-08c0-42ab-b6b6-62174eb42615",
+      "source": "Claude, model selector",
+      "observed": "Readable single-choice rows, specific capability text, explicit unavailable states.",
+      "applied": "Selected provider checkmarks and named output tradeoffs; Google hides unsupported OpenAI quality controls."
+    },
+    {
+      "url": "https://mobbin.com/screens/22d1a635-9232-41f1-96f1-25dc5d4fed0b",
+      "source": "Grok, Imagine settings",
+      "observed": "Visual option selections and compact generation controls alongside creative imagery.",
+      "applied": "Sage engine cards, full-width Imagine action and retained last-creation thumbnail, without duplicate editor popups."
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/image-generation",
+      "source": "OpenAI official image generation guide",
+      "applied": "Current configured model is shown instead of a stale hardcoded model claim; low/medium/high controls apply to existing runtime models, and streaming partial-image fallback remains supported."
+    },
+    {
+      "url": "https://ai.google.dev/gemini-api/docs/imagen",
+      "source": "Google official Imagen guide",
+      "applied": "Google uses its actual model settings; no OpenAI quality choices or invented per-image pricing."
+    }
+  ],
+  "assets": [
+    {
+      "path": "tessera/Tessera/Assets.xcassets/TMDBMark.imageset/TMDBMark.svg",
+      "source": "https://www.themoviedb.org/assets/v4/logos/v2/blue_long_1-8ba2ac31f354005783fab473602c34c3f4fd207150182061e425d366e4f34596.svg",
+      "use": "Official attribution logo, unchanged geometry and colours."
+    }
+  ]
+}

@@ -246,6 +246,7 @@ def wall_snapshot(host: str, output: Path) -> tuple[dict, bytes]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--launch-environment", action="append", default=[])
+    parser.add_argument("--device-services-state", choices=("connected","unlinked","refused","empty","paused","external","paired","showing","disabled","google","checking","artwork","notinstalled"))
     parser.add_argument("--service-detail-state", choices=("connected", "unlinked", "refused", "queued", "paused", "syncing", "empty"))
     parser.add_argument("--connections-state", choices=("unlinked","connected","expired","refused","unavailable"))
     parser.add_argument("--arcade-games-state", choices=("ready","playing","paused","lost","won"))
@@ -369,6 +370,10 @@ def main() -> int:
         from connections_fixtures import configure
         payload = configure(wall, args.connections_state)
         (output / "fixture-services.json").write_text(json.dumps(payload, indent=2)+"\n")
+    if args.device_services_state:
+        from device_services_fixtures import configure
+        payload = configure(wall, args.device_services_state, fixture_host)
+        (output / "fixture-devices.json").write_text(json.dumps(payload, indent=2)+"\n")
     if args.service_detail_state:
         from service_details_fixtures import configure
         payload = configure(wall, args.service_detail_state)

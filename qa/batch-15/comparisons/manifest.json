@@ -1,0 +1,276 @@
+{
+  "base": "84bbf20",
+  "units": [
+    "S09",
+    "S10",
+    "S11",
+    "S12",
+    "S13"
+  ],
+  "native": [
+    {
+      "unit": "S09",
+      "title": "Posters",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-15/before/posters/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-15/after/posters/room-live.png",
+      "before_sha256": "f327852d73f9c00fcc82180c5e2b864dea9f660933e91007433bbd65042a96ab",
+      "after_sha256": "f7742c8fc5e316c0de0138dda1913cc03c55a0b6108cf8661689b7bb5d8048c7",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-15/comparisons/posters.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "caf6f29111749aefa999c1950c39dde4551b15a887cddfe63e724bfb8b2610ec"
+    },
+    {
+      "unit": "S10",
+      "title": "Images",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-15/before/images/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-15/after/images/room-live.png",
+      "before_sha256": "c74bc2082e6602b10de7d60f06bb6a32e35613b26bcb808c995c108d5fabaef7",
+      "after_sha256": "9921abad2f9b95658bd5eb924725524d92229f679e55ce9691a497b7724409d8",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-15/comparisons/images.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "85299b506703a2cbd8cf5ce9219a6b06cb0b173940ec4b7abcfaaf0bcc2e5a43"
+    },
+    {
+      "unit": "S11",
+      "title": "AirPlay",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-15/before/airplay/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-15/after/airplay/room-live.png",
+      "before_sha256": "4614870405c6860b56015e10518e1cb8274bb1d850023b482708e136c8cfce3e",
+      "after_sha256": "78c1609955259532f6a9fa6ebfbe2f90ab4aa22effcbbbb634fa00b0aa61439c",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-15/comparisons/airplay.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "5370cd9a2e8792a6ea7d865b155921094fbc996bb4a639b8ec581059f3f9fb03"
+    },
+    {
+      "unit": "S12",
+      "title": "Your Mac",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-15/before/mac/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-15/after/mac/room-live.png",
+      "before_sha256": "a8aeb2f0dc6e4549a4f8aeac61c4b1996ed1bb8ec89619fcf8d2a2d54d08c156",
+      "after_sha256": "70f2c10655f88d25b17fb96742e3d292a40fc6d1e2f6d4f58d2e70d5c7c4b983",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-15/comparisons/mac.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "3949e380e7a706547d3e8366f6e6a4406bca6befdc5ee3b1d427ba81ac5b1133"
+    },
+    {
+      "unit": "S13",
+      "title": "Apple Home",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-15/before/homekit/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-15/after/homekit/room-live.png",
+      "before_sha256": "db9bed68f629567a14363d86d8da857220373a87bd84cea607ef3bf674b68bc0",
+      "after_sha256": "41c478d16cfe436a870d525ba8c092519cbbe2f195292bac19102398362e1f45",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-15/comparisons/homekit.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "20ca32e5fd2e2630eeae5946e9a20c35813c07edcdf1f33712307b553d7f7c4a"
+    }
+  ],
+  "state_captures": [
+    "posters-room-large.png",
+    "posters-room-offline.png",
+    "posters-artwork-room-live.png",
+    "posters-checking-room-live.png",
+    "posters-empty-room-live.png",
+    "posters-refused-room-live.png",
+    "posters-unlinked-room-live.png",
+    "images-room-large.png",
+    "images-room-offline.png",
+    "images-empty-room-live.png",
+    "images-google-room-live.png",
+    "images-refused-room-live.png",
+    "images-unlinked-room-live.png",
+    "airplay-room-large.png",
+    "airplay-room-offline.png",
+    "airplay-artwork-room-live.png",
+    "airplay-empty-room-live.png",
+    "airplay-external-room-live.png",
+    "airplay-notinstalled-room-live.png",
+    "airplay-paused-room-live.png",
+    "airplay-refused-room-live.png",
+    "airplay-unlinked-room-live.png",
+    "mac-room-large.png",
+    "mac-room-offline.png",
+    "mac-checking-room-live.png",
+    "mac-empty-room-live.png",
+    "mac-refused-room-live.png",
+    "mac-unlinked-room-live.png",
+    "homekit-room-large.png",
+    "homekit-room-offline.png",
+    "homekit-disabled-room-live.png",
+    "homekit-paired-room-live.png",
+    "homekit-refused-room-live.png",
+    "homekit-showing-room-live.png"
+  ],
+  "references": [
+    "https://ai.google.dev/gemini-api/docs/imagen",
+    "https://developer.themoviedb.org/docs/authentication-application",
+    "https://developer.themoviedb.org/docs/faq",
+    "https://developer.themoviedb.org/docs/search-and-query-for-details",
+    "https://developers.openai.com/api/docs/guides/image-generation",
+    "https://github.com/ikalchev/HAP-python",
+    "https://github.com/ikalchev/HAP-python/blob/dev/pyhap/accessory.py",
+    "https://github.com/mikebrady/shairport-sync-metadata-reader/blob/master/README.md",
+    "https://github.com/mikebrady/shairport-sync/blob/master/BUILD.md",
+    "https://github.com/mikebrady/shairport-sync/blob/master/CONFIGURATION%20FLAGS.md",
+    "https://mobbin.com/screens/22d1a635-9232-41f1-96f1-25dc5d4fed0b",
+    "https://mobbin.com/screens/235a0377-fbdb-486f-807f-2645731c3495",
+    "https://mobbin.com/screens/316340eb-d3cb-4a5d-9bb5-ab055d3754cd",
+    "https://mobbin.com/screens/42a791e3-b3d3-4707-8268-fd2a49c16cd8",
+    "https://mobbin.com/screens/7047e51a-57c3-4ec6-8f82-21a562e3854c",
+    "https://mobbin.com/screens/73360727-d82d-47f2-8a65-d0c13ebfbeac",
+    "https://mobbin.com/screens/74b41ed1-1e47-4cdc-83da-3dea3e56b7b6",
+    "https://mobbin.com/screens/7a61e021-d4de-464f-838e-d3e54bf9138f",
+    "https://mobbin.com/screens/828b9b4d-3f8a-4926-a2f2-19770d484046",
+    "https://mobbin.com/screens/91d5ce4b-b275-4aa6-ae57-d2d04078e3ec",
+    "https://mobbin.com/screens/93466664-4080-4a58-b566-6873a9066e55",
+    "https://mobbin.com/screens/a93defb7-0d4e-4680-8467-c6ecef6b5d36",
+    "https://mobbin.com/screens/b55ee688-b5ed-4977-a941-d3a32b08beb7",
+    "https://mobbin.com/screens/bed9d646-08c0-42ab-b6b6-62174eb42615",
+    "https://mobbin.com/screens/e25145c0-7af1-4c26-9103-fd71e6566afd",
+    "https://support.apple.com/en-nz/guide/mac-help/mchla4f49138/mac",
+    "https://support.apple.com/en-us/102557",
+    "https://support.apple.com/en-us/104998",
+    "https://support.apple.com/guide/iphone/homepod-and-other-wireless-speakers-iph315e0d58d/ios",
+    "https://support.apple.com/guide/mac-help/find-your-computers-name-and-network-address-mchlp1177/mac",
+    "https://www.themoviedb.org/about/logos-attribution"
+  ]
+}

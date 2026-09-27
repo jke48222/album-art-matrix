@@ -4,8 +4,8 @@ Debian's shairport-sync (trixie, 4.3.7) is a classic AirPlay build, so it
 needs no nqptp and no privileged port and runs as the pi user;
 pi/install-airplay.sh unpacks it under ~/opt/shairport-sync without root.
 The brain starts it with a config of its own: the name the phone chose,
-the dummy output (the wall makes no sound; the room's speaker can be in
-the same AirPlay group), the metadata pipe brain/nowplaying/airplay.py
+the dummy output (the wall makes no sound; iOS groups require AirPlay 2),
+the metadata pipe brain/nowplaying/airplay.py
 reads, cover art on. It restarts the receiver when it stops, with a
 growing pause, restarts it when the name changes, stops it when the phone
 turns receiving off, and stops it with the brain. A shairport-sync the
@@ -134,8 +134,12 @@ class Receiver:
         self._thread.start()
         return self
 
-    def restart(self):
+    def restart(self) -> bool:
+        on, _ = self._wanted()
+        if not on or self.external or find_binary(self.explicit) is None or self._stopping:
+            return False
         self._restart.set()
+        return True
 
     def _wanted(self) -> tuple[bool, str]:
         try:
@@ -176,9 +180,17 @@ class Receiver:
             self._sleep(1.0)
             return fails
         self.on, self.name = on, name
+        # An external receiver exists independently of Tessera's switch or
+        # bundled installation. Report it honestly and never claim that the
+        # app turned it off, renamed it, or knows its output configuration.
+        if self._elsewhere(None):
+            self.external = True
+            self.problem = None
+            self._sleep(3.0)
+            return fails
+        self.external = False
         if not on:
             self.problem = None
-            self.external = False
             self._sleep(1.0)
             return 0
         binary = find_binary(self.explicit)
@@ -186,12 +198,7 @@ class Receiver:
             self.problem = "shairport-sync is not installed; run pi/install-airplay.sh on the Pi"
             self._sleep(10.0)
             return fails
-        if self._elsewhere(None):
-            self.external = True
-            self.problem = None
-            self._sleep(10.0)
-            return fails
-        self.external = False
+        self._restart.clear()
         if self._launch(binary, name):
             return fails
         fails += 1
@@ -286,8 +293,22 @@ class Receiver:
         binary = find_binary(self.explicit)
         proc = self.proc
         running = proc is not None and proc.poll() is None
+        if self.external:
+            state = "external"
+        elif not self.on:
+            state = "off"
+        elif binary is None:
+            state = "not_installed"
+        elif running:
+            state = "ready"
+        else:
+            state = "error" if self.problem else "starting"
+        protocol = None if self.external or not self.version else ("airplay2" if "airplay2" in self.version.lower() else "classic")
         return {"installed": binary is not None, "binary": binary, "version": self.version,
-                "on": self.on, "name": self.name, "port": self.port, "running": running,
+                "on": self.on, "name": None if self.external else self.name,
+                "port": None if self.external else self.port, "running": running,
                 "pid": proc.pid if running else None,
-                "up_s": int(self._clock() - self.started_at) if running and self.started_at else None,
-                "restarts": self.restarts, "external": self.external, "problem": self.problem}
+                "up_s": int(self._clock() - self.started_at) if running and self.started_at is not None else None,
+                "restarts": self.restarts, "external": self.external, "problem": self.problem,
+                "state": state, "controllable": not self.external,
+                "output": None if self.external else "silent", "protocol": protocol}

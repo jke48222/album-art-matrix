@@ -449,9 +449,17 @@ class ControlState:
                 elif k == "place" and isinstance(v, str):
                     self._s[k] = "".join(c for c in v if c.isprintable())[:64]
                 elif k == "airplay_receiver" and isinstance(v, bool):
-                    self._s[k] = v
+                    receiver = getattr(self, "airplay_receiver", None)
+                    if persist and receiver and receiver.status().get("external"):
+                        rejected[k] = "This receiver is managed outside Tessera."
+                    else:
+                        self._s[k] = v
                 elif k == "airplay_name" and isinstance(v, str) and v.strip():
-                    self._s[k] = "".join(ch for ch in v if ch.isprintable()).strip()[:40] or "Wall"
+                    receiver = getattr(self, "airplay_receiver", None)
+                    if persist and receiver and receiver.status().get("external"):
+                        rejected[k] = "This receiver is managed outside Tessera."
+                    else:
+                        self._s[k] = "".join(ch for ch in v if ch.isprintable()).strip()[:40] or "Wall"
                 elif k == "weather_units" and v in ("f", "c"):
                     self._s[k] = v
                 elif k in ("match_art", "ticker_loop", "clock_24h") and isinstance(v, bool):
@@ -739,8 +747,8 @@ class ControlState:
                          "heard_s": hearing["heard_s"],
                          "problem": hearing["problem"]},
             "phone": {"age_s": (self.pushed.phone_age if self.pushed else None)},
-            "mac": {"endpoint": (ap.endpoint if ap else ""),
-                    "answering": (ap.answering if ap else None)},
+            "mac": (ap.status() if ap and hasattr(ap, "status") else {"endpoint": (ap.endpoint if ap else ""),
+                    "answering": (ap.answering if ap else None)}),
             "ears": bool(hearing["tools"] and hearing["mic"]),
             "source_order": list(getattr(self, "source_order", [])),
         }
@@ -780,6 +788,9 @@ class ControlState:
                                     api_key=store.get("images", "api_key"),
                                     quality=store.get("images", "quality") or None,
                                     model=store.get("images", "model") or None)
+        if "mac" in changed and self.apple and hasattr(self.apple, "configure"):
+            self.apple.configure(store.get("mac", "endpoint"))
+            self.apple.retry()
         if "tmdb" in changed and getattr(self, "posters", None):
             self.posters.configure(api_key=store.get("tmdb", "api_key"))
         if "google" in changed and getattr(self, "shower", None):
@@ -1437,21 +1448,25 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 if hk is None:
                     self._json(404, {"error": "homekit is off in config.toml"})
                     return
-                if self.path.startswith("/homekit/show"):
+                route = urlparse(self.path)
+                if route.path == "/homekit/show":
                     # ?s=900 keeps the code up longer than the default three
                     # minutes, for a pairing that is being sorted out slowly
                     try:
-                        secs = float(parse_qs(urlparse(self.path).query).get("s", ["180"])[0])
-                    except ValueError:
-                        secs = 180.0
+                        secs = float(parse_qs(route.query).get("s", ["180"])[0])
+                        if not math.isfinite(secs):
+                            raise ValueError()
+                    except (ValueError, OverflowError):
+                        self._json(400, {"error": "Choose a finite pairing display duration."})
+                        return
                     ok = hk.show_code(max(30.0, min(1800.0, secs)))
                     self._json(200 if ok else 503, hk.status())
                     return
-                if self.path.startswith("/homekit/hide"):
+                if route.path == "/homekit/hide":
                     hk.hide_code()
                     self._json(200, hk.status())
                     return
-                if self.path.startswith("/homekit/refresh"):
+                if route.path == "/homekit/refresh":
                     ok = hk.refresh()
                     self._json(200 if ok else 503, hk.status())
                     return
@@ -1524,12 +1539,16 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 ctrl.note(text, minutes)
                 self._json(200, {"shown": True, "minutes": minutes, **ctrl.note_status()})
                 return
-            if self.path.startswith("/airplay/restart"):
+            if self.path == "/airplay/restart":
                 rx = getattr(ctrl, "airplay_receiver", None)
                 if rx is None:
                     self._json(404, {"error": "AirPlay is off on this wall"})
                     return
-                rx.restart()
+                if self._body() is None:
+                    return
+                if rx.restart() is False:
+                    self._json(409, {"error": "This receiver cannot be restarted from Tessera.", "receiver": rx.status()})
+                    return
                 self._json(200, {"restarting": True, "receiver": rx.status()})
                 return
             if self.path.startswith("/game/"):
@@ -2150,6 +2169,35 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, ctrl.services())
                 return
 
+            if self.path == "/mac/retry":
+                if self._body() is None:
+                    return
+                source = ctrl.apple
+                if not source or not hasattr(source, "retry"):
+                    self._json(404, {"error": "The Mac reporter is unavailable on this wall."})
+                    return
+                if not source.retry():
+                    self._json(409, {"error": "Add a Mac reporter address first."})
+                    return
+                self._json(200, ctrl.services())
+                return
+            if self.path == "/posters/check":
+                patch = self._body()
+                if patch is None:
+                    return
+                title = patch.get("title", "")
+                if not isinstance(title, str) or len(title.strip()) > 240:
+                    self._json(400, {"error": "Use a title up to 240 characters."})
+                    return
+                posters = getattr(ctrl, "posters", None)
+                if posters is None or not hasattr(posters, "check"):
+                    self._json(404, {"error": "Poster lookup is unavailable on this wall."})
+                    return
+                if not posters.check(title.strip() or None):
+                    self._json(409, {"error": "Add a key or wait for the current check to finish."})
+                    return
+                self._json(200, {**ctrl.services(), "accepted": True})
+                return
             if self.path in ("/lastfm/retry", "/listenbrainz/retry"):
                 if self._body() is None:
                     return

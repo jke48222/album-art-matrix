@@ -1,0 +1,106 @@
+{
+  "status": "passed",
+  "unit": "S13",
+  "checked_at": "2026-09-27T11:03:16.829850+00:00",
+  "decoded": 5,
+  "decoder": "Apple Vision VNDetectBarcodesRequest, QR symbology",
+  "fixture": "Authored fixture only; no real wall pairing credential",
+  "visual_review": [
+    "regular phone layout readable, QR and primary action fully present",
+    "accessibility layout readable, code fits and primary action visible",
+    "paired/showing/disabled states previously inspected without clipping"
+  ],
+  "phone_qr_no_antialiasing_seams": true,
+  "wall_192_exact_nearest_3x_64": true,
+  "source_sha256": {
+    "tessera/Tessera/HomeKitPage.swift": "d22bac56555eacc083f2be63c3e61bcf86a3cd6d22b17a148063820a262cf900",
+    "brain/homekit.py": "1ce71af7c8587a1dd115ed5343717c1b2b85b377debcaa952cdb6e2e35fe2495",
+    "scripts/qa/verify_homekit_qr.swift": "cca573314982d3634935bdaa212bc2ded12005d6407a8e535be2f4c8e4de179f"
+  },
+  "files": [
+    {
+      "path": "qa/batch-15/after/homekit/room-live.png",
+      "sha256": "41c478d16cfe436a870d525ba8c092519cbbe2f195292bac19102398362e1f45",
+      "size": [
+        1206,
+        2622
+      ],
+      "apple_vision_decoded": true,
+      "qr_bounds": [
+        267,
+        1213,
+        939,
+        1885
+      ],
+      "qr_rgb_levels": [
+        0,
+        255
+      ],
+      "intermediate_rgb_pixels": 0,
+      "module_centers_match_wall": true
+    },
+    {
+      "path": "qa/batch-15/after/homekit/room-large.png",
+      "sha256": "bb1fff187fd5677adbd1c0672f07dc4534196fdab1ee44d2ce97a65b1c437682",
+      "size": [
+        1206,
+        2622
+      ],
+      "apple_vision_decoded": true,
+      "qr_bounds": [
+        315,
+        1218,
+        891,
+        1794
+      ],
+      "qr_rgb_levels": [
+        0,
+        255
+      ],
+      "intermediate_rgb_pixels": 0,
+      "module_centers_match_wall": true
+    },
+    {
+      "path": "qa/batch-15/homekit-parity/homekit-64.png",
+      "sha256": "53a9d46012b6643f3961b6e7ad55f92adcb3b11daeb468f7d2d816949948245b",
+      "size": [
+        64,
+        64
+      ],
+      "apple_vision_decoded": true,
+      "qr_rgb_levels": [
+        0,
+        150
+      ]
+    },
+    {
+      "path": "qa/batch-15/homekit-parity/homekit-192.png",
+      "sha256": "ba76a49899051ac9287e5c070220e30c7a55ea205a651c577c8a459cd366e179",
+      "size": [
+        192,
+        192
+      ],
+      "apple_vision_decoded": true,
+      "qr_rgb_levels": [
+        0,
+        150
+      ]
+    },
+    {
+      "path": "qa/batch-15/homekit-parity/homekit-512.png",
+      "sha256": "783ab33978ee4a8c107eed8fbfbc69f7f5ead699e2f1089271a65b1b245f0c86",
+      "size": [
+        512,
+        512
+      ],
+      "apple_vision_decoded": true,
+      "qr_rgb_levels": [
+        0,
+        150
+      ]
+    }
+  ],
+  "limitations": [
+    "Software decoding confirms the authored bitmap; physical LED scanning still depends on camera, viewing distance and brightness."
+  ]
+}

@@ -23,7 +23,7 @@ Siri knows a light's words (on, off, percent, colours, rooms) and a TV's
 (on, off, pause, mute). Apple gave it no words for inputs, so the Home tile
 and the Control Centre remote change faces, and the wall's own ears do the
 rest. Automations, control from outside the house and Siri on a HomePod all
-need a home hub (a HomePod, Apple TV or iPad); pairing and Siri from a phone
+need a home hub (a HomePod or Apple TV); pairing and Siri from a phone
 on this Wi-Fi do not.
 
 The library is HAP-python. It runs on its own thread and event loop inside
@@ -39,7 +39,9 @@ from __future__ import annotations
 
 import colorsys
 import logging
+import math
 import os
+import re
 import sys
 import threading
 import time
@@ -53,7 +55,7 @@ def _log_pairing(level: str = "info"):
     """HAP-python talks through `logging`, which the brain never configured,
     so a pairing that failed left nothing behind. Its INFO lines (pair
     setup, pair verify, who connected) go to stderr, which systemd keeps
-    unbuffered in the journal; the QR is still printed by the library.
+    unbuffered in the journal. Private setup codes stay in the local UI.
     `[homekit] log = "debug"` adds every request the phone makes."""
     lg = logging.getLogger("pyhap")
     if not lg.handlers:
@@ -107,24 +109,31 @@ def _hs_to_hex(hue: float, sat: float) -> str:
     return "#%02x%02x%02x" % (round(r * 255), round(g * 255), round(b * 255))
 
 
-def code_frame(uri: str, side: int) -> bytes:
-    """The setup code as a QR drawn for the panel: raw RGB, side x side.
-
-    Two pixels a module on the 64, a white quiet zone all round, and the
-    white held down to keep the LEDs from blooming into the black modules.
-    The phone reads it from a foot or so away, where the dots blur into
-    squares."""
+def code_modules(uri: str) -> list[str]:
+    """One canonical module matrix for the phone and physical panel."""
+    if not isinstance(uri, str) or re.fullmatch(r"X-HM://[0-9A-Z]{13}", uri) is None:
+        raise ValueError("Invalid HomeKit setup URI")
     import pyqrcode
-    q = pyqrcode.create(uri, error="M")       # M: 21 modules for a setup uri
-    rows = q.code
+    return ["".join("1" if cell else "0" for cell in row)
+            for row in pyqrcode.create(uri, error="M").code]
+
+
+def code_frame(uri: str, side: int) -> bytes:
+    """Raw RGB with whole modules and at least four modules of quiet zone.
+
+    Generate at the panel's physical size. A QR must not be resampled from
+    the phone canvas: nonintegral modules are harder for a camera to read.
+    """
+    rows = code_modules(uri)
     n = len(rows)
-    scale = max(1, (side - 8) // n)
+    scale = int(side) // (n + 8)
+    if scale < 1:
+        raise ValueError("The setup code does not fit this panel")
     off = (side - n * scale) // 2
-    white = 150
-    f = np.full((side, side, 3), white, dtype=np.uint8)
+    f = np.full((side, side, 3), 150, dtype=np.uint8)
     for y, row in enumerate(rows):
         for x, dark in enumerate(row):
-            if dark:
+            if dark == "1":
                 y0, x0 = off + y * scale, off + x * scale
                 f[y0:y0 + scale, x0:x0 + scale] = 0
     return f.tobytes()
@@ -155,6 +164,12 @@ class HomeKit:
         self._hue, self._sat = 0.0, 0.0
         self._code_until = 0.0
         self._code_ret = None
+        self._code_frame = None
+        self._code_previous_frame = None
+        self._code_lock = threading.RLock()
+        self._qr_uri = None
+        self._qr_modules = None
+        self._code_error = None
         self._last: dict[int, object] = {}
         self._chars: dict[str, object] = {}
         self._thread = threading.Thread(target=self._run, name="homekit", daemon=True)
@@ -199,6 +214,10 @@ class HomeKit:
                                      zeroconf_server=f"{host}.local.")
             self.driver = driver
             bridge = Bridge(driver, "Album Art Matrix")
+            # HAP-python normally prints the private setup code and QR to
+            # stdout. Pairing details belong on the local setup screen.
+            bridge.setup_message = lambda: print(
+                "[homekit] Pair using Tessera’s HomeKit page.", flush=True)
             bridge.set_info_service(manufacturer="Album Art Matrix", model="Wall",
                                     serial_number=self._serial(),
                                     firmware_revision="1.0")
@@ -288,15 +307,14 @@ class HomeKit:
                              daemon=True).start()
             paired = driver.state.paired
             print(f"[homekit] {self.name!r} on port {self.port}, "
-                  f"{'paired' if paired else 'NOT paired'}, code "
-                  f"{driver.state.pincode.decode()}", flush=True)
+                  f"{'paired' if paired else 'not paired'}", flush=True)
+            self.ready.set()
             if not paired:
                 self.show_code(CODE_SHOW_S)
-            self.ready.set()
             driver.start()                     # the HAP loop, until the brain dies
         except Exception as exc:
-            self.error = f"{type(exc).__name__}: {exc}"
-            print(f"[homekit] failed: {self.error}", flush=True)
+            self.error = "The HomeKit bridge couldn't start. Check its configuration on the wall and restart the wall service."
+            print(f"[homekit] failed: {type(exc).__name__}", flush=True)
             self.ready.set()
 
     def _serial(self) -> str:
@@ -513,56 +531,117 @@ class HomeKit:
             self._put("occ_active", False)
         playing = bool(ctrl.now_showing) and ctrl.quiet_since is None and on
         self._put("music", playing)
-        if self._code_until and time.monotonic() > self._code_until:
+        if self._code_until and (time.monotonic() >= self._code_until
+                                 or (self.driver and self.driver.state.paired)):
             self.hide_code()
 
     # ---- the pairing code on the panel --------------------------------------
+    def _usable(self) -> bool:
+        return bool(self.ready.is_set() and self.driver is not None
+                    and self.bridge is not None and not self.error)
+
+    def is_showing_code(self) -> bool:
+        with self._code_lock:
+            return bool(self._code_until > time.monotonic()
+                        and self.ctrl.get()["mode"] == "frame"
+                        and self.ctrl.frame_override is self._code_frame)
+
     def show_code(self, seconds: float = CODE_SHOW_S) -> bool:
-        if self.bridge is None:
-            return False
-        ctrl = self.ctrl
-        px = ctrl.wall.fit(code_frame(self.bridge.xhm_uri(), ctrl.phone_side))
-        if px is None:
-            return False
-        s = ctrl.get()
-        if not self._code_until:
-            self._code_ret = s["mode"] if s["mode"] not in ("frame", "clip", "video") else "art"
-        ctrl.frame_override = px
-        ctrl.shown_seq += 1
-        ctrl.apply({"mode": "frame"})
-        self._code_until = time.monotonic() + seconds
-        return True
+        with self._code_lock:
+            if not self._usable() or self.driver.state.paired:
+                return False
+            try:
+                seconds = float(seconds)
+                if not math.isfinite(seconds):
+                    return False
+                side = self.ctrl.wall.width
+                px = self.ctrl.wall.fit(code_frame(self.bridge.xhm_uri(), side))
+                if px is None:
+                    raise ValueError("Invalid panel frame")
+            except Exception:
+                self._code_error = "The setup code couldn't be drawn. Try showing it again."
+                return False
+            ctrl = self.ctrl
+            s = ctrl.get()
+            # A second request extends this presentation. If another source
+            # replaced it, this is a new presentation with a new return point.
+            owns_frame = self._code_frame is not None and ctrl.frame_override is self._code_frame
+            if not owns_frame or s["mode"] != "frame":
+                self._code_ret = s["mode"]
+                if not owns_frame:
+                    self._code_previous_frame = ctrl.frame_override
+            self._code_frame = px
+            ctrl.frame_override = px
+            ctrl.shown_seq += 1
+            ctrl.apply({"mode": "frame"})
+            self._code_until = time.monotonic() + max(30.0, min(1800.0, seconds))
+            self._code_error = None
+            return True
 
     def hide_code(self):
-        if not self._code_until:
-            return
-        self._code_until = 0.0
-        if self.ctrl.get()["mode"] == "frame":
-            self.ctrl.apply({"mode": self._code_ret or "art"})
+        with self._code_lock:
+            if not self._code_until:
+                return
+            self._code_until = 0.0
+            ctrl = self.ctrl
+            # Never dismiss a picture that arrived after the pairing code.
+            if self._code_frame is not None and ctrl.frame_override is self._code_frame:
+                ctrl.frame_override = self._code_previous_frame
+                ctrl.shown_seq += 1
+                if ctrl.get()["mode"] == "frame":
+                    previous = self._code_ret or "art"
+                    if previous == "frame" and self._code_previous_frame is None:
+                        previous = "art"
+                    ctrl.apply({"mode": previous})
+            self._code_frame = None
+            self._code_previous_frame = None
+            self._code_ret = None
 
     def refresh(self) -> bool:
         """Tell every paired phone to read the accessory list again: bumps
         the configuration number, saves it, and re-advertises. For when the
         Home app has not noticed a face or a sensor that is plainly there."""
-        if self.driver is None:
+        if not self._usable():
             return False
-        self.driver.config_changed()      # thread-safe: the advertisement hops to the HAP loop
-        return True
+        try:
+            self.driver.config_changed()  # advertisement hops to the HAP loop
+            return True
+        except Exception as exc:
+            print(f"[homekit] refresh failed: {type(exc).__name__}", flush=True)
+            return False
 
     # ---- for GET /homekit ---------------------------------------------------
     def status(self) -> dict:
         d = self.driver
+        usable = self._usable()
+        uri = None
+        modules = None
+        if usable:
+            try:
+                uri = self.bridge.xhm_uri()
+                if uri != self._qr_uri:
+                    self._qr_modules = code_modules(uri)
+                    self._qr_uri = uri
+                modules = self._qr_modules
+            except Exception:
+                self._code_error = "The setup code is unavailable. Check HomeKit on the wall."
+        showing = self.is_showing_code()
         return {
             "enabled": True,
-            "ready": self.ready.is_set(),
+            "ready": usable,
             "error": self.error,
+            "code_error": self._code_error,
             "name": self.name,
             "port": self.port,
             "paired": bool(d and d.state.paired),
-            "code": d.state.pincode.decode() if d else None,
-            "uri": self.bridge.xhm_uri() if self.bridge else None,
-            "showing_code": bool(self._code_until and time.monotonic() < self._code_until),
-            "faces": [{"id": i, "name": n, "mode": m} for i, n, m in FACES],
+            "code": d.state.pincode.decode() if usable else None,
+            "uri": uri,
+            "qr_modules": modules,
+            "showing_code": showing,
+            "code_seconds_remaining": max(0, math.ceil(self._code_until - time.monotonic())) if showing else 0,
+            "television": self.television,
+            "sensors": self.sensors,
+            "faces": [{"id": i, "name": n, "mode": m} for i, n, m in FACES] if self.television else [],
         }
 
 

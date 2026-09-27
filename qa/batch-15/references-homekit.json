@@ -1,0 +1,62 @@
+{
+  "unit": "S13",
+  "researched_at": "2026-09-27",
+  "task_intent": "Refine Tessera creative and device connection flows.",
+  "output_destination": "code",
+  "output_tool": "SwiftUI",
+  "mobbin": [
+    {
+      "url": "https://mobbin.com/screens/e25145c0-7af1-4c26-9103-fd71e6566afd",
+      "app": "Apple Home",
+      "image_inspected": true,
+      "observed": "Add Accessory sheet places the scan area before two concrete pairing paths. The scan instruction and manual More options are distinct.",
+      "applied": "Single pairing ticket with a real shared QR matrix and typed code, followed by Show on wall and three short Home steps. No extra setup sheet."
+    },
+    {
+      "url": "https://mobbin.com/screens/42a791e3-b3d3-4707-8268-fd2a49c16cd8",
+      "app": "Apple Home",
+      "image_inspected": true,
+      "observed": "Bridge Added confirmation uses a warm house icon, short state-specific headline and a clear completion action.",
+      "applied": "Warm architectural house mark and paired identity replace the pairing ticket only when the wall reports an actual paired bridge."
+    },
+    {
+      "url": "https://mobbin.com/screens/91d5ce4b-b275-4aa6-ae57-d2d04078e3ec",
+      "app": "Apple Home",
+      "image_inspected": true,
+      "observed": "Connecting to Bridge is an explicit progress state with nearby and powered-on guidance.",
+      "applied": "Loading, starting, disabled, offline, bridge failure and paired remain distinct. No ready label from merely completing the startup thread."
+    },
+    {
+      "url": "https://mobbin.com/screens/73360727-d82d-47f2-8a65-d0c13ebfbeac",
+      "app": "Apple Home",
+      "image_inspected": true,
+      "observed": "Bridge discovery uses a single accessory identity and add action instead of showing every accessory control at once.",
+      "applied": "The bridge is the setup subject. Light, television and sensor capabilities appear beneath as explanations; actual Home controls are not duplicated here."
+    }
+  ],
+  "primary": [
+    {
+      "url": "https://support.apple.com/en-us/104998",
+      "applied": "Home Add Accessory instructions, scan a setup code, assign room/name; no invented one-tap app pairing capability."
+    },
+    {
+      "url": "https://support.apple.com/en-us/102557",
+      "applied": "Accurate HomePod/Apple TV home-hub guidance for remote access, shared control and automations; management path Home Settings > Home Hubs & Bridges."
+    },
+    {
+      "url": "https://github.com/ikalchev/HAP-python/blob/dev/pyhap/accessory.py",
+      "applied": "Use the bridge's real xhm_uri and canonical module matrix for both surfaces. Suppress setup_message printing private pairing code into service logs."
+    },
+    {
+      "url": "https://github.com/ikalchev/HAP-python",
+      "applied": "HAP-python QR capability and local-network bridge pairing; readiness checks require actual bridge/driver and no startup error."
+    }
+  ],
+  "parity": {
+    "payload": "Authored fixture X-HM://0023ISYWY7OSY; never a real pairing credential",
+    "renderer": "brain.homekit.code_modules(uri), code_frame(uri,side)",
+    "phone": "HomeKitCode Canvas consumes the exact qr_modules from GET /homekit and matches canonical 64x64 placement.",
+    "wall": "Integer modules, at least four modules of quiet zone, native 64x64 generated before panel fit. 192x192 is exact 3x module geometry for the fixture.",
+    "limitations": "Physical QR scanning depends on LED brightness, camera focus and viewing distance. Matched RGB output alone cannot certify camera scanning or panel colour."
+  }
+}

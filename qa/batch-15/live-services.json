@@ -1,0 +1,38 @@
+{
+  "status": "passed",
+  "retry_endpoints": {
+    "/mac/retry": "accepted"
+  },
+  "mode_before": "off",
+  "mode_after": "off",
+  "frame_size": 64,
+  "frame_sha256": "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a",
+  "service_states": {
+    "tmdb": "unlinked",
+    "images_ready": true,
+    "airplay_receiver": "ready",
+    "mac": "paused",
+    "homekit_ready": true,
+    "homekit_paired": true
+  },
+  "homekit_contract": {
+    "qr_fields_present": true,
+    "pairing_codes_persisted": false
+  },
+  "runtime_health": {
+    "fps": 0.0,
+    "temp_c": 55.1,
+    "throttled": {
+      "now": false,
+      "ever": false
+    },
+    "uptime_s": 107,
+    "loop_age_s": 1.0,
+    "quiet_s": null,
+    "idle": null,
+    "mode": "off",
+    "ytdlp": "2026.08.19"
+  },
+  "privacy": "No credentials, real pairing code or QR persisted in QA. No paid image generation, receiver toggle, pairing or service account changes.",
+  "wall_parity": "Authored HomeKit URI is rendered through the production encoder at64/192/512; source artwork remains unmodified. Current physical wall mode preserved."
+}
