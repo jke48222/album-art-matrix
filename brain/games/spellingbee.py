@@ -21,8 +21,7 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, header,
-                    hexagon, progress, text, text_centred, text_width, fit_text)
+from .board import BLACK, blank, hexagon, progress, text_centred, text_width
 from .words import common
 
 RANKS = [(0.0, "Beginner"), (0.02, "Good Start"), (0.05, "Moving Up"), (0.08, "Good"), (0.15, "Solid"),
@@ -76,6 +75,7 @@ class SpellingBee(Game):
 
     def setup(self):
         rng = random.Random(self.options.get("seed"))
+        self._rng = rng
         words = common(4, 12)
         if not words:
             raise RuntimeError("no word list")
@@ -88,6 +88,17 @@ class SpellingBee(Game):
         self.message = f"{len(self.answers)} words, {len(self.pangrams)} pangram{'s' if len(self.pangrams) != 1 else ''}."
 
     def apply(self, move: dict, player: str) -> dict:
+        if self.over:
+            return {"error": "the game is over"}
+        if move.get("shuffle") is True:
+            before = self.others
+            letters = list(before)
+            self._rng.shuffle(letters)
+            self.others = "".join(letters)
+            if self.others == before:
+                self.others = before[1:] + before[:1]
+            self.changed()
+            return {"shuffled": True}
         word = str(move.get("word") or move.get("guess") or "").lower().strip()
         return self.say(word, player)
 
@@ -125,8 +136,15 @@ class SpellingBee(Game):
         return {"word": word, "points": pts, "pangram": pangram, "rank": rank_of(self.points, self.total)}
 
     def state(self) -> dict:
-        return {"centre": self.centre, "letters": self.others, "found": [{"word": w, "who": p} for w, p in self.found],
-                "points": self.points, "total": self.total, "rank": rank_of(self.points, self.total),
+        import math
+        next_rank = next(((math.ceil(cut * self.total), name) for cut, name in RANKS
+                          if math.ceil(cut * self.total) > self.points), (self.total, "Queen Bee"))
+        prior = max((math.ceil(cut * self.total) for cut, _ in RANKS if math.ceil(cut * self.total) <= self.points), default=0)
+        rank_progress = min(1.0, max(0.0, (self.points - prior) / max(1, next_rank[0] - prior)))
+        return {"centre": self.centre, "letters": self.others, "found": [{"word": w, "who": p, "points": score_of(w, self.letters), "pangram": set(w) == self.letters} for w, p in self.found],
+                "points": self.points, "total": self.total, "rank": "Queen Bee" if self.over and self.won else rank_of(self.points, self.total),
+                "next_rank": next_rank[1], "next_points": next_rank[0], "rank_progress": 1.0 if self.over else rank_progress,
+                "found_pangrams": sum(set(w) == self.letters for w, _ in self.found),
                 "count": len(self.answers), "pangrams": len(self.pangrams),
                 "answers": self.answers if self.over else None}
 
@@ -134,51 +152,43 @@ class SpellingBee(Game):
         return list(self.answers)
 
     def frame_at(self, size: int, t: float):
+        """A score strip, seven-letter hive and found-word receipt at every
+        size. Completion brightens the same hive instead of covering it.
+        """
         import math
+        from .board import fill, text_right, text_scrolled
         c = blank(size)
-        big = size > 96
-        s = 3 if big else 1
-        r = 19 if big else 6                        # a cell's radius
-        cx = size // 2
-        cy = (size // 2 - 5) if not big else 82
-        step = r * 1.9
-        spots = [(0, 0)] + [(round(step * math.cos(k * math.pi / 3)), round(step * math.sin(k * math.pi / 3)))
-                            for k in range(6)]
-        letters = [self.centre] + list(self.others)
-        pop = ease_out(self.age() / 0.35) if self.age() < 0.35 else 1.0
-        for (dx, dy), ch in zip(spots, letters):
+        unit = size / 64.0
+        margin = max(2, round(3 * unit))
+        font = max(1, round(size / 192))
+        honey, paper, cell = (232, 178, 44), (234, 228, 216), (30, 27, 22)
+        state = self.state()
+        rank = "QUEEN BEE" if self.over else state["rank"].upper()
+        if size <= 96:
+            rank = {"BEGINNER": "BEGIN", "GOOD START": "START", "MOVING UP": "UP", "QUEEN BEE": "QUEEN"}.get(rank, rank)
+        top = max(1, round(2 * unit))
+        text_scrolled(c, rank, margin, top, size - 2 * margin - text_width(str(self.points), font) - max(2, round(3 * unit)), t, honey, font, height=7)
+        text_right(c, str(self.points), size - margin, top, paper, font)
+        progress(c, margin, round(12 * unit), size - 2 * margin, max(1, round(unit)),
+                 self.points / max(1, self.total), honey, (55, 48, 36))
+        radius = size * 0.118
+        cx, cy = size * 0.5, size * 0.53
+        step = radius * 1.82
+        spots = [(0, 0)] + [(step * math.cos(k * math.pi / 3 + math.pi / 6),
+                            step * math.sin(k * math.pi / 3 + math.pi / 6)) for k in range(6)]
+        glyph = max(1, round(size / 64))
+        for (dx, dy), ch in zip(spots, self.centre + self.others):
             x, y = cx + dx, cy + dy
-            centre = ch == self.centre
-            rr = r * (0.85 + 0.15 * pop) if centre else r
-            hexagon(c, x + 0.5, y + 0.5, rr, HONEY if centre else SLATE2, pointy=False)
-            if big:
-                hexagon(c, x + 0.5, y + 0.5, rr - 1.5, HONEY if centre else SLATE, pointy=False)
-                hexagon(c, x + 0.5, y + 0.5, rr - 1.5 - 0.01, HONEY if centre else SLATE2, pointy=False)
-            gw, gh = 5 * s, 7 * s
-            text(c, ch.upper(), x - gw // 2 + 1, y - gh // 2 + 1, BLACK if centre else INK, s)
-        share = self.points / self.total if self.total else 0.0
-        rank = rank_of(self.points, self.total)
-        if big:
-            y = cy + int(step) + r + 8
-            for word, _ in self.found[:3]:
-                text_centred(c, word.upper(), cx, y, INK if word == self.found[0][0] else DIM, 1)
-                y += 9
-            progress(c, 8, size - 12, size - 16, 3, share, HONEY, FAINT, WHITE)
-            text(c, rank, 8, size - 22, DIM, 1)
-            text(c, f"{self.points} pts", size - 8 - text_width(f"{self.points} pts", 1), size - 22, INK, 1)
-        else:
-            # One panel has no room for the list of words found, and that is
-            # fine: the last one is the one you want to see. The score is not
-            # optional though. It used to show only on the nine panel wall,
-            # which left the small wall playing a scoring game with the score
-            # hidden. Word on the left, points on the right, one line.
-            pts = f"{self.points}"
-            if self.found:
-                text(c, fit_text(self.found[0][0].upper(), size - 8 - text_width(pts, 1), 1),
-                     2, size - 12, INK, 1)
-            text(c, pts, size - 2 - text_width(pts, 1), size - 12, HONEY, 1)
-            progress(c, 2, size - 3, size - 4, 1, share, HONEY, FAINT)
+            middle = dx == dy == 0
+            hexagon(c, x, y, radius, honey if middle else cell, pointy=False)
+            text_centred(c, ch.upper(), round(x), round(y - 3.5 * glyph), BLACK if middle else paper, glyph)
+            if middle:
+                fill(c, round(x - 2 * unit), round(y + 4.5 * unit), max(2, round(4 * unit)), max(1, round(unit)), BLACK)
+        latest = self.found[0][0].upper() if self.found else f"USE {self.centre.upper()}"
         if self.over:
-            banner(c, size, self.message, BLACK, HONEY)
-        header(c, size, "SPELLING BEE", f"{len(self.found)} of {len(self.answers)}" if not self.over else "", s, accent=HONEY)
+            latest = f"{len(self.found)} FOUND"
+        text_scrolled(c, latest, margin, round(size * 0.86), size - 2 * margin, t, paper, font, height=7)
+        if size >= 128:
+            label = "EVERY WORD FOUND" if self.over else f"{len(self.found)}/{len(self.answers)} WORDS  /  {state['found_pangrams']} PANGRAMS"
+            text_centred(c, label, size // 2, size - margin - 7 * font, (150, 144, 127), font)
         return c

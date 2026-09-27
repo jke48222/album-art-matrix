@@ -36,7 +36,8 @@ def test_play_chain_and_undo(tmp_path):
     host.start("letterboxed", {"seed": 1})
     g = host.game
     a, b = g.par
-    assert host.move(None, {"word": "xq"})["error"] == "three letters or more"
+    rejected = host.move(None, {"word": "xq"})
+    assert "three" in rejected["error"] and not g.words and not g.used
     r = host.hear(a)
     assert r["word"] == a and r["left"] == 12 - len(set(a))
     wrong_start = next((w for w in common(3, 8) if set(w) <= g.letters and w[0] != a[-1]
@@ -58,7 +59,7 @@ def test_the_box_at_both_sizes(tmp_path):
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
         assert f.shape == (size, size, 3)
-        yellow = ((f[..., 0] > 150) & (f[..., 1] > 130) & (f[..., 2] < 90)).sum()
+        yellow = ((f[..., 0] > 150) & (f[..., 1] > 130) & (f[..., 2] < 130)).sum()
         assert yellow > 10                                                # the word's lines
         if OUT:
             Image.fromarray(f).resize((size * scale, size * scale), Image.NEAREST).save(

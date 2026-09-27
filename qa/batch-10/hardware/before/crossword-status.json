@@ -1,0 +1,378 @@
+{
+  "running": true,
+  "seq": 35,
+  "game": {
+    "name": "crossword",
+    "title": "Mini crossword",
+    "players": [
+      "Tessera QA Batch 10"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "19 squares left.",
+    "started": 1790466253,
+    "finished": null,
+    "seq": 2,
+    "voice": true,
+    "blacks": [
+      [
+        0,
+        0
+      ],
+      [
+        4,
+        4
+      ]
+    ],
+    "grid": [
+      [
+        "#",
+        "l",
+        "a",
+        "m",
+        "p"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "#"
+      ]
+    ],
+    "slots": [
+      {
+        "id": "1A",
+        "n": 1,
+        "dir": "across",
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "clue": "Bedside light"
+      },
+      {
+        "id": "1D",
+        "n": 1,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "clue": "Toy that spins"
+      },
+      {
+        "id": "2D",
+        "n": 2,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            4,
+            2
+          ]
+        ],
+        "clue": "Country, in short"
+      },
+      {
+        "id": "3D",
+        "n": 3,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "clue": "Bird of the night"
+      },
+      {
+        "id": "4D",
+        "n": 4,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            4
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "clue": "Small ones are put in a stroller? No: to enter data"
+      },
+      {
+        "id": "5A",
+        "n": 5,
+        "dir": "across",
+        "cells": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ]
+        ],
+        "clue": "Rain on your wedding day, per Alanis"
+      },
+      {
+        "id": "5D",
+        "n": 5,
+        "dir": "down",
+        "cells": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "clue": "Frozen water"
+      },
+      {
+        "id": "6A",
+        "n": 6,
+        "dir": "across",
+        "cells": [
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "clue": "What a record is pressed on"
+      },
+      {
+        "id": "7A",
+        "n": 7,
+        "dir": "across",
+        "cells": [
+          [
+            3,
+            0
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "clue": "Fragrant compound in perfume"
+      },
+      {
+        "id": "8A",
+        "n": 8,
+        "dir": "across",
+        "cells": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "clue": "Calendar square"
+      }
+    ],
+    "chosen": "1D",
+    "wrong": [],
+    "checks": 0,
+    "solution": null
+  },
+  "session_id": "2a72b0e2faa14cc085be967813fb5a6d",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "across",
+    "down",
+    "check",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "a",
+    "d",
+    "e",
+    "i",
+    "l",
+    "m",
+    "n",
+    "o",
+    "p",
+    "r",
+    "s",
+    "t",
+    "v",
+    "y"
+  ],
+  "chosen": "1D"
+}

@@ -1,0 +1,54 @@
+{
+  "task_intent": "Elevate Tessera\u2019s five word games with expressive native controls and matching wall compositions.",
+  "research_date": "2026-09-26",
+  "units": {
+    "G03": {
+      "name": "Connections",
+      "mobbin": [
+        {
+          "app": "Quizlet",
+          "url": "https://mobbin.com/screens/3c0c29f9-ddf7-4a17-b7fd-4311f44c1a54",
+          "inspected": true,
+          "observed": "A complete grid of word and phrase cards; muted green distinguishes selected matches, while every tile remains a stable target.",
+          "applied": "Stable word tiles, explicit checkmarks in selected cells, full multi-line phrases on the phone, and a consistent four-column wall grid."
+        }
+      ],
+      "primary_web": [
+        {
+          "url": "https://thenewyorktimeshelpcenter.helpjuice.com/360011158491-New-York-Times-Games/28525912587924-Connections",
+          "applied": "Retain sixteen words, groups of four, four difficulty levels and four available mistakes. Revealed categories retain both their number and color, so completion is readable without color recognition."
+        }
+      ],
+      "implementation": "Phone and 64/192/512 wall share solved groups above a four-column unsolved board. Wall labels travel within their own tile only when the physical pixels cannot contain the whole word. Finished boards reveal all four groups without a banner obscuring them."
+    },
+    "G04": {
+      "name": "Spelling Bee",
+      "mobbin": [
+        {
+          "app": "Atoms",
+          "url": "https://mobbin.com/screens/6c57ef77-c824-4bbd-aa7b-e71495a11ae1",
+          "inspected": true,
+          "observed": "A restrained milestone grid makes the current hexagonal achievement prominent and pairs large numerals with concise labels.",
+          "applied": "One honey-colored center hexagon, prominent earned points and rank, and a quieter word ledger. This is a visual hierarchy reference, not a claim that Mobbin supplied a Spelling Bee screen."
+        }
+      ],
+      "primary_web": [
+        {
+          "url": "https://thenewyorktimeshelpcenter.helpjuice.com/360011158491-New-York-Times-Games/23675493312404-Spelling-Bee",
+          "applied": "Keep the central letter mandatory, track found words and pangrams separately, and make achieved rank legible throughout play."
+        }
+      ],
+      "implementation": "Phone and wall use the same flat-top seven-cell hive with a required-letter underline, score/rank above and accepted-word feedback below. Shuffle is an acknowledged outer-letter reorder. Drafts clear only when the submitted word appears in the accepted found-word ledger."
+    }
+  },
+  "verification": {
+    "python_checks": 29,
+    "command": "python -m pytest brain/tests/test_connections.py brain/tests/test_spellingbee.py brain/tests/test_connections_bee_batch.py -q",
+    "sizes_inspected": [
+      64,
+      192,
+      512
+    ],
+    "root_owned": "Native build/captures, matched final comparisons, physical wall and phone deployment."
+  }
+}

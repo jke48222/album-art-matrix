@@ -1,0 +1,710 @@
+{
+  "motion": "connections-labels.gif",
+  "baseline": "31827d4 + qa/batch-10/baseline-wall.patch (actual deployed files)",
+  "sizes": [
+    64,
+    192,
+    512
+  ],
+  "options": {
+    "connections": {
+      "set": 0,
+      "seed": 10
+    },
+    "spellingbee": {
+      "seed": 1
+    },
+    "letterboxed": {
+      "seed": 23
+    },
+    "strands": {
+      "set": 0,
+      "seed": 23
+    },
+    "crossword": {
+      "set": 0
+    }
+  },
+  "frames": [
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "connections-playing-before-64.png",
+      "rgb_sha256": "6b63aff040e953fb0c28c8620c6192c8b28b076447a120f7081d164843353b20"
+    },
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "connections-playing-before-192.png",
+      "rgb_sha256": "57377403aa9ab0d3af7c9ff918fff33c9d6a04e81350e6b7af28bcec15ff74f6"
+    },
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "connections-playing-before-512.png",
+      "rgb_sha256": "db4941f49aec79412d2b8f765855a2307b303fedd7a6108d6997d96304d62cab"
+    },
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "connections-playing-after-64.png",
+      "rgb_sha256": "c85d6d1942534a955bedef079a4c3ce25ba3a17a79c98624f2550cdbe285d98a"
+    },
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "connections-playing-after-192.png",
+      "rgb_sha256": "f433cf35985ed849c6ddee6668b6ade49ce2a63a1dd314914af12f08117a21fe"
+    },
+    {
+      "game": "connections",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "connections-playing-after-512.png",
+      "rgb_sha256": "67fb3bb6fd3b19e70a7ab2cc72627a26a32da0b874b6498bf64b82362cb6fb38"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "connections-won-before-64.png",
+      "rgb_sha256": "7ffb579b3bde37842fdb1e856904ab39c807e0b74b50d597ce024e8ce8fe099b"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "connections-won-before-192.png",
+      "rgb_sha256": "2f2eb25c95097777d9de504fde239a08aaf964f9dd7957e283669e492cc46c47"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "connections-won-before-512.png",
+      "rgb_sha256": "424112c0920d635955a7040f857cf1b571dcc6638d906f337d7c8df2ca853daa"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "connections-won-after-64.png",
+      "rgb_sha256": "087b0c1781d1b31a5f902f8d3f5df79f0df519720c85561fd522d76175dbf2ba"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "connections-won-after-192.png",
+      "rgb_sha256": "7183e07b2494f9e9256d78819169f50f7fe62db8a9a296485a56d7f22b87aea0"
+    },
+    {
+      "game": "connections",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "connections-won-after-512.png",
+      "rgb_sha256": "228ede9358965c9459ee930265ead8e2eba3b75e52447d93177f2d4b0fac6ce0"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "before",
+      "side": 64,
+      "file": "connections-error-before-64.png",
+      "rgb_sha256": "6b63aff040e953fb0c28c8620c6192c8b28b076447a120f7081d164843353b20"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "before",
+      "side": 192,
+      "file": "connections-error-before-192.png",
+      "rgb_sha256": "08aaeef64aca797be03de40fc288cc1e6e07868986c4bdea2f919364f5bd4ba9"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "before",
+      "side": 512,
+      "file": "connections-error-before-512.png",
+      "rgb_sha256": "9d0cee328f12dc491b65f989a04648d4e519aadb11cff3909cec9324cce77f09"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "after",
+      "side": 64,
+      "file": "connections-error-after-64.png",
+      "rgb_sha256": "70ecea1c3e194abb3c1aa7bc01cea9b295d17970e863cc818c4a76ea4b243822"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "after",
+      "side": 192,
+      "file": "connections-error-after-192.png",
+      "rgb_sha256": "213842149da0cb6b5bf4c4245991ac20bc6607f6b589cf0d0a822e714ff90f35"
+    },
+    {
+      "game": "connections",
+      "state": "error",
+      "version": "after",
+      "side": 512,
+      "file": "connections-error-after-512.png",
+      "rgb_sha256": "0e9c80affba7e49ba00eacaecfc28949f2e256bcd4e575090ba8e084b83d4248"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "before",
+      "side": 64,
+      "file": "connections-lost-before-64.png",
+      "rgb_sha256": "3967be7b9ccbd5f312be3800fc0207af2540cf955a320f122e7da10ba096b88a"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "before",
+      "side": 192,
+      "file": "connections-lost-before-192.png",
+      "rgb_sha256": "d8031c7c990c2a7454ff643e39b9085155eabeb46c8bd0a8ef3e0cdb15b5db6e"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "before",
+      "side": 512,
+      "file": "connections-lost-before-512.png",
+      "rgb_sha256": "31fd31b273d8883d922083e0c07df2cc3366de58f3c290cf9a6aac47ca3f86f5"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "after",
+      "side": 64,
+      "file": "connections-lost-after-64.png",
+      "rgb_sha256": "352ddf22cad8c7b53e0188ad5e452a80cad70e4e57c44d38f5596cf2b65d707c"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "after",
+      "side": 192,
+      "file": "connections-lost-after-192.png",
+      "rgb_sha256": "cb69c3cb12903d80e31f3740b022cc974290c83a76d257e4a37929868bd52dbf"
+    },
+    {
+      "game": "connections",
+      "state": "lost",
+      "version": "after",
+      "side": 512,
+      "file": "connections-lost-after-512.png",
+      "rgb_sha256": "60f964a4414e3ee6054d99dfd0c5ecc6c848c2410afc840b6f063635c6d11489"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "spellingbee-playing-before-64.png",
+      "rgb_sha256": "e80389dc48a61f006779e6ee5fc40aede42abefbcb3f90fc293dd0946fe1e655"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "spellingbee-playing-before-192.png",
+      "rgb_sha256": "41ef34b7fba6153e63a87a931745a70fce67b1375d2b978aabe0e132dfb66ed5"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "spellingbee-playing-before-512.png",
+      "rgb_sha256": "970c12cd881828cb601274b44ec1794e1c2fc3bf1e56a17093be09c1ee98c6af"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "spellingbee-playing-after-64.png",
+      "rgb_sha256": "5b10be34d3dd08af916f263479ca8361eaacf3b01b0de1ea55f2a121436b7fac"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "spellingbee-playing-after-192.png",
+      "rgb_sha256": "5203afec78f2d18ee550b9da8a4141f9a296107fef7138153e69e8348f7b6ba7"
+    },
+    {
+      "game": "spellingbee",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "spellingbee-playing-after-512.png",
+      "rgb_sha256": "69e794218605e518de887301be6302dbabf1e3f7866c798f715af496a0d3b279"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "spellingbee-won-before-64.png",
+      "rgb_sha256": "7e8d78eca4238bf211dd3dbbfde8a2e6b5148c188dafd7d48c916d1832200cd2"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "spellingbee-won-before-192.png",
+      "rgb_sha256": "911ec3300e38eca4a0d16818f1386c128afc2328737ba4fab8a10f2e1cc10402"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "spellingbee-won-before-512.png",
+      "rgb_sha256": "fe1d12b06629db9f8169e206ade2d2ff7de0421b04800c912dcffa0dcabf1ed0"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "spellingbee-won-after-64.png",
+      "rgb_sha256": "b6d31a3d46c103b4a74965331c152ae11ae89361d4c41b39d33d05bb4fca15d4"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "spellingbee-won-after-192.png",
+      "rgb_sha256": "ff4e1a3f2f6318d978aa918d81199dc294bf5acaa1f21239099ed1d1742cda4f"
+    },
+    {
+      "game": "spellingbee",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "spellingbee-won-after-512.png",
+      "rgb_sha256": "828837c77370ed551a4ec0047a08aa09f26baceda89f48a2503711695a698b8a"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "letterboxed-playing-before-64.png",
+      "rgb_sha256": "92613c74ec2290d38a85b4c66e2bc9f94a38a3b3bd839d05a0e3a854d905026f"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "letterboxed-playing-before-192.png",
+      "rgb_sha256": "71ef76369cdbc7aad9a1eb5a14356b2804c108b312bd03f8a5d2671c1360542f"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "letterboxed-playing-before-512.png",
+      "rgb_sha256": "c5b99ce82f849c567037e0acd2434b9a93ebfdc36cc9dce5cdb0ce344edf29d2"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "letterboxed-playing-after-64.png",
+      "rgb_sha256": "372e14abb01753e01151f5b4e45f570dc22956dee5247cddf6876a612dc8bbe0"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "letterboxed-playing-after-192.png",
+      "rgb_sha256": "ac642cd633b1dffc1266a8ce315b8ed103e78b48a52c1fea9465b95d8d164562"
+    },
+    {
+      "game": "letterboxed",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "letterboxed-playing-after-512.png",
+      "rgb_sha256": "100bc15d04626dfd5b00a73f6654f3273aab0eb7f9ee283565cfbffc73080800"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "letterboxed-won-before-64.png",
+      "rgb_sha256": "78e066a6f60a8b4eb4f3bd5a4a13526f91cad53b7cb8b0a013d09cfa89c21753"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "letterboxed-won-before-192.png",
+      "rgb_sha256": "e7ad9ed8c559342bc947b8bb44debbf019e94d3e047fad8d2e61e05f948404df"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "letterboxed-won-before-512.png",
+      "rgb_sha256": "1a7717e0b0e48002a769a512a547f9993a6149267956be8d3f78ad045b6c42cd"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "letterboxed-won-after-64.png",
+      "rgb_sha256": "641ede5167c27c29bba469123d78a8f44b9b2408b00ae4b354b6a5882d1f5480"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "letterboxed-won-after-192.png",
+      "rgb_sha256": "353749b7d2b8e615139e33d115fc7622ef0c22b309b4f3985a8b3c943c91bc30"
+    },
+    {
+      "game": "letterboxed",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "letterboxed-won-after-512.png",
+      "rgb_sha256": "8e614e77db9b2c0c1de901afbc8a81c3c751f49953cbf3ff2afcd90bd8fedd2a"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "strands-playing-before-64.png",
+      "rgb_sha256": "831b283815e5c4d6c9a1e3b22a4f48d535f4e73721cdd4352d8e79c6b927c2f7"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "strands-playing-before-192.png",
+      "rgb_sha256": "e330ebffb93aa9d5f16984f997f9ac17818ef2ba8dafaa03067ffbcb599badf6"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "strands-playing-before-512.png",
+      "rgb_sha256": "858555c1e2830c26a019721138092b317dde1f68ad28f391fad7d11a156b69da"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "strands-playing-after-64.png",
+      "rgb_sha256": "26f09458cf8cfcb9b228bd6ce00d4370c725b9b1b4d8c793d59fecfeb136bb8c"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "strands-playing-after-192.png",
+      "rgb_sha256": "26f4a38cd4bf223f996e00a94666bac8a7401766e053c7fc6952b1dc4acbd9ab"
+    },
+    {
+      "game": "strands",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "strands-playing-after-512.png",
+      "rgb_sha256": "92bb00680345b3f9f860db23740e4ecb65b4919e4d0502c515fd0f5140230524"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "strands-won-before-64.png",
+      "rgb_sha256": "71df7bc096e6e964a81792195529454bbae8dcfc79aa6a2f7382e6160e9a506f"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "strands-won-before-192.png",
+      "rgb_sha256": "ba2f88ad2265611799f57e249da5dfbf3660a8114fb188ca79ecec880b707150"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "strands-won-before-512.png",
+      "rgb_sha256": "85685e47f52949495378c59158ba08c79b02124de38b0b6954c8e94bf226a8ff"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "strands-won-after-64.png",
+      "rgb_sha256": "cd21c0fc5f2e69cee98f5d9ef23fdccad7e29f08320cb8460551cfea654f9bf5"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "strands-won-after-192.png",
+      "rgb_sha256": "896c4813c4ffa392dda22a19246523c837f7ff22147729e26ed94355206a107a"
+    },
+    {
+      "game": "strands",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "strands-won-after-512.png",
+      "rgb_sha256": "79aa7fc63ad79dba9341ed05f2abdc29b43c32cb4e94d7d488a6b79a3564febf"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "before",
+      "side": 64,
+      "file": "strands-hint-before-64.png",
+      "rgb_sha256": "b77d748de9da7380e2e25b2ac4a9ded2758437ff12594ad8bef5c7056a876d89"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "before",
+      "side": 192,
+      "file": "strands-hint-before-192.png",
+      "rgb_sha256": "54e7ca1697b091c4734e54ba3f0248910a629521221d080282b2b755598f0a3d"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "before",
+      "side": 512,
+      "file": "strands-hint-before-512.png",
+      "rgb_sha256": "f74ac134bd6dd0f2ee94b5be2100fb0ab8574d2ea58a5bf5be395912933f2126"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "after",
+      "side": 64,
+      "file": "strands-hint-after-64.png",
+      "rgb_sha256": "0b5bceeafcddc05ad2c92c46074c7f7d0a9e8ab3e1d42b2bf65f138d85aa28f5"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "after",
+      "side": 192,
+      "file": "strands-hint-after-192.png",
+      "rgb_sha256": "3fecd50e35e075fc571528f863dcf4f01aa40baaf0a93809a87902193fbe5c9d"
+    },
+    {
+      "game": "strands",
+      "state": "hint",
+      "version": "after",
+      "side": 512,
+      "file": "strands-hint-after-512.png",
+      "rgb_sha256": "45612bda18ae619d64219c2afa196c02eb38f8e9b38520590cf29b8197dc5881"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "before",
+      "side": 64,
+      "file": "crossword-playing-before-64.png",
+      "rgb_sha256": "4d9f71d3657ae09e37663f4a813f20ef2d74b38b911eabfdce8d319b8882a657"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "before",
+      "side": 192,
+      "file": "crossword-playing-before-192.png",
+      "rgb_sha256": "c176cfaa06e60747f9d7632fe3c3b3deaf1fbe3d803db5bee6c83aa6c7d7794a"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "before",
+      "side": 512,
+      "file": "crossword-playing-before-512.png",
+      "rgb_sha256": "cccebf1510882aef44a0b539e05e29badef44ba05ccc7e90c98e3614e6652e68"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "after",
+      "side": 64,
+      "file": "crossword-playing-after-64.png",
+      "rgb_sha256": "acb7fe4a15cd97844985b1b2c29ffb59992f65880b88081c14e4d77c29daff65"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "after",
+      "side": 192,
+      "file": "crossword-playing-after-192.png",
+      "rgb_sha256": "ebe9487fa9c740f648d51a6c87bd096022f8e624abd1903d3939dd3bfe24bc55"
+    },
+    {
+      "game": "crossword",
+      "state": "playing",
+      "version": "after",
+      "side": 512,
+      "file": "crossword-playing-after-512.png",
+      "rgb_sha256": "9687070877f02368848d5c1fbb43db3a25ccfeb2ff2d055b05f022fd0b98084f"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "before",
+      "side": 64,
+      "file": "crossword-won-before-64.png",
+      "rgb_sha256": "efdb88f1367637e55dade75b30f73bfbf24bc5bbce2f297db34c83bd53e0b774"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "before",
+      "side": 192,
+      "file": "crossword-won-before-192.png",
+      "rgb_sha256": "a68e7e4c0527f961f8ef4f0691d01fe0195a10020373b7ed38600a7623b8ca53"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "before",
+      "side": 512,
+      "file": "crossword-won-before-512.png",
+      "rgb_sha256": "fd9f3af45cfc6d1a4c23cf75aa5729c40e37e82c85a819ab3e6912dce3241b5f"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "after",
+      "side": 64,
+      "file": "crossword-won-after-64.png",
+      "rgb_sha256": "b42ad59f477dab95dd505f035a38cc2a5d090cd4ffb038aa19103f86999aee8e"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "after",
+      "side": 192,
+      "file": "crossword-won-after-192.png",
+      "rgb_sha256": "10785da2fc8fee61432dd6654f47f829152381d4ac08d47791d721f47e2c7352"
+    },
+    {
+      "game": "crossword",
+      "state": "won",
+      "version": "after",
+      "side": 512,
+      "file": "crossword-won-after-512.png",
+      "rgb_sha256": "70dec1c04562df72bde56c9d222e019eb2b2635d1c046686aa68b4d1ede06906"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "before",
+      "side": 64,
+      "file": "crossword-error-before-64.png",
+      "rgb_sha256": "a69f77538ab912af0973ce76333c67719ca75786eb6abf92a03eab24b778f8e8"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "before",
+      "side": 192,
+      "file": "crossword-error-before-192.png",
+      "rgb_sha256": "5d640329055dcdf91707e50f7933ea61c2a2b9171b0200ec72f277621b2776eb"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "before",
+      "side": 512,
+      "file": "crossword-error-before-512.png",
+      "rgb_sha256": "502c752cb76de6735c5313233592650976e8ac0c038ecf2719cd5851d2dd1852"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "after",
+      "side": 64,
+      "file": "crossword-error-after-64.png",
+      "rgb_sha256": "bbb32c5a0f2832a3717dfe0ee6ef789a2ad6798295e23dc532e0dd3d549a5f1d"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "after",
+      "side": 192,
+      "file": "crossword-error-after-192.png",
+      "rgb_sha256": "65dbde2dc8c9a7ad7c24272edd23c6dd90a8d1ead4765a0f7add651e7f340b07"
+    },
+    {
+      "game": "crossword",
+      "state": "error",
+      "version": "after",
+      "side": 512,
+      "file": "crossword-error-after-512.png",
+      "rgb_sha256": "d0d6085176a9e5a055ce870ba2d20396f07f5a5daaf3736bb878b416edfe4fe7"
+    }
+  ],
+  "cases": 14,
+  "notes": [
+    "Actual production renderers at native panel resolutions; no screenshot mockups.",
+    "Deterministic puzzle options and identical move intent in each version.",
+    "Crossword bundled clues and fill are repaired in this pass; compare corresponding play state rather than identical letters.",
+    "Strands hint API is exercised in both versions; only the new version reveals hint path order.",
+    "Input controls sit outside the shared phone/wall board composition."
+  ]
+}

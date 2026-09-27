@@ -113,19 +113,26 @@ struct WallStrip: View {
     @Environment(WallSession.self) private var wall
     let colour: Color
     let message: String
+    var compact = false
     var body: some View {
         HStack(spacing: 12) {
             PanelCanvas(px: wall.frame.map { [UInt8]($0) }, duty: 1.0)
-                .frame(width: 64, height: 64)
+                .frame(width: compact ? 44 : 64, height: compact ? 44 : 64)
                 .clipShape(RoundedRectangle(cornerRadius: Round.control, style: .continuous))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
-                Text("On the wall").font(.ui(11, .semibold)).foregroundStyle(colour)
-                Text(message).font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                Text(wall.link.isLive ? "On your wall" : "Last wall frame")
+                    .font(.ui(compact ? 13 : 11, .semibold)).foregroundStyle(colour)
+                if !compact {
+                    Text(message).font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
+                }
             }
             Spacer(minLength: 0)
         }
         .padding(10)
         .background(RoundedRectangle(cornerRadius: Round.card, style: .continuous).fill(Ink.plaster.opacity(0.7)))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(wall.link.isLive ? "Live wall preview. \(message)" : "Last wall preview. Connection unavailable.")
     }
 }
 

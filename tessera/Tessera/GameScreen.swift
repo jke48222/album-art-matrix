@@ -22,14 +22,15 @@ struct GameScreen: View {
     private var me: String { !chosenPlayer.isEmpty ? chosenPlayer : game?.players.first(where: { $0 == player }) ?? game?.players.first ?? "You" }
     private var onWall: Bool { wall.state.displayedMode == "game" && status?.on_wall != false }
     private var canSend: Bool { wall.link.isLive && !readFailed && !sending && game != nil }
-    private var wordless: Set<String> { ["wordle", "sudoku", "sliding", "reaction", "whistlebird", "twentyq", "pong", "snake", "tetris"] }
+    private var wordless: Set<String> { ["wordle", "sudoku", "connections", "spellingbee", "letterboxed", "strands", "crossword", "sliding", "reaction", "whistlebird", "twentyq", "pong", "snake", "tetris"] }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 if let g = game {
                     if onWall {
-                        WallStrip(colour: accent, message: g.over ? "Your finished board." : "Your moves appear here and on the wall.")
+                        WallStrip(colour: accent, message: g.over ? "Your finished board." : "Your moves appear here and on the wall.",
+                                  compact: ["connections", "spellingbee", "letterboxed", "strands", "crossword"].contains(g.name))
                     } else {
                         VStack(alignment: .leading, spacing: 10) {
                             MessageNotice(title: "Your board is saved", detail: "The wall is showing something else. Bring this game back when you're ready.", symbol: "square.grid.3x3", tint: accent)

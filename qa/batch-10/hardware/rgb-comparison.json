@@ -1,0 +1,42 @@
+[
+  {
+    "game": "connections",
+    "matching_pixels": 3438,
+    "total_pixels": 4096,
+    "max_channel_difference": 234,
+    "mean_channel_difference": 31.873046875,
+    "note": "Live time differs from fixed renderer time; Connections labels scroll within tiles."
+  },
+  {
+    "game": "spellingbee",
+    "matching_pixels": 4096,
+    "total_pixels": 4096,
+    "max_channel_difference": 0,
+    "mean_channel_difference": 0.0,
+    "note": "Same deterministic puzzle and moves."
+  },
+  {
+    "game": "letterboxed",
+    "matching_pixels": 4096,
+    "total_pixels": 4096,
+    "max_channel_difference": 0,
+    "mean_channel_difference": 0.0,
+    "note": "Same deterministic puzzle and moves."
+  },
+  {
+    "game": "strands",
+    "matching_pixels": 4096,
+    "total_pixels": 4096,
+    "max_channel_difference": 0,
+    "mean_channel_difference": 0.0,
+    "note": "Same deterministic puzzle and moves."
+  },
+  {
+    "game": "crossword",
+    "matching_pixels": 4096,
+    "total_pixels": 4096,
+    "max_channel_difference": 0,
+    "mean_channel_difference": 0.0,
+    "note": "Same deterministic puzzle and moves."
+  }
+]

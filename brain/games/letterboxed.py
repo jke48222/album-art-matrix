@@ -18,8 +18,7 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, header,
-                    line, mix, text, text_centred, fit_text, text_scrolled)
+from .board import blank, disc, line, text, rect
 from .words import common, common_set
 
 _WORD = re.compile(r"^(?:(?:the word is|try|then|and then|next)\s+)?([a-z]+)[.!?]*$")
@@ -98,18 +97,32 @@ class LetterBoxed(Game):
         self.letters = set(self.side_of)
         self.words: list[str] = []
         self.used: set[str] = set()
+        self.hinted: str | None = None
         self.message = f"Try it in {len(self.par)}."
 
     def apply(self, move: dict, player: str) -> dict:
-        if "undo" in move or move.get("word") == "undo":
-            return self.undo()
-        word = str(move.get("word") or move.get("guess") or "").lower().strip()
-        return self.play(word, player)
+        if self.over:
+            return {"error": "the game is over"}
+        if not isinstance(move, dict):
+            return {"error": "send a word"}
+        if "undo" in move:
+            return self.undo() if move["undo"] is True else {"error": "undo must be true"}
+        if "hint" in move:
+            return self.hint() if move["hint"] is True else {"error": "hint must be true"}
+        word = move.get("word", move.get("guess", ""))
+        if not isinstance(word, str):
+            return {"error": "send a word"}
+        word = word.lower().strip()
+        return self.undo() if word == "undo" else self.play(word, player)
 
     def hear(self, text: str, player: str) -> dict | None:
+        if not isinstance(text, str):
+            return None
         t = text.lower().strip()
         if t in ("undo", "take it back", "go back"):
             return self.undo()
+        if t in ("hint", "give me a hint"):
+            return self.hint()
         m = _WORD.match(t)
         if not m:
             return None
@@ -120,8 +133,8 @@ class LetterBoxed(Game):
 
     def check(self, word: str) -> str | None:
         """Why a word cannot be played, or None."""
-        if len(word) < 3:
-            return "three letters or more"
+        if not isinstance(word, str) or not re.fullmatch(r"[a-z]{3,12}", word):
+            return "use three to twelve English letters"
         if not set(word) <= self.letters:
             return "a letter that is not on the box"
         for a, b in zip(word, word[1:]):
@@ -141,6 +154,7 @@ class LetterBoxed(Game):
         why = self.check(word)
         if why:
             return {"error": why}
+        self.hinted = None
         self.words.append(word)
         self.used |= set(word)
         left = len(self.letters - self.used)
@@ -155,85 +169,83 @@ class LetterBoxed(Game):
     def undo(self) -> dict:
         if self.over or not self.words:
             return {"error": "nothing to take back"}
+        self.hinted = None
         self.words.pop()
         self.used = set("".join(self.words))
         self.message = f"{len(self.letters - self.used)} letters to go."
         self.changed()
         return {"undone": True}
 
+    def hint(self) -> dict:
+        if self.over:
+            return {"error": "the game is over"}
+        if self.hinted:
+            return {"hint": self.hinted}
+        candidates = [w for w in common(3, 12) if self.check(w) is None]
+        if not candidates:
+            return {"error": "no continuation here; undo the last word to try another route"}
+        # Prefer the known solution while the player follows it, otherwise a
+        # legal continuation that reaches the most unused letters.
+        next_par = self.par[len(self.words)] if len(self.words) < len(self.par) and self.words == list(self.par[:len(self.words)]) else None
+        word = next_par if next_par in candidates else max(candidates, key=lambda w: (len(set(w) - self.used), -len(w)))
+        self.hinted = word[:2]
+        self.message = f"Try a word beginning {self.hinted.upper()}."
+        self.changed()
+        return {"hint": self.hinted}
+
     def state(self) -> dict:
         return {"sides": self.sides, "words": self.words, "used": sorted(self.used),
                 "left": sorted(self.letters - self.used), "par": len(self.par),
-                "solution": list(self.par) if self.over else None}
+                "solution": list(self.par) if self.over else None,
+                "next_letter": self.words[-1][-1] if self.words and not self.over else None,
+                "hint": self.hinted, "can_undo": bool(self.words) and not self.over}
 
     def voice_words(self) -> list[str]:
-        return [w for w in common(3, 9, 6000) if set(w) <= self.letters][:1500] + ["undo"]
+        return [w for w in common(3, 9, 6000) if set(w) <= self.letters][:1500] + ["undo", "hint"]
 
-    # ---- the wall --------------------------------------------------------------------------------
-    def _spots(self, size: int) -> dict[str, tuple[int, int]]:
-        big = size > 96
-        m = 12 if not big else 34
-        x0, y0, x1, y1 = m, m + (0 if not big else 6), size - m - 1, size - m - 1 + (0 if not big else 6)
+    # The square and letter centres use the same normalized positions as iOS.
+    def _spots(self, size: int) -> dict[str, tuple[float, float]]:
         pts = {}
-        for i, s in enumerate(self.sides):
-            for k, ch in enumerate(s):
-                f = (k + 1) / 4
-                if i == 0:
-                    pts[ch] = (int(x0 + (x1 - x0) * f), y0)
-                elif i == 1:
-                    pts[ch] = (x1, int(y0 + (y1 - y0) * f))
-                elif i == 2:
-                    pts[ch] = (int(x0 + (x1 - x0) * f), y1)
-                else:
-                    pts[ch] = (x0, int(y0 + (y1 - y0) * f))
+        low, high = size * .14, size * .86
+        span = high - low
+        for side, letters in enumerate(self.sides):
+            for k, ch in enumerate(letters):
+                along = low + span * (k + 1) / 4
+                pts[ch] = ((along, low), (high, along), (along, high), (low, along))[side]
         return pts
 
     def frame_at(self, size: int, t: float):
-        c = blank(size)
-        big = size > 96
-        s = 2 if big else 1
+        canvas = blank(size)
+        canvas[:] = (11, 10, 9)
         pts = self._spots(size)
-        m = 12 if not big else 34
-        x0, y0, x1, y1 = m, m + (0 if not big else 6), size - m - 1, size - m - 1 + (0 if not big else 6)
-        # the box
-        for (ax, ay, bx, by) in ((x0, y0, x1, y0), (x1, y0, x1, y1), (x0, y1, x1, y1), (x0, y0, x0, y1)):
-            line(c, (ax, ay), (bx, by), EDGE if big else FAINT, 2 if big else 1)
-        # the lines the words draw, the current word bright and thicker
-        for wi, w in enumerate(self.words):
-            last = wi == len(self.words) - 1
-            colour = YELLOW if last else mix(YELLOW, BLACK, 0.55)
-            for a, b in zip(w, w[1:]):
-                line(c, pts[a], pts[b], colour, (3 if last else 2) if big else 1)
+        low, high = size * .14, size * .86
+        rule, old, gold, paper, empty = (67, 60, 47), (99, 80, 38), (223, 185, 101), (250, 242, 222), (31, 28, 23)
+        width = max(1, round(size * .006))
+        for a, b in (((low, low), (high, low)), ((high, low), (high, high)), ((high, high), (low, high)), ((low, high), (low, low))):
+            line(canvas, a, b, gold if self.over else rule, width)
+        for wi, word in enumerate(self.words):
+            colour = gold if wi == len(self.words) - 1 else old
+            for a, b in zip(word, word[1:]):
+                line(canvas, pts[a], pts[b], colour, max(1, round(size * .013)))
+        radius = max(4.75, size * .056) if size <= 96 else size * .056
+        scale = max(1, int(size * .075 / 7))
+        next_letter = self.words[-1][-1] if self.words and not self.over else None
         for ch, (x, y) in pts.items():
             used = ch in self.used
-            disc(c, x + 0.5, y + 0.5, (4.0 if big else 2.0), WHITE if used else SLATE2, soft=0.8 if big else 0.0)
-            if big and not used:
-                disc(c, x + 0.5, y + 0.5, 2.2, EDGE)
-            side = self.side_of[ch]
-            gw, gh = 5 * s, 7 * s
-            off = 6 if not big else 12
-            tx, ty = x - gw // 2, y - gh // 2
-            if side == 0:
-                ty = y - off - gh
-            elif side == 1:
-                tx = x + off
-            elif side == 2:
-                ty = y + off
-            else:
-                tx = x - off - gw
-            text(c, ch.upper(), tx, ty, INK if not used else DIM, s)
-        if self.words:
-            # The word just played, in full. It was cut to fit the square
-            # ("PRECISE" came out "PREC."), which hides the thing the game is
-            # about; a long one travels across the square instead.
-            box = (x1 - x0) - 8
-            text_scrolled(c, self.words[-1].upper(), x0 + 4, (y0 + y1) // 2 - 3 * s, box, t,
-                          INK, s, height=7 if s == 1 else 9)
-            if big and len(self.words) > 1:
-                text_centred(c, fit_text(" ".join(w.upper() for w in self.words[:-1]), (x1 - x0) - 12, 1), size // 2,
-                             (y0 + y1) // 2 + 12, DIM, 1)
+            small = size <= 96
+            back = (44, 36, 20) if small and used else gold if used else empty
+            disc(canvas, x, y, radius, back)
+            if ch == next_letter or (self.hinted and ch in self.hinted):
+                disc(canvas, x, y, radius + max(1, size * .012), paper)
+                disc(canvas, x, y, radius, back)
+            tx, ty = round(x - 2.5 * scale), round(y - 3.5 * scale)
+            ink = gold if small and used else (15, 12, 8) if used else paper
+            text(canvas, ch.upper(), tx, ty, ink, scale)
+            # At 64, the old underline cut through a glyph's last rows.
+            # Put the status mark below the entire 5×7 glyph instead.
+            if used:
+                marker_y = ty + 7 * scale + 1
+                line(canvas, (x - radius * .38, marker_y), (x + radius * .38, marker_y), ink, max(1, round(size * .004)))
         if self.over:
-            banner(c, size, self.message, BLACK, YELLOW)
-        header(c, size, "LETTER BOXED", f"{len(self.letters - self.used)} to go" if not self.over else "", s, accent=YELLOW)
-        return c
-
+            rect(canvas, 1, 1, size - 2, size - 2, gold, max(1, round(size * .005)))
+        return canvas

@@ -20,10 +20,9 @@ import random
 import re
 
 from . import Game, register
-from .board import (BLACK, INK, SLATE2, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
-                    ease_out, header, mix, text_centred, fit_text, tile, text_scrolled)
+from .board import BLACK, blank, tile, text_scrolled
 
-COLOURS = [YELLOW, GREEN, BLUE, PURPLE]
+COLOURS = [(219, 185, 88), (145, 191, 151), (139, 174, 218), (180, 152, 208)]
 NAMES = ["yellow", "green", "blue", "purple"]
 
 # (theme, words) x4, easiest first. The wall's own, for a Pi without a key.
@@ -78,6 +77,7 @@ class Connections(Game):
 
     def setup(self):
         rng = random.Random(self.options.get("seed"))
+        self._rng = rng
         groups = None
         asker = getattr(getattr(self.host, "ctrl", None), "asker", None)
         if self.options.get("set") is None and asker is not None and getattr(asker, "ready", False):
@@ -93,7 +93,6 @@ class Connections(Game):
         self.mistakes = 0
         self.tries: list[list[str]] = []
         self.message = "Find four that go together."
-        self.shook_at = None
 
     def _from_claude(self, asker, rng: random.Random):
         try:
@@ -101,15 +100,19 @@ class Connections(Game):
         except Exception as exc:
             print(f"[games] connections from Claude: {exc}", flush=True)
             return None
-        if not got or len(got) != 4:
+        if not isinstance(got, (list, tuple)) or len(got) != 4:
+            return None
+        if any(not isinstance(group, (list, tuple)) or len(group) != 2 for group in got):
             return None
         seen = set()
         for theme, words in got:
-            if len(words) != 4 or not theme:
+            if not isinstance(theme, str) or not isinstance(words, (list, tuple)) or any(not isinstance(w, str) for w in words):
+                return None
+            if len(words) != 4 or not theme.strip() or len(theme) > 100:
                 return None
             for w in words:
                 p = _plain(w)
-                if not p or p in seen:
+                if not p or len(p) > 32 or p in seen:
                     return None
                 seen.add(p)
         return got
@@ -129,8 +132,8 @@ class Connections(Game):
             self.picked = []
             self.changed()
             return {"picked": []}
-        if "shuffle" in move:
-            random.shuffle(self.words)
+        if move.get("shuffle") is True:
+            self._rng.shuffle(self.words)
             self.changed()
             return {"shuffled": True}
         return {"error": "four words, or a pick"}
@@ -198,9 +201,9 @@ class Connections(Game):
             return {"group": best, "theme": theme, "colour": NAMES[best]}
         self.mistakes += 1
         self.message = "One away." if best_n == 3 else "Not a group."
-        import time as _time
-        self.shook_at = _time.monotonic()
+        self.picked = list(words)
         if self.mistakes >= 4:
+            self.picked = []
             self.finish(won=False, message="Four mistakes. " + "; ".join(f"{t}: {', '.join(g)}" for t, g in self.groups
                                                                        if self.groups.index((t, g)) not in self.found))
         else:
@@ -212,10 +215,10 @@ class Connections(Game):
 
     def state(self) -> dict:
         return {"words": [w for w in self.words if w not in self._found_words()],
-                "found": [{"theme": self.groups[gi][0], "words": self.groups[gi][1], "colour": NAMES[gi]}
+                "found": [{"theme": self.groups[gi][0], "words": self.groups[gi][1], "colour": NAMES[gi], "difficulty": gi + 1, "solved": True}
                           for gi in self.found],
                 "picked": self.picked, "mistakes": self.mistakes, "mistakes_left": 4 - self.mistakes,
-                "groups": ([{"theme": t, "words": g, "colour": NAMES[i]} for i, (t, g) in enumerate(self.groups)]
+                "groups": ([{"theme": t, "words": g, "colour": NAMES[i], "difficulty": i + 1, "solved": i in self.found} for i, (t, g) in enumerate(self.groups)]
                            if self.over else None)}
 
     def voice_words(self) -> list[str]:
@@ -223,49 +226,56 @@ class Connections(Game):
 
     # ---- the wall --------------------------------------------------------------------------------
     def frame_at(self, size: int, t: float):
-        import math
-        import time as _time
+        """The same four-column board at every resolution; labels scroll in
+        their own cells when a real LED panel cannot hold the complete word.
+        Completed groups remain the board, including the unreached solution.
+        """
+        from .board import fill, text, text_right
         c = blank(size)
-        big = size > 96
-        s = 3 if big else 1
-        top = 0 if not big else 18
-        bar_h = 13 if not big else 40
-        y = top
-        # a wrong submission shakes the loose tiles for a moment
-        shake = 0
-        if self.shook_at is not None:
-            since = _time.monotonic() - self.shook_at
-            if since < 0.45:
-                shake = int(round(math.sin(since * 40) * (1 if not big else 3) * (1 - since / 0.45)))
-        for k, gi in enumerate(self.found):
+        unit = size / 64.0
+        margin, gap = max(1, round(2 * unit)), max(1, round(unit))
+        top, bottom = round(10 * unit), round(10 * unit)
+        height = (size - top - bottom - 3 * gap) // 4
+        width = (size - 2 * margin - 3 * gap) // 4
+        font = max(1, round(size / 192))
+        paper, quiet = (234, 228, 216), (20, 18, 16)
+        label = f"{len(self.found)}/4 FOUND"
+        text(c, label, margin, max(1, round(2 * unit)), paper, font)
+        if size >= 128:
+            text_right(c, "CONNECTIONS", size - margin, round(2 * unit), (150, 144, 127), font)
+        placed = list(range(4)) if self.over else list(self.found)
+        for row, gi in enumerate(placed):
             theme, words = self.groups[gi]
-            grow = ease_out(self.age() / 0.4) if k == len(self.found) - 1 else 1.0
-            h = max(2, int((bar_h - (1 if not big else 4)) * grow))
-            tile(c, 2 * s, y + (bar_h - (1 if not big else 4) - h) // 2, size - 4 * s, h, COLOURS[gi], s)
-            if grow > 0.7:
-                text_centred(c, fit_text(theme.upper(), size - 8 * s, 1), size // 2, y + (3 if not big else 8), BLACK, 1)
-                if big:
-                    text_centred(c, fit_text(", ".join(w.upper() for w in words), size - 8 * s, 1), size // 2, y + 22,
-                                 mix(COLOURS[gi], BLACK, 0.5), 1)
-            y += bar_h
-        loose = [w for w in self.words if w not in self._found_words()]
-        cols = 4 if big else 2
-        cell_w = (size - 4 * s) // cols
-        cell_h = bar_h if big else 8
-        for i, w in enumerate(loose):
-            r, col = divmod(i, cols)
-            x = 2 * s + col * cell_w + shake
-            yy = y + r * cell_h
-            if yy + cell_h > size - (0 if not self.over else 16):
-                break
-            picked = w in self.picked
-            tile(c, x, yy, cell_w - s, cell_h - (1 if not big else 4), INK if picked else SLATE2, s)
-            # The whole word, always. At 64 a tile holds four characters and
-            # the words are six, so the long ones travel through their tile
-            # instead of being cut to PENC and BRID.
-            text_scrolled(c, w.upper(), x + s, yy + (0 if not big else 15), cell_w - 3 * s, t,
-                          BLACK if picked else INK, 1, height=7 if not big else 9)
-        if self.over:
-            banner(c, size, self.message[:40], INK, mix(GREEN, BLACK, 0.55) if self.won else (52, 30, 30))
-        header(c, size, "CONNECTIONS", f"{4 - self.mistakes} mistakes left" if not self.over else "", s, accent=PURPLE)
+            y = top + row * (height + gap)
+            tile(c, margin, y, size - 2 * margin, height, COLOURS[gi], max(1, round(unit)))
+            if size >= 128:
+                title = f"{gi + 1}  {theme.upper()}"
+                text_scrolled(c, title, margin + gap, y + max(1, height // 5), size - 2 * margin - 2 * gap,
+                              t, BLACK, font, height=7)
+                text_scrolled(c, " / ".join(w.upper() for w in words), margin + gap,
+                              y + height - 7 * font - max(1, gap), size - 2 * margin - 2 * gap,
+                              t, BLACK, font, height=7)
+            else:
+                text_scrolled(c, f"{gi + 1} {theme.upper()}", margin + 1,
+                              y + (height - 7) // 2, size - 2 * margin - 2, t, BLACK, 1, height=7)
+        loose = [] if self.over else [w for w in self.words if w not in self._found_words()]
+        for index, word in enumerate(loose):
+            row, column = divmod(index, 4)
+            x, y = margin + column * (width + gap), top + (len(placed) + row) * (height + gap)
+            selected = word in self.picked
+            tile(c, x, y, width, height, paper if selected else quiet, max(1, round(unit)))
+            inset = max(1, round(unit))
+            text_scrolled(c, word.upper(), x + inset, y + (height - 7 * font) // 2,
+                          width - inset * 2, t, BLACK if selected else paper, font, height=7)
+            if selected:
+                # A small underline echoes the phone's checkmark without
+                # spending scarce LEDs on a second meaning-bearing color.
+                fill(c, x + inset, y + height - 2 * inset, max(1, width - 2 * inset), max(1, inset // 2), BLACK)
+        footer = ("COMPLETE" if self.won else "REVEALED") if self.over else f"{4 - self.mistakes} LEFT"
+        text(c, footer, margin, size - margin - 7 * font, paper, font)
+        if not self.over:
+            dot = max(2, round(2 * unit))
+            for index in range(4):
+                fill(c, size - margin - (4 - index) * (dot + gap), size - margin - dot,
+                     dot, dot, paper if index < 4 - self.mistakes else (70, 65, 57))
         return c

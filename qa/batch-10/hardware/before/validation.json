@@ -1,0 +1,40 @@
+{
+  "connections": {
+    "side": 64,
+    "sha256": "6b63aff040e953fb0c28c8620c6192c8b28b076447a120f7081d164843353b20",
+    "file": "connections-live.png",
+    "nonblack": true
+  },
+  "spellingbee": {
+    "side": 64,
+    "sha256": "e80389dc48a61f006779e6ee5fc40aede42abefbcb3f90fc293dd0946fe1e655",
+    "file": "spellingbee-live.png",
+    "nonblack": true
+  },
+  "letterboxed": {
+    "side": 64,
+    "sha256": "92613c74ec2290d38a85b4c66e2bc9f94a38a3b3bd839d05a0e3a854d905026f",
+    "file": "letterboxed-live.png",
+    "nonblack": true
+  },
+  "strands": {
+    "side": 64,
+    "sha256": "831b283815e5c4d6c9a1e3b22a4f48d535f4e73721cdd4352d8e79c6b927c2f7",
+    "file": "strands-live.png",
+    "nonblack": true
+  },
+  "crossword": {
+    "side": 64,
+    "sha256": "4d9f71d3657ae09e37663f4a813f20ef2d74b38b911eabfdce8d319b8882a657",
+    "file": "crossword-live.png",
+    "nonblack": true
+  },
+  "resume_and_off_restoration_all_five": true,
+  "restored_mode": "off",
+  "temporary_scores_removed": true,
+  "services": [
+    "active",
+    "active"
+  ],
+  "limitations": "Captured live managed-runtime RGB frames and exercised real APIs. Not physical LED colour or phone touch/speech certification."
+}

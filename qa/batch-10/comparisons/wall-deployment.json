@@ -1,0 +1,65 @@
+{
+  "status": "deployed",
+  "dependency_repair": "Deployed the existing text_scrolled helper from main after detecting the wall board.py predated it. Preserved original files in per-batch backup. All five modules imported successfully before restart.",
+  "base": "31827d4",
+  "files": [
+    {
+      "path": "brain/games/board.py",
+      "before_sha256": "f6420224b966bcc206c0dd451baa888a5171a60c556ef44edc23abdc8f3c2015",
+      "after_sha256": "61b0c64efc84b824b7ba062415d8da5bd39a732b2a8e554a0a0246de28c074d2"
+    },
+    {
+      "path": "brain/games/connections.py",
+      "before_sha256": "aac808ebfa15c46db2f610582a4e30c06aa52492cf1be4054d604a3e848b4583",
+      "after_sha256": "c93fff66a2e0678de2acbc4f4f85de1eeb0c343000e1a742b49d6d4d9ba7ab9e"
+    },
+    {
+      "path": "brain/games/crossword.py",
+      "before_sha256": "01f287c39db9770de5ccd47fd8133e8b5f8f8246f51f6f03e38ea071c82e3e3a",
+      "after_sha256": "0b9fa2bf15db304afd53aa151ba8822f9a5f2dfdbbd346116a314d03b47c4815"
+    },
+    {
+      "path": "brain/games/letterboxed.py",
+      "before_sha256": "34ac70cb03fceb635aedc865d91c9cf1c723b4ee8e7b609799b484a0d6bb6a96",
+      "after_sha256": "faeda228715c3794ed79b9941d124c67f02499beaceb4174ea867c60a077e1d0"
+    },
+    {
+      "path": "brain/games/spellingbee.py",
+      "before_sha256": "795624c760986a6dca5c791f5eddad59719de759d07d452ab45b374d2aa6723b",
+      "after_sha256": "a997b8f5b5ef5844534dff480b3ea8223db3142266079b18f3e4744dda27d98e"
+    },
+    {
+      "path": "brain/games/strands.py",
+      "before_sha256": "d3df7e4718879caccfc5bc066c3b8f6ebac0f8b56e32025703c501f82a9a2633",
+      "after_sha256": "1dcd81aa0078c01f2ca5ad045d541ffd6e621c885bbf11c95d418887bda61f8e"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "1350605",
+  "current_pid": "1373124",
+  "mode_before": "off",
+  "mode_after": "off",
+  "read_checks": {
+    "game_count": 19,
+    "session_id_supported": true,
+    "teaching_songs": 66,
+    "shelf_revision_supported": true,
+    "health": {
+      "fps": 0.0,
+      "temp_c": 57.3,
+      "throttled": {
+        "now": false,
+        "ever": false
+      },
+      "uptime_s": 3,
+      "loop_age_s": null,
+      "quiet_s": null,
+      "idle": null,
+      "mode": "off",
+      "ytdlp": "2026.08.19"
+    }
+  }
+}

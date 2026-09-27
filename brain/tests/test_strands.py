@@ -62,8 +62,8 @@ def test_the_grid_at_both_sizes(tmp_path):
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
         assert f.shape == (size, size, 3)
-        blue = ((f[..., 2] > 150) & (f[..., 0] < 120)).sum()
-        yellow = ((f[..., 0] > 150) & (f[..., 1] > 130) & (f[..., 2] < 90)).sum()
+        blue = ((f[..., 2] > 180) & (f[..., 0] < 170) & (f[..., 1] > 170)).sum()
+        yellow = ((f[..., 0] > 150) & (f[..., 1] > 130) & (f[..., 2] < 130)).sum()
         assert blue > 20 and yellow > 20
         if OUT:
             Image.fromarray(f).resize((size * scale, size * scale), Image.NEAREST).save(

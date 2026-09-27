@@ -12,7 +12,7 @@ from PIL import Image
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from brain.games.crossword import PATTERNS, BUNDLED, slots, fill_grid   # noqa: E402
+from brain.games.crossword import PATTERNS, BUNDLED, CROSSWORD_COLOURS, slots, fill_grid   # noqa: E402
 from brain.games.words import common, common_set                          # noqa: E402
 from brain.games.host import GameHost                                     # noqa: E402
 from brain.tests.test_games import FakeCtrl                               # noqa: E402
@@ -46,30 +46,30 @@ def test_bundled_is_sound_and_plays(tmp_path):
     host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
     st = host.start("crossword", {"set": 0})
     g = host.game
-    assert len(st["game"]["slots"]) == 10 and st["game"]["slots"][0]["clue"] == "Bedside light"
-    r = host.hear("one across is lamp")
+    assert len(st["game"]["slots"]) == 10 and st["game"]["slots"][0]["clue"] == "A little cloud of smoke"
+    r = host.hear("one across is puff")
     assert r["filled"] == 4
-    assert host.hear("one across is lamps")["error"] == "1A is 4 letters"
+    assert host.hear("one across is puffs")["error"] == "1A is 4 letters"
     host.move(None, {"cell": [1, 0], "letter": "x"})
     r = host.hear("check")
     assert r["wrong"] == [[1, 0]]
     for s in sl:
         word = "".join(g.solution[c] for c in s["cells"])
         host.move(None, {"slot": s["id"], "word": word})
-    assert g.over and g.won and host.status()["game"]["solution"][0] == ["#", "l", "a", "m", "p"]
+    assert g.over and g.won and host.status()["game"]["solution"][0] == ["#", "p", "u", "f", "f"]
 
 
 def test_the_grid_at_both_sizes(tmp_path):
     host = GameHost(FakeCtrl(), path=str(tmp_path / "g.json"))
     host.start("crossword", {"set": 0})
-    host.hear("one across is lamp")
+    host.hear("one across is puff")
     host.move(None, {"cell": [1, 0], "letter": "x"})
     host.hear("check")
     for size, scale in ((64, 4), (192, 2)):
         f = host.frame_at(size)
         assert f.shape == (size, size, 3)
-        assert ((f[..., 0] > 150) & (f[..., 1] < 90)).sum() > 3               # the red x
-        assert ((f[..., 0] > 200) & (f[..., 1] > 200)).sum() > 20             # lamp in ink
+        assert (f == CROSSWORD_COLOURS["wrong"]).all(axis=2).sum() >= 4     # crossed error corner
+        assert ((f[..., 0] > 200) & (f[..., 1] > 200)).sum() > 20             # puff in white
         if OUT:
             Image.fromarray(f).resize((size * scale, size * scale), Image.NEAREST).save(
                 os.path.join(OUT, f"crossword-{size}.png"))

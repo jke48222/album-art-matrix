@@ -1,0 +1,737 @@
+{
+  "base": "31827d4",
+  "generated_at": "2026-09-27T00:03:56.636961+00:00",
+  "units": [
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07"
+  ],
+  "processing": "Complete native screenshots scaled equally, not retouched. Before left, after right.",
+  "scope": "Rendering and fixture API states; no touch, spoken-recognition or physical LED certification.",
+  "comparisons": [
+    {
+      "unit": "G03",
+      "title": "Connections",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-10/before/connections/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-10/after/connections/room-live.png",
+      "before_sha256": "86566c67ecd20493f4f25f80efdb08609dae19bb49851eeb352d9141b8ff8fd2",
+      "after_sha256": "cd74d5d9a3c8d714e37c31e16ce2a88166834a397696466f00380a16d428a844",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-10/comparisons/connections.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "4775e589554a077e5f8c202cd7132f7e1224703283d04e3b54458bfde7036c96"
+    },
+    {
+      "unit": "G04",
+      "title": "Spelling Bee",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-10/before/spellingbee/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-10/after/spellingbee/room-live.png",
+      "before_sha256": "bc7086063a9868e36fa7778703c3f4d2600f7944a6c04b608bb9bb76c42fdd19",
+      "after_sha256": "277b2274b3b53cccb77637b363e738067ff69944ca76947d1d14e867aada0e73",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-10/comparisons/spellingbee.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "17c23e2b6f0417aa1a51f72158591746881bd8c244b4b038ef25694cfaa98fa9"
+    },
+    {
+      "unit": "G05",
+      "title": "Letter Boxed",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-10/before/letterboxed/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-10/after/letterboxed/room-live.png",
+      "before_sha256": "d8665a82701ec7dd28df44d50f03033ed9bf972770ae14d92d31cfef818f5d8e",
+      "after_sha256": "f34bc76a831a1f3943d3a678bd2e32cc510178f4b6bb17aa226472ca9e826ee1",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-10/comparisons/letterboxed.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "77567931bac15045dc4356f1d49dbc2ba96a0875821a85bb634e94025d3f3fe5"
+    },
+    {
+      "unit": "G06",
+      "title": "Strands",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-10/before/strands/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-10/after/strands/room-live.png",
+      "before_sha256": "a7c83f111ac79e9c0cede11cf5d75af77cd8306575b8e6a0ff72e3daec14db3b",
+      "after_sha256": "5b7d282a09b1ef40ed9621e98c953e956ff203ff9a7a8324223bd76fc46061cd",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-10/comparisons/strands.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "dffd1896f4a94ac6946c25334b99c91fd442b0dab27c7cacf9fe2de340def8cd"
+    },
+    {
+      "unit": "G07",
+      "title": "Mini Crossword",
+      "before": "/private/tmp/tessera-weather-release-source/qa/batch-10/before/crossword/room-live.png",
+      "after": "/private/tmp/tessera-weather-release-source/qa/batch-10/after/crossword/room-live.png",
+      "before_sha256": "3a237b31e9e7be9033f8593c7681c70ca06b870bac2595d133be529070714b6b",
+      "after_sha256": "8c4fb0f5eca50070c09164feb043c884210e99c26c170a7d230f07007c69ac86",
+      "source_sizes": [
+        [
+          1206,
+          2622
+        ],
+        [
+          1206,
+          2622
+        ]
+      ],
+      "shared_scale": 0.32338308457711445,
+      "placements": [
+        {
+          "x": 22,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        },
+        {
+          "x": 432,
+          "y": 104,
+          "width": 390,
+          "height": 848
+        }
+      ],
+      "output": "/private/tmp/tessera-weather-release-source/qa/batch-10/comparisons/crossword.png",
+      "output_size": [
+        844,
+        974
+      ],
+      "output_sha256": "60c0d0c79227024d13bbfe0da581ebcd4f9a3012099dc39da67344163660094b"
+    }
+  ],
+  "pixel_comparisons": [
+    {
+      "case": "connections-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-playing-before-64.png",
+      "after": "connections-playing-after-64.png",
+      "before_sha256": "60861dc29c1f72e3c8a0c137b2ab2376fd2f1ca71367bd275e1716273a88e961",
+      "after_sha256": "68433141cc8a08c622fcd602fc426fd997eaac64d14ed993d1d77713d2565df4",
+      "output": "connections-playing-64-comparison.png",
+      "output_sha256": "5fe3077269b6cf96727da58bc913312a7abc21a681eaa44ba091672434e07991"
+    },
+    {
+      "case": "connections-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-playing-before-192.png",
+      "after": "connections-playing-after-192.png",
+      "before_sha256": "fe995f08a6b175e9294b82bb89e5a19c80e21f7799dfa838d26f8d15ad12046c",
+      "after_sha256": "344482cbae5fbb2f875c95497085eada2d03c7ce2228b9cd0af99c45d83c0cd6",
+      "output": "connections-playing-192-comparison.png",
+      "output_sha256": "5c77c52e73181b648021d3e4d82890c170340b7155a6d733775ca3c5f8c51dc5"
+    },
+    {
+      "case": "connections-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-playing-before-512.png",
+      "after": "connections-playing-after-512.png",
+      "before_sha256": "8fb39ea1b70d789acf03dbd307fcba52987a7b99ac01b3ea154214be8ee5972f",
+      "after_sha256": "dedf6232603256bae675c97aa4bd1b0f2fce75cbdf3278ef3917d236f89b69d5",
+      "output": "connections-playing-512-comparison.png",
+      "output_sha256": "92ba3fcd323e63e73ccfef0be6595ab85b9fcef50b88bee558a35381b7eb49ec"
+    },
+    {
+      "case": "connections-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-won-before-64.png",
+      "after": "connections-won-after-64.png",
+      "before_sha256": "09d0e6c7723e01f8095d4bd2fd5e93e1165a78c7a1f5b51cff82d482933277e6",
+      "after_sha256": "d5ff3d67beb57a126f54345c6a7eb5ca1025b46c90a6ebbb711abeb4afa8ad45",
+      "output": "connections-won-64-comparison.png",
+      "output_sha256": "ccae846d1655c1ccc86f968dee40ea955ff1ad4937806884663329cb6c7437c6"
+    },
+    {
+      "case": "connections-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-won-before-192.png",
+      "after": "connections-won-after-192.png",
+      "before_sha256": "8f38f143a4e878f3672378c380e3f28e9d93b4a8e9d246c99b023391a4adf152",
+      "after_sha256": "2cb160227724b1bb88869b01d6b5286c2eda4a33f0ffa51306d6bff09c453c3f",
+      "output": "connections-won-192-comparison.png",
+      "output_sha256": "20dfbd8873c101a23b4a70069d384d2cc9e3930212dd22e9e02d0a7d979f0e13"
+    },
+    {
+      "case": "connections-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-won-before-512.png",
+      "after": "connections-won-after-512.png",
+      "before_sha256": "5feec1fbf3c901f947b46f751bbe7bfd04ddca37bfda61fc284c28055183bc1f",
+      "after_sha256": "64ae6ad06f291d590d77a28984eb8698c554235c4111c0f3c8bbdca27be1306a",
+      "output": "connections-won-512-comparison.png",
+      "output_sha256": "be4b03f9e5dc0313c0a437ba2c39c88068ab372e163914af0339fa7f333b844e"
+    },
+    {
+      "case": "connections-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-error-before-64.png",
+      "after": "connections-error-after-64.png",
+      "before_sha256": "60861dc29c1f72e3c8a0c137b2ab2376fd2f1ca71367bd275e1716273a88e961",
+      "after_sha256": "23719f49a2124acb7323de0422563bbf70c04728949d78efff137065d68c608f",
+      "output": "connections-error-64-comparison.png",
+      "output_sha256": "2a6faa4bc4a65efcb5c034de5cac7de50f3e42d66c2eff2db35349b270483b06"
+    },
+    {
+      "case": "connections-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-error-before-192.png",
+      "after": "connections-error-after-192.png",
+      "before_sha256": "16d19de5af839c9ceeab927f657ea2f1cb80c554bfcda6f2d725ec79a73e6de8",
+      "after_sha256": "61a850f20dbcf1f9bd89ad126e70d8f3cf8ca69ba6d28e351d8657db5dddee7a",
+      "output": "connections-error-192-comparison.png",
+      "output_sha256": "7af16086ad38353ccab3d9e1f3c944365284c0b0654625c1b5030eaecc48ce34"
+    },
+    {
+      "case": "connections-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-error-before-512.png",
+      "after": "connections-error-after-512.png",
+      "before_sha256": "aa6b6137c25efc626d7a7558a12af8ae91f4de9b0975321d8cefd1f5a089a17a",
+      "after_sha256": "bc0b6341b7ce123ea7f894e271e146349e34ac013317bc94b83758080ea782f9",
+      "output": "connections-error-512-comparison.png",
+      "output_sha256": "38d084456ee2a272b737cabd77981b7abd90c906680be1261a7d660983a330b3"
+    },
+    {
+      "case": "connections-lost",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-lost-before-64.png",
+      "after": "connections-lost-after-64.png",
+      "before_sha256": "3bf8d7952be2c3380517d9b330a5b13360f0b401475359c5128877300cc8bfa7",
+      "after_sha256": "d897a33d16590003c872cebd07f32b8c76076e78a5f7fdcfa9cfb7d8673571dd",
+      "output": "connections-lost-64-comparison.png",
+      "output_sha256": "979814d6a0b516206ac8aa677de1c767c74fa2632dfcdc4e00cee5f0ff9f487b"
+    },
+    {
+      "case": "connections-lost",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-lost-before-192.png",
+      "after": "connections-lost-after-192.png",
+      "before_sha256": "b17163be1e8142a29877026efa5a073e52ced7262598306562ed595cea9d03ec",
+      "after_sha256": "e3f551ecbd41a5371cd421a830f8f7e99df378a2e548529201d9d5782e13d9d8",
+      "output": "connections-lost-192-comparison.png",
+      "output_sha256": "71b04f9f6fd3c5d7af219527cab9b75a68bd2d66807063a3e7ea5247b82b321a"
+    },
+    {
+      "case": "connections-lost",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "connections-lost-before-512.png",
+      "after": "connections-lost-after-512.png",
+      "before_sha256": "2e9ffd2f116a66970e97ff84542c9fa502a05a9d072f0909b49324a920e29d31",
+      "after_sha256": "d4b77ca24c0ef87a8015dccbf4b791183f12c80ee7cf7bcdd6db5df97483563b",
+      "output": "connections-lost-512-comparison.png",
+      "output_sha256": "055933caa16ce4f1b937eac7a89c13e983fd446cc7622299c97e8ea1c12c95af"
+    },
+    {
+      "case": "spellingbee-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-playing-before-64.png",
+      "after": "spellingbee-playing-after-64.png",
+      "before_sha256": "5217149d6bff4a9aef889938876a234d4f179bbf22073ed9d040ce5b8a9daf60",
+      "after_sha256": "02115acaa2fa7326fb7cd406d84034f1c809e24a01241ad1d08f15726b3c226e",
+      "output": "spellingbee-playing-64-comparison.png",
+      "output_sha256": "c029b1baa71eb56642b4347577044ef7037e20816b4be48887fe0130c802a5f9"
+    },
+    {
+      "case": "spellingbee-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-playing-before-192.png",
+      "after": "spellingbee-playing-after-192.png",
+      "before_sha256": "9d00e91f185616e5db600508d21061df6b7360113a6c56239deb4a9782fa9c20",
+      "after_sha256": "31cc1ab4fdb36e641917a764243135acd33fc00a073a14ccb9821e12066c00a9",
+      "output": "spellingbee-playing-192-comparison.png",
+      "output_sha256": "3afa8ec551c3a1aa4b741c70128b799bf5d9aca453186cbd24f5209500ba492d"
+    },
+    {
+      "case": "spellingbee-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-playing-before-512.png",
+      "after": "spellingbee-playing-after-512.png",
+      "before_sha256": "668c644606e5f35dc6c49c7267c980900512a2928224e44c0bc8c0a74b491ffa",
+      "after_sha256": "c602c46f7d219c1de8f19d4a7994f0278794f95d4b3a50658860735d438cfd75",
+      "output": "spellingbee-playing-512-comparison.png",
+      "output_sha256": "db2e3a2b5d076681053850d6afa4281b9c2416fd1be5a0f7deca7311bf51990c"
+    },
+    {
+      "case": "spellingbee-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-won-before-64.png",
+      "after": "spellingbee-won-after-64.png",
+      "before_sha256": "75001b8b6a7ec420cf06a31c62f8f0869dd9cdb1dfcc0d24cd4dd242409e9005",
+      "after_sha256": "3b1b5cd50622c90b34852bb2cd8ed29e72c0a0af4258aa860e7dcba240ab4da7",
+      "output": "spellingbee-won-64-comparison.png",
+      "output_sha256": "aaba9ef39314a45f3c4330646811011264c0593069236622ea1078ce6f051a95"
+    },
+    {
+      "case": "spellingbee-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-won-before-192.png",
+      "after": "spellingbee-won-after-192.png",
+      "before_sha256": "7cbc0c8418b675c33356b4de98b7de733ebe54233de87f1abd3d5633ed5c1f81",
+      "after_sha256": "2d2d44f41ef4214934602319090cfcdbcd985d5b976d62a19fd95fccf184f36b",
+      "output": "spellingbee-won-192-comparison.png",
+      "output_sha256": "8ecf421d86dd0563d56fcb157f4ce856eb0dd7e4f7b498fdc57cd19ab1da784a"
+    },
+    {
+      "case": "spellingbee-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "spellingbee-won-before-512.png",
+      "after": "spellingbee-won-after-512.png",
+      "before_sha256": "8319a55287ac89c8a0fdacd4c41aa82041506ad166a29175de728a8dd89fa8b2",
+      "after_sha256": "2708310fe9153b5c2d17374e53ae67e2860af25b26d54bb506e4cff344c14dcf",
+      "output": "spellingbee-won-512-comparison.png",
+      "output_sha256": "6e8cbb9ac3904f55b4540295b7574448b79b7eb35b6cec2d72b6b5765831894f"
+    },
+    {
+      "case": "letterboxed-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-playing-before-64.png",
+      "after": "letterboxed-playing-after-64.png",
+      "before_sha256": "eb10835b538a5eed2262b0da492c6ff62fd261ee296e3c6f6043118691bda9cc",
+      "after_sha256": "82ca78d857717b3fbe4059b370ab990a5ab0ef57f6c3c9dca7b3f1958fd664d7",
+      "output": "letterboxed-playing-64-comparison.png",
+      "output_sha256": "adfcceeef7a76a74decb746ba3a024505027e1620c2da90a0bb5b4894914c3ce"
+    },
+    {
+      "case": "letterboxed-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-playing-before-192.png",
+      "after": "letterboxed-playing-after-192.png",
+      "before_sha256": "f0e79a5885334ed9f52d155e373801362932b80098b19b46486379fee733a1bf",
+      "after_sha256": "207f2f0018b729be52473834977fdc5ac1fc0c8ce71e77aa290f3cafabb4ac39",
+      "output": "letterboxed-playing-192-comparison.png",
+      "output_sha256": "96ee1355350beb404893ba786dd8a17328a0262692339552b95294755b09a5df"
+    },
+    {
+      "case": "letterboxed-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-playing-before-512.png",
+      "after": "letterboxed-playing-after-512.png",
+      "before_sha256": "d807b1d19be1091a212976ed0dec97da1520ab5ae801ab44a08e805e54348d86",
+      "after_sha256": "ccdb7e5a8ae128170e91fe611808ac21d591d63f945d1865ced902df5e3d5714",
+      "output": "letterboxed-playing-512-comparison.png",
+      "output_sha256": "4e3ce811c9d0b543e433f08910c0ace5300122903d3a932f6ce7f74e15482b72"
+    },
+    {
+      "case": "letterboxed-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-won-before-64.png",
+      "after": "letterboxed-won-after-64.png",
+      "before_sha256": "68157667de4bc61c02f81fe621c809109f4fac6ad24df4d3fa5872528f92f6c9",
+      "after_sha256": "849cb43b1770dbaffc6de76cc76923c0b0235457e269565aa15f3a1d3df991d2",
+      "output": "letterboxed-won-64-comparison.png",
+      "output_sha256": "e293824b1de4166a6d52b465b8790cc0bffcd17dabc44f0065082eb464f4f7b5"
+    },
+    {
+      "case": "letterboxed-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-won-before-192.png",
+      "after": "letterboxed-won-after-192.png",
+      "before_sha256": "b7c66b02e74f678bf38b48958961e479098a52afe0eb8405d91db1b899e1310b",
+      "after_sha256": "019b6485951b6cbb22ef980bd19873c8647921ba356bbc84265499e10aeefa1c",
+      "output": "letterboxed-won-192-comparison.png",
+      "output_sha256": "1de77ce304efa1a74c87a958aaea51a2d0cb91add3c05b40d9ecaee914cae677"
+    },
+    {
+      "case": "letterboxed-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "letterboxed-won-before-512.png",
+      "after": "letterboxed-won-after-512.png",
+      "before_sha256": "163e8da040d1747be314616639e1fa6bd8cfc6c7d78be2be04e779adcf43e1f7",
+      "after_sha256": "0dd70768da1e901b6bd0a83bba2df836127c79b4f2c3c3ed2e2cdb549349711d",
+      "output": "letterboxed-won-512-comparison.png",
+      "output_sha256": "111b3f4b3db311e8a10b264772e8c77cf25dbe5395fe8f6d00ce89305f0dc6e6"
+    },
+    {
+      "case": "strands-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-playing-before-64.png",
+      "after": "strands-playing-after-64.png",
+      "before_sha256": "9b26038c77667e1a7bfd842ce08d2cd10c6509b1040f6fc12db67686c7c5ee79",
+      "after_sha256": "12960da95daebbfa3c5af34e40e20c6f2137db1fbbcf43720d75bfb8db5c8ff3",
+      "output": "strands-playing-64-comparison.png",
+      "output_sha256": "b15cc8739438b518ad5ca7f58934b5017dbd52ce5c557266543f52e029484f18"
+    },
+    {
+      "case": "strands-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-playing-before-192.png",
+      "after": "strands-playing-after-192.png",
+      "before_sha256": "17017e7abf329329e885359ddc5ea0970b4ed56b8e819d4b20d58739a3273cfa",
+      "after_sha256": "9e51cde2d3ef3f1383b79218364968348419cec43ba4ac112caa02c39e294276",
+      "output": "strands-playing-192-comparison.png",
+      "output_sha256": "39285f1d130a6484fa77782226e8b4c09a1b4aa87821c1a410009b50a0f4735a"
+    },
+    {
+      "case": "strands-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-playing-before-512.png",
+      "after": "strands-playing-after-512.png",
+      "before_sha256": "12e474c508f2d7e80c4dae333720081da2c3f10a1d7405b82f558e0b1a5110e4",
+      "after_sha256": "8e2e610c976e28bf9cff47167a44ab1bdc2cda118a52918009b0ecf59bbb0b5f",
+      "output": "strands-playing-512-comparison.png",
+      "output_sha256": "cda660e9ca1934b63350455984e7ba0aa0cf9d4854c607f5b7f5415374f52331"
+    },
+    {
+      "case": "strands-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-won-before-64.png",
+      "after": "strands-won-after-64.png",
+      "before_sha256": "bd3611c4f82b305b5f679dd9c2986a706ef589c7c1becf1c24bf2f8290a372c4",
+      "after_sha256": "e9f479c4a12148c6557eafc938a999161e89c4459a2e7736219f68794a4fd734",
+      "output": "strands-won-64-comparison.png",
+      "output_sha256": "c5420f0d5d707fa5c336d5d0403386d6f45af0aed0a3cf822f8839a547b1047b"
+    },
+    {
+      "case": "strands-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-won-before-192.png",
+      "after": "strands-won-after-192.png",
+      "before_sha256": "a6609fb918c5e918dfebe9bf042bf7e13c880759e53a02d65bb57199ce54d2ff",
+      "after_sha256": "844b0f3dbc91da8218a8d3b1eeb746aca5884ea71d4aa8928bd389c68e9c9052",
+      "output": "strands-won-192-comparison.png",
+      "output_sha256": "7a3ac20de000781d8132db07a790e206ff029d07eaf9196aa105003c0875a860"
+    },
+    {
+      "case": "strands-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-won-before-512.png",
+      "after": "strands-won-after-512.png",
+      "before_sha256": "acea86d57ec9300ff8746928ba705e91827e5b829278c7feb173f709c42d5536",
+      "after_sha256": "387e026649a81d06dfd2190be2a4b357e50712bcb5eff571f2e03e887237047a",
+      "output": "strands-won-512-comparison.png",
+      "output_sha256": "4c1b6cbe8cf5f13e467cc6572ef03f52773593b52074831a2da7338fe7c69563"
+    },
+    {
+      "case": "strands-hint",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-hint-before-64.png",
+      "after": "strands-hint-after-64.png",
+      "before_sha256": "b022f202563194a01207b21c422473bdf8ce3dfed4c737a1891c53314e02d3e9",
+      "after_sha256": "8ebd800f2543cfe71e6120d1b7044f243679ede1b608254ed2b5f6aadc5cdca8",
+      "output": "strands-hint-64-comparison.png",
+      "output_sha256": "30be402630096039cdd0bd6113dcab4037f019164cde29f3d5adf26a03b21285"
+    },
+    {
+      "case": "strands-hint",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-hint-before-192.png",
+      "after": "strands-hint-after-192.png",
+      "before_sha256": "51c0bc3f94500ea075880df86cc863e490e80135a779bd99d5cac05499d32314",
+      "after_sha256": "839d9b69d661013c2e8f62e02273affd420089e63bec5e6c47ef0ad7609d9e23",
+      "output": "strands-hint-192-comparison.png",
+      "output_sha256": "f74ceb02e698344e5d1e1836fa2b4801080b97c4a51744176ae9998c67efc2ed"
+    },
+    {
+      "case": "strands-hint",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "strands-hint-before-512.png",
+      "after": "strands-hint-after-512.png",
+      "before_sha256": "bcce338219b29fe452e9a541bb0084e9b4c5f1e2a49097138696b6296c3c942f",
+      "after_sha256": "fd3d2c86302358546be257218ab42f27b42257cf99b2dbce26d7afbb62763d6a",
+      "output": "strands-hint-512-comparison.png",
+      "output_sha256": "471a372e1775fc2f5028c57c70eb2fa8752e12d01ac86a0f8779ff33fbba2980"
+    },
+    {
+      "case": "crossword-playing",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-playing-before-64.png",
+      "after": "crossword-playing-after-64.png",
+      "before_sha256": "9242bafeb50f92cb09c896281c7c13671fe07e488b68ffe9e02d8ff4b47a6bd1",
+      "after_sha256": "e6f3334e2a7470c4c9f732744b8fcc652c1d230ae59b9feca45e4d816d2dc3cb",
+      "output": "crossword-playing-64-comparison.png",
+      "output_sha256": "ece05f2fe2538d02edc3384fbdc17ea43564e7d7b771be0a43dc4747188114f2"
+    },
+    {
+      "case": "crossword-playing",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-playing-before-192.png",
+      "after": "crossword-playing-after-192.png",
+      "before_sha256": "ac04cfbfb91e8d039aecdda46f4bafba20cc2fd36b1390e79bb847ce62751a3f",
+      "after_sha256": "2f83255b209a485ea78aefedb3800b772ac8aa4f5cda590128a105c721338008",
+      "output": "crossword-playing-192-comparison.png",
+      "output_sha256": "beddfd8c600888b65fe5afd8c5c72a87de5d0d2cc2f7e33f9d5a6c356a634288"
+    },
+    {
+      "case": "crossword-playing",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-playing-before-512.png",
+      "after": "crossword-playing-after-512.png",
+      "before_sha256": "4256801838c42898ca36eab1b3329ce45f9cd37561db9205a1635b25b78abbdd",
+      "after_sha256": "0508a061872f01ce924dff0a07ffcaf890fec4baa5198ebc93b777462ea987fd",
+      "output": "crossword-playing-512-comparison.png",
+      "output_sha256": "1c738c8a471cc35c4a696ea1b2792775479c3c47e43a56a521df9c6f13487774"
+    },
+    {
+      "case": "crossword-won",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-won-before-64.png",
+      "after": "crossword-won-after-64.png",
+      "before_sha256": "f900a547145daf43dcdc2aac036e59c2fce2ab2c60dea99e11c5d2ad26139781",
+      "after_sha256": "24556845277659546355e157d6820891d14c5e528fcf4607803e2f6a3be45a38",
+      "output": "crossword-won-64-comparison.png",
+      "output_sha256": "f0fea1915d7f50efca60f4687596b8884c7c4fe0da6a3221586348904e861f25"
+    },
+    {
+      "case": "crossword-won",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-won-before-192.png",
+      "after": "crossword-won-after-192.png",
+      "before_sha256": "a53c4848c8392eb3482cc294921d16673848327c5071b08ebeca16cfd6279a2c",
+      "after_sha256": "955acae787687d0df269a2f8fd8d3eecaa7e8688e2c7478f935146a0ca28062d",
+      "output": "crossword-won-192-comparison.png",
+      "output_sha256": "6e3864b608c96d0393bc23bb77e61461c03dc6f3d9a2427b5958d4690689ea37"
+    },
+    {
+      "case": "crossword-won",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-won-before-512.png",
+      "after": "crossword-won-after-512.png",
+      "before_sha256": "660baf2b475ee11f62fb98acbad695c502185650d5d8e87705dc947b2b17d0a3",
+      "after_sha256": "b63f436684f46843c56755553ede974ec0185a4c289fe60c897cb8a178ee9c44",
+      "output": "crossword-won-512-comparison.png",
+      "output_sha256": "f1de88f61d16b7079404ea20a121844fbcb704dd5918c7a0f8b149f3d9ce2e47"
+    },
+    {
+      "case": "crossword-error",
+      "native_side": 64,
+      "integer_scale": 6,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-error-before-64.png",
+      "after": "crossword-error-after-64.png",
+      "before_sha256": "c5b2262cf12dafaf8ec87743807468f64601372918f59bc2dd9a32a225d02634",
+      "after_sha256": "b522cf18484489deb9744d2fa6e2470fb013811fc77c7972d4d0fcadd30ebc48",
+      "output": "crossword-error-64-comparison.png",
+      "output_sha256": "dc2910857f9e18df9b81adb260b5c4ec1f2c4337fead2908eb85aa442685bb5b"
+    },
+    {
+      "case": "crossword-error",
+      "native_side": 192,
+      "integer_scale": 2,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-error-before-192.png",
+      "after": "crossword-error-after-192.png",
+      "before_sha256": "3f70251218167a94399518ccf42544e84256e09681afa6b7ea25a474b37aa434",
+      "after_sha256": "c82bcd5dbf861bc04df99fe778d70b123cf30dbd6f811fd681408d2ba5c27af7",
+      "output": "crossword-error-192-comparison.png",
+      "output_sha256": "05354f24b42373c543f145d6decae0e2757b09aa85c338402fa11823ad007a6d"
+    },
+    {
+      "case": "crossword-error",
+      "native_side": 512,
+      "integer_scale": 1,
+      "processing": "Identical integer enlargement with nearest-neighbor sampling; no smoothing or retouching.",
+      "before": "crossword-error-before-512.png",
+      "after": "crossword-error-after-512.png",
+      "before_sha256": "fe8657fc53b4e89f4d4d4f79b3681a382b4442952e4e3a96ac5534210226b4b0",
+      "after_sha256": "75d2d51ff315ac654e628ba46777da24811ebdecc137d32d61f28363ca7445ac",
+      "output": "crossword-error-512-comparison.png",
+      "output_sha256": "3ba5fb5adb150baff6587edeeb65086c2627f20c26ab0aedad89e691e18ab2ba"
+    }
+  ],
+  "puzzle_manifest": "../puzzles/manifest.json",
+  "motion": "connections-labels.gif",
+  "extra_native_states": 11,
+  "deployment_note": "Updated wall runtime deployed; all five games passed real moves, resume and exit checks, with Off restored. Signed iPhone build ready; installation pending because the iPhone 18 Pro Max remains disconnected.",
+  "validation_present": true,
+  "references": [
+    "https://arxiv.org/html/2509.10846v1#S1.SS1.SSS1",
+    "https://arxiv.org/html/2509.10846v1#S1.SS1.SSS3",
+    "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+    "https://mobbin.com/screens/146abc9f-b2de-44ee-b272-1684f04ecb80",
+    "https://mobbin.com/screens/3c0c29f9-ddf7-4a17-b7fd-4311f44c1a54",
+    "https://mobbin.com/screens/5090f051-642d-454c-90cb-61406ceb6b6b",
+    "https://mobbin.com/screens/6c57ef77-c824-4bbd-aa7b-e71495a11ae1",
+    "https://mobbin.com/screens/9de19855-9f1a-4a72-ae91-2a916eeda115",
+    "https://mobbin.com/screens/b05db043-edac-44f5-8e97-c0d942f8bf9d",
+    "https://mobbin.com/screens/dee1f903-080e-4104-9cc0-2062634126b5",
+    "https://mobbin.com/screens/e1452297-31ea-4ff4-9ab0-bae46b9bf00b",
+    "https://support.apple.com/en-gb/guide/iphone/iph9c11382ff/ios",
+    "https://thenewyorktimeshelpcenter.helpjuice.com/360011158491-New-York-Times-Games/23675493312404-Spelling-Bee",
+    "https://thenewyorktimeshelpcenter.helpjuice.com/360011158491-New-York-Times-Games/28525912587924-Connections"
+  ]
+}

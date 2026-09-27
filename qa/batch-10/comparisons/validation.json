@@ -1,0 +1,101 @@
+{
+  "batch": 10,
+  "base": "31827d4",
+  "implementation_finished_ids": [
+    "G03",
+    "G04",
+    "G05",
+    "G06",
+    "G07"
+  ],
+  "next_ids": [
+    "G08",
+    "G09",
+    "G10",
+    "G11",
+    "G12"
+  ],
+  "checks": {
+    "python": {
+      "passed": 977,
+      "failed": 0,
+      "command": "python -m pytest brain/tests -q"
+    },
+    "playback_identity": 99,
+    "settings_catalog": 32,
+    "game_models_and_http": 45,
+    "symbols": 85,
+    "builds": {
+      "simulator_debug": "passed",
+      "signed_iphone_debug": "passed",
+      "iphone_release": "passed"
+    }
+  },
+  "visuals": {
+    "native_before": 5,
+    "native_after": 26,
+    "sizes": [
+      64,
+      192,
+      512
+    ],
+    "panel_cases": 14,
+    "panel_frames": 84,
+    "motion": "connections-labels.gif",
+    "research": "Fresh inspected Mobbin + primary web references for all five units",
+    "final_simulator_code_sha256": "b81d3f69c177344ed68ed4e712ff72b6080dbf3f0d02297d10427db3c955bd58",
+    "verified_final_build_captures": 26
+  },
+  "deployment_summary": "Updated wall runtime deployed; all five games passed real moves, resume and exit checks, with Off restored. Signed iPhone build ready; installation pending because the iPhone 18 Pro Max remains disconnected.",
+  "limitations": [
+    "Physical iPhone installation and manual touch/voice check pending USB reconnection.",
+    "Simulator captures validate rendering and API states; they do not certify touch or real speech recognition.",
+    "Live wall RGB confirms the managed runtime, not physical LED colour.",
+    "Connections live RGB differs from fixed-time previews because labels scroll within their tiles."
+  ],
+  "code_sha256": {
+    "brain/games/connections.py": "c93fff66a2e0678de2acbc4f4f85de1eeb0c343000e1a742b49d6d4d9ba7ab9e",
+    "brain/games/crossword.py": "0b9fa2bf15db304afd53aa151ba8822f9a5f2dfdbbd346116a314d03b47c4815",
+    "brain/games/letterboxed.py": "faeda228715c3794ed79b9941d124c67f02499beaceb4174ea867c60a077e1d0",
+    "brain/games/spellingbee.py": "a997b8f5b5ef5844534dff480b3ea8223db3142266079b18f3e4744dda27d98e",
+    "brain/games/strands.py": "1dcd81aa0078c01f2ca5ad045d541ffd6e621c885bbf11c95d418887bda61f8e",
+    "brain/tests/test_connections_bee_batch.py": "d4e22497a8a5441f9493dea896bfed6871e9f55f562d349fd45b996c68c63da2",
+    "brain/tests/test_crossword.py": "5c1f1e9828d2b1dd95da46fc742affb49990c4321389df6e499fe52c35f61519",
+    "brain/tests/test_crossword_batch.py": "939e59f7e39a850a4d0e019b88d88108dad403901b72eeda2ab0518db6ece369",
+    "brain/tests/test_letterboxed.py": "9f53a6d2aa1165f3f10d33ac12afbab95755612dbaf462b29b48c520d73ad2fc",
+    "brain/tests/test_letterboxed_strands_batch.py": "83d8600c2cfb61b880629a1913ac35c40bd67ea1f293731ac9a7e88fe8b2c3c5",
+    "brain/tests/test_strands.py": "bbec423b5299b51c686167540ecff86ac8ebd169763dda3fd482d3c47284953e",
+    "scripts/qa/capture_home.py": "f7dd239442356ef883637934865982d9620c9de16064789a36d0a850093efaeb",
+    "scripts/qa/compare_word_games_batch.py": "c32e36be93a53db2a3770f9a2472eb68da44a7be8d8ba42cdc1b75bc3e59fc78",
+    "scripts/qa/render_word_games.py": "58686f6ba1a6d50df05d7a87da3caf9940b3c1dbcb6dc3d8e65502830eb503a9",
+    "scripts/qa/word_games_fixtures.py": "dfb21cfe5595943bf311a574d61805697489a0a91aa693d9641ec2b8132f5bbd",
+    "tessera/Tessera/ConnectionsBoard.swift": "7d0f193a5a4c5f2b4edc9dcee4e1df1d94145cf0bc12a586ca17a9ab8949df66",
+    "tessera/Tessera/CrosswordBoard.swift": "e37ba1738f41efe3cf01b3684bccd1c8a0f9809cfd6dfd41afda5587b9212a39",
+    "tessera/Tessera/GameScreen.swift": "b2be0953540c6671247122527ca14fd079c65e3573e344ba9b5658be078d6e99",
+    "tessera/Tessera/Games.swift": "abf5625cc5b6fdb20cfc3c676dc3829e67884d7826b118a4c68f1cde3bb1d7ef",
+    "tessera/Tessera/GamesBoards.swift": "49169e2eb566ec5ca677cbfd140be3de7163a1a980afea4607db01da91488261",
+    "tessera/Tessera/LetterBoxedBoard.swift": "4df0b586c913c9593c7fff9d5ffc37f7f0d73f40bb3c5556faefd6933e6a0bdb",
+    "tessera/Tessera/SpellingBeeBoard.swift": "b3604dddee6f38baf8f21366d006406957bf18142ce44f343bb4a7cc1c6a22c7",
+    "tessera/Tessera/StrandsBoard.swift": "ffa35a30d8f167fd43fd615713b78ae20d86d4603b4669bee0b6607571294f5d"
+  },
+  "bugs_fixed": [
+    "Duplicate generic input removed from all five boards.",
+    "Retain drafts until accepted; preserve newer local edits.",
+    "Voice/remote Letter Boxed moves refresh untouched automatic starting letter.",
+    "Completed Strands hides unfinished local draft paths.",
+    "Bundled crossword has valid, correctly clued crossings.",
+    "Strict crossword coordinates and malformed move validation.",
+    "Idempotent crossword retries and acknowledged answer entry.",
+    "Small-panel glyphs and counters remain intact.",
+    "Completed ledgers/clues collapse to keep replay reachable.",
+    "Missing wall text_scrolled dependency restored from main."
+  ],
+  "manual_checks": [
+    "Connections: correct One away by changing one selected tile; complete or lose to see all groups.",
+    "Bee: tap/type a word, shuffle without losing draft, find pangram; check collapsed completed ledger.",
+    "Letter Boxed: chain words, undo, use Nudge, then try a spoken move after typed input.",
+    "Strands: trace and correct a word; earn hint with extra words, spend second hint for order.",
+    "Crossword: switch direction, enter full answers or letters, backspace, check/clear; test voice and completion.",
+    "Check small wall lettering from the room and offline/reconnect draft behavior on phone."
+  ]
+}

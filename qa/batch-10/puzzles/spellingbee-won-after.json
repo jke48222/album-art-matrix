@@ -1,0 +1,938 @@
+{
+  "name": "spellingbee",
+  "phase": "won",
+  "status": {
+    "running": true,
+    "seq": 42,
+    "session_id": "qa-words-001",
+    "on_wall": true,
+    "game": {
+      "name": "spellingbee",
+      "title": "Spelling Bee",
+      "players": [
+        "You"
+      ],
+      "over": true,
+      "won": true,
+      "winner": null,
+      "message": "Queen Bee. Every word.",
+      "started": 1790468604,
+      "finished": 1790469024,
+      "seq": 87,
+      "voice": true,
+      "centre": "c",
+      "letters": "ainort",
+      "found": [
+        {
+          "word": "tractor",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "traction",
+          "who": "You",
+          "points": 15,
+          "pangram": true
+        },
+        {
+          "word": "tract",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "tonic",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "titanic",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "tantric",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "tactic",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "tact",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "ricin",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "rancor",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "raincoat",
+          "who": "You",
+          "points": 15,
+          "pangram": true
+        },
+        {
+          "word": "racoon",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "raccoon",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "nitric",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "narcotic",
+          "who": "You",
+          "points": 15,
+          "pangram": true
+        },
+        {
+          "word": "ionic",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "intact",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "incarnation",
+          "who": "You",
+          "points": 18,
+          "pangram": true
+        },
+        {
+          "word": "incantation",
+          "who": "You",
+          "points": 11,
+          "pangram": false
+        },
+        {
+          "word": "inaction",
+          "who": "You",
+          "points": 8,
+          "pangram": false
+        },
+        {
+          "word": "iconic",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "icon",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "croon",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "croc",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "critic",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "crain",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cotton",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cotta",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cortina",
+          "who": "You",
+          "points": 14,
+          "pangram": true
+        },
+        {
+          "word": "coronation",
+          "who": "You",
+          "points": 17,
+          "pangram": true
+        },
+        {
+          "word": "corona",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "corn",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "cora",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "coot",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "coon",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "contrition",
+          "who": "You",
+          "points": 10,
+          "pangram": false
+        },
+        {
+          "word": "contractor",
+          "who": "You",
+          "points": 10,
+          "pangram": false
+        },
+        {
+          "word": "contraction",
+          "who": "You",
+          "points": 18,
+          "pangram": true
+        },
+        {
+          "word": "contract",
+          "who": "You",
+          "points": 8,
+          "pangram": false
+        },
+        {
+          "word": "contra",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "contain",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "contact",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "conn",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "concoction",
+          "who": "You",
+          "points": 10,
+          "pangram": false
+        },
+        {
+          "word": "concoct",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "coin",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "cocoon",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cocoa",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "coco",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "coca",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "coat",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "citation",
+          "who": "You",
+          "points": 8,
+          "pangram": false
+        },
+        {
+          "word": "circa",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "catatonic",
+          "who": "You",
+          "points": 9,
+          "pangram": false
+        },
+        {
+          "word": "cataract",
+          "who": "You",
+          "points": 8,
+          "pangram": false
+        },
+        {
+          "word": "cartoon",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "carton",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cart",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "carrot",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "carrion",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "carr",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "carnation",
+          "who": "You",
+          "points": 16,
+          "pangram": true
+        },
+        {
+          "word": "carina",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "carat",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cantor",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "canton",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "canto",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cantina",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "cant",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "canon",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cannot",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cannon",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cancan",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "cairn",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "cain",
+          "who": "You",
+          "points": 1,
+          "pangram": false
+        },
+        {
+          "word": "cacti",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "attraction",
+          "who": "You",
+          "points": 17,
+          "pangram": true
+        },
+        {
+          "word": "attract",
+          "who": "You",
+          "points": 7,
+          "pangram": false
+        },
+        {
+          "word": "attic",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "arctic",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "aortic",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "antarctica",
+          "who": "You",
+          "points": 10,
+          "pangram": false
+        },
+        {
+          "word": "antarctic",
+          "who": "You",
+          "points": 9,
+          "pangram": false
+        },
+        {
+          "word": "actor",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "action",
+          "who": "You",
+          "points": 6,
+          "pangram": false
+        },
+        {
+          "word": "actin",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        },
+        {
+          "word": "acorn",
+          "who": "You",
+          "points": 5,
+          "pangram": false
+        }
+      ],
+      "points": 561,
+      "total": 561,
+      "rank": "Queen Bee",
+      "next_rank": "Queen Bee",
+      "next_points": 561,
+      "rank_progress": 1.0,
+      "found_pangrams": 9,
+      "count": 87,
+      "pangrams": 9,
+      "answers": [
+        "acorn",
+        "actin",
+        "action",
+        "actor",
+        "antarctic",
+        "antarctica",
+        "aortic",
+        "arctic",
+        "attic",
+        "attract",
+        "attraction",
+        "cacti",
+        "cain",
+        "cairn",
+        "cancan",
+        "cannon",
+        "cannot",
+        "canon",
+        "cant",
+        "cantina",
+        "canto",
+        "canton",
+        "cantor",
+        "carat",
+        "carina",
+        "carnation",
+        "carr",
+        "carrion",
+        "carrot",
+        "cart",
+        "carton",
+        "cartoon",
+        "cataract",
+        "catatonic",
+        "circa",
+        "citation",
+        "coat",
+        "coca",
+        "coco",
+        "cocoa",
+        "cocoon",
+        "coin",
+        "concoct",
+        "concoction",
+        "conn",
+        "contact",
+        "contain",
+        "contra",
+        "contract",
+        "contraction",
+        "contractor",
+        "contrition",
+        "coon",
+        "coot",
+        "cora",
+        "corn",
+        "corona",
+        "coronation",
+        "cortina",
+        "cotta",
+        "cotton",
+        "crain",
+        "critic",
+        "croc",
+        "croon",
+        "icon",
+        "iconic",
+        "inaction",
+        "incantation",
+        "incarnation",
+        "intact",
+        "ionic",
+        "narcotic",
+        "nitric",
+        "raccoon",
+        "racoon",
+        "raincoat",
+        "rancor",
+        "ricin",
+        "tact",
+        "tactic",
+        "tantric",
+        "titanic",
+        "tonic",
+        "tract",
+        "traction",
+        "tractor"
+      ]
+    },
+    "scores": {
+      "You": {
+        "played": 12,
+        "won": 9,
+        "streak": 3,
+        "best": 5
+      }
+    },
+    "voice_words": [
+      "acorn",
+      "actin",
+      "action",
+      "actor",
+      "antarctic",
+      "antarctica",
+      "aortic",
+      "arctic",
+      "attic",
+      "attract",
+      "attraction",
+      "cacti",
+      "cain",
+      "cairn",
+      "cancan",
+      "cannon",
+      "cannot",
+      "canon",
+      "cant",
+      "cantina",
+      "canto",
+      "canton",
+      "cantor",
+      "carat",
+      "carina",
+      "carnation",
+      "carr",
+      "carrion",
+      "carrot",
+      "cart",
+      "carton",
+      "cartoon",
+      "cataract",
+      "catatonic",
+      "circa",
+      "citation",
+      "coat",
+      "coca",
+      "coco",
+      "cocoa",
+      "cocoon",
+      "coin",
+      "concoct",
+      "concoction",
+      "conn",
+      "contact",
+      "contain",
+      "contra",
+      "contract",
+      "contraction",
+      "contractor",
+      "contrition",
+      "coon",
+      "coot",
+      "cora",
+      "corn",
+      "corona",
+      "coronation",
+      "cortina",
+      "cotta",
+      "cotton",
+      "crain",
+      "critic",
+      "croc",
+      "croon",
+      "icon",
+      "iconic",
+      "inaction",
+      "incantation",
+      "incarnation",
+      "intact",
+      "ionic",
+      "narcotic",
+      "nitric",
+      "raccoon",
+      "racoon",
+      "raincoat",
+      "rancor",
+      "ricin",
+      "tact",
+      "tactic",
+      "tantric",
+      "titanic",
+      "tonic",
+      "tract",
+      "traction",
+      "tractor"
+    ]
+  },
+  "list": [
+    {
+      "name": "wordle",
+      "title": "Wordle",
+      "blurb": "Six guesses at a five-letter word. Say it or type it.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "sudoku",
+      "title": "Sudoku",
+      "blurb": "The grid on the wall, the digits from the phone. Easy, medium or hard.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "connections",
+      "title": "Connections",
+      "blurb": "Sixteen words, four groups of four. Four mistakes allowed.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "spellingbee",
+      "title": "Spelling Bee",
+      "blurb": "Seven letters, one in the middle. Say words of four or more.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "letterboxed",
+      "title": "Letter Boxed",
+      "blurb": "Twelve letters round a square. Chain words until all are used.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": true
+    },
+    {
+      "name": "strands",
+      "title": "Strands",
+      "blurb": "A grid of letters hiding a themed set. Say a word; the wall lights its path.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "crossword",
+      "title": "Mini crossword",
+      "blurb": "Five by five. Follow a clue, find a word, make the crossings meet.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "contexto",
+      "title": "Contexto",
+      "blurb": "Guess the secret word by meaning. Every guess gets a rank.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "sliding",
+      "title": "Sliding puzzle",
+      "blurb": "A sleeve you have played, in blocks. Slide them back.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "reveal",
+      "title": "Cover reveal",
+      "blurb": "A sleeve sharpens over thirty seconds. First to name it wins.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "heardle",
+      "title": "Heardle",
+      "blurb": "A song you have played, a second at a time. Name it in six.",
+      "players": [
+        1,
+        6
+      ],
+      "voice": true
+    },
+    {
+      "name": "quiz",
+      "title": "Pub quiz",
+      "blurb": "Ten questions on a theme. Twenty seconds each. Scores on the wall.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "pictionary",
+      "title": "AI pictionary",
+      "blurb": "The wall draws a secret word. Guess it in sixty seconds.",
+      "players": [
+        1,
+        8
+      ],
+      "voice": true
+    },
+    {
+      "name": "twentyq",
+      "title": "Twenty questions",
+      "blurb": "Think of a thing. The wall asks; knock for yes, whistle for no.",
+      "players": [
+        1,
+        4
+      ],
+      "voice": true
+    },
+    {
+      "name": "reaction",
+      "title": "Reaction knock",
+      "blurb": "Red, then green: knock. The milliseconds on the panel. Five rounds.",
+      "players": [
+        1,
+        6
+      ],
+      "voice": true
+    },
+    {
+      "name": "whistlebird",
+      "title": "Whistle bird",
+      "blurb": "Whistle high to climb, low to dive, through the gaps.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": false
+    },
+    {
+      "name": "pong",
+      "title": "Pong",
+      "blurb": "Your phone is the paddle: tilt it. First to seven.",
+      "players": [
+        1,
+        2
+      ],
+      "voice": false
+    },
+    {
+      "name": "snake",
+      "title": "Snake",
+      "blurb": "The phone is the remote. Eat, grow, do not hit the wall.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    },
+    {
+      "name": "tetris",
+      "title": "Tetris",
+      "blurb": "The phone is the remote: left, right, rotate, drop.",
+      "players": [
+        1,
+        1
+      ],
+      "voice": true
+    }
+  ]
+}

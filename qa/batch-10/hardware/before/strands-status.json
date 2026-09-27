@@ -1,0 +1,140 @@
+{
+  "running": true,
+  "seq": 28,
+  "game": {
+    "name": "strands",
+    "title": "Strands",
+    "players": [
+      "Tessera QA Batch 10"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "5 to go.",
+    "started": 1790466250,
+    "finished": null,
+    "seq": 2,
+    "voice": true,
+    "theme": "On the turntable",
+    "rows": [
+      "eslroo",
+      "leysgv",
+      "deltel",
+      "nivuyi",
+      "pesenv",
+      "rsndel",
+      "aeprde",
+      "ylocer"
+    ],
+    "found": [
+      {
+        "word": "needle",
+        "spangram": false,
+        "path": [
+          [
+            5,
+            2
+          ],
+          [
+            4,
+            3
+          ],
+          [
+            5,
+            4
+          ],
+          [
+            6,
+            4
+          ],
+          [
+            5,
+            5
+          ],
+          [
+            6,
+            5
+          ]
+        ]
+      },
+      {
+        "word": "vinyl",
+        "spangram": false,
+        "path": [
+          [
+            4,
+            5
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            4,
+            4
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            2,
+            5
+          ]
+        ]
+      }
+    ],
+    "extra": [],
+    "hints": 0,
+    "hint": null,
+    "left": 5,
+    "answers": null
+  },
+  "session_id": "7c778e035f3846879005a1ce2bdeef4c",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 2,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "recordplayer",
+    "needle",
+    "vinyl",
+    "sleeve",
+    "groove",
+    "spindle",
+    "stylus",
+    "hint"
+  ],
+  "word": "vinyl",
+  "theme_word": true,
+  "spangram": false,
+  "path": [
+    [
+      4,
+      5
+    ],
+    [
+      3,
+      5
+    ],
+    [
+      4,
+      4
+    ],
+    [
+      3,
+      4
+    ],
+    [
+      2,
+      5
+    ]
+  ]
+}

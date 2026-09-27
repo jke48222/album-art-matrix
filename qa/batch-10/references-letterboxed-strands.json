@@ -1,0 +1,83 @@
+{
+  "task_intent": "Elevate Tessera\u2019s five word games with expressive native controls and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "reviewed_at": "2026-09-26",
+  "features": [
+    {
+      "id": "G05",
+      "name": "Letter Boxed",
+      "mobbin_query": "Letter Boxed word game with letters on four sides of a square connected by lines and submit controls",
+      "references": [
+        {
+          "source": "Mobbin",
+          "app": "LinkedIn Wend",
+          "url": "https://mobbin.com/screens/9de19855-9f1a-4a72-ae91-2a916eeda115",
+          "image_inspected": true,
+          "observations": "Connected word paths remain visible after submission. Finished words carry checkmarks; Undo and Hint stay directly below the board. Adapted for the square-letter chain, preserving twelve visible nodes."
+        },
+        {
+          "source": "Mobbin",
+          "app": "The New Yorker",
+          "url": "https://mobbin.com/screens/e1452297-31ea-4ff4-9ab0-bae46b9bf00b",
+          "image_inspected": true,
+          "observations": "A dominant complete puzzle with a compact input area beneath it keeps attention on the board. Applied a single inline draft and direct controls."
+        },
+        {
+          "source": "Mobbin",
+          "app": "The Atlantic Magazine",
+          "url": "https://mobbin.com/screens/b05db043-edac-44f5-8e97-c0d942f8bf9d",
+          "image_inspected": true,
+          "observations": "Active clue and keyboard have a clear hierarchy below the board. Used nearby contextual instructions rather than another popup."
+        },
+        {
+          "source": "Primary research",
+          "url": "https://arxiv.org/html/2509.10846v1#S1.SS1.SSS1",
+          "title": "Man, these New York Times games are hard! A computational perspective",
+          "observations": "The original research describes different-side adjacency, chaining each new word from the previous ending, and complete letter coverage. These invariants are enforced in the native controls and production backend tests."
+        }
+      ],
+      "search_limitations": "Mobbin returned adjacent path and crossword interfaces, not a dedicated Letter Boxed screen. NYT help and official game pages were blocked; used the cited original research rules."
+    },
+    {
+      "id": "G06",
+      "name": "Strands",
+      "mobbin_query": "Strands word search game with a grid of letters connected by traced paths, theme clue and hint progress",
+      "references": [
+        {
+          "source": "Mobbin",
+          "app": "LinkedIn Wend",
+          "url": "https://mobbin.com/screens/9de19855-9f1a-4a72-ae91-2a916eeda115",
+          "image_inspected": true,
+          "observations": "Continuous paths, confirmation checkmarks and the accepted-word ledger explain progress. Used visible connecting strokes and persistent found-word list."
+        },
+        {
+          "source": "Mobbin",
+          "app": "Opal",
+          "url": "https://mobbin.com/screens/5090f051-642d-454c-90cb-61406ceb6b6b",
+          "image_inspected": true,
+          "observations": "Quiet dark letter grid, an anchored word prompt and a small segmented progress meter. Applied a large theme title, restrained blue/gold and three-part earned-hint meter."
+        },
+        {
+          "source": "Mobbin",
+          "app": "Abode Lexico",
+          "url": "https://mobbin.com/screens/dee1f903-080e-4104-9cc0-2062634126b5",
+          "image_inspected": true,
+          "observations": "Draft and Submit/Delete controls are separate from the completed game state. Kept an explicit Enter action so tracing can be corrected without losing a failed draft."
+        },
+        {
+          "source": "Primary research",
+          "url": "https://arxiv.org/html/2509.10846v1#S1.SS1.SSS3",
+          "title": "Man, these New York Times games are hard! A computational perspective",
+          "observations": "The paper documents adjacent nonrepeating paths, the opposite-edge spangram, three-extra-word hint credits, then a second hint revealing the same path order. Implemented both hint stages with validated trace submissions."
+        },
+        {
+          "source": "Apple HIG",
+          "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+          "observations": "Accessibility review entry point; native implementation includes VoiceOver cell labels/actions, a tap-button alternative to dragging, large controls, and Reduce Motion handling."
+        }
+      ],
+      "search_limitations": "Mobbin returned related path and word-search interfaces, not a dedicated Strands screen. Apple HIG HTML was JavaScript-only; native accessibility decisions follow existing app conventions."
+    }
+  ]
+}

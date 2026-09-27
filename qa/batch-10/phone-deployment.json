@@ -1,0 +1,12 @@
+{
+  "status": "pending_device_connection",
+  "target": "iPhone 18 Pro Max",
+  "device_id": "1BED2E47-0A74-5F9E-A99A-61408BF6382C",
+  "device_state": "unavailable",
+  "signed_build": "succeeded",
+  "app_path": "/tmp/tessera-batch10-phone/Build/Products/Debug-iphoneos/Tessera.app",
+  "bundle_id": "com.jalenedusei.tessera",
+  "executable_sha256": "d5fe022a2e11ea04e4105e71cc0679ac1ff65683f60d75e69b601c28ebce0c1d",
+  "production_code_sha256": "20fe4c75bc56ed7519430955f3ec2e5c923d841e76787b4a02b48f105a46738d",
+  "launch": "User will open the app; installation awaits USB reconnection."
+}

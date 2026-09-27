@@ -1,0 +1,39 @@
+{
+  "unit": "G07",
+  "feature": "Mini crossword",
+  "researched_at": "2026-09-26",
+  "task_intent": "Elevate Tessera’s five word games with expressive native controls and matching wall compositions.",
+  "output_destination": "code",
+  "output_tool": "Tessera",
+  "mobbin": [
+    {
+      "app": "The New Yorker",
+      "screen_id": "e1452297-31ea-4ff4-9ab0-bae46b9bf00b",
+      "mobbin_url": "https://mobbin.com/screens/e1452297-31ea-4ff4-9ab0-bae46b9bf00b",
+      "image_inspected": true,
+      "observed": "An uninterrupted crossword grid sits above a focused clue strip with previous and next arrows. The active answer is shaded across the grid.",
+      "applied": "Keep the complete shared grid free of banners; place active-clue navigation immediately below it, with an explicit selected answer and cell."
+    },
+    {
+      "app": "The Atlantic Magazine",
+      "screen_id": "146abc9f-b2de-44ee-b272-1684f04ecb80",
+      "mobbin_url": "https://mobbin.com/screens/146abc9f-b2de-44ee-b272-1684f04ecb80",
+      "image_inspected": true,
+      "observed": "Large legible letters and small corner clue numbers make the crossword readable while the current clue remains directly above the keyboard.",
+      "applied": "Use true-white letters, restrained corner numbering, a clear active clue, whole-answer hardware keyboard entry, and an optional generous single-letter keypad."
+    }
+  ],
+  "primary_web": [
+    {
+      "url": "https://support.apple.com/en-gb/guide/iphone/iph9c11382ff/ios",
+      "title": "Solve crossword and crossword mini puzzles in News on iPhone",
+      "applied": "Repeat selection switches across/down; previous/next clue controls; smart advancement skips filled squares; checking marks errors; clearing explains shared crossings."
+    },
+    {
+      "url": "https://developer.apple.com/design/human-interface-guidelines/accessibility",
+      "title": "Apple Human Interface Guidelines — Accessibility",
+      "applied": "44-point minimum controls, Dynamic Type layout changes, VoiceOver square/clue descriptions, crossed error markers independent of colour, reduced-motion disclosure, and an un-dimmed completed board."
+    }
+  ],
+  "assets": "Native geometric grid and production Python RGB render; no third-party reference images are shipped as app assets."
+}

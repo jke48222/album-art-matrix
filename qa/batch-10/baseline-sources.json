@@ -1,0 +1,31 @@
+{
+  "native_base": "31827d4",
+  "wall_base": "Actual deployed wall files fetched before batch10; overrides to commit31827d4 captured here.",
+  "files": [
+    {
+      "path": "brain/games/letterboxed.py",
+      "sha256": "34ac70cb03fceb635aedc865d91c9cf1c723b4ee8e7b609799b484a0d6bb6a96"
+    },
+    {
+      "path": "brain/games/spellingbee.py",
+      "sha256": "795624c760986a6dca5c791f5eddad59719de759d07d452ab45b374d2aa6723b"
+    },
+    {
+      "path": "brain/games/strands.py",
+      "sha256": "d3df7e4718879caccfc5bc066c3b8f6ebac0f8b56e32025703c501f82a9a2633"
+    },
+    {
+      "path": "brain/games/connections.py",
+      "sha256": "aac808ebfa15c46db2f610582a4e30c06aa52492cf1be4054d604a3e848b4583"
+    },
+    {
+      "path": "brain/games/crossword.py",
+      "sha256": "01f287c39db9770de5ccd47fd8133e8b5f8f8246f51f6f03e38ea071c82e3e3a"
+    },
+    {
+      "path": "brain/games/board.py",
+      "sha256": "f6420224b966bcc206c0dd451baa888a5171a60c556ef44edc23abdc8f3c2015"
+    }
+  ],
+  "apply_patch_command": "git apply --unidiff-zero qa/batch-10/baseline-wall.patch"
+}

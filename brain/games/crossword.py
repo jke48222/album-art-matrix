@@ -16,10 +16,11 @@ from __future__ import annotations
 
 import random
 import re
+from copy import deepcopy
 
 from . import Game, register
-from .board import (BLACK, DIM, INK, RED, SLATE2, YELLOW, banner, blank, header,
-                    mix, rounded, text, letter_tile)
+from .board import blank, fill, rect, text
+from ..art.pixelfont import text_width
 from .words import common
 
 N = 5
@@ -38,10 +39,10 @@ PATTERNS = [
 # hand-clued puzzles for a wall with no key: (blacks, rows, clues by slot)
 BUNDLED = [
     ([(0, 0), (4, 4)],
-     ["_lamp", "irony", "vinyl", "ester", "date_"],
-     {"1A": "Bedside light", "5A": "Rain on your wedding day, per Alanis", "6A": "What a record is pressed on",
-      "7A": "Fragrant compound in perfume", "8A": "Calendar square", "1D": "Toy that spins", "2D": "Country, in short",
-      "3D": "Bird of the night", "4D": "Small ones are put in a stroller? No: to enter data", "5D": "Frozen water"}),
+     ["_puff", "final", "ladle", "anise", "node_"],
+     {"1A": "A little cloud of smoke", "5A": "Last in a series", "6A": "Spoon for serving soup",
+      "7A": "Spice with a licorice flavor", "8A": "Point in a network", "1D": "Instrument with 88 keys",
+      "2D": "Reversed an action", "3D": "Not true", "4D": "Run away", "5D": "Caramel-topped custard"}),
 ]
 _SAY = re.compile(r"^(?:(\w+)\s*(across|down|a|d)\s*(?:is|,|:)?\s*([a-z]+))[.!?]*$")
 _NUM = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10}
@@ -130,172 +131,306 @@ def fill_grid(blacks: set[tuple[int, int]], rng: random.Random, words_by_len: di
     return dict(grid) if ok else None
 
 
+# Kept in step with CrosswordBoard.swift. The entire square belongs to the
+# grid; clues and results live outside it on the phone, never over the letters.
+CROSSWORD_COLOURS = {
+    "ground": (11, 10, 9), "square": (28, 32, 34), "block": (14, 13, 11),
+    "word": (37, 52, 59), "selected": (54, 91, 102), "rule": (101, 114, 122),
+    "letter": (255, 255, 255), "number": (187, 201, 207),
+    "cursor": (162, 211, 240), "wrong": (236, 105, 89), "solved": (163, 207, 155),
+}
+
+
 @register
 class Crossword(Game):
     name = "crossword"
     title = "Mini crossword"
-    blurb = "Five by five. Clues on the phone, answers by voice or by typing."
+    blurb = "Five by five. Follow a clue, find a word, make the crossings meet."
     min_players = 1
     max_players = 4
 
     def setup(self):
         rng = random.Random(self.options.get("seed"))
+        n = self.options.get("set")
+        if n is not None and type(n) is not int:
+            raise ValueError("Choose a numbered crossword set.")
         asker = getattr(getattr(self.host, "ctrl", None), "asker", None)
-        can_clue = asker is not None and getattr(asker, "ready", False)
         chosen = None
-        if self.options.get("set") is None and can_clue:
-            words = common(3, 5, 8000)
+        if n is None and asker is not None and getattr(asker, "ready", False):
             by_len: dict[int, list[str]] = {}
-            for w in words:
-                by_len.setdefault(len(w), []).append(w)
+            for word in common(3, 5, 8000):
+                by_len.setdefault(len(word), []).append(word)
             for pattern in rng.sample(PATTERNS, len(PATTERNS)):
                 blacks = set(pattern)
                 grid = fill_grid(blacks, rng, by_len)
                 if grid is None:
                     continue
-                sl = slots(blacks)
-                answers = {s["id"]: "".join(grid[c] for c in s["cells"]) for s in sl}
-                clues = None
+                answers = {s["id"]: "".join(grid[c] for c in s["cells"]) for s in slots(blacks)}
                 try:
                     clues = asker.crossword_clues(sorted(set(answers.values())))
                 except Exception as exc:
-                    print(f"[games] clues from Claude: {exc}", flush=True)
-                if clues:
-                    chosen = (blacks, grid, {sid: clues[w] for sid, w in answers.items()})
+                    print(f"[games] crossword clues unavailable: {type(exc).__name__}", flush=True)
+                    break
+                # A partial provider result must never create an unclued puzzle.
+                if isinstance(clues, dict) and all(isinstance(clues.get(w), str) and clues[w].strip() for w in answers.values()):
+                    chosen = (blacks, grid, {sid: clues[w].strip() for sid, w in answers.items()})
                     break
         if chosen is None:
-            n = self.options.get("set")
-            blacks_l, rows, clues = BUNDLED[int(n) % len(BUNDLED)] if n is not None else rng.choice(BUNDLED)
+            blacks_l, rows, clues = BUNDLED[n % len(BUNDLED)] if n is not None else rng.choice(BUNDLED)
             blacks = set(blacks_l)
-            grid = {(r, c): rows[r][c] for r in range(N) for c in range(N) if rows[r][c] != "_"}
-            chosen = (blacks, grid, clues)
+            grid = {(r, c): rows[r][c] for r in range(N) for c in range(N) if (r, c) not in blacks}
+            chosen = (blacks, grid, dict(clues))
         self.blacks, self.solution, self.clues = chosen
         self.slots = slots(self.blacks)
         self.grid: dict[tuple[int, int], str] = {}
         self.wrong: set[tuple[int, int]] = set()
-        self.chosen: str | None = self.slots[0]["id"] if self.slots else None
+        self.chosen = self.slots[0]["id"]
+        self.selected = self.slots[0]["cells"][0]
         self.checks = 0
-        self.message = f"{len(self.slots)} clues."
+        self.last_move_id: str | None = None
+        self._last_move_payload: dict | None = None
+        self.feedback = {"kind": "ready", "message": "Start anywhere. Every crossing helps."}
+        self.message = f"{len(self.slots)} clues. One little grid."
 
-    # ---- moves ---------------------------------------------------------------------------------
+    def _slot(self, sid=None):
+        return next((s for s in self.slots if s["id"] == (self.chosen if sid is None else sid)), None)
+
+    def _cell(self, value):
+        if not isinstance(value, (list, tuple)) or len(value) != 2 or any(type(v) is not int for v in value):
+            return None
+        cell = tuple(value)
+        return cell if cell in self.solution else None
+
+    def _ordered_slots(self):
+        return sorted(self.slots, key=lambda s: (s["dir"] == "down", s["n"]))
+
+    def _choose(self, sid, cell=None):
+        slot = self._slot(sid)
+        if slot is None:
+            return {"error": "Choose a clue from this puzzle."}
+        self.chosen = sid
+        self.selected = cell if cell in slot["cells"] else next((c for c in slot["cells"] if c not in self.grid), slot["cells"][0])
+        self.changed()
+        return {"chosen": sid, "selected": list(self.selected)}
+
+    def _advance(self):
+        slot = self._slot()
+        cells = slot["cells"]
+        start = cells.index(self.selected) if self.selected in cells else -1
+        later = cells[start + 1:] + cells[:start + 1]
+        empty = next((c for c in later if c not in self.grid), None)
+        if empty is not None:
+            self.selected = empty
+            return
+        ordered = self._ordered_slots()
+        index = next(i for i, s in enumerate(ordered) if s["id"] == self.chosen)
+        for next_slot in ordered[index + 1:] + ordered[:index]:
+            empty = next((c for c in next_slot["cells"] if c not in self.grid), None)
+            if empty is not None:
+                self.chosen, self.selected = next_slot["id"], empty
+                return
+
     def apply(self, move: dict, player: str) -> dict:
-        if "choose" in move:
-            sid = str(move["choose"]).upper()
-            if not any(s["id"] == sid for s in self.slots):
-                return {"error": "no such clue"}
-            self.chosen = sid
-            self.changed()
-            return {"chosen": sid}
-        if move.get("check"):
+        if self.over:
+            return {"error": "The puzzle is complete. Start a new one to play again."}
+        if not isinstance(move, dict):
+            return {"error": "Send a crossword move."}
+        token = move.get("client_move_id")
+        if token is not None and (not isinstance(token, str) or not 1 <= len(token) <= 80):
+            return {"error": "The move identifier is invalid."}
+        # Repeating a request after a lost response must not type twice or
+        # backspace twice. Rejected requests never consume the identifier.
+        payload = {key: value for key, value in move.items() if key != "client_move_id"}
+        if token is not None and token == self.last_move_id:
+            return ({"acknowledged": token} if payload == self._last_move_payload else
+                    {"error": "That move identifier was already used for a different move."})
+        result = self._apply(payload)
+        if "error" not in result:
+            self.last_move_id = token
+            self._last_move_payload = deepcopy(payload) if token else None
+        return result
+
+    def _apply(self, move):
+        keys = set(move)
+        if keys == {"choose"}:
+            if not isinstance(move["choose"], str):
+                return {"error": "Choose a clue from this puzzle."}
+            return self._choose(move["choose"].upper())
+        if keys in ({"select"}, {"select", "direction"}):
+            cell = self._cell(move["select"])
+            direction = move.get("direction")
+            if cell is None or direction not in (None, "across", "down"):
+                return {"error": "Select a white square and an across or down direction."}
+            candidates = [s for s in self.slots if cell in s["cells"]]
+            current = self._slot()
+            if direction is not None:
+                slot = next((s for s in candidates if s["dir"] == direction), None)
+                if slot is None:
+                    return {"error": "There is no clue in that direction at this square."}
+            elif cell == self.selected and len(candidates) > 1:
+                slot = next(s for s in candidates if s["id"] != self.chosen)
+            else:
+                slot = next((s for s in candidates if s["dir"] == current["dir"]), candidates[0])
+            return self._choose(slot["id"], cell)
+        if keys == {"check"} and move["check"] is True:
             return self.check()
-        if "cell" in move and "letter" in move:
-            cell = move["cell"]
-            if not (isinstance(cell, (list, tuple)) and len(cell) == 2):
-                return {"error": "a cell is row and column"}
-            cell = (int(cell[0]), int(cell[1]))
-            if cell in self.blacks or not (0 <= cell[0] < N and 0 <= cell[1] < N):
-                return {"error": "not a white square"}
-            letter = str(move["letter"]).lower()[:1]
+        if keys == {"backspace"} and move["backspace"] is True:
+            cells = self._slot()["cells"]
+            if self.selected not in self.grid:
+                self.selected = cells[max(0, cells.index(self.selected) - 1)]
+            self.grid.pop(self.selected, None)
+            self.wrong.discard(self.selected)
+            return self._after("erased", "One square cleared.")
+        if keys == {"clear"}:
+            sid = move["clear"]
+            if not isinstance(sid, str) or self._slot(sid.upper()) is None:
+                return {"error": "Choose the clue to clear."}
+            slot = self._slot(sid.upper())
+            for cell in slot["cells"]:
+                self.grid.pop(cell, None)
+                self.wrong.discard(cell)
+            self.chosen, self.selected = slot["id"], slot["cells"][0]
+            return self._after("erased", f"{slot['n']} {slot['dir']} cleared. Crossing clues share these squares.")
+        if keys in ({"letter"}, {"cell", "letter"}):
+            cell = self._cell(move["cell"]) if "cell" in move else self.selected
+            letter = move["letter"]
+            if cell is None:
+                return {"error": "Choose a white square in this grid."}
+            if not isinstance(letter, str) or not re.fullmatch(r"[a-zA-Z]?", letter):
+                return {"error": "A square holds one letter from A to Z."}
+            if "cell" in move and cell not in self._slot()["cells"]:
+                self.chosen = next(s["id"] for s in self.slots if cell in s["cells"])
+            self.selected = cell
             if letter:
-                self.grid[cell] = letter
+                self.grid[cell] = letter.lower()
             else:
                 self.grid.pop(cell, None)
             self.wrong.discard(cell)
+            if letter:
+                self._advance()
             return self._after()
-        sid = str(move.get("slot") or self.chosen or "").upper()
-        word = str(move.get("word") or move.get("guess") or "").lower().strip()
-        return self.enter(sid, word)
+        if keys in ({"word"}, {"guess"}, {"slot", "word"}, {"slot", "guess"}):
+            sid = move.get("slot", self.chosen)
+            word = move.get("word", move.get("guess"))
+            if not isinstance(sid, str) or not isinstance(word, str):
+                return {"error": "Enter a clue and its answer as text."}
+            return self.enter(sid.upper(), word.strip().lower())
+        return {"error": "Choose a clue, enter letters, or check the puzzle."}
 
-    def hear(self, text: str, player: str) -> dict | None:
-        t = text.lower().strip()
-        if t in ("check", "check it", "check the puzzle"):
-            return self.check()
-        m = _SAY.match(t)
-        if not m:
+    def hear(self, spoken: str, player: str) -> dict | None:
+        if not isinstance(spoken, str):
             return None
-        num, direction, word = m.groups()
-        n = int(num) if num.isdigit() else _NUM.get(num)
-        if n is None:
-            return None
-        sid = f"{n}{'A' if direction.startswith('a') else 'D'}"
-        if not any(s["id"] == sid for s in self.slots):
-            return None
-        return self.enter(sid, word)
+        t = spoken.lower().strip().rstrip(".!?")
+        if t in ("check", "check it", "check the puzzle", "check puzzle"):
+            return self.apply({"check": True}, player)
+        if t in ("backspace", "delete letter", "erase letter"):
+            return self.apply({"backspace": True}, player)
+        match = _SAY.fullmatch(t)
+        if match:
+            num, direction, word = match.groups()
+            n = int(num) if num.isdigit() else _NUM.get(num)
+            if n is not None:
+                return self.apply({"slot": f"{n}{'A' if direction.startswith('a') else 'D'}", "word": word}, player)
+        # A single spoken answer belongs to the selected clue. Explicit clue
+        # commands remain available so room voice can change direction too.
+        if re.fullmatch(r"[a-z]+", t) and len(t) == len(self._slot()["cells"]):
+            return self.apply({"word": t}, player)
+        return None
 
     def enter(self, sid: str, word: str) -> dict:
         if self.over:
-            return {"error": "the puzzle is done"}
-        slot = next((s for s in self.slots if s["id"] == sid), None)
+            return {"error": "The puzzle is complete. Start a new one to play again."}
+        slot = self._slot(sid)
         if slot is None:
-            return {"error": "pick a clue"}
-        if len(word) != len(slot["cells"]) or not word.isalpha():
+            return {"error": "Choose a clue from this puzzle."}
+        if not isinstance(word, str) or len(word) != len(slot["cells"]) or not re.fullmatch(r"[a-z]+", word):
             return {"error": f"{sid} is {len(slot['cells'])} letters"}
         for cell, ch in zip(slot["cells"], word):
             self.grid[cell] = ch
             self.wrong.discard(cell)
-        self.chosen = sid
-        return self._after()
+        self.chosen, self.selected = sid, slot["cells"][-1]
+        self._advance()
+        return self._after("entered", f"{slot['n']} {slot['dir']} placed.")
 
-    def _after(self) -> dict:
-        white = [(r, c) for r in range(N) for c in range(N) if (r, c) not in self.blacks]
-        full = all(cell in self.grid for cell in white)
-        if full and all(self.grid[cell] == self.solution[cell] for cell in white):
-            self.finish(won=True, message="Solved.")
-            return {"solved": True}
-        self.message = "Full. Check it?" if full else f"{sum(1 for c in white if c not in self.grid)} squares left."
+    def _after(self, kind="entered", message=None):
+        remaining = len(self.solution) - len(self.grid)
+        if remaining == 0 and self.grid == self.solution:
+            self.wrong.clear()
+            self.feedback = {"kind": "solved", "message": "Every crossing comes together."}
+            self.finish(won=True, message="Solved. Every crossing comes together.")
+            return {"solved": True, "filled": len(self.grid)}
+        self.message = "Every square is filled. Check the crossings." if remaining == 0 else f"{remaining} {'square' if remaining == 1 else 'squares'} to fill."
+        self.feedback = {"kind": kind, "message": message or self.message}
         self.changed()
-        return {"solved": False, "filled": sum(1 for c in white if c in self.grid)}
+        return {"solved": False, "filled": len(self.grid)}
 
-    def check(self) -> dict:
+    def check(self):
+        if self.over:
+            return {"error": "The puzzle is complete. Start a new one to play again."}
         self.checks += 1
         self.wrong = {cell for cell, ch in self.grid.items() if self.solution.get(cell) != ch}
-        self.message = "All right so far." if not self.wrong else f"{len(self.wrong)} wrong."
+        count = len(self.wrong)
+        self.message = ("Fill a few squares, then check your crossings." if not self.grid else
+                        "Every entered letter is right so far." if not count else
+                        f"{count} {'square needs' if count == 1 else 'squares need'} another look. Follow the crossed corners.")
+        self.feedback = {"kind": "incorrect" if count else "checked", "message": self.message}
         self.changed()
         return {"wrong": [list(c) for c in sorted(self.wrong)]}
 
-    def state(self) -> dict:
+    def state(self):
         return {"blacks": [list(b) for b in sorted(self.blacks)],
                 "grid": [["#" if (r, c) in self.blacks else self.grid.get((r, c), "") for c in range(N)] for r in range(N)],
                 "slots": [{"id": s["id"], "n": s["n"], "dir": s["dir"], "cells": [list(c) for c in s["cells"]],
                            "clue": self.clues.get(s["id"], "")} for s in self.slots],
-                "chosen": self.chosen, "wrong": [list(c) for c in sorted(self.wrong)], "checks": self.checks,
+                "chosen": self.chosen, "selected": list(self.selected), "direction": self._slot()["dir"],
+                "wrong": [list(c) for c in sorted(self.wrong)], "checks": self.checks,
+                "filled": len(self.grid), "total": len(self.solution), "remaining": len(self.solution) - len(self.grid),
+                "filled_slots": [s["id"] for s in self.slots if all(c in self.grid for c in s["cells"])],
+                "feedback": dict(self.feedback), "last_move_id": self.last_move_id,
                 "solution": ([["#" if (r, c) in self.blacks else self.solution[(r, c)] for c in range(N)]
                               for r in range(N)] if self.over else None)}
 
-    def voice_words(self) -> list[str]:
-        return ["across", "down", "check"] + list(_NUM)[:10] + sorted(set(self.solution.values()))
+    def voice_words(self):
+        return ["across", "down", "check", "backspace"] + list(_NUM) + sorted({"".join(self.solution[c] for c in s["cells"]) for s in self.slots})
 
-    # ---- the wall --------------------------------------------------------------------------------
     def frame_at(self, size: int, t: float):
-        c = blank(size)
-        big = size > 96
-        cell = 11 if not big else 30
-        gap = 1 if not big else 2
-        gw = N * cell + (N - 1) * gap
-        x0 = (size - gw) // 2
-        y0 = (size - gw) // 2 if not big else 20
-        lit = set(next((s["cells"] for s in self.slots if s["id"] == self.chosen), []))
-        for r in range(N):
+        canvas = blank(size)
+        colours = CROSSWORD_COLOURS
+        canvas[:] = colours["ground"]
+        margin = max(1, round(size * 2 / 64))
+        rule = max(1, round(size / 192))
+        available = size - margin * 2
+        edges = [margin + round(i * available / N) for i in range(N + 1)]
+        fill(canvas, margin, margin, available, available, colours["solved"] if self.over else colours["rule"])
+        lit = set(self._slot()["cells"]) if not self.over else set()
+        for row in range(N):
             for col in range(N):
-                x = x0 + col * (cell + gap)
-                y = y0 + r * (cell + gap)
-                if (r, col) in self.blacks:
-                    rounded(c, x, y, cell, cell, (14, 14, 18), 1 if not big else 3)
+                cell = (row, col)
+                x, y = edges[col] + rule, edges[row] + rule
+                width, height = edges[col + 1] - x, edges[row + 1] - y
+                if cell in self.blacks:
+                    fill(canvas, x, y, width, height, colours["block"])
                     continue
-                back = mix(SLATE2, YELLOW, 0.22) if (r, col) in lit and not self.over else SLATE2
-                ch = self.grid.get((r, col), "")
-                ink = RED if (r, col) in self.wrong else INK
-                letter_tile(c, x, y, cell, ch, back, ink, 1 if not big else 3)
-                if big:
-                    n = next((s["n"] for s in self.slots if s["cells"][0] == (r, col)), None)
-                    if n is not None:
-                        text(c, str(n), x + 2, y + 2, DIM, 1)
-        if self.over:
-            banner(c, size, "Solved.", INK, mix((40, 120, 70), BLACK, 0.45))
-        elif big and self.chosen:
-            clue = self.clues.get(self.chosen, "")
-            text(c, f"{self.chosen}  " + clue, 6, size - 12, DIM, 1) if len(clue) < 26 else \
-                text(c, f"{self.chosen}  " + clue[:24] + ".", 6, size - 12, DIM, 1)
-        header(c, size, "MINI", self.message[:22] if not self.over else "", 3 if big else 1, accent=YELLOW)
-        return c
-
+                selected = cell == self.selected and not self.over
+                back = colours["selected"] if selected else colours["word"] if cell in lit else colours["square"]
+                fill(canvas, x, y, width, height, back)
+                if selected:
+                    rect(canvas, x, y, width, height, colours["cursor"], rule)
+                ch = self.grid.get(cell, "").upper()
+                scale = max(1, int(height * 0.57 / 7))
+                if ch:
+                    text(canvas, ch, x + (width - text_width(ch, scale)) // 2, y + (height - 7 * scale) // 2, colours["letter"], scale)
+                if size >= 128:
+                    number = next((s["n"] for s in self.slots if s["cells"][0] == cell), None)
+                    if number is not None:
+                        text(canvas, str(number), x + rule, y + rule, colours["number"], max(1, size // 256))
+                if cell in self.wrong:
+                    # A crossed corner is a shape cue, independent of red.
+                    arm = max(2, round(width * 0.16))
+                    for k in range(arm):
+                        fill(canvas, x + width - arm - rule + k, y + rule + k, rule, rule, colours["wrong"])
+                        fill(canvas, x + width - rule - 1 - k, y + rule + k, rule, rule, colours["wrong"])
+                if selected:
+                    fill(canvas, x + width // 3, y + height - rule * 2, max(2, width // 3), rule, colours["cursor"])
+        rect(canvas, margin, margin, available, available, colours["solved"] if self.over else colours["rule"], rule)
+        return canvas

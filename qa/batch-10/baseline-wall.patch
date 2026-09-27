@@ -1,0 +1,151 @@
+diff --git a/brain/games/board.py b/brain/games/board.py
+index 611b78d..03ab890 100644
+--- a/brain/games/board.py
++++ b/brain/games/board.py
+@@ -239,43 +238,0 @@ def text_right(canvas: np.ndarray, s: str, right: int, y: int, color=INK, scale:
+-def text_scrolled(canvas: np.ndarray, s: str, x: int, y: int, w: int, t: float,
+-                  color=INK, scale: int = 1, speed: float = 9.0, height: int = 9):
+-    """A label wider than its box, travelling through it so all of it is read.
+-
+-    On one 64x64 panel a Connections tile is four characters wide and most of
+-    its words are six, so the board used to cut them: PENCIL became PENC and
+-    BRIDGE became BRID, which is not a word game any more. Rather than cut,
+-    the word moves. Centred and still when it already fits, which is most
+-    labels and every label on the nine-panel wall.
+-
+-    Only lit pixels are copied, so whatever the tile is painted stays behind
+-    the letters."""
+-    full = text_width(s, scale)
+-    if full <= w:
+-        text_centred(canvas, s, x + w // 2, y, color, scale)
+-        return
+-    gap = 5 * scale
+-    span = full + gap
+-    # A mask, drawn in white, rather than the glyph in its own colour: the
+-    # colour here is often BLACK (a picked tile is light with dark letters on
+-    # it) and a "copy the lit pixels" test would drop every one of them.
+-    mask = np.zeros((height * scale, span, 3), dtype=np.uint8)
+-    draw_text(mask, s, 0, 0, (255, 255, 255), scale)
+-    H, W = canvas.shape[:2]
+-    y0, y1 = max(0, y), min(H, y + height * scale)
+-    if y1 <= y0:
+-        return
+-    # A beat still at the start of every lap, so the eye can catch the first
+-    # letters before they move. A label that never stops is read twice as
+-    # slowly as one that waits a moment and then travels.
+-    hold = 1.1
+-    lap = hold + span / speed
+-    at = (t % lap) - hold
+-    off = 0 if at < 0 else int(at * speed) % span
+-    for col in range(w):
+-        xx = x + col
+-        if not (0 <= xx < W):
+-            continue
+-        lit = mask[(y0 - y):(y1 - y), (off + col) % span, 0] > 0
+-        if lit.any():
+-            canvas[y0:y1, xx][lit] = color
+-
+-
+diff --git a/brain/games/connections.py b/brain/games/connections.py
+index 95452bd..a63fa9b 100644
+--- a/brain/games/connections.py
++++ b/brain/games/connections.py
+@@ -23,2 +23,2 @@ from . import Game, register
+-from .board import (BLACK, INK, SLATE2, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
+-                    ease_out, header, mix, text_centred, fit_text, tile, text_scrolled)
++from .board import (BLACK, DIM, FAINT, INK, SLATE, SLATE2, WHITE, BLUE, PURPLE, GREEN, YELLOW, banner, blank,
++                    ease_out, fill, header, mix, rounded, text, text_centred, fit_text, tile, text_width)
+@@ -263,5 +263,3 @@ class Connections(Game):
+-            # The whole word, always. At 64 a tile holds four characters and
+-            # the words are six, so the long ones travel through their tile
+-            # instead of being cut to PENC and BRID.
+-            text_scrolled(c, w.upper(), x + s, yy + (0 if not big else 15), cell_w - 3 * s, t,
+-                          BLACK if picked else INK, 1, height=7 if not big else 9)
++            label = w.upper() if big else w[:4].upper()
++            text_centred(c, fit_text(label, cell_w - 3 * s, 1), x + (cell_w - s) // 2, yy + (0 if not big else 15),
++                         BLACK if picked else INK, 1)
+diff --git a/brain/games/crossword.py b/brain/games/crossword.py
+index 4f07b70..841e23f 100644
+--- a/brain/games/crossword.py
++++ b/brain/games/crossword.py
+@@ -21 +21 @@ from . import Game, register
+-from .board import (BLACK, DIM, INK, RED, SLATE2, YELLOW, banner, blank, header,
++from .board import (BLACK, DIM, EDGE, FAINT, INK, RED, SLATE, SLATE2, WHITE, YELLOW, banner, blank, fill, header,
+diff --git a/brain/games/letterboxed.py b/brain/games/letterboxed.py
+index bef75b0..7db7c8e 100644
+--- a/brain/games/letterboxed.py
++++ b/brain/games/letterboxed.py
+@@ -16,0 +17 @@ from __future__ import annotations
++import itertools
+@@ -21,2 +22,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, header,
+-                    line, mix, text, text_centred, fit_text, text_scrolled)
++from .board import (BLACK, DIM, EDGE, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, disc, fill, header,
++                    line, mix, text, text_centred, fit_text)
+@@ -226,6 +227,2 @@ class LetterBoxed(Game):
+-            # The word just played, in full. It was cut to fit the square
+-            # ("PRECISE" came out "PREC."), which hides the thing the game is
+-            # about; a long one travels across the square instead.
+-            box = (x1 - x0) - 8
+-            text_scrolled(c, self.words[-1].upper(), x0 + 4, (y0 + y1) // 2 - 3 * s, box, t,
+-                          INK, s, height=7 if s == 1 else 9)
++            text_centred(c, fit_text(self.words[-1].upper(), (x1 - x0) - 8, s), size // 2,
++                         (y0 + y1) // 2 - 3 * s, INK, s)
+diff --git a/brain/games/spellingbee.py b/brain/games/spellingbee.py
+index c534f8b..1175f67 100644
+--- a/brain/games/spellingbee.py
++++ b/brain/games/spellingbee.py
+@@ -24,2 +24,2 @@ from . import Game, register
+-from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, header,
+-                    hexagon, progress, text, text_centred, text_width, fit_text)
++from .board import (BLACK, DIM, HONEY, INK, SLATE, SLATE2, WHITE, FAINT, banner, blank, ease_out, fill, header,
++                    hexagon, mix, progress, text, text_centred, text_width, fit_text)
+@@ -170,6 +169,0 @@ class SpellingBee(Game):
+-            # One panel has no room for the list of words found, and that is
+-            # fine: the last one is the one you want to see. The score is not
+-            # optional though. It used to show only on the nine panel wall,
+-            # which left the small wall playing a scoring game with the score
+-            # hidden. Word on the left, points on the right, one line.
+-            pts = f"{self.points}"
+@@ -177,3 +171 @@ class SpellingBee(Game):
+-                text(c, fit_text(self.found[0][0].upper(), size - 8 - text_width(pts, 1), 1),
+-                     2, size - 12, INK, 1)
+-            text(c, pts, size - 2 - text_width(pts, 1), size - 12, HONEY, 1)
++                text_centred(c, fit_text(self.found[0][0].upper(), size - 4, 1), cx, size - 12, INK, 1)
+diff --git a/brain/games/strands.py b/brain/games/strands.py
+index 87185a0..76086f0 100644
+--- a/brain/games/strands.py
++++ b/brain/games/strands.py
+@@ -26,2 +26,2 @@ from . import Game, register
+-from .board import (BLACK, BLUE, INK, SLATE2, YELLOW, banner, blank, breathe, disc, fill,
+-                    glow, header, line, mix, text, fit_text)
++from .board import (BLACK, BLUE, DIM, FAINT, INK, SLATE2, WHITE, YELLOW, banner, blank, breathe, disc, fill,
++                    glow, header, line, mix, text, letter_tile, text_centred, fit_text)
+@@ -283,10 +283 @@ class Strands(Game):
+-                    # At 192 a found cell is a bright disc with the letter
+-                    # knocked out of it in black, and it reads beautifully. At
+-                    # 64 the cell is 7px and the letter is 5x7, so there is a
+-                    # single pixel of tile around it: the knocked-out letter
+-                    # loses its edges and a found word turns into a column of
+-                    # solid blocks. So the tile carries the colour darkened and
+-                    # the letter stays the bright one, which keeps the whole
+-                    # glyph and still says plainly that the cell was found.
+-                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell,
+-                         mix(back, BLACK, 0.72))
++                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell, back)
+@@ -295,13 +286,2 @@ class Strands(Game):
+-                # Centred in its cell. At 64 the cell is 7px and the glyph 5,
+-                # and the old +1 pushed the letter flush against the cell's
+-                # right edge: two pixels of bare tile on one side, none on the
+-                # other, so a highlighted letter read as a broken block rather
+-                # than a letter on a tile.
+-                if back is None:
+-                    ink_ = INK
+-                elif big:
+-                    ink_ = BLACK          # knocked out of the bright disc
+-                else:
+-                    ink_ = back           # the bright letter on its dark tile
+-                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 0), int(y - gh_ / 2) + (1 if big else 0),
+-                     ink_, s)
++                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 1), int(y - gh_ / 2) + (1 if big else 0),
++                     BLACK if back else INK, s)

@@ -1,0 +1,87 @@
+{
+  "running": true,
+  "seq": 7,
+  "game": {
+    "name": "connections",
+    "title": "Connections",
+    "players": [
+      "Tessera QA Batch 10"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "Things in a record shop.",
+    "started": 1790466242,
+    "finished": null,
+    "seq": 3,
+    "voice": true,
+    "words": [
+      "moon",
+      "dash",
+      "flash",
+      "lime",
+      "surf",
+      "ivy",
+      "nights",
+      "key",
+      "skate",
+      "spot",
+      "solo",
+      "pyramids"
+    ],
+    "found": [
+      {
+        "theme": "Things in a record shop",
+        "words": [
+          "sleeve",
+          "vinyl",
+          "crate",
+          "needle"
+        ],
+        "colour": "yellow"
+      }
+    ],
+    "picked": [
+      "ivy",
+      "nights"
+    ],
+    "mistakes": 0,
+    "mistakes_left": 4,
+    "groups": null
+  },
+  "session_id": "28d2d6335f934e9aa55caafa767dfd10",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 5,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "crate",
+    "moon",
+    "dash",
+    "flash",
+    "lime",
+    "surf",
+    "ivy",
+    "nights",
+    "key",
+    "skate",
+    "needle",
+    "sleeve",
+    "spot",
+    "solo",
+    "pyramids",
+    "vinyl",
+    "submit"
+  ],
+  "picked": [
+    "ivy",
+    "nights"
+  ]
+}

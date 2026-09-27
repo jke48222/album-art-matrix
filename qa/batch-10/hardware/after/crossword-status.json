@@ -1,0 +1,395 @@
+{
+  "running": true,
+  "seq": 35,
+  "game": {
+    "name": "crossword",
+    "title": "Mini crossword",
+    "players": [
+      "Tessera QA Batch 10"
+    ],
+    "over": false,
+    "won": false,
+    "winner": null,
+    "message": "19 squares to fill.",
+    "started": 1790467252,
+    "finished": null,
+    "seq": 2,
+    "voice": true,
+    "blacks": [
+      [
+        0,
+        0
+      ],
+      [
+        4,
+        4
+      ]
+    ],
+    "grid": [
+      [
+        "#",
+        "p",
+        "u",
+        "f",
+        "f"
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ],
+      [
+        "",
+        "",
+        "",
+        "",
+        "#"
+      ]
+    ],
+    "slots": [
+      {
+        "id": "1A",
+        "n": 1,
+        "dir": "across",
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            0,
+            2
+          ],
+          [
+            0,
+            3
+          ],
+          [
+            0,
+            4
+          ]
+        ],
+        "clue": "A little cloud of smoke"
+      },
+      {
+        "id": "1D",
+        "n": 1,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            1
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            4,
+            1
+          ]
+        ],
+        "clue": "Instrument with 88 keys"
+      },
+      {
+        "id": "2D",
+        "n": 2,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            2
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            4,
+            2
+          ]
+        ],
+        "clue": "Reversed an action"
+      },
+      {
+        "id": "3D",
+        "n": 3,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            3
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "clue": "Not true"
+      },
+      {
+        "id": "4D",
+        "n": 4,
+        "dir": "down",
+        "cells": [
+          [
+            0,
+            4
+          ],
+          [
+            1,
+            4
+          ],
+          [
+            2,
+            4
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "clue": "Run away"
+      },
+      {
+        "id": "5A",
+        "n": 5,
+        "dir": "across",
+        "cells": [
+          [
+            1,
+            0
+          ],
+          [
+            1,
+            1
+          ],
+          [
+            1,
+            2
+          ],
+          [
+            1,
+            3
+          ],
+          [
+            1,
+            4
+          ]
+        ],
+        "clue": "Last in a series"
+      },
+      {
+        "id": "5D",
+        "n": 5,
+        "dir": "down",
+        "cells": [
+          [
+            1,
+            0
+          ],
+          [
+            2,
+            0
+          ],
+          [
+            3,
+            0
+          ],
+          [
+            4,
+            0
+          ]
+        ],
+        "clue": "Caramel-topped custard"
+      },
+      {
+        "id": "6A",
+        "n": 6,
+        "dir": "across",
+        "cells": [
+          [
+            2,
+            0
+          ],
+          [
+            2,
+            1
+          ],
+          [
+            2,
+            2
+          ],
+          [
+            2,
+            3
+          ],
+          [
+            2,
+            4
+          ]
+        ],
+        "clue": "Spoon for serving soup"
+      },
+      {
+        "id": "7A",
+        "n": 7,
+        "dir": "across",
+        "cells": [
+          [
+            3,
+            0
+          ],
+          [
+            3,
+            1
+          ],
+          [
+            3,
+            2
+          ],
+          [
+            3,
+            3
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "clue": "Spice with a licorice flavor"
+      },
+      {
+        "id": "8A",
+        "n": 8,
+        "dir": "across",
+        "cells": [
+          [
+            4,
+            0
+          ],
+          [
+            4,
+            1
+          ],
+          [
+            4,
+            2
+          ],
+          [
+            4,
+            3
+          ]
+        ],
+        "clue": "Point in a network"
+      }
+    ],
+    "chosen": "1D",
+    "selected": [
+      1,
+      1
+    ],
+    "direction": "down",
+    "wrong": [],
+    "checks": 0,
+    "filled": 4,
+    "total": 23,
+    "remaining": 19,
+    "filled_slots": [
+      "1A"
+    ],
+    "feedback": {
+      "kind": "entered",
+      "message": "1 across placed."
+    },
+    "last_move_id": null,
+    "solution": null
+  },
+  "session_id": "b36c697238e84e2fa4ae815448ed26d3",
+  "on_wall": true,
+  "starting": null,
+  "scores": {
+    "You": {
+      "played": 1,
+      "won": 0,
+      "streak": 0,
+      "best": 0
+    }
+  },
+  "last": null,
+  "voice_words": [
+    "across",
+    "down",
+    "check",
+    "backspace",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "anise",
+    "false",
+    "final",
+    "flan",
+    "flee",
+    "ladle",
+    "node",
+    "piano",
+    "puff",
+    "undid"
+  ],
+  "chosen": "1D",
+  "selected": [
+    1,
+    1
+  ]
+}

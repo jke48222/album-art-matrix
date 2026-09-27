@@ -13,18 +13,16 @@ The sets come from Claude when a key is on the wall (a theme, a spangram
 and six to seven words whose letters total forty-eight) or from the
 wall's own sets below; the grid is laid by a randomised search that
 threads every word through the empty cells until the grid is full. Sets
-that will not thread in time fall back to one that does. Options:
+that cannot be threaded within a bounded search fall back to one that can. Options:
 {"set": n}, {"seed": n}.
 """
 from __future__ import annotations
 
 import random
 import re
-import time
 
 from . import Game, register
-from .board import (BLACK, BLUE, INK, SLATE2, YELLOW, banner, blank, breathe, disc, fill,
-                    glow, header, line, mix, text, fit_text)
+from .board import blank, disc, line, text, fill, rect
 from .words import common_set
 
 ROWS, COLS = 8, 6
@@ -82,8 +80,9 @@ def thread(words: list[str], rng: random.Random, budget_s: float = 3.0) -> list[
     total = sum(len(w) for w in words)
     if total != ROWS * COLS:
         return None
-    deadline = time.monotonic() + budget_s
-    while time.monotonic() < deadline:
+    # Fixed work keeps seeded puzzles reproducible on a Pi and a fast host.
+    # The historical budget argument remains compatible with callers.
+    for _ in range(64):
         path = hamiltonian(rng)
         order = list(range(len(words)))
         for _ in range(40):
@@ -107,7 +106,13 @@ def spangram_ok(path: list[tuple[int, int]]) -> bool:
 def build(theme: str, spangram: str, words: list[str], rng: random.Random, budget_s: float = 3.0):
     """The grid and the paths, with the spangram touching two opposite
     sides; None when the letters do not add up or nothing threads."""
+    if not isinstance(theme, str) or not theme.strip() or len(theme) > 120:
+        return None
+    if not isinstance(words, (list, tuple)) or not isinstance(spangram, str):
+        return None
     allw = [spangram] + list(words)
+    if not all(isinstance(w, str) and re.fullmatch(r"[a-z]{4,24}", w) for w in allw) or len(set(allw)) != len(allw):
+        return None
     paths = thread(allw, rng, budget_s)
     if paths is None:
         return None
@@ -130,20 +135,22 @@ class Strands(Game):
         rng = random.Random(self.options.get("seed"))
         chosen = None
         asker = getattr(getattr(self.host, "ctrl", None), "asker", None)
-        if self.options.get("set") is None and asker is not None and getattr(asker, "ready", False):
+        if self.options.get("set") is None and self.options.get("seed") is None and asker is not None and getattr(asker, "ready", False):
             got = None
             try:
                 got = asker.strands_set(rng.random())
             except Exception as exc:
                 print(f"[games] strands from Claude: {exc}", flush=True)
-            if got:
+            if isinstance(got, (list, tuple)) and len(got) == 3:
                 theme, span, words = got
                 built = build(theme, span, words, rng, 4.0)
                 if built:
-                    chosen = (theme, span, words, built)
+                    chosen = (theme, span, list(words), built)
         if chosen is None:
             n = self.options.get("set")
-            sets = [BUNDLED[int(n) % len(BUNDLED)]] if n is not None else rng.sample(BUNDLED, len(BUNDLED))
+            if n is not None and (type(n) is not int or not 0 <= n < len(BUNDLED)):
+                raise ValueError("set must identify a bundled puzzle")
+            sets = [BUNDLED[n]] if n is not None else rng.sample(BUNDLED, len(BUNDLED))
             for theme, span, words in sets:
                 built = build(theme, span, words, rng, 6.0)
                 if built:
@@ -156,15 +163,45 @@ class Strands(Game):
         self.extra: list[str] = []
         self.hints = 0
         self.hinted: str | None = None
+        self.hint_ordered = False
         self.message = f"Theme: {self.theme}."
 
     def apply(self, move: dict, player: str) -> dict:
-        if move.get("hint"):
-            return self.hint()
-        word = str(move.get("word") or move.get("guess") or "").lower().strip()
+        if self.over:
+            return {"error": "the game is over"}
+        if not isinstance(move, dict):
+            return {"error": "send a word or trace"}
+        if "hint" in move:
+            return self.hint() if move["hint"] is True else {"error": "hint must be true"}
+        word = move.get("word", move.get("guess", ""))
+        if not isinstance(word, str):
+            return {"error": "send a word"}
+        word = word.lower().strip()
+        if "path" in move:
+            path = move["path"]
+            if not self.valid_trace(path):
+                return {"error": "trace neighbouring letters without repeating a cell"}
+            traced = "".join(self.grid[r][c] for r, c in path)
+            if word and word != traced:
+                return {"error": "the word does not match the trace"}
+            word = traced
         return self.say(word, player)
 
+    @staticmethod
+    def valid_trace(path) -> bool:
+        if not isinstance(path, list) or not 4 <= len(path) <= ROWS * COLS:
+            return False
+        if any(not isinstance(cell, (list, tuple)) or len(cell) != 2 or
+               type(cell[0]) is not int or type(cell[1]) is not int or
+               not 0 <= cell[0] < ROWS or not 0 <= cell[1] < COLS for cell in path):
+            return False
+        if len(set(tuple(cell) for cell in path)) != len(path):
+            return False
+        return all(max(abs(a[0] - b[0]), abs(a[1] - b[1])) == 1 for a, b in zip(path, path[1:]))
+
     def hear(self, text: str, player: str) -> dict | None:
+        if not isinstance(text, str):
+            return None
         t = text.lower().strip()
         if t in ("hint", "give me a hint", "a hint please"):
             return self.hint()
@@ -182,14 +219,15 @@ class Strands(Game):
     def say(self, word: str, player: str) -> dict:
         if self.over:
             return {"error": "the game is over"}
-        if len(word) < 4:
-            return {"error": "four letters or more"}
+        if not isinstance(word, str) or not re.fullmatch(r"[a-z]{4,48}", word):
+            return {"error": "use four or more English letters"}
         if word in self.found:
             return {"error": "already found"}
         if word == self.spangram or word in self.words:
             self.found.append(word)
             if self.hinted == word:
                 self.hinted = None
+                self.hint_ordered = False
             span = word == self.spangram
             self.message = "The spangram!" if span else f"{len(self.words) + 1 - len(self.found)} to go."
             if len(self.found) == len(self.words) + 1:
@@ -198,7 +236,9 @@ class Strands(Game):
                 self.changed()
             return {"word": word, "theme_word": True, "spangram": span,
                     "path": self.path_of(word)}
-        if word in common_set() and word not in self.extra and self._in_grid(word):
+        if word in self.extra:
+            return {"error": "already counted toward a hint"}
+        if word in common_set() and self._in_grid(word):
             self.extra.append(word)
             self.message = f"Not a theme word. {3 - len(self.extra) % 3 if len(self.extra) % 3 else 'Hint ready'}."
             if len(self.extra) % 3 == 0:
@@ -210,19 +250,27 @@ class Strands(Game):
     def hint(self) -> dict:
         if self.over:
             return {"error": "the game is over"}
+        if self.hinted and self.hint_ordered:
+            return {"error": "follow the outlined strand before using another hint"}
         if len(self.extra) // 3 <= self.hints:
             return {"error": "find three extra words for a hint"}
-        nxt = next((w for w in self.words if w not in self.found), None)
+        nxt = self.hinted or next((w for w in self.words if w not in self.found), None)
         if nxt is None:
             return {"error": "only the spangram is left"}
         self.hints += 1
+        self.hint_ordered = self.hinted == nxt
         self.hinted = nxt
-        self.message = "The hint is lit."
+        self.message = "Follow the dotted path." if self.hint_ordered else "The outlined letters belong to one word."
         self.changed()
-        return {"hint": self.path_of(nxt)}
+        return {"hint": self.path_of(nxt), "ordered": self.hint_ordered}
 
     def _in_grid(self, word: str) -> bool:
         """Can the word be traced through neighbouring cells?"""
+        if not word or len(word) > ROWS * COLS:
+            return False
+        letters = "".join("".join(row) for row in self.grid)
+        if any(word.count(ch) > letters.count(ch) for ch in set(word)):
+            return False
         def go(k, y, x, used):
             if k == len(word):
                 return True
@@ -243,70 +291,74 @@ class Strands(Game):
         return {"theme": self.theme, "rows": ["".join(r) for r in self.grid],
                 "found": [{"word": w, "spangram": w == self.spangram, "path": self.path_of(w)} for w in self.found],
                 "extra": self.extra, "hints": self.hints, "hint": self.path_of(self.hinted) if self.hinted else None,
-                "left": len(self.words) + 1 - len(self.found),
+                "left": len(self.words) + 1 - len(self.found), "total": len(self.words) + 1,
+                "hints_available": max(0, len(self.extra) // 3 - self.hints),
+                "hint_progress": len(self.extra) % 3, "hint_ordered": self.hint_ordered,
                 "answers": ([self.spangram] + list(self.words)) if self.over else None}
 
     def voice_words(self) -> list[str]:
         return [self.spangram] + list(self.words) + ["hint"]
 
-    def frame_at(self, size: int, t: float):
-        c = blank(size)
-        big = size > 96
-        s = 2 if big else 1
-        cell = 7 if not big else 21
-        gap = 1 if not big else 2
-        gw = COLS * cell + (COLS - 1) * gap
-        gh = ROWS * cell + (ROWS - 1) * gap
-        x0 = (size - gw) // 2
-        y0 = (size - gh) // 2 if not big else 16
-        def centre(r, cc):
-            return (x0 + cc * (cell + gap) + cell / 2, y0 + r * (cell + gap) + cell / 2)
-        colour = {}
-        # the paths first, as lines between centres, then the letters over them
-        for w in self.found:
-            col = YELLOW if w == self.spangram else BLUE
-            path = self.path_of(w)
-            for (r, cc) in path:
-                colour[(r, cc)] = col
-            for a, b in zip(path, path[1:]):
-                line(c, centre(*a), centre(*b), mix(col, BLACK, 0.35), 5 if big else 1)
-        hinted = set(tuple(p) for p in (self.path_of(self.hinted) if self.hinted else []))
-        for r in range(ROWS):
-            for cc in range(COLS):
-                x, y = centre(r, cc)
-                back = colour.get((r, cc))
-                if back is None and (r, cc) in hinted:
-                    glow(c, x, y, cell * 0.9, YELLOW, 0.25 + 0.25 * breathe(t, 1.6))
-                if big:
-                    disc(c, x, y, cell / 2 - 0.5, back or SLATE2, soft=0.8)
-                elif back:
-                    # At 192 a found cell is a bright disc with the letter
-                    # knocked out of it in black, and it reads beautifully. At
-                    # 64 the cell is 7px and the letter is 5x7, so there is a
-                    # single pixel of tile around it: the knocked-out letter
-                    # loses its edges and a found word turns into a column of
-                    # solid blocks. So the tile carries the colour darkened and
-                    # the letter stays the bright one, which keeps the whole
-                    # glyph and still says plainly that the cell was found.
-                    fill(c, int(x - cell / 2), int(y - cell / 2), cell, cell,
-                         mix(back, BLACK, 0.72))
-                ch = self.grid[r][cc]
-                gw_, gh_ = 5 * s, 7 * s
-                # Centred in its cell. At 64 the cell is 7px and the glyph 5,
-                # and the old +1 pushed the letter flush against the cell's
-                # right edge: two pixels of bare tile on one side, none on the
-                # other, so a highlighted letter read as a broken block rather
-                # than a letter on a tile.
-                if back is None:
-                    ink_ = INK
-                elif big:
-                    ink_ = BLACK          # knocked out of the bright disc
-                else:
-                    ink_ = back           # the bright letter on its dark tile
-                text(c, ch.upper(), int(x - gw_ / 2) + (1 if big else 0), int(y - gh_ / 2) + (1 if big else 0),
-                     ink_, s)
-        if self.over:
-            banner(c, size, self.message, BLACK, YELLOW)
-        header(c, size, "STRANDS", fit_text(self.theme, 100, 1) if not self.over else "", s, accent=BLUE)
-        return c
+    @staticmethod
+    def geometry(size: int):
+        # An 8×6 field centred in square artwork, shared with the phone.
+        if size <= 96:
+            # Align the eight 5×7 letter rows to whole LED cells. At 64 this
+            # gives each glyph seven rows plus one clear row of separation.
+            step = size / 8
+            return (size - 5 * step) / 2, step / 2, step
+        step = size * .12
+        return size * .2, size * .08, step
 
+    def frame_at(self, size: int, t: float):
+        canvas = blank(size)
+        canvas[:] = (11, 10, 9)
+        x0, y0, step = self.geometry(size)
+        blue, gold, paper, dark = (144, 196, 215), (223, 185, 101), (250, 242, 222), (13, 21, 25)
+        centre = lambda r, c: (x0 + c * step, y0 + r * step)
+        if self.over:
+            # Completion framing is behind the board: at true64, eight full
+            # glyph rows leave no room for an overlaid horizontal border.
+            rect(canvas, 1, 1, size - 2, size - 2, gold, max(1, round(size * .005)))
+        colours = {}
+        width = max(1, round(size * .038))
+        for word in self.found:
+            colour = gold if word == self.spangram else blue
+            path = self.path_of(word)
+            for cell in path:
+                colours[tuple(cell)] = colour
+            for a, b in zip(path, path[1:]):
+                line(canvas, centre(*a), centre(*b), tuple(int(v * .45) for v in colour), width)
+        hinted = self.path_of(self.hinted) if self.hinted else []
+        if self.hint_ordered:
+            for a, b in zip(hinted, hinted[1:]):
+                ax, ay = centre(*a); bx, by = centre(*b)
+                for k in range(1, 6, 2):
+                    disc(canvas, ax + (bx - ax) * k / 6, ay + (by - ay) * k / 6, max(.6, size * .005), paper)
+        hinted = set(tuple(cell) for cell in hinted)
+        scale = max(1, int(size * .083 / 7))
+        # A full pixel-font rectangle has wider corners than a typographic
+        # cap-height. Keep even N/M corner pixels inside the bright disc.
+        radius = size * .046 if size <= 96 else max(size * .046, (2.5 ** 2 + 3.5 ** 2) ** .5 * scale + 1)
+        for r in range(ROWS):
+            for c in range(COLS):
+                x, y = centre(r, c)
+                back = colours.get((r, c))
+                if (r, c) in hinted:
+                    disc(canvas, x, y, radius + max(1, size * .008), paper)
+                disc(canvas, x, y, radius, back or (26, 30, 31))
+                ink = dark if back and size > 96 else back or paper
+                if size <= 96:
+                    # The coloured path must not show through a letter's
+                    # counters. Clear its full cell before stamping the bright
+                    # glyph; neighbouring cells cannot overwrite its last row.
+                    tx, ty = int(x) - 2, int(y) - 3
+                    background = tuple(int(v * .20) for v in back) if back else (26, 30, 31)
+                    fill(canvas, tx - 1, ty, 7, 7, background)
+                else:
+                    tx, ty = round(x - 2.5 * scale), round(y - 3.5 * scale)
+                text(canvas, self.grid[r][c].upper(), tx, ty, ink, scale)
+                if back and size > 96:
+                    marker_y = ty + 7 * scale + 1
+                    line(canvas, (x - radius * .3, marker_y), (x + radius * .3, marker_y), dark, max(1, round(size * .003)))
+        return canvas
