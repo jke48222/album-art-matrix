@@ -1,7 +1,12 @@
 import XCTest
 
 final class GameInteractionTests: XCTestCase {
-    let fixture = "http://127.0.0.1:65357"
+    /// test_motion_games_ui.py passes its fixture port as
+    /// TEST_RUNNER_TESSERA_QA_FIXTURE_PORT, which xcodebuild hands this runner
+    /// as TESSERA_QA_FIXTURE_PORT, so suites can run side by side on their own
+    /// ports. 65357 is the suite's own port, for a run started from Xcode.
+    static let host = "127.0.0.1:" + (ProcessInfo.processInfo.environment["TESSERA_QA_FIXTURE_PORT"] ?? "65357")
+    let fixture = "http://" + GameInteractionTests.host
 
     func api(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {
         var request = URLRequest(url: URL(string: fixture + path)!)
@@ -17,7 +22,7 @@ final class GameInteractionTests: XCTestCase {
         _ = try await api("/qa/reset", ["name": name, "phase": phase])
         if failArtwork { _ = try await api("/qa/fail-artwork", [:]) }
         let app = XCUIApplication(bundleIdentifier: "com.jalenedusei.tessera")
-        app.launchArguments = ["-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES", "-intro.style", "none", "-design", "room", "-wall.host", "127.0.0.1:65357", "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO", "-settings", "-settings-page", "games", "-game-page", name]
+        app.launchArguments = ["-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES", "-intro.style", "none", "-design", "room", "-wall.host", Self.host, "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO", "-settings", "-settings-page", "games", "-game-page", name]
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 12))
         return app

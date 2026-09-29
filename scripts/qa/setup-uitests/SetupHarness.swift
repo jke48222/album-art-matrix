@@ -7,7 +7,12 @@ import XCTest
 /// SetupInteractionTests, whose own tests would otherwise run again under
 /// every subclass. This class has no tests, so XCTest runs none for it.
 class SetupHarnessCase: XCTestCase {
-    static let fixture = "127.0.0.1:65367"
+    /// The fixture's address. test_setup_ui.py and test_widgets_ui.py set
+    /// TEST_RUNNER_TESSERA_QA_FIXTURE_PORT, which xcodebuild hands this runner
+    /// as TESSERA_QA_FIXTURE_PORT, so the two suites (or two shards of one)
+    /// can run side by side on their own ports. 65367 is the setup suite's
+    /// own port, for a run started from Xcode without the script.
+    static let fixture = "127.0.0.1:" + (ProcessInfo.processInfo.environment["TESSERA_QA_FIXTURE_PORT"] ?? "65367")
 
     /// A fixture call that must answer 200. GET without a body, POST with one.
     func api(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {

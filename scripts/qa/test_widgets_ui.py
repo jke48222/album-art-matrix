@@ -2,11 +2,19 @@
 """Drive the installed app's Home screen page and the widget's deep link with XCUITest.
 
 The bundle is scripts/qa/widgets-uitests plus the shared SetupHarness.swift,
-against the serve_setup.py fixture on 127.0.0.1:65367, like test_setup_ui.py.
+against the serve_setup.py fixture on 127.0.0.1:65369. That is its own
+port, not test_setup_ui.py's 65367, so the two suites can run at once.
+--port moves the fixture and the tests follow it (they read
+TESSERA_QA_FIXTURE_PORT). That is how run_ui_suites.py runs all seven
+suites side by side, one simulator each.
+
+    .venv/bin/python scripts/qa/test_widgets_ui.py --app <Tessera.app> [--simulator UDID]
+        [--port N] [--build-dir DIR] [--no-install] [--only-testing ID ...]
 """
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
 import socket
 import subprocess
@@ -16,57 +24,88 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 SIMULATOR = '9108AFCE-E437-42FF-A946-C41349BE6540'
-PORT = 65367
+PORT = 65369
+
+
+def fixture_command(port):
+    """serve_setup.py takes --port itself."""
+    return [sys.executable, str(ROOT / 'scripts/qa/serve_setup.py'), '--port', str(port)]
 
 
 def main():
-    p = argparse.ArgumentParser(description=__doc__)
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument('--app', type=Path, required=True)
     p.add_argument('--output', type=Path, default=ROOT / 'qa/batch-17/widgets-interactions.json')
     p.add_argument('--simulator', default=SIMULATOR)
-    p.add_argument('--only-testing', help='for example WidgetsPageTests/WidgetsPageTests/testCurrentPreview')
+    p.add_argument('--port', type=int, default=PORT, help=f'the fixture port, {PORT} by default')
+    p.add_argument('--build-dir', type=Path,
+                   help='keep the generated project and derived data here instead of a temporary folder, '
+                        'so a later run only rebuilds what changed. One run at a time per folder.')
+    p.add_argument('--no-install', action='store_true',
+                   help='the app is already installed on this simulator (run_ui_suites.py installs it once)')
+    p.add_argument('--only-testing', action='append',
+                   help='for example WidgetsPageTests/WidgetsPageTests/testName; repeat for more')
     a = p.parse_args()
     a.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='tessera-native-widgets-') as temporary:
         work = Path(temporary)
-        project = work / 'project'
-        project.mkdir()
-        sources = [str(ROOT / 'scripts/qa/widgets-uitests'), str(ROOT / 'scripts/qa/setup-uitests/SetupHarness.swift')]
+        build = a.build_dir.resolve() if a.build_dir else work
+        project = build / 'project'
+        project.mkdir(parents=True, exist_ok=True)
+        target = 'WidgetsPageTests'
+        bundle = {'type': 'bundle.ui-testing', 'platform': 'iOS',
+                  'sources': [str(ROOT / 'scripts/qa/widgets-uitests'),
+                              str(ROOT / 'scripts/qa/setup-uitests/SetupHarness.swift')],
+                  'settings': {'base': {'PRODUCT_BUNDLE_IDENTIFIER': 'com.jalenedusei.qa.widgets'}}}
         spec = {'name': 'TesseraWidgetsInteractions', 'options': {'bundleIdPrefix': 'com.jalenedusei.qa'},
                 'settings': {'base': {'IPHONEOS_DEPLOYMENT_TARGET': '18.0', 'SWIFT_VERSION': '5.0',
                                       'GENERATE_INFOPLIST_FILE': 'YES', 'CODE_SIGNING_ALLOWED': 'NO'}},
-                'targets': {'WidgetsPageTests': {'type': 'bundle.ui-testing', 'platform': 'iOS', 'sources': sources,
-                                                 'settings': {'base': {'PRODUCT_BUNDLE_IDENTIFIER': 'com.jalenedusei.qa.widgets'}}}},
-                'schemes': {'WidgetsPageTests': {'build': {'targets': {'WidgetsPageTests': ['test']}},
-                                                 'test': {'targets': ['WidgetsPageTests']}}}}
+                'targets': {target: bundle},
+                'schemes': {target: {'build': {'targets': {target: ['test']}}, 'test': {'targets': [target]}}}}
         (work / 'project.json').write_text(json.dumps(spec))
-        subprocess.run(['xcodegen', 'generate', '--spec', str(work / 'project.json'), '--project', str(project)], check=True)
-        subprocess.run(['xcrun', 'simctl', 'install', a.simulator, str(a.app.resolve())], check=True)
-        with socket.socket() as probe:
-            try:
-                probe.bind(('127.0.0.1', PORT))
-            except OSError as error:
-                raise RuntimeError(f'Port {PORT} is occupied; wait for the previous interaction test to finish') from error
-        log = (work / 'fixture.log').open('w')
-        server = subprocess.Popen([sys.executable, str(ROOT / 'scripts/qa/serve_setup.py')], cwd=ROOT,
-                                  stdout=log, stderr=subprocess.STDOUT)
+        subprocess.run(['xcodegen', 'generate', '--spec', str(work / 'project.json'), '--project', str(project)],
+                       check=True)
+        if not a.no_install:
+            subprocess.run(['xcrun', 'simctl', 'install', a.simulator, str(a.app.resolve())], check=True)
+        # Anything already answering on the port would take the tests' calls.
+        # A connection, not a bind, is the check: a fixture that just stopped
+        # leaves the port in TIME_WAIT, which a bind reports as busy although
+        # the next fixture (allow_reuse_address) can listen there at once.
         try:
-            for _ in range(50):
+            socket.create_connection(('127.0.0.1', a.port), timeout=.5).close()
+            occupied = True
+        except OSError:
+            occupied = False
+        if occupied:
+            raise RuntimeError(f'Port {a.port} is occupied; wait for the previous interaction test to finish '
+                               'or pass another --port')
+        log = (work / 'fixture.log').open('w')
+        server = subprocess.Popen(fixture_command(a.port), cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+        try:
+            # Up to 30 s: beside other suites the fixture's imports can take
+            # longer than on an idle Mac. One that never answers stops here
+            # rather than failing every test.
+            for _ in range(150):
                 if server.poll() is not None:
-                    raise RuntimeError(f'Fixture failed to start; port {PORT} must be free')
+                    raise RuntimeError(f'Fixture failed to start; port {a.port} must be free')
                 try:
-                    with socket.create_connection(('127.0.0.1', PORT), timeout=.2):
+                    with socket.create_connection(('127.0.0.1', a.port), timeout=.2):
                         break
                 except OSError:
-                    time.sleep(.1)
-            command = ['xcodebuild', '-project', str(project / 'TesseraWidgetsInteractions.xcodeproj'),
-                       '-scheme', 'WidgetsPageTests', '-destination', 'id=' + a.simulator,
-                       '-derivedDataPath', str(work / 'build'), '-resultBundlePath', str(work / 'run.xcresult'),
-                       '-collect-test-diagnostics', 'never', 'test']
-            if a.only_testing:
-                command.append('-only-testing:' + a.only_testing)
+                    time.sleep(.2)
+            else:
+                raise RuntimeError(f'Fixture did not answer on port {a.port} within 30 s')
+            command = ['xcodebuild', '-project', str(project / 'TesseraWidgetsInteractions.xcodeproj'), '-scheme', target,
+                       '-destination', 'id=' + a.simulator, '-derivedDataPath', str(build / 'build'),
+                       '-resultBundlePath', str(work / 'run.xcresult'), '-collect-test-diagnostics', 'never', 'test']
+            for only in a.only_testing or []:
+                command.append('-only-testing:' + only)
+            # xcodebuild hands every TEST_RUNNER_<NAME> variable to the test
+            # runner as <NAME>. The Swift tests build the fixture address
+            # from TESSERA_QA_FIXTURE_PORT.
+            environment = dict(os.environ, TEST_RUNNER_TESSERA_QA_FIXTURE_PORT=str(a.port))
             with a.output.with_suffix('.log').open('w') as output:
-                result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT)
+                result = subprocess.run(command, stdout=output, stderr=subprocess.STDOUT, env=environment)
             summary = subprocess.run(['xcrun', 'xcresulttool', 'get', 'test-results', 'summary', '--path',
                                       str(work / 'run.xcresult'), '--format', 'json'], text=True, capture_output=True)
             text = a.output.with_suffix('.log').read_text()
@@ -76,9 +115,10 @@ def main():
                       if f.name in ('Tessera', 'Tessera.debug.dylib')}
             receipt = {'passed': result.returncode == 0, 'cases': passed, 'failed_cases': failed,
                        'app': str(a.app.resolve()), 'app_sha256': hashes,
-                       'scope': 'Real XCUITest on the production Home screen page with pinned widget snapshots '
-                                '(-widget-snapshot, -widget-now, -widget-installed) and the loopback serve_setup.py '
-                                'wall. testDeepLinkKeepsRunningCheck is best effort. No real walls or credentials.',
+                       'simulator': a.simulator, 'fixture_port': a.port,
+                       'scope': ('Real XCUITest on the production Home screen page with pinned widget snapshots '
+                                '(-widget-snapshot, -widget-now, -widget-installed) and the loopback serve_setup.py wall.'
+                                ' testDeepLinkKeepsRunningCheck is best effort. No real walls or credentials.'),
                        'xcode_summary': json.loads(summary.stdout) if summary.returncode == 0 else None}
             a.output.write_text(json.dumps(receipt, indent=2) + '\n')
             print(json.dumps({'passed': receipt['passed'], 'cases': len(passed), 'failed': len(failed),

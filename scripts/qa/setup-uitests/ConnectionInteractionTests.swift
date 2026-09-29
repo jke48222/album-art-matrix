@@ -124,7 +124,7 @@ final class ConnectionInteractionTests: SetupHarnessCase {
         tap("connection.address.change", in: app)
         let field = app.textFields["connection.address.field"]
         XCTAssertTrue(field.waitForExistence(timeout: 5))
-        replace(field, with: "http://127.0.0.1:65367/")
+        replace(field, with: "http://\(Self.fixture)/")
         XCTAssertTrue(waitForLabel(element("connection.address.preview", in: app), containing: "This is the address in use."))
         replace(field, with: "bad host!")
         XCTAssertTrue(element("connection.address.problem", in: app).waitForExistence(timeout: 5))
@@ -140,7 +140,7 @@ final class ConnectionInteractionTests: SetupHarnessCase {
         XCTAssertFalse(app.buttons["connection.address.save"].isEnabled)
         dismissKeyboard(app)
         tap("connection.address.cancel", in: app)
-        XCTAssertTrue(waitForLabel(element("connection.address.value", in: app), containing: "127.0.0.1:65367"))
+        XCTAssertTrue(waitForLabel(element("connection.address.value", in: app), containing: Self.fixture))
     }
 
     @MainActor func testConnectionWrongAddressRecovers() async throws {
@@ -159,7 +159,7 @@ final class ConnectionInteractionTests: SetupHarnessCase {
         XCTAssertFalse(recent.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS %@", "Wall stopped responding")).firstMatch.exists,
                        "A wall that never answered cannot have stopped")
-        saveAddress("127.0.0.1:65367", in: app)
+        saveAddress(Self.fixture, in: app)
         waitUntilConnected(app, timeout: 8)
         reveal(recent, in: app)
         XCTAssertTrue(recent.descendants(matching: .any)

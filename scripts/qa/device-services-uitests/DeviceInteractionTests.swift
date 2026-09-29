@@ -1,8 +1,13 @@
 import XCTest
 
 final class DeviceInteractionTests: XCTestCase {
+    /// test_device_services_ui.py passes its fixture port as
+    /// TEST_RUNNER_TESSERA_QA_FIXTURE_PORT, which xcodebuild hands this runner
+    /// as TESSERA_QA_FIXTURE_PORT, so suites can run side by side on their own
+    /// ports. 65365 is the suite's own port, for a run started from Xcode.
+    static let host = "127.0.0.1:" + (ProcessInfo.processInfo.environment["TESSERA_QA_FIXTURE_PORT"] ?? "65365")
     func api(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {
-        var request = URLRequest(url: URL(string: "http://127.0.0.1:65365" + path)!)
+        var request = URLRequest(url: URL(string: "http://" + Self.host + path)!)
         request.timeoutInterval = 8
         if let body {
             request.httpMethod = "POST"; request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -14,7 +19,7 @@ final class DeviceInteractionTests: XCTestCase {
     @MainActor func launch(_ page: String, phase: String = "connected") async throws -> XCUIApplication {
         _ = try await api("/qa/reset", ["phase": phase])
         let app = XCUIApplication(bundleIdentifier: "com.jalenedusei.tessera")
-        app.launchArguments = ["-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES", "-intro.style", "none", "-design", "room", "-wall.host", "127.0.0.1:65365", "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO", "-settings", "-settings-page", "services", "-service-page", page]
+        app.launchArguments = ["-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES", "-intro.style", "none", "-design", "room", "-wall.host", Self.host, "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO", "-settings", "-settings-page", "services", "-service-page", page]
         app.launch(); XCTAssertTrue(app.wait(for: .runningForeground, timeout: 12))
         XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 12))
         return app
