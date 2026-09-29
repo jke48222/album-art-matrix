@@ -7,6 +7,13 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Technor-Bold.otf</string>
+		<string>Switzer-Medium.otf</string>
+		<string>Switzer-Semibold.otf</string>
+		<string>MartianMono-Medium.ttf</string>
+	</array>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>The widget asks the wall what it is showing.</string>
 	<key>NSAppTransportSecurity</key>

@@ -75,6 +75,8 @@ struct RoomIntro: View {
     @State private var lightPlayer: AVPlayer? = nil
     @State private var badgePlayer: AVPlayer? = nil
     @State private var ended = false
+    /// Appeared at launch before the scene was active. See load().
+    @State private var waitingForActive = false
     @State private var endObserver: NSObjectProtocol? = nil
     @State private var startTask: Task<Void, Never>?
     @State private var finishTask: Task<Void, Never>?
@@ -143,7 +145,9 @@ struct RoomIntro: View {
         .ignoresSafeArea()
         .onAppear(perform: load)
         .onChange(of: reducedMotion) { _, reduced in if reduced { finish() } }
-        .onChange(of: scenePhase) { _, phase in if phase != .active { finish() } }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { if waitingForActive { load() } } else { finish() }
+        }
         .onDisappear {
             startTask?.cancel(); finishTask?.cancel()
             // all three reels, not only the first: a replay or an early
@@ -156,7 +160,13 @@ struct RoomIntro: View {
     }
 
     private func load() {
-        guard !reducedMotion, scenePhase == .active else { finish(); return }
+        guard !reducedMotion, scenePhase != .background else { finish(); return }
+        // A cold launch shows the room while its scene is still inactive, a
+        // moment before it becomes active. Ending the film then, as this did
+        // for anything but active, stopped the room's own opening before its
+        // first frame at every launch. It starts when the scene is in front.
+        guard scenePhase == .active else { waitingForActive = true; return }
+        waitingForActive = false
         guard player == nil, let url = Bundle.main.url(forResource: films.main, withExtension: "mov") else {
             DispatchQueue.main.async { onDone() }; return
         }

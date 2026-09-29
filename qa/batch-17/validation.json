@@ -1,0 +1,53 @@
+{
+  "batch": 17,
+  "base": "f36b741",
+  "implemented_units": [
+    "D06",
+    "D07",
+    "D08",
+    "D09",
+    "E01"
+  ],
+  "validated_at": "2026-09-29T21:56:04.451369+00:00",
+  "builds": {
+    "simulator_debug": "passed",
+    "signed_phone_debug": "passed",
+    "device_release": "passed"
+  },
+  "tests": {
+    "python_full_suite": 2153,
+    "swift_model_check_runners": 32,
+    "native_interactions": 132,
+    "native_suites": {
+      "setup": 73,
+      "widgets": 18,
+      "device_services": 9,
+      "service_details": 9,
+      "connections_arcade": 7,
+      "party_games": 9,
+      "motion_games": 7
+    },
+    "symbols": {
+      "checked": 157,
+      "missing": [],
+      "passed": 157
+    },
+    "widget_render_checks": "4370 of 4370 across 660 renders"
+  },
+  "captures": {
+    "case_folders": 150,
+    "all_from_app": {
+      "Tessera.debug.dylib": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2",
+      "Tessera": "96330cbe14a79f9d61f237e050c9bf1b3c9196981101553e148dfadba3d86d58"
+    }
+  },
+  "deployment": "Wall brain updated (control, display_session, main, pi_renderer, tuning), both services active, the Off mode kept. On the real wall: renderer attached with one connect, memory, storage and detailed power and heat bits reported, the wall name read back, tuning reports the renderer running. Signed app installed on the iPhone 18 Pro Max.",
+  "review": "Each unit designed from Mobbin research and critiqued before building; built by one owner per phase and page with a reviewer each; three visual critic and fix rounds over every capture; the final recapture confirmed every last-round fix with no retakes.",
+  "limitations": [
+    "Physical review is the owner's: the widgets on a real Home Screen (Default, Dark, Tinted, Clear, StandBy), Local Network denial and a real mDNS failure (the simulator never denies), the restart button on a live wall and dragging a tuning knob by hand.",
+    "Before captures exist for Health, Addresses and About only; the old tuning page had no launch hook and the old widgets had no render harness.",
+    "On the Tuning page, while another phone's panel check holds the wall, the masthead still reads \"Change one, then look at the wall.\"",
+    "One Python test failed once in five full runs and did not recur; it was not identified."
+  ],
+  "tracking_semantics": "IDs indicate finished implementation; roadmap checkboxes await physical review."
+}

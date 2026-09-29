@@ -211,7 +211,8 @@ expired/retry and unlink states wherever the integration supports them.
 Sources: [Onboarding](../tessera/Tessera/Onboarding.swift),
 [SettingsSheet](../tessera/Tessera/SettingsSheet.swift),
 [Calibrate](../tessera/Tessera/Calibrate.swift),
-[Tuning](../tessera/Tessera/Tuning.swift), [knob registry](../brain/tuning.py).
+[Panel tuning](../tessera/Tessera/PanelTuningPage.swift),
+[tuning store](../tessera/Tessera/TuningStore.swift), [knob registry](../brain/tuning.py).
 
 - [ ] **D01 — First run.** Welcome, wall discovery/found/no-wall, glow, service
   setup, light and done; permission states and offline stand-in.
@@ -273,7 +274,7 @@ currently synchronized with the native app or connected to the wall.
 ## X — Shared foundations and secondary scope
 
 Sources: [Theme](../tessera/Tessera/Theme.swift),
-[Components](../tessera/Tessera/Components.swift), [Panel](../tessera/Tessera/Panel.swift),
+[Components](../tessera/Tessera/Components.swift), [Panel](../tessera/Shared/Panel.swift),
 [README](../README.md), [design tools](../design).
 
 - [ ] **X01 — Typography, colour and controls.** Technor/Switzer/Martian Mono,

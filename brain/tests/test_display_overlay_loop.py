@@ -233,3 +233,26 @@ def test_a_guest_check_ending_mid_frame_never_reports_the_code(wall):
     wall.wait(lambda: any(picture == GUEST_CODE for picture, _, _ in wall.shown))
     wall.wait(lambda: ctrl.last_frame == before)
     assert all(reported != GUEST_CODE for _, reported, _ in wall.shown)
+
+
+def test_ceiling_change_during_a_check_reaches_the_nearest_colour_cap(wall):
+    """A tuning pattern stays up while the ceiling is dragged. Only the loop's
+    face branch used to set the cap, and it does not run under a check, so
+    the pattern's dark colours were picked for the old ceiling."""
+    from brain.art import pipeline
+    ctrl = wall.ctrl
+    begin(wall, purpose="tuning")
+    wall.wait(lambda: ctrl.last_frame == CHECK)
+    ctrl.apply({"panel_brightness": 120}, interrupt=False)
+    wall.wait(lambda: pipeline.PANEL_CAP == 120)
+    assert ctrl.display_session.status()["purpose"] == "tuning"
+
+
+def test_a_preview_sink_has_no_renderer_to_report(wall):
+    """No status() on the sink: tuning reports the renderer absent and never
+    shows a restart, and /health has no renderer reading."""
+    assert wall.ctrl.tuning.renderer is None
+    assert wall.ctrl.tuning.renderer_state()["state"] == "absent"
+    assert wall.ctrl.renderer_status() is None
+    assert wall.ctrl.health()["renderer"] is None
+    assert wall.ctrl.fps_target == 120

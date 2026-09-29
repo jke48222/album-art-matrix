@@ -39,7 +39,7 @@ def main():
         binary = folder/'media-tests'
         subprocess.run(['xcrun', 'swiftc', '-O', '-parse-as-library', '-sdk', sdk,
                         '-target', 'arm64-apple-ios18.0-simulator', str(model),
-                        '-D', 'DEBUG', str(root/'tessera/Tessera/Panel.swift'), str(root/'tessera/Tessera/MediaQA.swift'), str(root/'tessera/Shared/VideoPicture.swift'), str(root/'scripts/test_media.swift'),
+                        '-D', 'DEBUG', str(root/'tessera/Shared/Panel.swift'), str(root/'tessera/Tessera/MediaQA.swift'), str(root/'tessera/Shared/VideoPicture.swift'), str(root/'scripts/test_media.swift'),
                         '-o', str(binary)], check=True)
         subprocess.run(['xcrun', 'simctl', 'spawn', args.simulator, str(binary), str(args.output.resolve())], check=True)
 

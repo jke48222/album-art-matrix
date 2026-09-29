@@ -1,0 +1,43 @@
+{
+  "passed": true,
+  "checks": 4370,
+  "failed": [],
+  "renders": 660,
+  "fixtures": [
+    "music",
+    "music-long",
+    "lamp",
+    "music-under-lamp",
+    "weather",
+    "clock",
+    "timer",
+    "timer-done",
+    "idle-dark",
+    "away",
+    "off",
+    "panel-check",
+    "connection-check",
+    "guests-cover",
+    "stale",
+    "stale-days",
+    "outdated",
+    "queued",
+    "preview",
+    "wall192",
+    "missing",
+    "unreadable"
+  ],
+  "now": 1790000000,
+  "timezone": "Europe/London",
+  "locale": "en_GB",
+  "mask": "The rounded corner is the harness's (22 pt continuous), not the system's.",
+  "app": {
+    "source": "/private/tmp/tessera-batch17-build/Build/Products/Debug-iphonesimulator/Tessera.app",
+    "files_sha256": {
+      "Tessera": "96330cbe14a79f9d61f237e050c9bf1b3c9196981101553e148dfadba3d86d58",
+      "Tessera.debug.dylib": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "scope": "Software renders of the widget's own SwiftUI views at scale 3 in the app process. Tinted, Clear and StandBy appearances and the system's own mask are not certified here, and software previews do not certify LED colour."
+}

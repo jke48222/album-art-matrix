@@ -340,7 +340,7 @@ struct OnboardingFlow: View {
                 stage(illustrated: false)
                 // The choice lives in memory only. The next launch looks for
                 // the wall again, so the copy names both ways back.
-                Text("If you use this phone only, Tessera stops talking to the wall until you look for it again in Settings under Addresses, or until you close and reopen the app.")
+                Text("If you use this phone only, Tessera stops talking to the wall until you look for it again in Settings under Connection, or until you close and reopen the app.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             } else {
                 heading("No wall connected", detail: "Tessera is not connected to your wall. You can try it on this phone, or check the wall and look again.")
@@ -355,7 +355,7 @@ struct OnboardingFlow: View {
         DisclosureGroup(isExpanded: $networkHelp) {
             VStack(alignment: .leading, spacing: 15) {
                 Text("Keep the wall powered on and connect this phone to the same Wi-Fi. Guest networks may prevent devices from finding each other.")
-                Text("In iPhone Settings, allow Tessera access to the Local Network. If you use a custom wall address, you can change it later in Settings under Addresses.")
+                Text("In iPhone Settings, allow Tessera access to the Local Network. If you use a custom wall address, you can change it later in Settings under Connection.")
                 Button("Open iPhone Settings", action: openSettings)
                     .font(.ui(14, .semibold)).frame(minHeight: 44)
                     .accessibilityIdentifier("onboarding.networkSettings")
@@ -404,7 +404,7 @@ struct OnboardingFlow: View {
             if !wall.link.isLive {
                 // A stand-in chosen over a live wall stops probing, so this
                 // cannot promise the wall will connect by itself.
-                Text("You can allow Apple Music now. Services that run on the wall need it connected. You can look for your wall again in Settings under Addresses.")
+                Text("You can allow Apple Music now. Services that run on the wall need it connected. You can look for your wall again in Settings under Connection.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -457,7 +457,7 @@ struct OnboardingFlow: View {
                 }
             }
             if !wall.link.isLive {
-                Text(wall.link.isStandIn ? "The sun schedule needs a connected wall. You can look for it again in Settings under Addresses." : "Reconnect to your wall to save brightness and the sun schedule.")
+                Text(wall.link.isStandIn ? "The sun schedule needs a connected wall. You can look for it again in Settings under Connection." : "Reconnect to your wall to save brightness and the sun schedule.")
                     .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -467,14 +467,14 @@ struct OnboardingFlow: View {
         VStack(alignment: .leading, spacing: 24) {
             heading("Setup complete", detail: wall.link.isLive ? "Play some music and it will show on your wall."
                     : (wall.link.isStandIn ? "Play some music and it will show on this phone."
-                       : "Your wall is not connected right now. You can look for it again in Settings under Addresses."))
+                       : "Your wall is not connected right now. You can look for it again in Settings under Connection."))
             stage(illustrated: false)
             VStack(spacing: 0) {
                 summary("The wall", wall.link.isLive ? "Connected" : (wall.link.isStandIn ? "On this phone" : "Waiting to reconnect"))
                 summary("Music", musicConnected ? "Apple Music access allowed" : connectedMusicSummary)
                 summary("Light", "\(Int((wall.state.brightness * 100).rounded()))%, \(wall.state.sun == "on" ? "follows the sun" : "set by you")")
             }
-            Text("You can change connections, brightness and your home view in Settings.")
+            Text("You can change connections, brightness and the app design in Settings.")
                 .font(.ui(13)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }
     }
@@ -579,7 +579,7 @@ struct OnboardingFlow: View {
                 // Skip the glow (shown while a problem is set) and the help.
                 move(to: .found)
                 unseen = true
-                problem = "The wall at this address accepted the glow. If yours did not light up, check that its panels have power and try again, or skip the glow and check the address later in Settings under Addresses."
+                problem = "The wall at this address accepted the glow. If yours did not light up, check that its panels have power and try again, or skip the glow and check the address later in Settings under Connection."
             }
         case .noWall:
             if wallAnswering {
@@ -753,6 +753,8 @@ struct OnboardingFlow: View {
         case "guests": "A guest code is on the wall."
         case "panel": "A panel check is on the wall."
         case "onboarding": "Setup is already showing a glow on the wall."
+        case "identify": "A short glow is on the wall."
+        case "tuning": "Panel tuning is showing a test pattern."
         default: "Another screen is using the wall."
         }
     }

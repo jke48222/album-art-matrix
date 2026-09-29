@@ -159,6 +159,8 @@ struct PanelPage: View {
         case "guests": "A guest code is on the wall."
         case "onboarding": "Setup is showing a preview on the wall."
         case "panel": "Another panel check is on the wall."
+        case "identify": "A short glow is on the wall."
+        case "tuning": "Panel tuning is showing a test pattern."
         default: "Another screen is using the wall."
         }
     }

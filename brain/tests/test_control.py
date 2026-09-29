@@ -89,14 +89,66 @@ class _Client:
 
 # ---- it answers at all ------------------------------------------------------
 
+HEALTH_KEYS = {"fps", "fps_age_s", "fps_target", "sent_fps", "temp_c", "temp_log",
+               "throttled", "uptime_s", "boot_s", "loop_age_s", "renderer", "memory",
+               "storage", "quiet_s", "idle", "mode", "ytdlp"}
+
+
 def test_health_and_state(api):
     code, body = api.get("/health")
     assert code == 200 and isinstance(body, dict)
+    # every key an older phone reads, and every one the health page adds
+    assert HEALTH_KEYS <= set(body)
+    assert isinstance(body["temp_log"], list)
 
     code, body = api.get("/state")
     assert code == 200
     assert body["mode"] == "art"                 # DEFAULTS, no saved state
     assert 0.05 <= body["brightness"] <= 1.0
+
+
+def test_state_names_the_wall(api, monkeypatch):
+    monkeypatch.setattr(control, "_HOSTNAME", "album-matrix")
+    wall = api.get("/state")[1]["wall"]
+    assert wall["name"] == "album-matrix"
+    assert (wall["width"], wall["height"], wall["frame_side"]) == (64, 64, 64)
+
+
+def test_host_label_survives_a_missing_hostname(monkeypatch):
+    def gone():
+        raise OSError("no name")
+
+    monkeypatch.setattr(control.socket, "gethostname", gone)
+    assert control._host_label() == ""
+    monkeypatch.setattr(control.socket, "gethostname", lambda: "album-matrix.lan")
+    assert control._host_label() == "album-matrix"
+    monkeypatch.setattr(control.socket, "gethostname", lambda: "x" * 80)
+    assert len(control._host_label()) == 63
+
+
+@pytest.mark.parametrize("tile,cols,rows", [(64, 1, 1), (64, 3, 3)])
+def test_state_reports_wall_grid(tile, cols, rows):
+    """The About page names the size and the panel count from this block."""
+    from brain.wall import Wall
+    ctrl = ControlState(frame_len=(tile * cols) ** 2 * 3, wall=Wall(tile=tile, cols=cols, rows=rows))
+    wall = ctrl.public_state()["wall"]
+    for key in ("width", "height", "tile", "cols", "rows"):
+        assert isinstance(wall[key], int) and wall[key] > 0, key
+    assert wall["width"] == wall["tile"] * wall["cols"]
+    assert wall["height"] == wall["tile"] * wall["rows"]
+    assert (wall["cols"], wall["rows"]) == (cols, rows)
+
+
+def test_peek_does_not_refresh_presence(api):
+    """The widget's reload reads with ?peek=1. Counting it as someone home
+    would keep lifting Away at night."""
+    api.ctrl.last_client = None
+    assert api.get("/state?peek=1")[0] == 200
+    assert api.ctrl.last_client is None
+    assert api.get("/state?peek")[0] == 200
+    assert api.ctrl.last_client is None
+    assert api.get("/state")[0] == 200
+    assert api.ctrl.last_client is not None
 
 
 def test_unknown_path_is_404(api):
@@ -400,3 +452,134 @@ def test_services_says_asking_claude_is_off_in_a_sentence(api):
     _, body = api.get("/services")
     assert body["claude"] == {"ready": False, "state": "off",
                               "problem": "Asking Claude is switched off on this wall."}
+
+
+# ---- /tuning, with a store attached ------------------------------------------
+
+@pytest.fixture
+def tuned(api):
+    from brain.tuning import Tuning
+    api.ctrl.tuning = Tuning({})
+    return api
+
+
+class _Renderer:
+    def __init__(self):
+        self.attached, self.connects = True, 1
+
+    def __call__(self):
+        return {"attached": self.attached, "connects": self.connects,
+                "detached_s": None if self.attached else 0.5, "pending_s": None}
+
+
+def test_tuning_lists_the_brightness_ceiling_first_in_panel(tuned):
+    code, body = tuned.get("/tuning")
+    assert code == 200
+    first = body["knobs"][0]
+    assert first["name"] == "panel_brightness" and first["group"] == "Panel"
+    assert (first["min"], first["max"], first["step"], first["restart"]) == (1, 254, 1, False)
+    assert first["label"] == "Brightness ceiling" and first["unit"] == "/254"
+    assert body["values"]["panel_brightness"] == 160
+    assert body["defaults"]["panel_brightness"] == 160
+    assert body["renderer"] == {"state": "absent", "down_s": None}
+    assert body["groups"][0]["title"] == "Panel drive"
+
+
+def test_tuning_post_routes_the_ceiling_to_state(tuned, tmp_path):
+    code, body = tuned.post("/tuning", {"panel_brightness": 120, "black_point": 4})
+    assert code == 200 and "rejected" not in body
+    assert body["values"]["panel_brightness"] == 120 and body["values"]["black_point"] == 4
+    assert tuned.ctrl.get()["panel_brightness"] == 120
+    assert (tmp_path / "panel-brightness").read_text() == "120"
+    code, body = tuned.post("/tuning", {"panel_brightness": "bright"})
+    assert body["rejected"] == ["panel_brightness"]
+    assert tuned.ctrl.get()["panel_brightness"] == 120
+
+
+def test_tuning_reset_restores_the_ceiling_and_keeps_true_colour(tuned):
+    tuned.post("/state", {"wb_r": 0.9})
+    tuned.post("/tuning", {"panel_brightness": 90, "gain_g": 0.7})
+    code, body = tuned.post("/tuning/reset")
+    assert code == 200
+    assert body["values"]["panel_brightness"] == 160
+    assert body["values"]["gain_g"] == body["defaults"]["gain_g"]
+    assert tuned.ctrl.get()["wb_r"] == pytest.approx(0.9)
+
+
+def test_tuning_answers_409_with_values_while_restarting(tuned, renderer_process):
+    r = _Renderer()
+    tuned.ctrl.tuning.renderer = r
+    renderer_process.pids = [4242]
+    code, body = tuned.post("/tuning", {"bit_depth": 48})
+    assert code == 200 and body["renderer"]["state"] == "restarting"
+    assert body["restarting"] is True
+    r.attached = False
+    code, body = tuned.post("/tuning", {"bit_depth": 32, "panel_brightness": 100})
+    assert code == 409
+    assert body["error"] == "The panel is still restarting. Try again in a moment."
+    assert body["values"]["bit_depth"] == 48
+    # nothing in the refused write landed, the ceiling included
+    assert tuned.ctrl.get()["panel_brightness"] == 160
+    assert tuned.post("/tuning/reset")[0] == 409
+    assert tuned.post("/tuning/restart")[0] == 409
+    assert renderer_process.kills == [4242]
+    # a live knob still goes through
+    code, body = tuned.post("/tuning", {"gain_r": 0.9})
+    assert code == 200 and body["values"]["gain_r"] == 0.9
+
+
+def test_tuning_restart_returns_values_and_said(tuned, renderer_process):
+    tuned.ctrl.tuning.renderer = _Renderer()
+    renderer_process.pids = [11, 12]
+    code, body = tuned.post("/tuning/restart")
+    assert code == 200
+    assert body["said"] == "renderer relaunching (2 stopped)"
+    assert body["renderer"]["state"] == "restarting" and "values" in body
+    assert renderer_process.kills == [11, 12]
+
+
+def test_tuning_restart_with_nothing_running_says_so(tuned):
+    tuned.ctrl.tuning.renderer = _Renderer()
+    code, body = tuned.post("/tuning/restart")
+    assert code == 200 and body["said"] == "the renderer was not running"
+
+
+def test_state_brightness_no_longer_rewrites_panel_type(tuned, tmp_path):
+    tuned.post("/tuning", {"panel_type": 3})
+    assert (tmp_path / "panel-type").read_text() == "3"
+    tuned.post("/state", {"panel_brightness": 100})
+    assert (tmp_path / "panel-brightness").read_text() == "100"
+    assert (tmp_path / "panel-type").read_text() == "3"
+
+
+def test_state_panel_type_is_rejected_and_leaves_the_file(tuned, tmp_path):
+    tuned.post("/tuning", {"panel_type": 3})
+    code, body = tuned.post("/state", {"panel_type": 6})
+    assert code == 200 and "panel_type" in body["rejected"]
+    assert "panel_type" not in tuned.get("/state")[1]
+    assert (tmp_path / "panel-type").read_text() == "3"
+    assert tuned.ctrl.tuning.get("panel_type") == 3
+
+
+def test_a_saved_panel_type_is_ignored():
+    with open(control.STATE_PATH, "w") as fh:
+        json.dump({"mode": "clock", "panel_type": 4}, fh)
+    ctrl = ControlState()
+    assert ctrl.get()["mode"] == "clock" and "panel_type" not in ctrl.get()
+
+
+def test_tuning_restart_and_reset_leave_the_connection_usable(tuned):
+    """Neither reads a body. do_POST drains it, so the next request on a
+    kept-alive connection is not spoiled by it."""
+    import http.client
+    conn = http.client.HTTPConnection("127.0.0.1", tuned.port, timeout=10)
+    try:
+        for path in ("/tuning/reset", "/tuning/restart"):
+            conn.request("POST", path, body=b'{"ignored": true}',
+                         headers={"Content-Type": "application/json"})
+            assert conn.getresponse().read() and True
+            conn.request("GET", "/state")
+            response = conn.getresponse()
+            assert response.status == 200 and json.loads(response.read())["mode"] == "art"
+    finally:
+        conn.close()

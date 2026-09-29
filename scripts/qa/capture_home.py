@@ -119,6 +119,16 @@ class FixtureWall:
             {"at": 90, "text": "a little colour in the quiet", "words": [{"at":90,"text":"a little"},{"at":92,"text":"colour"},{"at":96,"text":"in the quiet"}]},
             {"at": 110, "text": "we leave the window open", "words": []}]}
         self.studies = {}
+        # path -> (status, JSON payload), answered before studies: a route
+        # that fails, like /tuning's 503 on a wall without a tuning store.
+        self.statuses = {}
+        # path -> seconds to hold the answer, outside the lock, so the app's
+        # other reads keep answering while one is slow.
+        self.delays = {}
+        # The same, only after the path has answered once: the app gets its
+        # first reply (the wall is live), and the next read hangs, which
+        # holds a "looking for your wall" state long enough to capture.
+        self.delays_after_first = {}
         self.ask = {"ready": True, "pending": False, "history": [], "problem": None}
         self.note = {"text": None, "seconds_left": None, "active": False}
 
@@ -149,10 +159,20 @@ def make_handler(wall: FixtureWall) -> type[BaseHTTPRequestHandler]:
         def do_GET(self) -> None:
             path = urlsplit(self.path).path
             with wall.lock:
+                answered = any(r == {"method": "GET", "path": path} for r in wall.requests)
                 wall.requests.append({"method": "GET", "path": path})
                 available, state, frame = wall.available, copy.deepcopy(wall.state), wall.frame
+                status, delay = wall.statuses.get(path), wall.delays.get(path, 0.0)
+                if answered:
+                    delay = max(delay, wall.delays_after_first.get(path, 0.0))
             if not available:
                 self.response(503, b"Fixture connection unavailable", "text/plain")
+                return
+            if delay:
+                time.sleep(delay)
+            if status is not None:
+                code, payload = status
+                self.response(code, json.dumps(payload).encode(), "application/json")
                 return
             if path == "/frame.raw":
                 self.response(200, frame, "application/octet-stream")
@@ -263,7 +283,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--launch-environment", action="append", default=[])
     parser.add_argument("--device-services-state", choices=("connected","unlinked","refused","empty","paused","external","paired","showing","disabled","google","checking","artwork","notinstalled"))
-    parser.add_argument("--setup-state", choices=("ready","default","saved","verified","refused","checking","last","off"))
+    parser.add_argument("--setup-state", choices=("ready","default","saved","verified","refused","checking","last","off",
+                                                   "about","about-tuned","about-notuning","about-slow","about-badtuning"))
+    parser.add_argument("--intro-style", default="none",
+                        help="The app's saved opening, passed as -intro.style. none keeps earlier captures unchanged. "
+                             "About captures pass sting, because none is now a real choice the page shows selected.")
+    parser.add_argument("--delay-after-first", action="append", default=[], metavar="PATH=SECONDS",
+                        help="Hold every GET of PATH after its first answer, e.g. /state=10 with "
+                             "-about-state look to capture the page while it looks for the wall.")
+    parser.add_argument("--wall-side", type=int, choices=(64, 192), default=64,
+                        help="The fixture wall's side. 192 reports the nine-panel wall (3 x 3 tiles of 64) in /state.")
     parser.add_argument("--service-detail-state", choices=("connected", "unlinked", "refused", "queued", "paused", "syncing", "empty"))
     parser.add_argument("--connections-state", choices=("unlinked","connected","expired","refused","unavailable"))
     parser.add_argument("--arcade-games-state", choices=("ready","playing","paused","lost","won"))
@@ -329,6 +358,11 @@ def main() -> int:
         wall.note = {"id": "qa-note-1", "text": "Take your time. The music will wait.", "seconds_left": 420, "active": True}
     elif args.message_state == "note-expired":
         wall.note = {"text": None, "seconds_left": 0, "active": False}
+    for assignment in args.delay_after_first:
+        route, _, seconds = assignment.partition("=")
+        if not route.startswith("/") or not seconds:
+            parser.error("--delay-after-first takes PATH=SECONDS")
+        wall.delays_after_first[route] = max(0.0, min(30.0, float(seconds)))
     server = ThreadingHTTPServer(("127.0.0.1", 0), make_handler(wall))
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -475,7 +509,27 @@ def main() -> int:
                 wall.studies["/ambient/previews"] = {name:base64.b64encode(Ambient(64,name,state["color"],state["color2"],1).frame_at(8).tobytes()).decode() for name in ("solid","breathe","pulse","rainbow","gradient","plaid","weave","deco","snake")}
             if getattr(wall, "capture_frame", None) is not None:
                 frame = wall.capture_frame
+            if args.wall_side == 192 and variant != "wall":
+                # Every face above is drawn at 64. The nine-panel wall shows
+                # the same composition at three times the side, and the art
+                # face has its own full-size fixture.
+                state["wall"] = {"width": 192, "height": 192, "tile": 64, "cols": 3, "rows": 3,
+                                 "frame_side": 64}
+                if len(frame) == 64 * 64 * 3:
+                    if state["mode"] == "art" and frame == artwork():
+                        frame = artwork(192)
+                    else:
+                        small = Image.frombytes("RGB", (64, 64), frame)
+                        frame = small.resize((192, 192), Image.Resampling.NEAREST).tobytes()
             wall.load(state, frame)
+            # A pinned widget snapshot is the page's whole truth: the page
+            # reads the snapshot's own link and picture. The fixture wall is
+            # kept unreachable, so no capture pairs the page with a wall
+            # frame it never showed.
+            snapshot = "-widget-snapshot" in args.launch_argument
+            if snapshot:
+                with wall.lock:
+                    wall.available = False
             command("xcrun", "simctl", "ui", args.simulator, "content_size",
                     "accessibility-extra-extra-extra-large" if variant == "large" else "large")
             for assignment in args.launch_environment:
@@ -484,7 +538,7 @@ def main() -> int:
                 os.environ["SIMCTL_CHILD_" + key] = value
             command("xcrun", "simctl", "launch", "--terminate-running-process", args.simulator,
                     args.bundle, "-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES",
-                    "-intro.style", "none", "-design", design, "-wall.host", fixture_host,
+                    "-intro.style", args.intro_style, "-design", design, "-wall.host", fixture_host,
                     "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO",
                     *args.launch_argument)
             time.sleep(args.settle)
@@ -500,19 +554,31 @@ def main() -> int:
                 with wall.lock:
                     wall.available = False
                 time.sleep(max(4, args.settle))
+            # The file keeps the design-variant name the comparison pages
+            # look for. The manifest names a snapshot capture for what it
+            # is, the fixture, with no wall frame beside it.
             image_path = output / f"{name}.png"
             command("xcrun", "simctl", "io", args.simulator, "screenshot", str(image_path))
-            side = math.isqrt(len(frame) // 3)
-            Image.frombytes("RGB", (side, side), frame).save(output / f"{name}-frame.png")
+            if not snapshot:
+                side = math.isqrt(len(frame) // 3)
+                Image.frombytes("RGB", (side, side), frame).save(output / f"{name}-frame.png")
             with wall.lock:
                 reads = len([request for request in wall.requests if request == {"method": "GET", "path": "/state"}])
                 writes = [request for request in wall.requests if request["method"] == "POST"]
-            if reads == 0:
+            if reads == 0 and not snapshot:
                 raise RuntimeError(f"{name}: app never reached the fixture /state endpoint")
-            captures.append({"state": name, "image": image_path.name, "frame": f"{name}-frame.png",
-                             "mode": state["mode"], "state_reads": reads, "fixture_writes": writes,
+            label = ("fixture-large" if variant == "large" else "fixture") if snapshot else name
+            if snapshot:
+                # An earlier capture of this case under the old name paired
+                # it with a wall frame. It is replaced, not kept beside.
+                previous_captures.pop(name, None)
+            captures.append({"state": label, "image": image_path.name, "frame": None if snapshot else f"{name}-frame.png",
+                             **({"wall": "unreachable", "fixture_only": True} if snapshot else {}),
+                             "mode": None if snapshot else state["mode"], "state_reads": reads, "fixture_writes": writes,
                              "app": str(args.app) if args.app else None,
                              "launch_arguments": args.launch_argument,
+                             "intro_style": args.intro_style, "wall_side": args.wall_side,
+                             "setup_state": args.setup_state,
                              "library_game_state": args.library_game_state, "word_games_state": args.word_games_state, "motion_games_state": args.motion_games_state, "party_games_state": args.party_games_state,
                              "installed_app_identity": installed_identity,
                              "captured_at": datetime.now(timezone.utc).isoformat(),

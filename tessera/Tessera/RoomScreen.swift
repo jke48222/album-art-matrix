@@ -88,11 +88,16 @@ struct RoomWallScreen: View {
     @State private var localArtist = ""
     /// How far into the song, 0 to 1, read once a second; nil with no record on.
     @State private var songProgress: Double? = nil
-    @State private var introDone = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro") || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
+    /// The room's own opening plays at a cold launch only: a home made later
+    /// in the session (a design switch) finds OpeningLaunch settled.
+    @State private var introDone = !RoomWallScreen.opensWithFilm()
     /// The opening has faded and the room is itself: only then does the
     /// needle set off, so the move is seen and not lost in the crossfade.
-    @State private var introSettled = (!IntroTrack.available && !CommandLine.arguments.contains("-intro2") && UserDefaults.standard.string(forKey: "intro.style") != "mark") || CommandLine.arguments.contains("-nointro") || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
+    @State private var introSettled = !RoomWallScreen.opensWithFilm()
     @State private var introKey = 0
+    /// The Now Playing card's own height, so the glass ends where its words
+    /// and keys do rather than filling the whole band. 0 until measured.
+    @State private var cardContentHeight: CGFloat = 0
     /// The sleeve of the song that is on, for the record's label.
     @State private var sleeve = SleeveArt()
     /// The song's pressing, rendered flat once, put on the platter by the shader,
@@ -109,10 +114,25 @@ struct RoomWallScreen: View {
     @State private var overheadShown = CommandLine.arguments.contains("-pressingsheet") || CommandLine.arguments.contains("-recordzoom")
     /// The pressing as you are shaping it, on the record before it is kept.
     @State private var previewChoice: PressingChoice? = nil
-    /// Which opening: the film, or the mark building on the wall.
-    @AppStorage("intro.style") private var introStyle = "film"
+    /// Which opening: the film, or the mark building on the wall. The same
+    /// default as RootView, so an unset style is the sting everywhere.
+    @AppStorage(OpeningStyle.key) private var introStyle = OpeningStyle.sting.rawValue
     @State private var pressingRequest = UUID()
-    @AppStorage("intro.replay") private var replay = false
+    @AppStorage(OpeningReplay.key) private var replayRequest = 0
+    private var reduced: Bool { reducedMotion || Motion.forcedReduced }
+    /// What the saved style plays in the room with the films this build has.
+    private var opening: OpeningKind { OpeningStyle.kind(OpeningStyle.saved(introStyle), in: .room, assets: .bundled) }
+    /// The mark variant: the saved style, or -intro2 to capture it.
+    private var markOpening: Bool { opening == .roomMark || CommandLine.arguments.contains("-intro2") }
+
+    /// Whether a room made now opens with its own film. -intro2 asks for the
+    /// mark's opening whatever is saved, unless a sting is.
+    static func opensWithFilm() -> Bool {
+        guard !OpeningLaunch.settled, !CommandLine.arguments.contains("-nointro"), !Motion.reduced else { return false }
+        let kind = OpeningStyle.kind(OpeningStyle.saved(UserDefaults.standard.string(forKey: OpeningStyle.key)), in: .room, assets: .bundled)
+        if kind == .roomFilm || kind == .roomMark { return true }
+        return CommandLine.arguments.contains("-intro2") && !kind.isSting && RoomGeometry.loaded != nil
+    }
     /// The record's turn: what it had turned to when it last stopped, and
     /// when it started again.
     @State private var turned: Double = 0
@@ -200,7 +220,7 @@ struct RoomWallScreen: View {
                     .zIndex(1)
                 }
                 if !introDone {
-                    if introStyle == "mark" || CommandLine.arguments.contains("-intro2"), IntroFilms.mark.available {
+                    if markOpening, IntroFilms.mark.available {
                         // the second opening, in the room's own scene: the mark builds before
                         // the wall and grows into it as the deck builds up out of blocks
                         RoomIntro(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, sleeve: pressing?.label, pressing: pressing?.image, films: .mark) {
@@ -209,7 +229,8 @@ struct RoomWallScreen: View {
                         .id(introKey)
                         .zIndex(1)
                         .allowsHitTesting(false)
-                    } else if introStyle == "mark" || CommandLine.arguments.contains("-intro2"), let g {
+                        .modifier(OpeningMarker())
+                    } else if markOpening, let g {
                         // without its films, the flat version: the room's picture drawn in
                         RoomIntro2(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, face: rect(g.face, in: fit),
                                    picture: AnyView(picture(fit: fit, g: g, size: geo.size))) {
@@ -217,6 +238,7 @@ struct RoomWallScreen: View {
                         }
                         .id(introKey)
                         .zIndex(1)
+                        .modifier(OpeningMarker())
                     } else {
                         RoomIntro(light: light, duty: dragLight ?? wall.state.brightness, fit: fit, sleeve: pressing?.label, pressing: pressing?.image) {
                             finishIntro(after: 1.3)
@@ -224,6 +246,7 @@ struct RoomWallScreen: View {
                         .id(introKey)
                         .zIndex(1)
                         .allowsHitTesting(false)
+                        .modifier(OpeningMarker())
                     }
                 }
                 if controls {
@@ -238,12 +261,12 @@ struct RoomWallScreen: View {
         // the page marks would sit on the boards, the close-up and the
         // opening, all of which cover the whole screen: they step aside
         .preference(key: PageMarksHidden.self, value: controls || zoomed || close != .none || !introDone)
-        .onChange(of: replay) { _, on in
-            // always put the switch back, or a build without the film
-            // latches it on and the pill in Settings goes dead
-            guard on else { return }
-            replay = false
-            if !reducedMotion, !StingFilm.styles.contains(introStyle), IntroTrack.available || introStyle == "mark" { introKey += 1; introDone = false; introSettled = false }
+        // A counter, so nothing has to be put back and nothing can latch.
+        // The stings are the root's to replay. Only the room's own films
+        // play here, and only when this build has them.
+        .onChange(of: replayRequest) { _, _ in
+            guard !reduced, opening == .roomFilm || opening == .roomMark else { return }
+            introKey += 1; introDone = false; introSettled = false
         }
         .onDisappear {
             roomVisible = false
@@ -311,7 +334,7 @@ struct RoomWallScreen: View {
         }
         .onAppear {
             roomVisible = true
-            if reducedMotion { introDone = true; introSettled = true }
+            if reduced { introDone = true; introSettled = true }
             turnRate = turnsPerSecond
             if needleDown && !reducedMotion { turningSince = Date() }
             // `-recorddemo`: in on the record two seconds in, out again at eight,
@@ -691,7 +714,7 @@ struct RoomWallScreen: View {
                     else {
                         VStack(spacing: 8) {
                             roomAction("The record", symbol: "opticaldisc") { openRecord() }
-                            roomAction("Wall controls", symbol: "slider.horizontal.3") { enterWall() }
+                            roomAction("Wall controls", symbol: Self.wallCloseSymbol) { enterWall() }
                         }
                     }
                 }
@@ -704,7 +727,7 @@ struct RoomWallScreen: View {
                     } else {
                         VStack(spacing: 8) {
                             roomAction("The record", symbol: "opticaldisc", iconOnly: true) { openRecord() }
-                            roomAction("Wall controls", symbol: "slider.horizontal.3", iconOnly: true) { enterWall() }
+                            roomAction("Wall controls", symbol: Self.wallCloseSymbol, iconOnly: true) { enterWall() }
                         }
                         .frame(width: 44)
                     }
@@ -712,8 +735,13 @@ struct RoomWallScreen: View {
                 .padding(14)
             }
         }
+        .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
+            cardContentHeight = height
+        }
         .scrollIndicators(.hidden)
-        .frame(width: size.width - 32, height: bandHeight)
+        // As tall as what is on it, up to the band, and centred in the band,
+        // so there is air between the glass and the navigation under it.
+        .frame(width: size.width - 32, height: cardContentHeight > 0 ? min(bandHeight, cardContentHeight) : bandHeight)
         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 24).strokeBorder(.white.opacity(0.13), lineWidth: 0.5))
@@ -725,6 +753,11 @@ struct RoomWallScreen: View {
         NowPlayingIdentity(state: wall.state, link: wall.link,
                            accent: accent, ink: inkLight, secondary: inkLightDim, compact: true)
     }
+
+    /// Wall controls opens the close-up on the wall. The header's Controls
+    /// key already wears the sliders and opens the control board, so this
+    /// one shows the wall coming closer.
+    private static let wallCloseSymbol = "arrow.up.left.and.arrow.down.right"
 
     private func roomAction(_ title: String, symbol: String, iconOnly: Bool = false, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -1211,5 +1244,16 @@ private struct RoomKeys: View {
         }
         .buttonStyle(PressStyle(scale: 0.92))
         .accessibilityLabel(g == .rewind ? "Previous Apple Music track" : g == .forward ? "Next Apple Music track" : playing ? "Pause Apple Music" : "Play Apple Music")
+    }
+}
+
+/// Marks a room opening as one element, so a UI test can see it play (and a
+/// replay play again). It takes no touches either way.
+private struct OpeningMarker: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Opening film")
+            .accessibilityIdentifier("opening.room")
     }
 }

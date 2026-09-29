@@ -19,5 +19,5 @@ with tempfile.TemporaryDirectory(prefix='tessera-studio-') as tmp:
     binary=folder/'studio-tests'
     for font in ['World7.bin','Hangul7.bin']:
         shutil.copy2(root/'tessera/Tessera'/font,folder/font)
-    subprocess.run(['xcrun','swiftc','-parse-as-library',str(folder/'Canvas.swift'),str(root/'tessera/Tessera/Panel.swift'),str(root/'tessera/Tessera/PixelFont.swift'),str(root/'tessera/Tessera/LetteringLayout.swift'),str(root/'tessera/Tessera/MadeStore.swift'),str(root/'scripts/test_studio.swift'),'-o',str(binary)],check=True)
+    subprocess.run(['xcrun','swiftc','-parse-as-library',str(folder/'Canvas.swift'),str(root/'tessera/Shared/Panel.swift'),str(root/'tessera/Tessera/PixelFont.swift'),str(root/'tessera/Tessera/LetteringLayout.swift'),str(root/'tessera/Tessera/MadeStore.swift'),str(root/'scripts/test_studio.swift'),'-o',str(binary)],check=True)
     subprocess.run([str(binary),str(args.json.resolve())],check=True)

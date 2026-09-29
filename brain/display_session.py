@@ -7,7 +7,10 @@ import time
 
 
 class DisplaySession:
-    PURPOSES = {"onboarding", "calibration", "panel", "guests"}
+    # identify: the Connection page's five-second glow. tuning: the Panel
+    # tuning page's test patterns, up for as long as that page is open.
+    # Neither gets the guest cover or calibration's right to keep gains.
+    PURPOSES = {"onboarding", "calibration", "panel", "guests", "identify", "tuning"}
     GAINS = {"wb_r", "wb_g", "wb_b"}
 
     def __init__(self, ctrl):

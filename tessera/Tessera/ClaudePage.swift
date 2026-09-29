@@ -275,9 +275,18 @@ struct CreativeConnectionNotice: View {
     let detail: String
     let symbol: String
     let tint: Color
+    /// The title's colour when the tint does not read as text. Signal red
+    /// measures about 4.4:1 on the darker grounds, under the 4.5:1 text
+    /// needs, so Wall health's problems keep it for the symbol and the wash
+    /// and set their titles in ink. nil keeps the title in the tint.
+    var titleInk: Color? = nil
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Label(title, systemImage: symbol).font(.ui(16, .semibold)).foregroundStyle(tint)
+            Label {
+                Text(title).foregroundStyle(titleInk ?? tint)
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(tint)
+            }.font(.ui(16, .semibold))
             Text(detail).font(.ui(14)).foregroundStyle(Ink.dim).fixedSize(horizontal: false, vertical: true)
         }.padding(18).frame(maxWidth: .infinity, alignment: .leading)
             .background(tint.opacity(0.07), in: RoundedRectangle(cornerRadius: 14)).accessibilityElement(children: .combine)

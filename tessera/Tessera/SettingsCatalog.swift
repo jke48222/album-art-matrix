@@ -5,7 +5,7 @@ import Foundation
 enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
     case light, time, sun, sleep, wake, idle, services, voice, hearing, shelf, teach
     case ask, note, show, earworm, imagine, weather, games
-    case lockScreen, homeKit, guests, colour, panel, health, addresses, about
+    case design, lockScreen, widgets, homeKit, guests, colour, panel, health, addresses, about
     var id: String { rawValue }
 
     var title: String {
@@ -20,7 +20,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .voice: "Voice"
         case .hearing: "Hearing & gestures"
         case .shelf: "The shelf"
-        case .teach: "Teach the wall"
+        case .teach: "Song library"
         case .ask: "Ask the wall"
         case .note: "Notes"
         case .show: "Show me"
@@ -28,7 +28,9 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .imagine: "Imagine"
         case .weather: "Weather"
         case .games: "Games"
-        case .lockScreen: "Lock screen"
+        case .design: "App design"
+        case .lockScreen: "Lock Screen"
+        case .widgets: "Home Screen"
         case .homeKit: "HomeKit"
         case .guests: "Guests"
         case .colour: "True colour"
@@ -59,7 +61,9 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .imagine: "paintbrush.pointed"
         case .weather: "cloud.sun"
         case .games: "dice"
+        case .design: "iphone"
         case .lockScreen: "lock.iphone"
+        case .widgets: "apps.iphone"
         case .homeKit: "homekit"
         case .guests: "qrcode"
         case .colour: "camera.aperture"
@@ -75,7 +79,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .light, .time, .sun, .sleep, .wake, .idle: .rhythm
         case .services, .voice, .hearing, .shelf, .teach: .music
         case .ask, .note, .show, .earworm, .imagine, .weather, .games: .explore
-        case .lockScreen, .homeKit, .guests: .home
+        case .design, .lockScreen, .widgets, .homeKit, .guests: .home
         case .colour, .panel, .health, .addresses, .about: .care
         }
     }
@@ -92,7 +96,7 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .voice: "Wake word and listening history"
         case .hearing: "Room recognition, knocks and whistles"
         case .shelf: "Your record collection, from Discogs"
-        case .teach: "Build the wall’s song library"
+        case .teach: "Songs you add for recognition"
         case .ask: "Ask a question, see the answer on the wall"
         case .note: "Short messages on the wall"
         case .show: "Find a cover or a video"
@@ -100,14 +104,16 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .imagine: "Turn a few words into a picture"
         case .weather: "Forecast and the weather face"
         case .games: "Play on the wall and the phone"
-        case .lockScreen: "The wall on the lock screen"
+        case .design: "Room, Panel or iPod"
+        case .lockScreen: "The wall on the Lock Screen"
+        case .widgets: "The wall on your Home Screen"
         case .homeKit: "Scenes and the Home app"
         case .guests: "Share your Wi-Fi with a code"
         case .colour: "Calibrate the panel with your camera"
         case .panel: "Check every light"
-        case .health: "Temperature and performance"
-        case .addresses: "Find your wall or connect a Mac"
-        case .about: "Version and credits"
+        case .health: "Power, heat and picture updates"
+        case .addresses: "The wall’s address and a connection check"
+        case .about: "Version, openings and tuning"
         }
     }
 
@@ -119,11 +125,11 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .sleep: "bedtime shutdown fade timer"
         case .wake: "morning dawn schedule"
         case .idle: "nothing playing pause presence leave black hold ambient drift weather standby power resume"
-        case .services: "apple spotify lastfm listenbrainz anthropic api key account login connect"
+        case .services: "apple spotify lastfm listenbrainz anthropic api key account login connect mac reporter"
         case .voice: "microphone speech assistant"
         case .hearing: "music recognition shazam sound microphone knock whistle gate"
         case .shelf: "vinyl discogs records archive collection"
-        case .teach: "recognition identify library learning"
+        case .teach: "teach recognition identify library learning songs"
         case .ask: "question answer ai claude prompt"
         case .note: "text message temporary duration expiry ticker"
         case .show: "artwork search film video album"
@@ -131,14 +137,16 @@ enum SettingsDestination: String, CaseIterable, Hashable, Identifiable {
         case .imagine: "generate picture image ai"
         case .weather: "forecast temperature celsius fahrenheit city"
         case .games: "play fun controller"
+        case .design: "classic panel ipod room 3d click wheel look layout style appearance theme home view"
         case .lockScreen: "dynamic island live activity notification"
+        case .widgets: "widget widgets home screen small medium add glance"
         case .homeKit: "automation siri smart home"
         case .guests: "wifi password qr guest network"
         case .colour: "color white balance calibration green camera"
         case .panel: "pixel dead test rgb"
-        case .health: "diagnostics fps cpu memory heat throttling uptime"
-        case .addresses: "address ip hostname network offline reconnect mac server"
-        case .about: "version credits legal privacy tessera"
+        case .health: "diagnostics fps cpu memory heat throttling uptime power voltage undervoltage storage disk renderer frozen stuck temperature"
+        case .addresses: "address ip hostname network offline reconnect local network permission wifi check queue waiting log mac"
+        case .about: "version build credits acknowledgements licence license fonts legal privacy opening intro sting film mark first run setup onboarding again tuning advanced tessera"
         }
     }
 

@@ -26,6 +26,18 @@ enum StingFilm {
     }
 }
 
+/// What this build carries, for the opening rules in HomeDesign.swift. The
+/// room's mark counts with its films or, without them, with the geometry the
+/// flat version draws from (RoomIntro2). StingFilm.plays stays the launch
+/// decision, since it also keeps the -nointro gate.
+extension OpeningAssets {
+    static let bundled = OpeningAssets(sting: StingFilm.onBlack != nil,
+                                       stingKeyed: StingFilm.keyed != nil,
+                                       roomFilm: IntroTrack.available,
+                                       roomMark: IntroFilms.mark.available || RoomGeometry.loaded != nil,
+                                       iPodFilm: IntroFlip.available)
+}
+
 /// The film, muted like the other openings, ending with a callback.
 struct StingPlayer: UIViewRepresentable {
     let url: URL
@@ -122,6 +134,11 @@ struct StingOpening: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
+        // One element, so a UI test can see the opening play (and a replay
+        // play again). It takes no touches either way.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Opening film")
+        .accessibilityIdentifier("opening.sting")
         // on black, the whole thing fades to the app; in the room, the
         // film alone fades, and the cover is dropped in one go for the
         // glitch, the room under it being the same room

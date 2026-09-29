@@ -166,100 +166,33 @@ enum EmitterTile {
     /// FNV-1a over the whole buffer. Data.hashValue only reads a prefix,
     /// and dark-topped frames taught us exactly what that costs.
     static func digest(_ px: [UInt8]) -> UInt64 {
-        var h: UInt64 = 0xcbf29ce484222325
-        for b in px { h = (h ^ UInt64(b)) &* 0x100000001b3 }
-        return h
-    }
-
-    /// Circle coverage across one cell, supersampled once per cell size and
-    /// shared by all 4,096 emitters of every tile at that size.
-    private static var masks: [Int: [Double]] = [:]
-    /// The shelf renders off the main thread while the archive renders on
-    /// it; the dictionary is not safe to share without this.
-    private static let maskLock = NSLock()
-    private static func mask(_ cell: Int) -> [Double] {
-        maskLock.lock(); defer { maskLock.unlock() }
-        if let m = masks[cell] { return m }
-        let r = Double(cell) * 0.35
-        let mid = Double(cell) / 2
-        let ss = 4
-        var m = [Double](repeating: 0, count: cell * cell)
-        for y in 0..<cell {
-            for x in 0..<cell {
-                var hit = 0
-                for sy in 0..<ss {
-                    for sx in 0..<ss {
-                        let dx = Double(x) + (Double(sx) + 0.5) / Double(ss) - mid
-                        let dy = Double(y) + (Double(sy) + 0.5) / Double(ss) - mid
-                        if dx * dx + dy * dy <= r * r { hit += 1 }
-                    }
-                }
-                m[y * cell + x] = Double(hit) / Double(ss * ss)
-            }
-        }
-        masks[cell] = m
-        return m
+        EmitterRaster.digest(px)
     }
 
     /// duty dims the lit emitters the way the wall's brightness would; the
-    /// unlit lattice stays put. One rasteriser, so the finish thumbnails and
-    /// the archive tiles cannot drift apart again.
+    /// unlit lattice stays put. One rasteriser, so the finish thumbnails, the
+    /// archive tiles and the Home Screen widget cannot drift apart again.
     ///
-    /// Rastered by hand into a byte buffer rather than drawn: the old body
-    /// issued 4,096 CGContext ellipse fills with a fresh CGColor each, and
-    /// with the kept strip re-rendering per body evaluation that held the
-    /// main thread at 60 percent CPU until the watchdog shot the app.
+    /// The raster itself is EmitterRaster's (Shared/), made by hand into a
+    /// byte buffer rather than drawn: the old body issued 4,096 CGContext
+    /// ellipse fills with a fresh CGColor each, and with the kept strip
+    /// re-rendering per body evaluation that held the main thread at 60
+    /// percent CPU until the watchdog shot the app. This wrapper keeps the
+    /// UIImage cache the app's grids depend on.
     static func render(_ px: [UInt8], cell: CGFloat, duty: Double = 1) -> UIImage? {
         guard let n = Panel.square(px.count) else { return nil }
         // The emitter shrinks as the wall grows: a tile in a dense grid is
         // the same size on screen whether it holds 4,096 emitters or 36,864,
         // and a 768 pixel raster is more than that tile can show either way.
-        let cellI = max(1, min(Int(cell.rounded()), 768 / n))
+        let cellI = max(1, min(Int(cell.rounded()), EmitterRaster.maxSide / n))
         let d = max(0.05, min(1.0, duty))
 
         let key = "\(digest(px))|\(cellI)|\(Int(d * 100))" as NSString
         if let hit = done.object(forKey: key) { return hit }
 
-        let side = n * cellI
-        let m = mask(cellI)
-        var buf = [UInt8](repeating: 0, count: side * side * 4)
-        buf.withUnsafeMutableBufferPointer { out in
-            px.withUnsafeBufferPointer { pin in
-                for i in 0..<(n * n) {
-                    let o = i * 3
-                    let lit = pin[o] >= 8 || pin[o + 1] >= 8 || pin[o + 2] >= 8
-                    let er = lit ? Double(pin[o]) * d : 12.75
-                    let eg = lit ? Double(pin[o + 1]) * d : 12.75
-                    let eb = lit ? Double(pin[o + 2]) * d : 12.75
-                    let x0 = (i % n) * cellI
-                    let y0 = (i / n) * cellI
-                    for yy in 0..<cellI {
-                        var at = ((y0 + yy) * side + x0) * 4
-                        let mrow = yy * cellI
-                        for xx in 0..<cellI {
-                            let cov = m[mrow + xx]
-                            out[at] = UInt8(min(255, er * cov))
-                            out[at + 1] = UInt8(min(255, eg * cov))
-                            out[at + 2] = UInt8(min(255, eb * cov))
-                            out[at + 3] = 255
-                            at += 4
-                        }
-                    }
-                }
-            }
-        }
-
-        guard let provider = CGDataProvider(data: Data(buf) as CFData),
-              let cg = CGImage(width: side, height: side,
-                               bitsPerComponent: 8, bitsPerPixel: 32,
-                               bytesPerRow: side * 4,
-                               space: CGColorSpaceCreateDeviceRGB(),
-                               bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
-                               provider: provider, decode: nil,
-                               shouldInterpolate: false, intent: .defaultIntent)
-        else { return nil }
+        guard let cg = EmitterRaster.render(px, cell: cellI, duty: d) else { return nil }
         let img = UIImage(cgImage: cg)
-        done.setObject(img, forKey: key, cost: side * side * 4)
+        done.setObject(img, forKey: key, cost: cg.width * cg.height * 4)
         return img
     }
 

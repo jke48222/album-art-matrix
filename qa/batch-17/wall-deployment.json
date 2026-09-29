@@ -1,0 +1,79 @@
+{
+  "status": "deployed",
+  "base": "f36b741",
+  "files": [
+    {
+      "path": "brain/control.py",
+      "before_sha256": "cab62e6a0eaf9c6178e26bb22b9edb1664b90ab61d7469c97ba07c8807d84ade",
+      "after_sha256": "8b825841a3d6c325494cb8016f0fdaa424c641f4288a8aaa76632086adda2273"
+    },
+    {
+      "path": "brain/display_session.py",
+      "before_sha256": "3ce069a1fc33c52a2081f85d79a411bc4b9b6d7e9414573a33533adb33642bfb",
+      "after_sha256": "81977fac73433b39258a96f8e244b666432e31e69331ef8359ee76f9e3df3a82"
+    },
+    {
+      "path": "brain/main.py",
+      "before_sha256": "b99ea0c59b1f0442e9aebb3c7b898eb676dd1ae864a6904e6ae11f8a909f9d29",
+      "after_sha256": "69d3bd0e92179aa60d2e788eca22f36bb9809aa5cd1427d0080a8506d493af2e"
+    },
+    {
+      "path": "brain/sinks/pi_renderer.py",
+      "before_sha256": "601a5c84a44af29934c813e1d422984eb93bf206d0b8ace72b40705020aa2a30",
+      "after_sha256": "201415306a8ac1fd50f146e31af86668d08da1aab57b7016ab48b5b1bbd98dd8"
+    },
+    {
+      "path": "brain/tuning.py",
+      "before_sha256": "38b62c0e04d45b25c3a2f79e252ff50b3f0396601c6d9f5bd58fbdba23d3504f",
+      "after_sha256": "9bb57aef35a86bc3015d6433e7b78c140c0748bfe8f41867a03d3b9b0bab6fc7"
+    }
+  ],
+  "services": [
+    "active",
+    "active"
+  ],
+  "previous_pid": "2718856",
+  "current_pid": "308278",
+  "mode_before": "off",
+  "mode_after": "off",
+  "display_session": {
+    "active": false
+  },
+  "health": {
+    "fps": 0.0,
+    "fps_age_s": null,
+    "fps_target": 60.0,
+    "sent_fps": null,
+    "temp_c": 65.0,
+    "temp_log": [],
+    "throttled": {
+      "now": false,
+      "ever": false,
+      "raw": "0x0",
+      "undervolt_now": false,
+      "capped_now": false,
+      "throttled_now": false,
+      "soft_temp_now": false,
+      "undervolt_ever": false,
+      "capped_ever": false,
+      "throttled_ever": false,
+      "soft_temp_ever": false
+    },
+    "uptime_s": 3,
+    "boot_s": 64026,
+    "loop_age_s": null,
+    "renderer": null,
+    "memory": {
+      "total_mb": 990,
+      "available_mb": 195
+    },
+    "storage": {
+      "total_gb": 28.1,
+      "free_gb": 18.5
+    },
+    "quiet_s": null,
+    "idle": null,
+    "mode": "off",
+    "ytdlp": "2026.08.19"
+  }
+}

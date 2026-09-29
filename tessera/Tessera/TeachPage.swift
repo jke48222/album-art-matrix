@@ -38,7 +38,7 @@ struct TeachPage: View {
     private var cleanArtist: String { artist.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
-        MessagePage(title: "Teach the wall", eyebrow: "SONG LIBRARY", tint: mint) {
+        MessagePage(title: "Song library", eyebrow: "MUSIC RECOGNITION", tint: mint) {
             hero
             if !wall.link.isLive || readFailed {
                 MessageNotice(title: wall.link.isLive ? "Couldn't read the library" : "Your wall is offline", detail: "Your draft stays here. Reconnect or pull to refresh before changing the library.", symbol: "wifi.slash", tint: mint)

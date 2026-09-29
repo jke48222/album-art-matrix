@@ -1,0 +1,10 @@
+{
+  "tuning": {
+    "changed": [
+      "black_point",
+      "dither",
+      "gain_g"
+    ],
+    "knobs": 42
+  }
+}

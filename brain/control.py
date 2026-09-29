@@ -3,7 +3,13 @@
 Runs as a daemon thread inside the brain, so control works whenever the wall
 is on — no Mac required.
 
-  GET  /state   -> full control state + last-shown track (for the app's UI)
+  GET  /state   -> full control state + last-shown track (for the app's UI).
+                   wall carries the panels' shape and the computer's name.
+                   ?peek=1 reads without counting as someone at home
+  GET  /health  -> the computer behind the panels: frame rates (paced, and
+                   handed to the panels), temperature and its last hour,
+                   power and heat throttling bits, memory, storage, process
+                   and computer uptime, loop age, the renderer's attachment
   POST /state   -> partial update, e.g. {"mode": "ambient", "brightness": 0.4}
   GET  /journal -> what the wall has worn, newest first (?limit=N, default 50)
   POST /replay  -> {"ts": <journal ts>} re-show that sleeve until next track
@@ -32,10 +38,18 @@ is on — no Mac required.
   POST /video/clock -> {t, playing}: the phone's player says where it is;
                    the wall shows the frame for that moment
   POST /video/control -> {action: play|pause|seek, t?}: the wall's own clock
-  GET  /tuning   -> every knob that decides what the LEDs do, with ranges
-  POST /tuning   -> {knob: value, ...}; says which need the renderer back
-  POST /tuning/reset   -> back to what the wall shipped with
-  POST /tuning/restart -> relaunch the renderer so launch flags take
+  GET  /tuning   -> every knob that decides what the LEDs do, with ranges,
+                   labels, units, groups, why a knob is inactive, and the
+                   renderer's state (running, starting, restarting, stalled,
+                   stopped, absent). The panel's brightness ceiling is its
+                   first Panel knob
+  POST /tuning   -> {knob: value, ...}: answers GET /tuning's body, plus
+                   rejected. 409 with that body while the panel is still
+                   restarting and the patch moves a launch flag
+  POST /tuning/reset   -> back to what the wall shipped with, the ceiling
+                   too. The measured colour correction stays (409 as above)
+  POST /tuning/restart -> relaunch the renderer so launch flags take:
+                   {said, ...GET /tuning's body} (409 as above)
   POST /video/stop -> the video is over; back to what the wall was doing
   POST /video/upload?title=&clock=phone -> the body is a small mp4 the phone
                    made from a video of its own; the wall plays the picture
@@ -76,10 +90,13 @@ Transient things deliberately NOT persisted: the sleep fade (restarting the
 wall cancels it), the frame override, a pending replay.
 """
 import base64
+import collections
 import hashlib
 import json
 import math
 import os
+import socket
+import subprocess
 import threading
 import tempfile
 import time
@@ -90,6 +107,9 @@ from urllib.parse import parse_qs, urlparse
 
 STATE_PATH = os.path.expanduser("~/.config/album-art-matrix/control.json")
 JOURNAL_PATH = os.path.expanduser("~/.config/album-art-matrix/journal.jsonl")
+# Beside the renderer: the files run_renderer.sh reads at launch. The panel
+# brightness is written here. The rest of the launch flags are tuning.py's.
+ROOT = os.path.expanduser("~/album-art-matrix")
 JOURNAL_MAX = 500                     # rewrite the file when it grows past this
 
 # The app draws and reads at the wall's own size: what Tessera puts on the
@@ -138,8 +158,7 @@ DEFAULTS = {
     "clock_24h": True,       # clock mode: 24-hour vs 12-hour + AM/PM
     "lyric_offset": 0.2,     # seconds the words run ahead of the song
     "spin_face": "pressing", # what the record turns: pressing | art
-    "panel_brightness": 160, # the panel's own cap, 1-254; a renderer restart
-    "panel_type": 0,         # the panel's row addressing, 0-7; ditto
+    "panel_brightness": 160, # the panel's own cap, 1-254, on every frame's header
     "idle": "black",         # silence: black | hold | dim | ambient
     "away": "stay",          # phone gone >15 min: stay | off
     "alarm_enabled": False,  # a time of day the wall rings: the timer's fireworks
@@ -162,6 +181,153 @@ DEFAULTS = {
 
 
 _T0 = time.monotonic()               # process start, for /health uptime
+
+# ---- what /health reads off the computer -----------------------------------
+# Module-level so a test can point them at a fixture. Every reader answers
+# None on a machine without the file (a Mac) rather than guessing, and none
+# of them can raise into /health.
+THERMAL_PATH = "/sys/class/thermal/thermal_zone0/temp"
+MEMINFO_PATH = "/proc/meminfo"
+UPTIME_PATH = "/proc/uptime"
+THROTTLE_TTL = 5.0                    # vcgencmd is a process, not for every poll
+YTDLP_TTL = 600.0                     # yt-dlp --version is a whole Python start
+_THROTTLED = [None, None]             # (monotonic checked, value)
+_YTDLP = [None, None]                 # (monotonic checked, version)
+_YTDLP_LOCK = threading.Lock()
+
+
+def _read_temp():
+    """The processor's temperature in C, or None without a sensor."""
+    try:
+        with open(THERMAL_PATH) as fh:
+            return round(int(fh.read().strip()) / 1000.0, 1)
+    except (OSError, ValueError):
+        return None
+
+
+def _throttle_detail(bits: int) -> dict:
+    """vcgencmd get_throttled, bit by bit. now and ever keep the meaning they
+    always had (any of the low three bits, any of their since-boot copies),
+    so a phone from before this reads the same answer. The named bits let a
+    newer one tell low power from heat: capped and throttled can come from
+    either, undervolt only from the supply, soft_temp only from heat."""
+    return {"now": bool(bits & 0x7), "ever": bool(bits & 0x70000),
+            "raw": f"0x{bits:x}",
+            "undervolt_now": bool(bits & 0x1), "capped_now": bool(bits & 0x2),
+            "throttled_now": bool(bits & 0x4), "soft_temp_now": bool(bits & 0x8),
+            "undervolt_ever": bool(bits & 0x10000), "capped_ever": bool(bits & 0x20000),
+            "throttled_ever": bool(bits & 0x40000), "soft_temp_ever": bool(bits & 0x80000)}
+
+
+def _read_throttled(now=None):
+    """_throttle_detail from vcgencmd, kept for THROTTLE_TTL. None where
+    there is no vcgencmd, and that answer is kept too, so a Mac does not
+    look for one on every poll."""
+    now = time.monotonic() if now is None else now
+    at, value = _THROTTLED
+    if at is not None and now - at < THROTTLE_TTL:
+        return value
+    try:
+        raw = subprocess.run(["vcgencmd", "get_throttled"], capture_output=True,
+                             text=True, timeout=2).stdout
+        value = _throttle_detail(int(raw.strip().split("=")[1], 16))
+    except Exception:
+        value = None
+    _THROTTLED[0], _THROTTLED[1] = now, value
+    return value
+
+
+def _read_memory():
+    """{total_mb, available_mb} from /proc/meminfo. MemAvailable is what can
+    be had without swapping, which is the number that matters on 990 MB."""
+    try:
+        found = {}
+        with open(MEMINFO_PATH) as fh:
+            for line in fh:
+                key, _, rest = line.partition(":")
+                if key in ("MemTotal", "MemAvailable"):
+                    found[key] = int(rest.split()[0]) // 1024
+        return {"total_mb": found["MemTotal"], "available_mb": found["MemAvailable"]}
+    except (OSError, ValueError, KeyError, IndexError):
+        return None
+
+
+def _read_storage(path=None):
+    """{total_gb, free_gb} for the disk the state lives on, to 0.1 GB. Free
+    is what an unprivileged process may still write (f_bavail)."""
+    where = path if path is not None else os.path.dirname(STATE_PATH)
+    if not os.path.isdir(where):
+        where = os.path.expanduser("~")
+    try:
+        st = os.statvfs(where)
+    except (OSError, AttributeError):
+        return None
+    gb = float(1 << 30)
+    return {"total_gb": round(st.f_blocks * st.f_frsize / gb, 1),
+            "free_gb": round(st.f_bavail * st.f_frsize / gb, 1)}
+
+
+def _boot_seconds():
+    """How long the computer has been on, which uptime_s (the brain's own
+    process) is not."""
+    try:
+        with open(UPTIME_PATH) as fh:
+            return int(float(fh.read().split()[0]))
+    except (OSError, ValueError, IndexError):
+        return None
+
+
+def _ytdlp_version(now=None):
+    """yt-dlp's version, asked at most once every YTDLP_TTL. Asking starts a
+    Python process of 40 to 60 MB, and /health is polled every ten seconds
+    while the phone's health page is open. While one ask is running, other
+    callers get the last answer instead of starting their own."""
+    now = time.monotonic() if now is None else now
+    at, value = _YTDLP
+    if at is not None and now - at < YTDLP_TTL:
+        return value
+    if not _YTDLP_LOCK.acquire(blocking=False):
+        return value
+    try:
+        try:
+            from .video import ytdlp
+            value = ytdlp.version()
+        except Exception:
+            value = None
+        _YTDLP[0], _YTDLP[1] = now, value
+        return value
+    finally:
+        _YTDLP_LOCK.release()
+
+
+def _host_label() -> str:
+    """The computer's name, first label only, for GET /state wall.name. The
+    phone offers it as the .local address when a number was typed in."""
+    try:
+        return socket.gethostname().split(".")[0][:63]
+    except OSError:
+        return ""
+
+
+# Once, at import: a hostname does not change under a running brain, and
+# /state is polled every second.
+_HOSTNAME = _host_label()
+
+
+def _with_ceiling(public: dict, ceiling, default) -> dict:
+    """GET /tuning with the panel's brightness ceiling as the first Panel
+    knob. It is a /state setting (it rides on every frame's header), but it
+    belongs with the panel's other numbers, and one reset should cover it."""
+    out = dict(public)
+    out["values"] = {**public.get("values", {}), "panel_brightness": int(ceiling)}
+    out["defaults"] = {**public.get("defaults", {}), "panel_brightness": int(default)}
+    out["knobs"] = [{"name": "panel_brightness", "group": "Panel", "kind": "int",
+                     "min": 1, "max": 254, "step": 1, "restart": False,
+                     "note": "The most light the panel is allowed to give. The "
+                             "Light setting dims within this.",
+                     "label": "Brightness ceiling", "unit": "/254", "applies": "now"},
+                    *public.get("knobs", [])]
+    return out
 
 
 def _clamp(v, lo, hi):
@@ -255,6 +421,16 @@ class ControlState:
         from .routines import RoutineEngine
         self.routines = RoutineEngine()
         self.fps_last = 0.0          # main loop's sustained rate, for /health
+        self.fps_at = None           # when pace() last measured it
+        self.fps_target = None       # the rate pace() aims for
+        # One temperature a minute, the last hour of them, for the phone's
+        # trace: (monotonic, celsius). Sampled by the main loop, not /health.
+        self.temp_log = collections.deque(maxlen=60)
+        self._temp_log_at = None
+        # Set by main.py once the sink is built: the renderer's status and
+        # the rate frames are handed to it. None on a brain without them.
+        self.renderer_status = None
+        self.frames_sent_rate = None
         self.last_client = None      # monotonic of the app's last request
         # Until this monotonic moment Away and the idle face stand back: a
         # knock that lit the wall, or a wake-up that just finished, counts
@@ -517,7 +693,7 @@ class ControlState:
             for k, v in patch.items():
                 numeric = {"wake_fade_min", "wb_r", "wb_g", "wb_b", "sun_night", "lat", "lon",
                            "brightness", "rpm", "speed", "ticker_speed", "lyric_offset",
-                           "panel_brightness", "panel_type"}
+                           "panel_brightness"}
                 if k in numeric:
                     try:
                         if isinstance(v, bool) or not math.isfinite(float(v)):
@@ -609,8 +785,6 @@ class ControlState:
                     self._s[k] = _clamp(v, -2.0, 2.0)
                 elif k == "panel_brightness":
                     self._s[k] = int(_clamp(v, 1, 254))
-                elif k == "panel_type":
-                    self._s[k] = int(_clamp(v, 0, 7))
                 elif k == "spin_face":
                     if v in ("pressing", "art"):
                         self._s[k] = v
@@ -777,8 +951,6 @@ class ControlState:
         if patch.get("mode") == "off":
             self.routines.wake = None
         want = patch.get("panel_brightness")
-        if patch.get("panel_type") is not None:
-            want = True
         self._note_interrupted_by(patch)
         rejected = {**rejected_commands, **self._merge(patch)}
         if "ticker_color" in patch and "ticker_color" not in rejected:
@@ -799,13 +971,13 @@ class ControlState:
         # down for the renderer's launch, so a reboot starts at the same level.
         # Restarting the renderer here, as this used to, left half a frame in
         # the pipe and every frame after it shifted.
-        if want is not None:
+        # panel-type is tuning.py's alone. This used to write it too, from a
+        # panel_type of its own that defaulted to 0, so a brightness change
+        # put back the addressing tuning had set, for the next launch.
+        if want is not None and "panel_brightness" not in rejected:
             try:
-                root = os.path.expanduser("~/album-art-matrix")
-                with open(os.path.join(root, "panel-brightness"), "w") as fh:
+                with open(os.path.join(ROOT, "panel-brightness"), "w") as fh:
                     fh.write(str(self._s["panel_brightness"]))
-                with open(os.path.join(root, "panel-type"), "w") as fh:
-                    fh.write(str(self._s["panel_type"]))
             except Exception as exc:
                 print(f"[control] panel brightness: {exc}")
         self.dirty.set()
@@ -823,7 +995,10 @@ class ControlState:
                # app that ignores these keys keeps working.
                "wall": {"width": self.wall.width, "height": self.wall.height,
                         "tile": self.wall.tile, "cols": self.wall.cols,
-                        "rows": self.wall.rows, "frame_side": self.phone_side}}
+                        "rows": self.wall.rows, "frame_side": self.phone_side,
+                        # the computer's name, so the phone can offer
+                        # name.local in place of a number that may change
+                        "name": _HOSTNAME}}
         # The ink the message on the wall is actually drawn in when it brought
         # its own, else None (the lamp's colour, or the album's under Match
         # Art). ticker_color alone cannot say: it is always set.
@@ -1033,41 +1208,132 @@ class ControlState:
         self.dirty.set()
 
     # ---- health ---------------------------------------------------------
+    def sample_vitals(self, now=None):
+        """The main loop calls this every pass. At most once a minute it adds
+        the temperature to the last hour's log. It cannot raise into the
+        loop: a missing sensor is a log that stays empty."""
+        try:
+            now = time.monotonic() if now is None else now
+            if self._temp_log_at is not None and now - self._temp_log_at < 60.0:
+                return
+            self._temp_log_at = now
+            temp = _read_temp()
+            if temp is not None:
+                self.temp_log.append((now, temp))
+        except Exception as exc:
+            print(f"[control] vitals: {exc}")
+
     def health(self) -> dict:
         """The Pi lives sealed behind panels; this is how you find out it is
         cooking before it matters. Every reading that does not exist on this
-        machine is None rather than a guess."""
-        temp = None
-        try:
-            with open("/sys/class/thermal/thermal_zone0/temp") as fh:
-                temp = round(int(fh.read().strip()) / 1000.0, 1)
-        except (OSError, ValueError):
-            pass
-        throttled = None
-        try:
-            import subprocess
-            raw = subprocess.run(["vcgencmd", "get_throttled"],
-                                 capture_output=True, text=True,
-                                 timeout=2).stdout
-            bits = int(raw.strip().split("=")[1], 16)
-            throttled = {"now": bool(bits & 0x7),        # under-volt/capped/hot
-                         "ever": bool(bits & 0x70000)}   # since boot
-        except Exception:
-            pass
-        ytdlp_v = None
-        try:
-            from .video import ytdlp
-            ytdlp_v = ytdlp.version()
-        except Exception:
-            pass
-        return {"fps": round(self.fps_last, 1), "temp_c": temp,
-                "throttled": throttled,
-                "uptime_s": int(time.monotonic() - _T0),
-                "loop_age_s": (None if self.loop_beat is None else round(time.monotonic() - self.loop_beat, 1)),
-                "quiet_s": (None if self.quiet_since is None else int(time.monotonic() - self.quiet_since)),
+        machine is None rather than a guess, and a reader that fails leaves
+        its field None and /health still answers.
+
+        fps is pace()'s last measurement, which only the paced faces (Spin,
+        Lamp, the ticker, the voice) make, so fps_age_s says how old it is.
+        sent_fps is every face: frames the brain drew and handed to the
+        panel program in the last few seconds, before the sink drops
+        repeats. uptime_s is this process, boot_s the computer. Ages are all
+        on the brain's own clock, so the phone's clock cannot skew them."""
+        now = time.monotonic()
+        renderer = None
+        if self.renderer_status is not None:
+            try:
+                renderer = self.renderer_status()
+            except Exception:
+                renderer = None
+        sent = None
+        if self.frames_sent_rate is not None:
+            try:
+                # 0.0 is a real answer (a still face), not a missing one.
+                sent = round(float(self.frames_sent_rate()), 1)
+            except Exception:
+                sent = None
+        return {"fps": round(self.fps_last, 1),
+                "fps_age_s": None if self.fps_at is None else round(now - self.fps_at, 1),
+                "fps_target": self.fps_target,
+                "sent_fps": sent,
+                "temp_c": _read_temp(),
+                "temp_log": [[round(now - t, 0), round(c, 1)] for t, c in list(self.temp_log)],
+                "throttled": _read_throttled(),
+                "uptime_s": int(now - _T0),
+                "boot_s": _boot_seconds(),
+                "loop_age_s": (None if self.loop_beat is None else round(now - self.loop_beat, 1)),
+                "renderer": renderer,
+                "memory": _read_memory(),
+                "storage": _read_storage(),
+                "quiet_s": (None if self.quiet_since is None else int(now - self.quiet_since)),
                 "idle": self.idle_now,
                 "mode": self.get()["mode"],
-                "ytdlp": ytdlp_v}
+                "ytdlp": _ytdlp_version(now)}
+
+    # ---- tuning ---------------------------------------------------------
+    # The handlers behind /tuning, kept here rather than in the HTTP class so
+    # the QA fixture (scripts/qa/serve_setup.py) answers with the same code.
+    # Each returns (status, body).
+    _NO_TUNING = "tuning is not available on this wall"
+
+    def tuning_public(self) -> dict:
+        """GET /tuning: the store, with the panel's brightness ceiling."""
+        return _with_ceiling(self.tuning.public(), self.get()["panel_brightness"],
+                             DEFAULTS["panel_brightness"])
+
+    def tuning_write(self, patch: dict):
+        """POST /tuning. The tuning store goes first: a launch flag refused
+        while the panel is still restarting refuses the whole write, the
+        ceiling with it, so a 409 has changed nothing."""
+        if self.tuning is None:
+            return 503, {"error": self._NO_TUNING}
+        patch = dict(patch or {})
+        ceiling = patch.pop("panel_brightness", None)
+        try:
+            changed, rejected, _restart = self.tuning.update(patch)
+        except RuntimeError as exc:
+            return 409, {"error": str(exc), **self.tuning_public()}
+        rejected = list(rejected)
+        if ceiling is not None:
+            before = self.get()["panel_brightness"]
+            if "panel_brightness" in self.apply({"panel_brightness": ceiling}, interrupt=False):
+                rejected.append("panel_brightness")
+            elif self.get()["panel_brightness"] != before:
+                changed = {**changed, "panel_brightness": self.get()["panel_brightness"]}
+        if changed:
+            # a colour or dark-end knob changes the picture that is already
+            # up, so it has to be drawn again
+            self.last_frame = None
+            self.dirty.set()
+            print(f"[tuning] {', '.join(f'{k}={v}' for k, v in changed.items())}")
+        out = self.tuning_public()
+        if rejected:
+            out["rejected"] = sorted(rejected)
+        return 200, out
+
+    def tuning_reset(self):
+        """POST /tuning/reset: every knob and the ceiling back to what the wall
+        shipped with. The measured colour correction (wb_*) is True colour's
+        and stays."""
+        if self.tuning is None:
+            return 503, {"error": self._NO_TUNING}
+        try:
+            self.tuning.reset()
+        except RuntimeError as exc:
+            return 409, {"error": str(exc), **self.tuning_public()}
+        self.apply({"panel_brightness": DEFAULTS["panel_brightness"]}, interrupt=False)
+        self.last_frame = None
+        self.dirty.set()
+        print("[tuning] back to what the wall shipped with")
+        return 200, self.tuning_public()
+
+    def tuning_restart(self):
+        """POST /tuning/restart: relaunch the renderer so launch flags take."""
+        if self.tuning is None:
+            return 503, {"error": self._NO_TUNING}
+        try:
+            said = self.tuning.restart_renderer()
+        except RuntimeError as exc:
+            return 409, {"error": str(exc), **self.tuning_public()}
+        print(f"[tuning] {said}")
+        return 200, {"said": said, **self.tuning_public()}
 
     # ---- journal --------------------------------------------------------
     def journal_append(self, entry: dict):
@@ -1311,9 +1577,9 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
             if u.path.startswith("/tuning"):
                 if ctrl.tuning is None:
-                    self._json(503, {"error": "tuning is not available on this wall"})
+                    self._json(503, {"error": ControlState._NO_TUNING})
                     return
-                self._json(200, ctrl.tuning.public())
+                self._json(200, ctrl.tuning_public())
                 return
             if u.path.startswith("/frame.raw"):
                 px = ctrl.last_frame
@@ -1580,7 +1846,11 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 self._json(200, ctrl.display_session.status())
                 return
             if u.path.startswith("/state"):
-                ctrl.last_client = time.monotonic()
+                # ?peek is a read that is not someone at home: the phone's
+                # widget reloads on its own, and counting that as presence
+                # would keep waking an Away wall at night.
+                if "peek" not in parse_qs(u.query, keep_blank_values=True):
+                    ctrl.last_client = time.monotonic()
                 self._json(200, ctrl.public_state())
                 return
             if u.path.startswith("/services"):
@@ -2271,46 +2541,18 @@ def serve(ctrl: ControlState, port: int) -> ThreadingHTTPServer:
                 return
 
             if self.path.startswith("/tuning/restart"):
-                if ctrl.tuning is None:
-                    self._json(503, {"error": "tuning is not available on this wall"})
-                    return
-                said = ctrl.tuning.restart_renderer()
-                print(f"[tuning] {said}")
-                self._json(200, {"said": said})
+                self._json(*ctrl.tuning_restart())
                 return
 
             if self.path.startswith("/tuning/reset"):
-                if ctrl.tuning is None:
-                    self._json(503, {"error": "tuning is not available on this wall"})
-                    return
-                ctrl.tuning.reset()
-                ctrl.last_frame = None
-                ctrl.dirty.set()
-                print("[tuning] back to what the wall shipped with")
-                out = ctrl.tuning.public()
-                out["restarting"] = True     # the wall took the panel down itself
-                self._json(200, out)
+                self._json(*ctrl.tuning_reset())
                 return
 
             if self.path.startswith("/tuning"):
                 patch = self._body()
                 if patch is None:
                     return
-                if ctrl.tuning is None:
-                    self._json(503, {"error": "tuning is not available on this wall"})
-                    return
-                changed, rejected, restart = ctrl.tuning.update(patch)
-                if changed:
-                    # a colour or dark-end knob changes the picture that is
-                    # already up, so it has to be drawn again
-                    ctrl.last_frame = None
-                    ctrl.dirty.set()
-                    print(f"[tuning] {', '.join(f'{k}={v}' for k, v in changed.items())}")
-                out = ctrl.tuning.public()
-                out["restarting"] = restart
-                if rejected:
-                    out["rejected"] = sorted(rejected)
-                self._json(200, out)
+                self._json(*ctrl.tuning_write(patch))
                 return
 
             if self.path.startswith("/video/clock"):

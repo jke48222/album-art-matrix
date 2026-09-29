@@ -182,7 +182,7 @@ struct PanelCanvas: View {
     let duty: Double
 
     /// Above this many LEDs a side, hand rastering wins by a wide margin.
-    private static let liveLimit = 96
+    static let liveLimit = 96
 
     var body: some View {
         if let px, let side = Panel.square(px.count), side > Self.liveLimit {
@@ -269,9 +269,12 @@ enum PanelRaster {
         }
     }
 
-    static func image(_ px: [UInt8], side: Int, duty: Double) -> UIImage? {
+    /// `cell` is the pixels a LED takes. Left out, the raster is about
+    /// `target` wide, the size the homes draw. Pure apart from the cache,
+    /// which is thread safe, so it may run off the main thread.
+    static func image(_ px: [UInt8], side: Int, duty: Double, cell: Int? = nil) -> UIImage? {
         guard px.count == side * side * 3 else { return nil }
-        let cell = max(2, target / side)
+        let cell = max(2, cell ?? target / side)
         let d = max(0.05, min(1.0, duty))
         let key = "\(digest(px))|\(side)|\(cell)|\(Int(d * 100))" as NSString
         if let hit = cache.object(forKey: key) { return hit }
@@ -318,6 +321,21 @@ enum PanelRaster {
         let img = UIImage(cgImage: cg)
         cache.setObject(img, forKey: key, cost: w * w * 4)
         return img
+    }
+
+    /// A high quality downsample to `side` pixels, so a small copy averages
+    /// the emitters the way the eye does rather than sampling cores and gaps.
+    /// An image already that small is returned as it is. Safe off the main
+    /// thread.
+    static func shrink(_ image: UIImage, to side: CGFloat) -> UIImage {
+        guard image.size.width > side else { return image }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            context.cgContext.interpolationQuality = .high
+            image.draw(in: CGRect(x: 0, y: 0, width: side, height: side))
+        }
     }
 
     /// One disc, antialiased at its edge by coverage. `add` is the halo pass.

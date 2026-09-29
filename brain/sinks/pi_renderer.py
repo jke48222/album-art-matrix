@@ -64,6 +64,15 @@ class PiRendererSink(FrameSink):
         # dither). Set by show() when a write cannot happen, cleared by the
         # write that lands it. The keeper thread owns retrying it.
         self._pending = None
+        # For status(), which the phone polls: when the frame now pending
+        # first went pending (a replacement keeps the first stamp, so a
+        # renderer that stopped taking pictures keeps ageing), how many
+        # times a renderer has attached, and when the last one went away.
+        # Plain attributes, written only by the paths below, so status()
+        # can read them without _lock.
+        self._pending_since = None
+        self._connects = 0
+        self._detached_at = time.monotonic()
         self._lock = threading.Lock()
         self._keeper = threading.Thread(target=self._keep, name="sink-keeper",
                                         daemon=True)
@@ -76,6 +85,37 @@ class PiRendererSink(FrameSink):
         moving picture (the boot sting) knows its frames will be seen."""
         with self._lock:
             return self._fd is not None
+
+    def status(self) -> dict:
+        """What /health and /tuning report about the renderer: whether it
+        is attached, how many times one has attached since the brain
+        started (a restart shows as the count going up), how long it has
+        been gone, and how long the newest picture has waited for it.
+
+        Deliberately takes no lock. _lock is held through a blocking write
+        to the pipe, and a renderer that is attached but has stopped
+        reading holds it for as long as it stays that way. A status that
+        waited for it would park an HTTP thread behind it on every poll,
+        which is the wrong way round for the one call meant to show the
+        hang. Each field is one attribute read, and a reading taken while
+        a write is landing is at worst a quarter second out."""
+        fd, pending, since = self._fd, self._pending, self._pending_since
+        connects, gone_at = self._connects, self._detached_at
+        now = time.monotonic()
+        return {"attached": fd is not None,
+                "connects": connects,
+                "detached_s": None if fd is not None else round(now - gone_at, 1),
+                "pending_s": (round(now - since, 1)
+                              if pending is not None and since is not None else None)}
+
+    def _queue(self, frame):
+        """Make frame the pending one. Lock held by the caller. The first
+        frame to go pending is stamped, and replacing it keeps that stamp:
+        what status() reports is how long the panel has gone without a new
+        picture, not how old the newest one is."""
+        if self._pending is None:
+            self._pending_since = time.monotonic()
+        self._pending = frame
 
     def _connect(self) -> bool:
         """True with the pipe open for writing. A fresh connection means a
@@ -98,11 +138,12 @@ class PiRendererSink(FrameSink):
         # Writes should block until the reader drains, rather than failing with
         # EAGAIN and tearing a frame in half.
         os.set_blocking(self._fd, True)
+        self._connects += 1
         if self._warned:
             print("[sink] renderer is back")
             self._warned = False
         if self._pending is None and self._last is not None:
-            self._pending = (self._last, self._last_cap, self._last_dither)
+            self._queue((self._last, self._last_cap, self._last_dither))
         self._last = None
         return True
 
@@ -112,6 +153,9 @@ class PiRendererSink(FrameSink):
                 os.close(self._fd)
             except OSError:
                 pass
+            # Stamped before the descriptor is cleared, so status() never
+            # sees a detached pipe with the previous detachment's time.
+            self._detached_at = time.monotonic()
             self._fd = None
 
     def _reader_gone(self) -> bool:
@@ -159,6 +203,7 @@ class PiRendererSink(FrameSink):
             return False
         self._last, self._last_cap, self._last_dither = rgb888, cap, dit
         self._pending = None
+        self._pending_since = None
         return True
 
     def _keep(self):
@@ -174,8 +219,8 @@ class PiRendererSink(FrameSink):
                     if self._fd is not None and self._reader_gone():
                         self._drop()
                         if self._last is not None:
-                            self._pending = (self._last, self._last_cap,
-                                             self._last_dither)
+                            self._queue((self._last, self._last_cap,
+                                         self._last_dither))
                     if self._fd is None and not self._connect():
                         continue            # no renderer yet; next tick
                     if self._pending is not None:
@@ -190,5 +235,5 @@ class PiRendererSink(FrameSink):
             if self._pending is None and rgb888 == self._last \
                     and cap == self._last_cap and dit == self._last_dither:
                 return                  # the panel is already showing this
-            self._pending = (bytes(rgb888), cap, dit)
+            self._queue((bytes(rgb888), cap, dit))
             self._deliver()

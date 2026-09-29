@@ -189,7 +189,45 @@ def test_calibration_persistence_failure_retains_session_and_original_gains(cloc
     assert not list(Path(control.STATE_PATH).parent.glob(".calibration-*"))
 
 
-@pytest.mark.parametrize("purpose", ["onboarding", "panel", "guests"])
+def test_identify_glow_is_a_temporary_purpose(clock):
+    """The Connection page's five-second glow: exact pixels, gone on its own,
+    and everything under it as it was."""
+    ctrl = ControlState(seed={"mode": "clock", "brightness": .5})
+    ctrl.frame_override = frame(color=(9, 9, 9))
+    before, override = ctrl.get(), ctrl.frame_override
+    glow = frame(color=(191, 191, 191))
+    receipt = ctrl.display_session.begin(request(purpose="identify", pixels=glow, seconds=5))
+    assert receipt["purpose"] == "identify"
+    assert ctrl.display_session.status()["purpose"] == "identify"
+    source, _ = ctrl.display_session.render((1, 1, 1))
+    assert source.tobytes() == glow
+    clock[0] += 5
+    assert ctrl.display_session.status() == {"active": False}
+    assert ctrl.get() == before and ctrl.frame_override is override
+
+
+def test_tuning_purpose_is_accepted_and_holds_the_wall(clock):
+    """A test pattern stays up while the tuning page is open. Another check
+    waits for it, and ending it leaves the wall as it was."""
+    ctrl = ControlState(seed={"mode": "clock"})
+    before = ctrl.get()
+    ctrl.display_session.begin(request(purpose="tuning", seconds=600))
+    assert ctrl.display_session.status()["purpose"] == "tuning"
+    with pytest.raises(RuntimeError):
+        ctrl.display_session.begin(request(token=OTHER, purpose="panel"))
+    assert ctrl.display_session.end({"token": TOKEN}) == {"active": False}
+    assert ctrl.get() == before
+    # the cover is the guests' alone
+    assert ctrl.display_session.cover() == (False, None)
+
+
+def test_an_unknown_purpose_is_still_refused(clock):
+    ctrl = ControlState()
+    with pytest.raises(ValueError, match="Unknown display purpose."):
+        ctrl.display_session.begin(request(purpose="nope"))
+
+
+@pytest.mark.parametrize("purpose", ["onboarding", "panel", "guests", "identify", "tuning"])
 def test_other_previews_cannot_commit_colour_calibration(clock, purpose):
     ctrl = ControlState()
     ctrl.display_session.begin(request(purpose=purpose))

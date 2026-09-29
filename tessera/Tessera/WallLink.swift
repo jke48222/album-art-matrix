@@ -127,6 +127,22 @@ struct WallState: Equatable {
     var title: String? = nil
     var artist: String? = nil
     var album: String? = nil
+    /// The two songs /state carries, kept apart. `title` and `artist` above
+    /// stay the merged pair the app has always shown. The widget needs to
+    /// know which is which (the artwork's song, or the song that is on
+    /// under a lamp or a clock). Read through WallFacts, as the widget does.
+    var showingTitle: String? = nil
+    var showingArtist: String? = nil
+    var playingTitle: String? = nil
+    var playingArtist: String? = nil
+    /// display_session.purpose while a temporary display is up (a panel
+    /// check, a guest code, a glow), else nil.
+    var displaySession: String? = nil
+    /// The wall's own name on the network (the Pi's hostname), so a numeric
+    /// address can be swapped for the name that survives a router restart.
+    var wallName: String? = nil
+    /// The panel layout. Nil from the stand-in and from an older brain.
+    var grid: WallGrid? = nil
     /// The pressing on the owner's Discogs shelf for the song that is on.
     var owned: WallOwned? = nil
     var artColors: [String] = []
@@ -256,6 +272,12 @@ struct WallState: Equatable {
             artist = now["artist"] as? String
             album = now["album"] as? String
         }
+        let facts = WallFacts(json: json)
+        showingTitle = facts.showingTitle
+        showingArtist = facts.showingArtist
+        playingTitle = facts.playingTitle
+        playingArtist = facts.playingArtist
+        displaySession = facts.session
         owned = (json["owned"] as? [String: Any]).map(WallOwned.init(json:))
         if let p = json["progress"] as? [String: Any], let at = p["at"] as? Double,
            at.isFinite, at >= 0 {
@@ -281,37 +303,18 @@ struct WallState: Equatable {
         // How many LEDs the wall has. Everything the app draws is built at
         // this size, so a nine panel wall gets a 192 pixel doodle and a bench
         // panel gets a 64 pixel one, without a rebuild for either.
-        if let w = json["wall"] as? [String: Any], let px = w["width"] as? Int {
-            Panel.learn(px)
+        if let w = json["wall"] as? [String: Any] {
+            if let px = w["width"] as? Int { Panel.learn(px) }
+            grid = WallGrid(json: w)
+            wallName = (w["name"] as? String)
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .flatMap { $0.isEmpty ? nil : $0 }
         }
     }
 }
 
-/// An HTTP success can still carry rejected fields from an older wall.
-enum WallAcknowledgement {
-    static func accepted(_ data: Data) -> Bool {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return data.isEmpty }
-        if json["error"] != nil { return false }
-        if let rejected = json["rejected"] as? [String: Any], !rejected.isEmpty { return false }
-        if let rejected = json["rejected"] as? [Any], !rejected.isEmpty { return false }
-        return json["rejected"] == nil || (json["rejected"] as? [String: Any])?.isEmpty == true || (json["rejected"] as? [Any])?.isEmpty == true
-    }
-
-    /// What the wall turned down, by field. A reason is the wall's own words
-    /// when it gave some (a timer command answers with a sentence), and empty
-    /// when it only named the field.
-    static func reasons(_ data: Data) -> [String: String] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return [:] }
-        var out: [String: String] = [:]
-        if let rejected = json["rejected"] as? [String: Any] {
-            for (key, value) in rejected { out[key] = value as? String ?? "" }
-        } else if let names = json["rejected"] as? [String] {
-            for key in names { out[key] = "" }
-        }
-        if let error = json["error"] as? String { out["error"] = error }
-        return out
-    }
-}
+// WallAcknowledgement lives in Shared/WallAcknowledgement.swift, so the
+// widget keys' direct send reads a wall's answer by the same rule.
 
 /// A pressing from the shelf, as /state carries it under `owned`.
 struct WallOwned: Equatable {
@@ -371,6 +374,32 @@ enum LinkState: Equatable {
     var isLive: Bool { if case .live = self { true } else { false } }
     /// True when what is on screen is the app's own, not a wall's.
     var isStandIn: Bool { if case .standIn = self { true } else { false } }
+}
+
+extension LinkState {
+    /// The link in a word or two, the same on every screen that names it
+    /// (the Settings wall card, About), so one state never reads three ways.
+    /// `resting` is why a live wall is dark, when it is.
+    func word(resting: String? = nil) -> String {
+        switch self {
+        case .live: resting.map { "Connected, \($0)" } ?? "Connected"
+        case .searching: "Looking for your wall"
+        case .offline: "Offline"
+        case .standIn: "Phone preview"
+        }
+    }
+
+    func word(off: Bool) -> String { word(resting: off ? "off" : nil) }
+
+    /// The status dot beside that word.
+    var dot: Color {
+        switch self {
+        case .live: Ink.moss
+        case .searching: Color(hex: 0xE5BE83)
+        case .offline: Ink.signal
+        case .standIn: Ink.dim
+        }
+    }
 }
 
 /// Translate observations once, not every time the same observation is polled.
@@ -459,12 +488,38 @@ final class WallSession {
     /// must not paint over it just because the wall is out of reach today.
     @ObservationIgnored private var hadSnapshot = false
 
+    /// Why the last poll failed, cleared by the next answer. The status is
+    /// kept beside it because "HTTP 503" is part of the sentence.
+    private(set) var lastProblem: LinkProblem? = nil
+    private(set) var lastProblemStatus: Int? = nil
+    /// "Last try: ..." for the Connection page, nil while nothing failed.
+    var lastProblemSentence: String? { lastProblem?.sentence(host: host, status: lastProblemStatus) }
+
+    /// Recent connection events, newest first, kept across launches.
+    private(set) var history = LinkHistory.load(from: .standard)
+    /// Whether a wall answered since "stopped responding" was last logged.
+    /// Without it every look from offline that failed three more times
+    /// logged the wall stopping again, though it never answered in between.
+    @ObservationIgnored private var episode = LinkEpisode()
+    /// A delivery of the outbox is under way, from a reconnect or Send now.
+    private(set) var delivering = false
+
+    /// The wall's name from its last answer, for suggesting name.local in
+    /// place of a number the router can change.
+    @ObservationIgnored @AppStorage("wall.name") var lastWallName = ""
+
     // The simulator shares the Mac's network: localhost reaches a brain
     // running beside it. On device the wall's mDNS name is the default.
     #if targetEnvironment(simulator)
-    @ObservationIgnored @AppStorage("wall.host") var host = "localhost:8788"
+    static let defaultHost = "localhost:8788"
     #else
-    @ObservationIgnored @AppStorage("wall.host") var host = "album-matrix.local:8788" {
+    static let defaultHost = "album-matrix.local:8788"
+    #endif
+
+    #if targetEnvironment(simulator)
+    @ObservationIgnored @AppStorage("wall.host") var host = WallSession.defaultHost
+    #else
+    @ObservationIgnored @AppStorage("wall.host") var host = WallSession.defaultHost {
         didSet {
             // The widget's keys dial the wall themselves; they read the
             // address from the shared group, so it has to live there too.
@@ -565,8 +620,8 @@ final class WallSession {
             // says nothing, since the stand-in writes frames too, and taking
             // its own snapshot for a wall kept a wall-less phone in "away"
             // after every look for one.
-            hadSnapshot = !WallSnapshot.read().host.isEmpty
-            enterStandIn()
+            hadSnapshot = Self.saved(WallSnapshot.Store.shared.read()).map { !$0.host.isEmpty } ?? false
+            enterStandIn(.launch)
         }
         guard pollTask == nil else { return }
         pollTask = Task { [weak self] in
@@ -667,7 +722,7 @@ final class WallSession {
         let outcome = await post("/state", patch)
         guard requestedHost == host else { return false }
         guard outcome.ok else {
-            if case .rejected(let reasons) = outcome,
+            if case .refused(_, let reasons) = outcome,
                let reason = reasons["timer_action"], !reason.isEmpty { routineRejection = reason }
             await pollState(); return false
         }
@@ -710,11 +765,15 @@ final class WallSession {
         let requestedEpoch = connectionEpoch
         stateRequest &+= 1
         let request = stateRequest
+        // Kept outside the do: a non-2xx throws, and the status is the only
+        // thing that tells "the wall reported an error" from "no answer".
+        var status: Int? = nil
         do {
             let (data, response) = try await http.data(from: stateURL)
             guard !Task.isCancelled, !explicitStandIn, requestedEpoch == connectionEpoch,
                   requestedHost == host, request >= appliedStateRequest else { return }
-            guard let httpResponse = response as? HTTPURLResponse, (200..<300).contains(httpResponse.statusCode) else {
+            status = (response as? HTTPURLResponse)?.statusCode
+            guard let code = status, (200..<300).contains(code) else {
                 throw URLError(.badServerResponse)
             }
             let receivedAt = Date()
@@ -767,6 +826,9 @@ final class WallSession {
             push.refine(&fresh)
             state = fresh
             lastSync = Date()
+            misses = 0
+            clearProblem()
+            if let name = fresh.wallName, name != lastWallName { lastWallName = name }
             // the sound for a video starts and stops on the wall's word,
             // wherever in the app you are
             let v = state.video, m = state.mode, h = host
@@ -774,18 +836,25 @@ final class WallSession {
             if reconnected {
                 Taps.found()                      // the lamp switched on
                 FlightLog.note("LINK", "wall answered at \(host)")
+                if let kind = history.answerKind { record(kind) }
             }
+            episode.answer()
             wasLive = true
             lookedFromStandIn = false
             link = .live
             seedWall()
-            if reconnected { flushOutbox() }
+            if reconnected, !Self.debugHoldsQueue { Task { await deliverOutbox() } }
             syncWidget()
             live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: host)
         } catch {
             guard !Task.isCancelled, !explicitStandIn, requestedEpoch == connectionEpoch,
                   requestedHost == host, request >= appliedStateRequest else { return }
             misses += 1
+            let problem = LinkProblem.from(error, status: status)
+            if problem != lastProblem || status != lastProblemStatus {
+                lastProblem = problem
+                lastProblemStatus = status
+            }
             // Three misses is about six seconds of asking. After that, stop
             // showing an empty room and run a wall instead. Anything the app
             // has genuinely seen before is still worth showing as offline —
@@ -798,11 +867,20 @@ final class WallSession {
             // the stand-in the same way, so a look must not end elsewhere.
             if lastSync == nil, !link.isStandIn, lookedFromStandIn || (misses >= 3 && !hadSnapshot) {
                 lookedFromStandIn = false
-                enterStandIn()
+                enterStandIn(.noAnswer)
             } else if wasLive || linkIsSearching {
                 link = .offline(since: lastSync ?? Date())
             }
             wasLive = false
+            // Logged at the third miss, not the first (see LinkEpisode), and
+            // stamped when the wall went quiet.
+            if case .offline(let since) = link, episode.miss(misses, offline: true) {
+                let reason = problem.reason(host: host, status: status)
+                record(.stopped, at: since, detail: reason)
+                FlightLog.note("LINK", "wall stopped responding at \(host): \(reason)")
+            }
+            // A dropped wall dims on the widget now, not ten minutes later.
+            syncWidget()
         }
     }
 
@@ -814,18 +892,32 @@ final class WallSession {
     /// look again, so a screen that offers that look reads this.
     private(set) var explicitStandIn = false
 
+    /// Whether a screen should offer to look for the wall: away, searching,
+    /// or this phone chosen over it. The automatic stand-in is still
+    /// probing in the background, so it has nothing to offer.
+    var offersLookAgain: Bool { !link.isLive && (!link.isStandIn || explicitStandIn) }
+
     func useStandIn() {
+        // Logged here rather than in enterStandIn: from the automatic
+        // stand-in its guard returns early, and the owner's choice would go
+        // unrecorded in the most common case.
+        if !explicitStandIn { record(.phoneOnly) }
         explicitStandIn = true
         invalidateConnectionQueries()
         wasLive = false
+        episode.reset()
         lookedFromStandIn = false
         hadSnapshot = false
         lastSync = nil
         misses = 0
+        // Polling stops here, so an old failure would otherwise stay on the
+        // page as if it were why this phone is on its own.
+        clearProblem()
         playbackClock = PlaybackClock()
         push.setPhoneOnly(true)
-        enterStandIn()
+        enterStandIn(.chosen)
         frame = standIn.frame()
+        frameFromPhone = true
         syncWidget()
         live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
     }
@@ -838,9 +930,16 @@ final class WallSession {
         pending.removeAll()
     }
 
-    private func enterStandIn() {
+    /// Why the stand-in took over. Only a wall that did not answer is news
+    /// for the history: every launch starts here until the first probe, and
+    /// the owner's own choice is logged where it is made.
+    private enum StandInReason { case launch, noAnswer, chosen }
+
+    private func enterStandIn(_ reason: StandInReason) {
         guard !link.isStandIn else { return }
         FlightLog.note("LINK", "stand-in takes over")
+        if reason == .noAnswer { record(.noWallFound) }
+        standInModeChanged = false
         standIn.refreshNowPlaying()
         state = standIn.state
         link = .standIn
@@ -849,14 +948,51 @@ final class WallSession {
     /// Leave the stand-in and go looking again. The next successful poll
     /// takes over completely.
     func lookForWallAgain() {
+        record(.looking)
+        look(fromStandIn: link.isStandIn)
+    }
+
+    private func look(fromStandIn: Bool) {
         invalidateConnectionQueries()
         explicitStandIn = false
         misses = 0
-        lookedFromStandIn = link.isStandIn
+        lookedFromStandIn = fromStandIn
         link = .searching
         push.wallHost = host
         push.setPhoneOnly(false)
         Task { await pollState() }
+    }
+
+    /// Point the app at a different wall. `normalized` is already checked
+    /// (WallAddressInput on the Connection page).
+    func setHost(_ normalized: String) {
+        guard !normalized.isEmpty, normalized != host else { return }
+        host = normalized
+        #if targetEnvironment(simulator)
+        // On a device host's didSet does these. The simulator build has no
+        // didSet, and the widget keys dial the address in the app group.
+        UserDefaults(suiteName: WallSnapshot.group)?.set(host, forKey: "wall.host")
+        push.wallHost = host
+        push.restart()
+        #endif
+        // A new address is a new wall until it answers. The old wall's last
+        // reply must not make this one "offline since" it, and three misses
+        // must not log a wall stopping that never started.
+        lastSync = nil
+        wasLive = false
+        episode.reset()
+        misses = 0
+        clearProblem()
+        record(.address, detail: host)
+        // As a look from the stand-in: the first miss is the honest answer,
+        // "No wall found", rather than offline at an address never reached.
+        look(fromStandIn: true)
+    }
+
+    private func clearProblem() {
+        guard lastProblem != nil || lastProblemStatus != nil else { return }
+        lastProblem = nil
+        lastProblemStatus = nil
     }
 
     /// The stand-in as a pure renderer: this session's own state pushed into
@@ -885,7 +1021,10 @@ final class WallSession {
         let px = standIn.frame()
         // a finished non-looping run hands back to art, wall or no wall
         if standIn.state.mode != state.mode { state.mode = standIn.state.mode }
-        if px != frame { frame = px }
+        if px != frame {
+            frame = px
+            frameFromPhone = true
+        }
         syncWidget()
     }
 
@@ -906,6 +1045,7 @@ final class WallSession {
         // frame() first: a sleep fade expiring inside it flips mode to off,
         // and the state published here must be the one that drew the frame.
         frame = standIn.frame()
+        frameFromPhone = true
         lap("frame")
         state = standIn.state
         live.update(state: state, frame: frame.map { [UInt8]($0) } ?? [], wall: "stand-in")
@@ -929,47 +1069,147 @@ final class WallSession {
 
     @ObservationIgnored private var snapKey = ""
     @ObservationIgnored private var snapAt = Date.distantPast
+    /// Whether `frame` was drawn on this phone (the stand-in, or a moving
+    /// face rendered while the wall is away) rather than pulled from a wall.
+    /// The widget labels a phone's picture instead of passing it off as the
+    /// wall's.
+    @ObservationIgnored private(set) var frameFromPhone = false
+    /// The owner changed the mode while the stand-in was running. Only then
+    /// does a stand-in session touch the mode of a snapshot a wall wrote.
+    @ObservationIgnored private var standInModeChanged = false
 
-    /// The widget can only show what somebody wrote down. Writing happened
-    /// only on a successful live poll, so a phone that had never reached a
-    /// wall — which is every phone until the wall is built — left the shared
-    /// snapshot empty and the widget sat on an unlit lattice saying nothing
-    /// was playing. Now every path that produces frames writes: new content
-    /// immediately, a moving frame at most once a minute, and the timelines
-    /// are nudged so the home screen follows the app instead of a 5-minute
-    /// clock. The host is only stamped by a wall that answered; the widget
-    /// uses it to dial direct, and a stand-in is not dialable.
+    /// Posted after every meaningful snapshot write, for the in-app widget
+    /// page, which previews the same record the widget reads.
+    static let snapshotDidWrite = Notification.Name("WallSnapshotDidWrite")
+
+    /// The widget can only show what somebody wrote down. Every path that
+    /// produces frames writes: new content immediately, a moving frame at
+    /// most once a minute, and the timelines are nudged so the home screen
+    /// follows the app instead of a clock. The record says who drew the
+    /// frame and when a wall last answered, so the widget can be honest
+    /// about how current its picture is. The host is only stamped by a wall
+    /// that answered. The widget uses it to dial direct, and a stand-in is
+    /// not dialable.
     private func syncWidget() {
+        #if DEBUG
+        // A capture pinned a fixture into the store, and this session must
+        // not paint over it.
+        if WallSnapshot.frozen { return }
+        #endif
         let carrier = link.isLive ? "live" : (link.isStandIn ? "standin" : "away")
-        let key = "\(arrivalKey)|\(state.mode)|\(state.effect)|\(state.title ?? "")|\(carrier)"
+        let key = [arrivalKey, state.mode, state.displayedMode, state.effect, state.title ?? "", carrier,
+                   frameFromPhone ? "phone" : "wall", outbox.isEmpty ? "clear" : "queued",
+                   state.displaySession ?? ""].joined(separator: "|")
         let changed = key != snapKey
         guard changed || Date().timeIntervalSince(snapAt) > 60 else { return }
         snapKey = key
         snapAt = Date()
-        WallSnapshot.write(px: frame.map { [UInt8]($0) }, title: state.title,
-                           artist: state.artist, mode: state.mode,
-                           host: link.isLive ? host : "")
+        let store = WallSnapshot.Store.shared
+        let saved = Self.saved(store.read())
+        let queued = !outbox.isEmpty
+        if frame == nil, lastSync == nil, !link.isStandIn {
+            // A widget key launched this process in the background: a fresh
+            // session with no frame and no song, which must not erase the
+            // ones on record. It adds only what it knows, the mode it was
+            // asked for and whether that is waiting, and marks the frame as
+            // older than the change.
+            let mode = state.mode
+            store.update { r in
+                r.mode = mode
+                r.queued = queued
+                r.outdated = true
+            }
+        } else if link.isStandIn, !explicitStandIn, let saved, saved.source == .wall {
+            // Opened away from home, the automatic stand-in runs until a
+            // wall answers. The wall's last frame and when it was seen stay
+            // on record, dimmed and dated by the widget, instead of being
+            // replaced by this phone's preview on every such launch.
+            let mode = standInModeChanged ? state.mode : nil
+            store.update { r in
+                r.link = .away
+                r.queued = queued
+                if let mode, mode != r.mode {
+                    r.mode = mode
+                    r.outdated = true
+                }
+            }
+        } else {
+            store.write(widgetRecord(over: saved))
+        }
         // Redraw only when the picture MEANS something new. The minute write
         // keeps the snapshot fresh for whenever WidgetKit next asks on its
         // own; a reload per write would spend the whole background budget on
         // frames nobody asked for, and the widget would then sit stale on
         // the one reload that mattered, the track change.
-        if changed { WidgetCenter.shared.reloadAllTimelines() }
+        if changed {
+            WidgetCenter.shared.reloadTimelines(ofKind: WallSnapshot.kind)
+            NotificationCenter.default.post(name: Self.snapshotDidWrite, object: nil)
+        }
+    }
+
+    private static func saved(_ result: WallSnapshot.ReadResult) -> WallSnapshot.Record? {
+        if case .record(let record) = result { return record }
+        return nil
+    }
+
+    /// Everything this session knows, laid over what was on record so that
+    /// nothing it does not know is erased: a missing frame, the last time a
+    /// wall answered, the address of a wall that did.
+    private func widgetRecord(over saved: WallSnapshot.Record?) -> WallSnapshot.Record {
+        var r = saved ?? WallSnapshot.Record()
+        let now = Date()
+        if let frame {
+            r.frame = frame
+            r.side = Panel.square(frame)
+            r.source = frameFromPhone ? .phone : .wall
+        }
+        r.mode = state.mode
+        // Only a live wall reports what it is really showing. The stand-in
+        // never sets displayedMode and send() changes only mode, so away or
+        // standing in, the setting is the face.
+        let face = link.isLive
+            ? WallFacts.face(mode: state.mode, displayed: state.displayedMode, session: state.displaySession)
+            : state.mode
+        r.face = face
+        r.check = link.isLive ? WallFacts.check(state.displaySession) : nil
+        // The stand-in knows only the merged song, which is the phone's own.
+        let phoneSong = !link.isLive && state.showingTitle == nil && state.playingTitle == nil
+        r.showingTitle = phoneSong ? state.title : state.showingTitle
+        r.showingArtist = phoneSong ? state.artist : state.showingArtist
+        r.playingTitle = state.playingTitle
+        r.playingArtist = state.playingArtist
+        let place = state.place.trimmingCharacters(in: .whitespacesAndNewlines)
+        r.place = face == "weather" && !place.isEmpty ? place : nil
+        r.timerRinging = state.timerRinging || state.timerStatus == "ringing"
+        r.timerEnds = face == "timer" && !r.timerRinging
+            ? state.timerSeconds(at: now).flatMap { $0 > 0 ? now.addingTimeInterval(TimeInterval($0)) : nil }
+            : nil
+        r.rest = WallFacts.rest(away: state.awayActive, idle: state.idleActive)
+        r.link = link.isLive ? .live : (link.isStandIn ? .standIn : .away)
+        r.seen = lastSync ?? saved?.seen
+        r.written = now
+        if link.isLive { r.host = host }
+        r.queued = !outbox.isEmpty
+        r.outdated = false
+        return r
     }
 
     /// What a POST came back with. Only `unreachable` means the wall did not
-    /// hear it. A wall that answered and turned something down was reached,
-    /// and replaying the patch from the outbox later would only repeat it.
-    private enum PostOutcome {
+    /// take it in. A wall that answered and turned something down was
+    /// reached, and replaying it from the outbox later would only repeat it.
+    private enum PostResult {
         case accepted
-        case rejected([String: String])
+        /// `keys` are the fields the wall turned down: all of them when it
+        /// named none or refused the whole request, only the named ones
+        /// when it kept the rest. `reasons` are its own words, by field.
+        case refused(keys: [String], reasons: [String: String])
         case unreachable
         var ok: Bool { if case .accepted = self { true } else { false } }
     }
 
     /// The one JSON POST every endpoint shares: request shape, status check,
     /// timeout. Four hand-rolled copies of this had already drifted apart.
-    private func post(_ path: String, _ obj: [String: Any]) async -> PostOutcome {
+    private func post(_ path: String, _ obj: [String: Any]) async -> PostResult {
         guard !explicitStandIn, let u = url(path),
               let body = try? JSONSerialization.data(withJSONObject: obj) else { return .unreachable }
         var req = URLRequest(url: u)
@@ -978,10 +1218,19 @@ final class WallSession {
         req.httpBody = body
         guard let (data, resp) = try? await http.data(for: req),
               let code = (resp as? HTTPURLResponse)?.statusCode else { return .unreachable }
+        // A wall that is up but failing did not take the change in any more
+        // than a silent one did, so it waits in the outbox like one.
+        if code >= 500 { return .unreachable }
         // Any 2xx is a delivery. /pressing answers 204 with no body, and
         // reading that as a failure re-sent the whole pressing every second.
         guard (200..<300).contains(code), WallAcknowledgement.accepted(data) else {
-            return .rejected(WallAcknowledgement.reasons(data))
+            let reasons = WallAcknowledgement.reasons(data)
+            let named = reasons.keys.filter { $0 != "error" }
+            // A 200 with `rejected` applied everything else, so only the
+            // named fields were refused. No field named, or an error for the
+            // whole request, means none of it held.
+            let keys = reasons["error"] != nil || named.isEmpty ? Array(obj.keys) : named
+            return .refused(keys: keys.sorted(), reasons: reasons)
         }
         return .accepted
     }
@@ -998,6 +1247,7 @@ final class WallSession {
            !explicitStandIn, requestedEpoch == connectionEpoch, requestedHost == host,
            (resp as? HTTPURLResponse)?.statusCode == 200,
            Panel.square(data.count) != nil {
+            frameFromPhone = false
             // Only publish when the bytes actually changed. Two identical
             // frames must leave the screen perfectly still.
             if data != frame {
@@ -1032,13 +1282,17 @@ final class WallSession {
         }
         Task { [weak self] in
             guard let self else { return }
-            if await self.postJSON("/clip", [
+            switch await self.post("/clip", [
                 "fps": min(24, max(1, fps)),
                 "frames": valid.map { Data($0).base64EncodedString() },
             ]) {
+            case .accepted:
                 Taps.landed()
-            } else {
-                self.outbox.add(clip: valid, fps: fps)
+            case .unreachable:
+                self.queue { self.outbox.add(clip: valid, fps: fps) }
+                Taps.error()
+            case .refused(_, let reasons):
+                FlightLog.note("SEND", "wall refused a clip: \(reasons["error"] ?? "no reason")")
                 Taps.error()
             }
         }
@@ -1226,15 +1480,20 @@ final class WallSession {
             standIn.push(frame: px)
             state = standIn.state
             frame = standIn.frame()
+            frameFromPhone = true
             Taps.landed()
             return
         }
         Task { [weak self] in
             guard let self else { return }
-            if await self.postJSON("/frame", ["px": Data(px).base64EncodedString()]) {
+            switch await self.post("/frame", ["px": Data(px).base64EncodedString()]) {
+            case .accepted:
                 Taps.landed()
-            } else {
-                self.outbox.add(frame: px)
+            case .unreachable:
+                self.queue { self.outbox.add(frame: px) }
+                Taps.error()
+            case .refused(_, let reasons):
+                FlightLog.note("SEND", "wall refused a picture: \(reasons["error"] ?? "no reason")")
                 Taps.error()
             }
         }
@@ -1250,6 +1509,7 @@ final class WallSession {
             standIn.push(frame: px)
             state = standIn.state
             frame = standIn.frame()
+            frameFromPhone = true
             return
         }
         Task { [weak self] in
@@ -1308,23 +1568,33 @@ final class WallSession {
             break
         case .unreachable:
             // Intent survives the network. It goes out when the wall
-            // answers again, and the UI says so in the meantime.
+            // answers again, and the Connection page says so meanwhile.
             let durable = merged.filter { !Self.momentary.contains($0.key) }
             FlightLog.note("SEND", "wall away, queued \(durable.keys.sorted().joined(separator: ","))")
-            if !durable.isEmpty { outbox.add(patch: durable) }
+            if !durable.isEmpty { queue { outbox.add(patch: durable) } }
             Taps.error()
-        case .rejected(let reasons):
+        case .refused(let keys, _):
             // The wall heard it and turned some of it down (an older build
-            // that does not know a key, say). Queuing would replay the whole
-            // patch at some later reconnect. Stop holding what it refused
-            // and read back what it actually kept instead.
-            FlightLog.note("SEND", "wall rejected \(reasons.keys.sorted().joined(separator: ","))")
-            // No field named, or an error for the whole request: none of it held.
-            let refused = reasons.isEmpty || reasons["error"] != nil ? Array(merged.keys) : Array(reasons.keys)
-            for key in refused { pending.removeValue(forKey: key) }
+            // that does not know a key, say). Queuing would replay it at
+            // some later reconnect only to be refused again. Stop holding
+            // what it refused and read back what it actually kept instead.
+            FlightLog.note("SEND", "wall refused \(keys.joined(separator: ","))")
+            for key in keys { pending.removeValue(forKey: key) }
             Taps.error()
             await pollState()
         }
+    }
+
+    /// Every add to the outbox goes through here, so the first thing queued
+    /// logs "Changes waiting" and the widget hears at once that something
+    /// is waiting. A widget key tapped in the background queues after the
+    /// optimistic write has already gone out, so this second write is the
+    /// only one that says so.
+    private func queue(_ add: () -> Void) {
+        let wasEmpty = outbox.isEmpty
+        add()
+        if wasEmpty, !outbox.isEmpty { record(.waiting, detail: outbox.contents.words) }
+        syncWidget()
     }
 
     /// The optimistic half of a send: dedupe, merge into the local state so
@@ -1391,6 +1661,7 @@ final class WallSession {
         for key in merged.keys { pending[key] = Date() }
 
         if link.isStandIn {
+            if merged["mode"] != nil { standInModeChanged = true }
             standIn.apply(merged)
             state = standIn.state
             syncWidget()
@@ -1404,38 +1675,142 @@ final class WallSession {
         return merged
     }
 
+    // MARK: - The outbox, delivered
+
+    /// One job taken from the outbox, with when it was queued.
+    private enum Job {
+        case settings([String: Any])
+        case picture([UInt8])
+        case clip([[UInt8]], fps: Double)
+    }
+
     /// Everything queued while the wall was away, in one ORDERED pass. The
     /// brain force-sets mode "frame" on a frame push, so the kinds are sent
     /// oldest first and the newest intent lands last and wins; firing them as
     /// parallel tasks let the network decide which one the user meant.
-    private func flushOutbox() {
-        guard !outbox.isEmpty else { return }
-        var jobs: [(Date, () async -> Bool)] = []
-        if let f = outbox.frame {
-            jobs.append((outbox.frameAt ?? .distantPast,
-                         { await self.postJSON("/frame", ["px": Data(f).base64EncodedString()]) }))
-        }
-        if let c = outbox.clip {
-            jobs.append((outbox.clipAt ?? .distantPast,
-                         { await self.postJSON("/clip", [
-                             "fps": min(24, max(1, c.fps)),
-                             "frames": c.frames.map { Data($0).base64EncodedString() },
-                         ]) }))
-        }
-        if !outbox.patch.isEmpty {
-            let p = outbox.patch
-            jobs.append((outbox.patchAt ?? .distantPast,
-                         { await self.postJSON("/state", p) }))
-        }
-        outbox.clear()
-        jobs.sort { $0.0 < $1.0 }
-        Task { [weak self] in
-            var allLanded = true
-            for job in jobs {
-                if !(await job.1()) { allLanded = false }
-            }
-            guard self != nil else { return }
-            if allLanded { Taps.landed() } else { Taps.error() }
-        }
+    ///
+    /// Nothing is lost on the way. What the wall does not hear goes back in
+    /// the queue, never over anything queued meanwhile. What it hears and
+    /// turns down is dropped, and the delivery says which was which.
+    /// DEBUG: a queue seeded with -connection-delivery stays until the page's
+    /// own Send now, so a test or capture sees the seeded state and not the
+    /// automatic redelivery on the next reconnect. Always false in release.
+    static var debugHoldsQueue: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("-connection-delivery")
+        #else
+        false
+        #endif
     }
+
+    @discardableResult
+    func deliverOutbox() async -> Outbox.Delivery? {
+        guard !outbox.isEmpty, !delivering else { return nil }
+        delivering = true
+        defer { delivering = false }
+        let destination = host
+        var jobs: [(at: Date, job: Job)] = []
+        if let f = outbox.frame { jobs.append((outbox.frameAt ?? .distantPast, .picture(f))) }
+        if let c = outbox.clip { jobs.append((outbox.clipAt ?? .distantPast, .clip(c.frames, fps: c.fps))) }
+        if !outbox.patch.isEmpty { jobs.append((outbox.patchAt ?? .distantPast, .settings(outbox.patch))) }
+        outbox.clear()
+        jobs.sort { $0.at < $1.at }
+
+        var sent = Outbox.Contents(), again = Outbox.Contents(), refused = Outbox.Contents()
+        var away = false
+        for (at, job) in jobs {
+            // Once the wall stops answering, the rest waits too: sending a
+            // later job past an earlier one would break the order above.
+            let result: PostResult
+            if away || host != destination {
+                result = .unreachable
+            } else {
+                switch job {
+                case .settings(let patch):
+                    result = await post("/state", patch)
+                case .picture(let px):
+                    result = await post("/frame", ["px": Data(px).base64EncodedString()])
+                case .clip(let frames, let fps):
+                    result = await post("/clip", ["fps": min(24, max(1, fps)),
+                                                  "frames": frames.map { Data($0).base64EncodedString() }])
+                }
+            }
+            if case .unreachable = result { away = true }
+            switch (job, result) {
+            case (.settings(let patch), .accepted):
+                sent.keys += patch.keys
+            case (.settings(let patch), .unreachable):
+                outbox.restore(patch: patch, at: at)
+                again.keys += patch.keys
+            case (.settings(let patch), .refused(let keys, _)):
+                let turned = Set(keys).intersection(patch.keys)
+                refused.keys += turned
+                sent.keys += patch.keys.filter { !turned.contains($0) }
+                for key in turned { pending.removeValue(forKey: key) }
+            case (.picture, .accepted): sent.frame = true
+            case (.picture(let px), .unreachable):
+                outbox.restore(frame: px, at: at)
+                again.frame = true
+            case (.picture, .refused): refused.frame = true
+            case (.clip, .accepted): sent.clip = true
+            case (.clip(let frames, let fps), .unreachable):
+                outbox.restore(clip: frames, fps: fps, at: at)
+                again.clip = true
+            case (.clip, .refused): refused.clip = true
+            }
+        }
+        sent.keys.sort(); again.keys.sort(); refused.keys.sort()
+
+        let delivery = Outbox.Delivery(at: Date(), sent: sent, again: again, refused: refused)
+        outbox.record(delivery)
+        if delivery.complete {
+            record(.sent, detail: sent.words)
+            Taps.landed()
+        } else {
+            let missed = Outbox.Contents(keys: (again.keys + refused.keys).sorted(),
+                                         frame: again.frame || refused.frame,
+                                         clip: again.clip || refused.clip)
+            record(.notSent, detail: missed.words)
+            Taps.error()
+        }
+        FlightLog.note("SEND", "delivered \(sent.words.isEmpty ? "nothing" : sent.words)"
+                       + (again.isEmpty ? "" : ", waiting again \(again.words)")
+                       + (refused.isEmpty ? "" : ", refused \(refused.words)"))
+        syncWidget()
+        // Read back what the wall kept, so the controls stop holding values
+        // it turned down and Send now shows the result at once.
+        if !away, host == destination { await pollState() }
+        return delivery
+    }
+
+    /// Drop what is waiting. Nothing is sent, and the wall keeps what it has.
+    func discardOutbox() {
+        guard !outbox.isEmpty else { return }
+        let words = outbox.contents.words
+        outbox.clear()
+        record(.discarded, detail: words)
+        syncWidget()
+    }
+
+    // MARK: - History
+
+    private func record(_ kind: LinkEvent.Kind, at: Date = Date(), detail: String? = nil) {
+        let event = LinkEvent(kind: kind, at: at, detail: detail)
+        history.append(event)
+        history.save(to: .standard)
+        FlightLog.note("LINK", detail.map { "\(event.sentence): \($0)" } ?? event.sentence)
+    }
+
+    #if DEBUG
+    /// Captures of the Recent list, and a clean slate for UI tests.
+    func debugSeedHistory(_ events: [LinkEvent]) {
+        history = LinkHistory(events: events)
+        history.save(to: .standard)
+    }
+
+    func debugClearHistory() {
+        history = LinkHistory()
+        UserDefaults.standard.removeObject(forKey: LinkHistory.key)
+    }
+    #endif
 }

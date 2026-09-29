@@ -11,42 +11,8 @@ import CoreText
 
 // MARK: - Palette
 
-enum Ink {
-    static let ground   = Color(hex: 0x0B0A09)
-    static let plaster  = Color(hex: 0x141210)
-    static let sunk     = Color(hex: 0x0E0D0B)
-    static let ink      = Color(hex: 0xEAE4D8)
-    static let dim      = Color(hex: 0x96907F)
-    // Was 0x5E594E, which measured 2.84:1 on ground: under the 3:1 floor for
-    // large text, let alone the 4.5:1 body text needs, and it carries words at
-    // forty-odd places, most of them 9 to 12pt. Lifted along its own hue until
-    // it clears 4.5:1 on all three grounds (4.77 / 4.51 / 4.68). Still the
-    // quietest voice: well below dim, which is 6.2:1.
-    static let faint    = Color(hex: 0x837C6C)
-    static let hairline = Color(hex: 0xEAE4D8).opacity(0.13)
-    static let tile     = Color(hex: 0xE8B04B)   // a lit tessera; pending states
-    static let signal   = Color(hex: 0xE0491F)   // warnings and destructive only
-    static let moss     = Color(hex: 0x7FA87A)   // confirmed on the wall
-}
-
-extension Color {
-    init(hex: UInt32) {
-        self.init(
-            red: Double((hex >> 16) & 0xFF) / 255,
-            green: Double((hex >> 8) & 0xFF) / 255,
-            blue: Double(hex & 0xFF) / 255
-        )
-    }
-
-    /// "#rrggbb" from the brain's art_colors; nil when malformed.
-    init?(wallHex: String) {
-        var s = wallHex
-        guard s.hasPrefix("#") else { return nil }
-        s.removeFirst()
-        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
-        self.init(hex: v)
-    }
-}
+// Ink, Color(hex:) and Color(wallHex:) live in Shared/Palette.swift, so the
+// widget and the share extension draw in the same palette as the app.
 
 // MARK: - Type
 
@@ -130,10 +96,21 @@ extension View {
     /// anyone thinks to press. The underline is the affordance, and it is not
     /// a colour, so it survives the room being dark and eyes that do not sort
     /// these greys apart.
-    func quietLink() -> some View {
-        self.font(.ui(15, .semibold))
-            .foregroundStyle(Ink.ink)
-            .underline(true, pattern: .solid)
+    ///
+    /// Turned off, it drops to the faint ink with no underline, so it never
+    /// looks pressable when it is not. A wrapped label stays flush left.
+    func quietLink() -> some View { modifier(QuietLink()) }
+}
+
+private struct QuietLink: ViewModifier {
+    @Environment(\.isEnabled) private var enabled
+
+    func body(content: Content) -> some View {
+        content
+            .font(.ui(15, .semibold))
+            .foregroundStyle(enabled ? Ink.ink : Ink.faint)
+            .underline(enabled, pattern: .solid)
+            .multilineTextAlignment(.leading)
             .accessibilityAddTraits(.isButton)
     }
 }
@@ -149,7 +126,18 @@ extension Color {
 
 // One family of springs; Reduce Motion swaps every move for a dissolve.
 enum Motion {
-    static var reduced: Bool { UIAccessibility.isReduceMotionEnabled }
+    static var reduced: Bool { UIAccessibility.isReduceMotionEnabled || forcedReduced }
+    /// `-reduce-motion` in DEBUG, so a capture or UI test can exercise every
+    /// Reduce Motion gate. accessibilityReduceMotion is get-only in the SDK,
+    /// so the environment cannot be overridden from outside. Each opening
+    /// gate reads `reducedMotion || Motion.forcedReduced` instead.
+    static var forcedReduced: Bool {
+        #if DEBUG
+        CommandLine.arguments.contains("-reduce-motion")
+        #else
+        false
+        #endif
+    }
     static var blink: Animation { reduced ? .easeOut(duration: 0.09) : .easeOut(duration: 0.12) }
     static var settle: Animation { reduced ? .easeInOut(duration: 0.20) : .spring(response: 0.42, dampingFraction: 0.85) }
     static var scene: Animation { reduced ? .easeInOut(duration: 0.24) : .spring(response: 0.48, dampingFraction: 0.86) }

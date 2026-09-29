@@ -6,7 +6,7 @@ from test_playback_identity import declarations
 
 parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--json',type=Path);args=parser.parse_args()
 root=Path(__file__).resolve().parents[1];app=root/'tessera/Tessera'
-source='import Foundation\n'+declarations(app/'WallLink.swift','struct WallState:','// MARK: - Session')+'\n'+declarations(app/'Video.swift','struct WallVideo:','// MARK: - Talking to the wall')
+source='import Foundation\nimport SwiftUI\n'+declarations(app/'WallLink.swift','struct WallState:','// MARK: - Session')+'\n'+declarations(app/'Video.swift','struct WallVideo:','// MARK: - Talking to the wall')
 tests=r'''
 import Foundation
 @main struct RoutineTests {
@@ -75,7 +75,7 @@ import Foundation
 with tempfile.TemporaryDirectory(prefix='tessera-routines-') as folder:
  folder=Path(folder);(folder/'Models.swift').write_text(source);(folder/'Tests.swift').write_text(tests)
  binary=folder/'routines'
- subprocess.run(['xcrun','swiftc','-parse-as-library',str(folder/'Models.swift'),str(app/'Panel.swift'),str(folder/'Tests.swift'),'-o',str(binary)],check=True,cwd=root)
+ subprocess.run(['xcrun','swiftc','-parse-as-library',str(folder/'Models.swift'),str(app.parent/'Shared'/'Panel.swift'),str(app/'WallGrid.swift'),str(app.parent/'Shared'/'WallFacts.swift'),str(app.parent/'Shared'/'Palette.swift'),str(app.parent/'Shared'/'WallAcknowledgement.swift'),str(folder/'Tests.swift'),'-o',str(binary)],check=True,cwd=root)
  result=subprocess.run([str(binary)],capture_output=True,text=True,check=True)
  data=json.loads(result.stdout)
  if args.json:args.json.parent.mkdir(parents=True,exist_ok=True);args.json.write_text(json.dumps(data,indent=2)+'\n')

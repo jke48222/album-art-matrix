@@ -133,3 +133,79 @@ def test_the_same_picture_is_not_sent_twice(fifo):
         assert read_exact(fd, HEAD + FRAME)[4] == 120
     finally:
         os.close(fd)
+
+
+# ---- status(), for /health and /tuning ---------------------------------------
+
+def wait_until(predicate, timeout=3.0):
+    end = time.monotonic() + timeout
+    while not predicate():
+        if time.monotonic() > end:
+            raise AssertionError("condition never held")
+        time.sleep(0.02)
+
+
+def test_status_says_how_long_a_picture_has_waited_for_a_renderer(fifo):
+    sink = PiRendererSink(fifo)
+    before = sink.status()
+    assert before["attached"] is False and before["connects"] == 0
+    assert before["detached_s"] is not None and before["pending_s"] is None
+    sink.show(frame(10, 20, 30))                   # nobody listening: kept
+    first = sink.status()["pending_s"]
+    assert first is not None
+    time.sleep(0.25)
+    sink.show(frame(40, 50, 60))                   # replacing it keeps the stamp
+    later = sink.status()
+    assert later["pending_s"] > first
+    assert later["detached_s"] >= 0.2
+    fd = open_reader(fifo)
+    try:
+        read_exact(fd, HEAD + FRAME)
+        wait_until(lambda: sink.status()["attached"])
+        now = sink.status()
+        assert now == {"attached": True, "connects": 1, "detached_s": None, "pending_s": None}
+    finally:
+        os.close(fd)
+
+
+def test_status_counts_each_renderer_connection(fifo):
+    """A restart is over when the count goes up: that is how /tuning tells a
+    renderer that came back from one that did not."""
+    sink = PiRendererSink(fifo)
+    assert sink.status()["connects"] == 0
+    fd = open_reader(fifo)
+    wait_until(lambda: sink.status()["attached"])
+    assert sink.status()["connects"] == 1
+    os.close(fd)                                   # the renderer is killed
+    wait_until(lambda: not sink.status()["attached"])
+    gone = sink.status()
+    assert gone["connects"] == 1 and gone["detached_s"] >= 0
+    fd = open_reader(fifo)                         # systemd brings it back
+    try:
+        wait_until(lambda: sink.status()["attached"])
+        assert sink.status()["connects"] == 2
+    finally:
+        os.close(fd)
+
+
+def test_status_never_waits_for_the_pipe_lock(fifo):
+    """_lock is held through a blocking write to a renderer that has stopped
+    reading. /health and /tuning must still answer."""
+    sink = PiRendererSink(fifo)
+    held, release = threading.Event(), threading.Event()
+
+    def hold():
+        with sink._lock:
+            held.set()
+            release.wait(2)
+
+    t = threading.Thread(target=hold, daemon=True)
+    t.start()
+    held.wait(1)
+    try:
+        start = time.monotonic()
+        sink.status()
+        assert time.monotonic() - start < 0.05
+    finally:
+        release.set()
+        t.join(2)

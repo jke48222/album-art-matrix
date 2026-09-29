@@ -468,6 +468,8 @@ struct GuestsPage: View {
         // expired code, refresh() reports another phone's code as occupying.
         // The next refresh adopts it, and it can then be hidden from here.
         case "guests": return "A guest code from another phone is on the wall. It closes by itself when its time is up."
+        case "identify": return "A short glow is on the wall. Try again in a few seconds."
+        case "tuning": return "Panel tuning is showing a test pattern on the wall. Choose Your wall there before showing a guest code."
         default: return "Another check is showing on the wall. Finish it before showing a guest code."
         }
     }

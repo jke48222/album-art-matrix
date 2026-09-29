@@ -74,6 +74,9 @@ struct IPodView: View {
     var onArchive: () -> Void
     var onZoom: () -> Void
     var onHintChange: (String) -> Void = { _ in }
+    /// Why previous and next do nothing, or nil when they work. The home
+    /// shows it under the wheel's hint.
+    var onMusicNoteChange: (String?) -> Void = { _ in }
 
     @State private var pages: [IPodPage] = []            // empty = Now Playing
     @State private var selected: [IPodPage: Int] = [:]
@@ -87,6 +90,13 @@ struct IPodView: View {
     // Read on appear, never here: this view is made on every evaluation of
     // the screen above it, and a system player read is an XPC call.
     @State private var playing = false
+    /// Apple Music is connected and has a song, so previous and next can do
+    /// something. Read with playing, never in body.
+    @State private var musicAuthorized = false
+    @State private var musicHasTrack = false
+    /// False until the first reading, so a connected phone never flashes
+    /// the note or the dimmed keys before it has looked.
+    @State private var musicRead = false
     @AppStorage("lyrics.nudge") private var lyricsNudge: Double = 0
     @AppStorage("spin.beat") private var beatOn = false
 
@@ -117,6 +127,7 @@ struct IPodView: View {
             ClickWheel(
                 accent: accent,
                 accessibilityValue: wheelDescription,
+                skipsEnabled: !musicRead || (musicAuthorized && musicHasTrack),
                 onTurn: { turn($0) },
                 onMenu: { menu() },
                 onSelect: { select() },
@@ -136,11 +147,14 @@ struct IPodView: View {
         }
         .frame(width: IPodMetrics.bodyW, height: IPodMetrics.bodyH)
         .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerPlaybackStateDidChange)) { _ in
-            playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+            refreshMusic()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .MPMusicPlayerControllerNowPlayingItemDidChange)) { _ in
+            refreshMusic()
         }
         .onAppear {
             MPMusicPlayerController.systemMusicPlayer.beginGeneratingPlaybackNotifications()
-            playing = MPMusicPlayerController.systemMusicPlayer.playbackState == .playing
+            refreshMusic()
             beats.retune(title: wall.state.title, artist: wall.state.artist)
             #if DEBUG
             if CommandLine.arguments.contains("-ipod-menu") { pages = [.root] }
@@ -153,7 +167,7 @@ struct IPodView: View {
             scrubHideTask?.cancel()
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase != .active { finishScrub(commit: false) }
+            if phase != .active { finishScrub(commit: false) } else { refreshMusic() }
         }
         .onChange(of: wall.state.mode) { _, mode in
             if mode != "cd" { scrub = .light }
@@ -163,6 +177,7 @@ struct IPodView: View {
             beats.retune(title: wall.state.title, artist: wall.state.artist)
         }
         .onChange(of: wheelHint, initial: true) { _, hint in onHintChange(hint) }
+        .onChange(of: musicNote, initial: true) { _, note in onMusicNoteChange(note) }
         .onChange(of: beats.phase) {
             guard beatOn, wall.state.mode == "cd", scenePhase == .active else { return }
             if case .locked(let reading) = beats.phase { wall.send(["rpm": reading.rpm]) }
@@ -309,11 +324,30 @@ struct IPodView: View {
         let m = MPMusicPlayerController.systemMusicPlayer
         if playing { m.pause() } else {
             StandIn.requestMusicAccess {
+                // A first grant lands here, with no player notification.
+                refreshMusic()
                 guard MPMediaLibrary.authorizationStatus() == .authorized,
                       m.nowPlayingItem != nil else { return }
                 m.play()
             }
         }
+    }
+
+    /// The same reading as the Panel home's music keys.
+    private func refreshMusic() {
+        let m = MPMusicPlayerController.systemMusicPlayer
+        musicAuthorized = MPMediaLibrary.authorizationStatus() == .authorized
+        musicHasTrack = musicAuthorized && m.nowPlayingItem != nil
+        playing = m.playbackState == .playing
+        musicRead = true
+    }
+
+    /// The Panel home's words for the same two cases.
+    private var musicNote: String? {
+        guard musicRead else { return nil }
+        if !musicAuthorized { return "Connect Apple Music in Settings for playback controls" }
+        if !musicHasTrack { return "Choose a song in Apple Music to play here" }
+        return nil
     }
 
     private var wheelDescription: String {
@@ -344,6 +378,7 @@ struct IPodView: View {
     private func skip(previous: Bool) {
         guard MPMediaLibrary.authorizationStatus() == .authorized else { return }
         let player = MPMusicPlayerController.systemMusicPlayer
+        guard player.nowPlayingItem != nil else { return }
         if previous { player.skipToPreviousItem() } else { player.skipToNextItem() }
         Taps.commit()
     }
@@ -514,6 +549,9 @@ struct ClickWheel: View {
     let accent: Color
     var drawn: Bool = IPodBody.rendered == nil
     var accessibilityValue: String
+    /// Previous and next have a song to move through. Off, their glyphs
+    /// dim to the Panel home's disabled keys.
+    var skipsEnabled: Bool = true
     var onTurn: (Int) -> Void
     var onMenu: () -> Void
     var onSelect: () -> Void
@@ -614,7 +652,8 @@ struct ClickWheel: View {
     private func wheelSymbol(_ name: String, sector: IPodWheelInteraction.Sector) -> some View {
         Image(systemName: name)
             .font(.system(size: 15, weight: .semibold))
-            .foregroundStyle(pressed == sector ? highlight : Ink.ink.opacity(0.85))
+            .foregroundStyle(pressed == sector && skipsEnabled ? highlight : Ink.ink.opacity(0.85))
+            .opacity(skipsEnabled ? 1 : 0.38)
     }
 
     private func accessibleTurn(_ step: Int) {
@@ -803,7 +842,9 @@ final class ImmediateTouch: UIGestureRecognizer {
 
 // MARK: - Now Playing
 
-private enum IPodLCD {
+/// The screen's inks. Internal, so the App design page's iPod preview is
+/// drawn on the same paper.
+enum IPodLCD {
     static let paper = Color(hex: 0xEAE6D9)
     static let ink = Color(hex: 0x242B2A)
     static let secondary = Color(hex: 0x59625D)

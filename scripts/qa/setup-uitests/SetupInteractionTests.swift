@@ -1,95 +1,14 @@
 import XCTest
 
-final class SetupInteractionTests: XCTestCase {
-    func api(_ path: String, _ body: [String: Any]? = nil) async throws -> [String: Any] {
-        var request = URLRequest(url: URL(string: "http://127.0.0.1:65367" + path)!)
-        request.timeoutInterval = 8
-        if let body {
-            request.httpMethod = "POST"
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        }
-        let (data, response) = try await URLSession.shared.data(for: request)
-        XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200)
-        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-    }
-
-    @MainActor func launch(_ page: String, phase: String = "connected", fixture: String? = nil) async throws -> XCUIApplication {
-        _ = try await api("/qa/reset", ["phase": phase])
-        let app = XCUIApplication(bundleIdentifier: "com.jalenedusei.tessera")
-        app.launchArguments = ["-nointro", "-onboarded", "YES", "-intro.sting.migrated", "YES", "-intro.style", "none", "-design", "room", "-wall.host", "127.0.0.1:65367", "-reporter.host", "", "-reporter.background", "NO", "-live.enabled", "NO", "-guests-reset"]
-        if page == "onboarding" {
-            app.launchArguments += ["-onboarding-step", "welcome"]
-        } else if page == "pictures" {
-            app.launchArguments += ["-settings", "-settings-page", "services", "-service-page", "pictures"]
-        } else {
-            app.launchArguments += ["-settings", "-settings-page", page]
-        }
-        if let fixture { app.launchArguments += ["-guests-fixture", fixture] }
-        app.launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 12))
-        if page == "onboarding" {
-            XCTAssertTrue(app.buttons["onboarding.usePhone"].waitForExistence(timeout: 12))
-        } else {
-            XCTAssertTrue(app.navigationBars.firstMatch.waitForExistence(timeout: 12))
-        }
-        return app
-    }
-
-    @MainActor func reveal(_ element: XCUIElement, in app: XCUIApplication) {
-        for _ in 0..<9 {
-            if element.exists { return }
-            app.swipeUp()
-        }
-        XCTAssertTrue(element.exists, element.debugDescription)
-    }
-
-    @MainActor func tap(_ id: String, in app: XCUIApplication) {
-        let element = app.buttons[id]
-        _ = element.waitForExistence(timeout: 8)
-        reveal(element, in: app)
-        let enabled = XCTNSPredicateExpectation(predicate: NSPredicate(format: "enabled == true"), object: element)
-        XCTAssertEqual(XCTWaiter.wait(for: [enabled], timeout: 8), .completed, "Button did not become ready: \(id)")
-        element.tap()
-    }
-
-    @MainActor func element(_ id: String, in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any)[id].firstMatch
-    }
-
-    @MainActor func dismissKeyboard(_ app: XCUIApplication) {
-        if app.toolbars.buttons["Done"].exists { app.toolbars.buttons["Done"].tap() }
-        else if app.keyboards.buttons["Done"].exists { app.keyboards.buttons["Done"].tap() }
-    }
-
+/// Setup, calibration, panel check, guests and pictures. The shared launch,
+/// fixture and tap helpers are SetupHarnessCase's (SetupHarness.swift).
+final class SetupInteractionTests: SetupHarnessCase {
     @MainActor func enterNetwork(in app: XCUIApplication, password: String) {
         let ssid = app.textFields["guests.ssid"]
         reveal(ssid, in: app); ssid.tap(); ssid.typeText("Tessera guest")
         let secret = app.secureTextFields["guests.password"]
         reveal(secret, in: app); secret.tap(); secret.typeText(password)
         dismissKeyboard(app)
-    }
-
-    func waitForSession(active: Bool, purpose: String? = nil) async throws -> [String: Any] {
-        var snapshot = [String: Any]()
-        for _ in 0..<40 {
-            snapshot = try await api("/qa/status")
-            let session = snapshot["session"] as? [String: Any] ?? [:]
-            if session["active"] as? Bool == active && (purpose == nil || session["purpose"] as? String == purpose) { return snapshot }
-            try await Task.sleep(for: .milliseconds(200))
-        }
-        XCTFail("The temporary display did not reach the expected confirmed state")
-        return snapshot
-    }
-
-    func assertPreserved(_ snapshot: [String: Any], mode: String = "clock", file: StaticString = #filePath, line: UInt = #line) {
-        let state = snapshot["state"] as? [String: Any] ?? [:]
-        let initial = snapshot["initial"] as? [String: Any] ?? [:]
-        XCTAssertEqual(state["mode"] as? String, mode, file: file, line: line)
-        for key in ["brightness", "wb_r", "wb_g", "wb_b"] {
-            XCTAssertEqual(state[key] as? Double, initial[key] as? Double, key, file: file, line: line)
-        }
-        XCTAssertEqual(state["finish"] as? String, "poster", file: file, line: line)
     }
 
     @MainActor func testGuestPasswordIsSecureAndInvalidInputCannotShow() async throws {

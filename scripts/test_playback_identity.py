@@ -23,7 +23,7 @@ def main() -> int:
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     app = root / "tessera/Tessera"
-    model = "import Foundation\n" + "\n".join([
+    model = "import Foundation\nimport SwiftUI\n" + "\n".join([
         declarations(app / "WallLink.swift", "struct WallState:", "// MARK: - Session"),
         declarations(app / "Video.swift", "struct WallVideo:", "// MARK: - Talking to the wall"),
         declarations(app / "NowPlayingIdentity.swift", "struct PlaybackIdentity:", "struct NowPlayingIdentity: View"),
@@ -33,7 +33,10 @@ def main() -> int:
         source = directory / "ProductionModels.swift"
         source.write_text(model)
         binary = directory / "playback-identity-tests"
-        subprocess.run(["xcrun", "swiftc", "-parse-as-library", str(source), str(app / "Panel.swift"),
+        subprocess.run(["xcrun", "swiftc", "-parse-as-library", str(source), str(app.parent / "Shared" / "Panel.swift"),
+                        # WallState now carries the wall's grid and facts, and its
+                        # neighbours use the shared palette.
+                        str(app / "WallGrid.swift"), str(app.parent / "Shared" / "WallFacts.swift"), str(app.parent / "Shared" / "Palette.swift"),
                         str(root / "scripts/test_playback_identity.swift"), "-o", str(binary)], check=True, cwd=root)
         run = subprocess.run([str(binary)], capture_output=True, text=True, cwd=root)
         if run.stderr:

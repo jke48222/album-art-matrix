@@ -14,4 +14,4 @@ import SwiftUI
 
 // MARK: - HomeKit
 
-// Teach the wall lives in TeachPage.swift.
+// The song library lives in TeachPage.swift.

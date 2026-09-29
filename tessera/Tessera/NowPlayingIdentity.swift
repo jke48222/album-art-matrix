@@ -66,7 +66,7 @@ struct PlaybackIdentity: Equatable {
         case .lastPlayed: "Last played"
         case .preview: "Phone preview"
         case .offline: hasSong ? "Last known track" : "Wall offline"
-        case .searching: "Finding the wall"
+        case .searching: "Looking for your wall"
         case .empty: "Connected"
         }
     }

@@ -1,0 +1,156 @@
+{
+  "simulator": "656AFBBD-1ED1-4828-9692-59467A1E70E1",
+  "bundle": "com.jalenedusei.tessera",
+  "captures": [
+    {
+      "state": "room-live",
+      "image": "room-live.png",
+      "case": "connection-check-cellular",
+      "fixture": "scripts/qa/serve_setup.py",
+      "fixture_port": 65368,
+      "side": 64,
+      "phase": "connected",
+      "launch_arguments": [
+        "-nointro",
+        "-onboarded",
+        "YES",
+        "-intro.sting.migrated",
+        "YES",
+        "-intro.style",
+        "none",
+        "-design",
+        "room",
+        "-reporter.host",
+        "",
+        "-reporter.background",
+        "NO",
+        "-live.enabled",
+        "NO",
+        "-wall.host",
+        "127.0.0.1:65368",
+        "-settings",
+        "-settings-page",
+        "addresses",
+        "-connection-reset",
+        "-connection-check-fixture",
+        "cellular"
+      ],
+      "fixture_calls": [
+        {
+          "when": "before launch",
+          "post": "/qa/reset",
+          "body": {
+            "phase": "connected"
+          }
+        }
+      ],
+      "app_reached_fixture": true,
+      "screenshot_after_launch_s": 11.88,
+      "dynamic_type": "large",
+      "qa_status": {
+        "gets": {
+          "/journal": 5,
+          "/state": 11,
+          "/health": 1,
+          "/services": 12,
+          "/frame.raw": 49
+        },
+        "check_gets": 0,
+        "health_reads": 1,
+        "health_preset": "steady",
+        "available": true,
+        "unavailable_as": "http",
+        "delay_s": 0.0,
+        "phase": "connected",
+        "hostname": "qa-wall",
+        "session": {
+          "active": false
+        },
+        "tuning": {
+          "values": {
+            "hearing": true,
+            "listen_for": 6.0,
+            "room_gate": -52,
+            "quiet_before_letting_go": 10,
+            "listen_again_every": 25,
+            "retry_after_miss": 4,
+            "keep_through_noise": 180,
+            "mic_gain": 100,
+            "knock": true,
+            "knock_sensitivity": 20,
+            "whistle": true,
+            "teach": true,
+            "teach_by_ear": true,
+            "teach_match_score": 15,
+            "wake": true,
+            "wake_threshold": 0.5,
+            "speech_base": false,
+            "mic_auto_gain": false,
+            "shelf_mark": true,
+            "bit_depth": 64,
+            "dither": 0.0,
+            "addr_settle_ns": 0,
+            "panel_type": 0,
+            "temporal_dither": true,
+            "dither_min": 0.2,
+            "gain_r": 1.0,
+            "gain_g": 0.88,
+            "gain_b": 0.83,
+            "nearest_colour": true,
+            "black_point": 0,
+            "pic_black": 0,
+            "pic_floor": 0,
+            "pic_knee": 104,
+            "low_end": 160,
+            "low_full": 40,
+            "low_red": 1.0,
+            "low_blue": 1.0,
+            "unsharp_radius": 1.0,
+            "unsharp_percent": 60,
+            "video_tone_target": 112,
+            "video_floor": false
+          },
+          "panel_brightness": 160,
+          "renderer": {
+            "state": "running",
+            "down_s": null
+          },
+          "restarts": 0
+        },
+        "frame": {
+          "bytes": 12288,
+          "sha256": "8b56113415577b4e579faaef243ee757cc45f985ef3e03f624e8b89bbbf1a1ca",
+          "first_rgb": [
+            184,
+            206,
+            196
+          ],
+          "uniform": false
+        },
+        "requests": []
+      },
+      "installed_app_identity": {
+        "source": "Installed simulator bundle, resolved by simctl get_app_container",
+        "files_sha256": {
+          "Tessera": "96330cbe14a79f9d61f237e050c9bf1b3c9196981101553e148dfadba3d86d58",
+          "Tessera.debug.dylib": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2"
+        },
+        "production_code_file": "Tessera.debug.dylib"
+      },
+      "tessera_debug_dylib_sha256": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2",
+      "captured_at": "2026-09-29T11:22:21.538637+00:00",
+      "frame": "room-live-frame.png",
+      "frame_source": "GET /frame.raw on the fixture (final)"
+    }
+  ],
+  "captured_at": "2026-09-29T11:22:21.539300+00:00",
+  "installed_app_identity": {
+    "source": "Installed simulator bundle, resolved by simctl get_app_container",
+    "files_sha256": {
+      "Tessera": "96330cbe14a79f9d61f237e050c9bf1b3c9196981101553e148dfadba3d86d58",
+      "Tessera.debug.dylib": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2"
+    },
+    "production_code_file": "Tessera.debug.dylib"
+  },
+  "tessera_debug_dylib_sha256": "2f3a4b07b0a596831ae698ce0a28264b57236a80b48802adb356c3b4eff483d2"
+}

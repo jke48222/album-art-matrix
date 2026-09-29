@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='tessera-lettering-') as directory:
     (folder/'Render.swift').write_text(runner)
     binary=folder/'render'
     subprocess.run(['xcrun','swiftc','-parse-as-library',str(folder/'Legacy.swift'),str(folder/'Render.swift'),
-                    str(root/'tessera/Tessera/LetteringLayout.swift'),str(root/'tessera/Tessera/Panel.swift'),
+                    str(root/'tessera/Tessera/LetteringLayout.swift'),str(root/'tessera/Shared/Panel.swift'),
                     str(root/'tessera/Tessera/PixelFont.swift'),'-o',str(binary)],check=True)
     subprocess.run([str(binary),str(args.output.resolve())],check=True)
 manifest=[]

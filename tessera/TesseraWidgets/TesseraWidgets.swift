@@ -2,186 +2,128 @@
 //
 // Moonlitt's widget is the moon: no frame, no label, no chrome, just the
 // object at its current state. Tessera's is the same idea taken literally.
-// The small widget is 4,096 emitters and nothing else. The medium one adds
-// the placard, because at that size there is room for the wall to be named.
+// The small widget is the panel and nothing else while its picture is
+// current, and one label when it is not, or when a check is up. The medium one adds the words and
+// the three keys, in a column of their own beside the panel.
 //
 // A widget cannot poll, so the provider tries the wall directly and falls
-// back to whatever the app last wrote. An extension's local network access
-// can be denied without ever prompting, so the fallback is the normal path,
-// not the error path, and anything older than ten minutes says when it is
-// from rather than pretending to be current.
+// back to the record the app last wrote (Shared/WallSnapshot.swift). An
+// extension's local network access can be denied without ever prompting, so
+// the record is the normal path, not the error path. The timeline carries
+// its own future: the entry where a current picture turns "As of", the one
+// where a timer finishes, the ones where "As of 9:41 PM" becomes a day and
+// then a date. Honesty rests on those, not on WidgetKit reloading in time.
+//
+// The views and every rule about what they say live in Shared/, so the
+// app's Home Screen page and render harness draw this exact widget.
 
 import AppIntents
-import WidgetKit
 import SwiftUI
+import WidgetKit
 
 struct WallEntry: TimelineEntry {
     let date: Date
-    let image: UIImage?
-    let title: String?
-    let artist: String?
-    let mode: String
-    let asOf: Date?          // nil when the frame came from the wall just now
+    let result: WallSnapshot.ReadResult
+    let reading: WidgetReading
 
-    var isDark: Bool { mode == "off" || image == nil }
+    var frame: Data? {
+        if case .record(let r) = result { return r.frame }
+        return nil
+    }
+
+    var side: Int? {
+        if case .record(let r) = result { return r.side ?? Panel.square(r.frame) }
+        return nil
+    }
 }
 
 struct WallProvider: TimelineProvider {
     typealias Entry = WallEntry
 
     func placeholder(in context: Context) -> WallEntry {
-        WallEntry(date: Date(), image: nil, title: nil, artist: nil, mode: "off", asOf: nil)
+        let now = Date()
+        return WallEntry(date: now, result: .unreadable, reading: WidgetReading(result: .unreadable, now: now))
     }
 
+    /// The gallery shows the owner's own last frame, or the not set up
+    /// state, never invented art. It asks for this at once, so no network.
     func getSnapshot(in context: Context, completion: @escaping (WallEntry) -> Void) {
-        Task { completion(await entry()) }
+        let result = WallSnapshot.Store.shared.read()
+        completion(Self.entries(for: result, from: Date())[0])
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<WallEntry>) -> Void) {
         Task {
-            let e = await entry()
-            // The wall changes when a track changes, which is minutes, not
-            // seconds. Asking more often than this would cost battery for
-            // frames nobody is looking at.
-            completion(Timeline(entries: [e], policy: .after(Date().addingTimeInterval(300))))
+            let store = WallSnapshot.Store.shared
+            var result = store.read()
+            var frozen = false
+            #if DEBUG
+            frozen = WallSnapshot.frozen
+            #endif
+            if !frozen {
+                // The real sizes on this phone, for the app's preview.
+                if let family = WallWidgetFamily(context.family) {
+                    store.setMeasured(context.displaySize, for: family.measuredKey)
+                }
+                result = await Self.refresh(result, in: store)
+            }
+            let now = Date()
+            let entries = Self.entries(for: result, from: now)
+            // A request, not a promise: the reload budget decides. The
+            // scheduled entries above keep the labels true in the meantime.
+            completion(Timeline(entries: entries, policy: .after(now.addingTimeInterval(15 * 60))))
         }
     }
 
-    private func entry() async -> WallEntry {
-        let cached = WallSnapshot.read()
-
-        if let live = await WallSnapshot.fetchLive(host: cached.host) {
-            WallSnapshot.write(px: live.px, title: live.title, artist: live.artist,
-                               mode: live.mode, host: cached.host)
-            return WallEntry(
-                date: Date(),
-                image: WallSnapshot.render(live.px),
-                title: live.title, artist: live.artist, mode: live.mode,
-                asOf: nil
-            )
+    /// Asks the wall directly and writes what it said. Only a record with a
+    /// host can be dialled: the host is stamped by a wall that answered.
+    private static func refresh(_ result: WallSnapshot.ReadResult, in store: WallSnapshot.Store) async -> WallSnapshot.ReadResult {
+        guard case .record(let cached) = result, !cached.host.isEmpty else { return result }
+        guard var live = await WallSnapshot.fetchLive(host: cached.host, carrying: cached) else {
+            count("widget.debug.snapshot")
+            return result
         }
+        // The outbox is the app's. Whatever it recorded since this read began
+        // stays, rather than being overwritten by a copy taken before.
+        if case .record(let latest) = store.read() { live.queued = latest.queued }
+        store.write(live)
+        count("widget.debug.live")
+        return .record(live)
+    }
 
-        let stale = (cached.updated.map { Date().timeIntervalSince($0) > 600 } ?? true)
-        return WallEntry(
-            date: Date(),
-            image: cached.px.flatMap { WallSnapshot.render($0) },
-            title: cached.title, artist: cached.artist, mode: cached.mode,
-            asOf: stale ? cached.updated : nil
-        )
+    /// Whether the extension ever reaches the wall on the real phone, which
+    /// Apple's rules leave open. Debug builds only.
+    private static func count(_ key: String) {
+        #if DEBUG
+        let d = WallSnapshot.Store.shared.defaults
+        d.set(d.integer(forKey: key) + 1, forKey: key)
+        #endif
+    }
+
+    /// One entry now, then one at each moment the reading changes on its
+    /// own, so the stale flip, a timer's end and the midnight rollover of an
+    /// "As of" time need no reload.
+    static func entries(for result: WallSnapshot.ReadResult, from start: Date) -> [WallEntry] {
+        #if DEBUG
+        // A capture pinned the clock: one still entry, read at that moment.
+        if let pinned = WallSnapshot.pinnedNow {
+            return [WallEntry(date: start, result: result,
+                              reading: WidgetReading(result: result, now: pinned, liveTimer: false))]
+        }
+        #endif
+        var out: [WallEntry] = []
+        var at = start
+        for _ in 0..<8 {
+            let reading = WidgetReading(result: result, now: at)
+            out.append(WallEntry(date: at, result: result, reading: reading))
+            guard let next = reading.nextChange, next > at else { break }
+            at = next
+        }
+        return out
     }
 }
 
 // MARK: - Views
-
-private struct PanelView: View {
-    let entry: WallEntry
-
-    /// The wall with nothing on it. Shown when the wall is off or unknown,
-    /// so the widget is still the object rather than an empty square.
-    private static let unlit = WallSnapshot.render(Panel.blank())
-
-    var body: some View {
-        ZStack {
-            Color.black
-            if let img = (entry.isDark ? PanelView.unlit : entry.image ?? PanelView.unlit) {
-                // The Tinted and Clear home screens re-render widget
-                // content as monochrome glass unless the image opts out,
-                // which turned the whole panel into a blank white tile.
-                // The frame is a photograph of the wall: keep its color.
-                Image(uiImage: img)
-                    .interpolation(.high)
-                    .resizable()
-                    .widgetAccentedRenderingMode(.fullColor)
-                    .aspectRatio(contentMode: .fill)
-            }
-        }
-    }
-}
-
-private struct SmallWall: View {
-    let entry: WallEntry
-    var body: some View {
-        PanelView(entry: entry)
-            .overlay(alignment: .bottomTrailing) {
-                if let asOf = entry.asOf {
-                    Text(asOf, style: .time)
-                        .font(.system(size: 9, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.45))
-                        .padding(6)
-                }
-            }
-    }
-}
-
-private struct MediumWall: View {
-    let entry: WallEntry
-    var body: some View {
-        HStack(spacing: 14) {
-            PanelView(entry: entry)
-                .aspectRatio(1, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: Round.chip))
-
-            VStack(alignment: .leading, spacing: 4) {
-                if let title = entry.title, !title.isEmpty, !entry.isDark {
-                    Text(title)
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    if let artist = entry.artist, !artist.isEmpty {
-                        Text(artist)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.white.opacity(0.55))
-                            .lineLimit(1)
-                    }
-                } else {
-                    Text(entry.mode == "off" ? "Asleep" : "Nothing playing")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white.opacity(0.65))
-                }
-
-                Spacer(minLength: 0)
-
-                if let asOf = entry.asOf {
-                    Text(asOf, style: .time)
-                        .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.white.opacity(0.35))
-                }
-
-                // The three things worth doing from the home screen. These
-                // run in the app's process (see Shared/WallIntents.swift),
-                // which is the only process allowed to dial the wall.
-                HStack(spacing: 6) {
-                    WidgetKey(label: "Art", mode: .art, on: entry.mode == "art")
-                    WidgetKey(label: "Lamp", mode: .lamp, on: entry.mode == "ambient")
-                    WidgetKey(label: "Off", mode: .off, on: entry.mode == "off")
-                }
-                .padding(.top, 6)
-            }
-            Spacer(minLength: 0)
-        }
-    }
-}
-
-private struct WidgetKey: View {
-    let label: String
-    let mode: WallMode
-    let on: Bool
-
-    var body: some View {
-        Button(intent: SetWallModeIntent(mode: mode)) {
-            Text(label)
-                .font(.system(size: 11, weight: .medium))
-                .foregroundStyle(on ? .black : .white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 5)
-                .background(on ? Color.white : Color.white.opacity(0.14),
-                            in: RoundedRectangle(cornerRadius: Round.chip))
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Widgets
 
 /// One entry view that reads the family, so both sizes share a configuration.
 private struct WallEntryView: View {
@@ -191,29 +133,45 @@ private struct WallEntryView: View {
     var body: some View {
         Group {
             switch family {
-            case .systemMedium: MediumWall(entry: entry)
-            default: SmallWall(entry: entry)
+            case .systemMedium:
+                WallWidgetMedium(reading: entry.reading, frame: entry.frame, side: entry.side, interactive: true)
+            default:
+                WallWidgetSmall(reading: entry.reading, frame: entry.frame, side: entry.side)
             }
         }
-        .containerBackground(.black, for: .widget)
+        .containerBackground(Ink.ground, for: .widget)
+        // Opens the Wall page. Sheets stay as they are: dismissing Settings
+        // would end a running panel check or clear a guest draft.
+        .widgetURL(URL(string: "tessera://wall"))
     }
 }
 
 struct WallWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "TesseraWall", provider: WallProvider()) { entry in
+        StaticConfiguration(kind: WallSnapshot.kind, provider: WallProvider()) { entry in
             WallEntryView(entry: entry)
         }
         .configurationDisplayName("The wall")
-        .description("What the wall is showing.")
+        .description("What the wall is showing. The medium size adds Art, Lamp and Off.")
         .supportedFamilies([.systemSmall, .systemMedium])
-        // The frame must reach the edges: this is an object, not a card.
+        // The panel must reach the edges: this is an object, not a card. The
+        // medium widget pads its own column instead.
         .contentMarginsDisabled()
     }
 }
 
 @main
 struct TesseraWidgetBundle: WidgetBundle {
+    init() {
+        #if DEBUG
+        // A face missing from UIAppFonts falls back to the system font
+        // without a word, so say which ones this process can find.
+        for name in ["Technor-Bold", "Switzer-Medium", "Switzer-Semibold", "MartianMono-Medium"] {
+            print("[widget fonts] \(name): \(UIFont(name: name, size: 12) != nil ? "found" : "missing")")
+        }
+        #endif
+    }
+
     var body: some Widget {
         WallWidget()
         WallLiveActivity()

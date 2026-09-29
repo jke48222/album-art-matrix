@@ -1,0 +1,252 @@
+{
+ "D06": {
+  "mobbin": [
+   {
+    "app": "Starlink",
+    "mobbin_url": "https://mobbin.com/screens/7765bb6f-a321-44b4-ab64-9196ee1aa8d4",
+    "ideas": "One word status as the hero (Online) with a colour dot; two metric tiles with a number, unit, a short sparkline and the window it covers (last 15 minutes); plain rows below that open details."
+   },
+   {
+    "app": "Mercedes-Benz",
+    "mobbin_url": "https://mobbin.com/screens/155f60ad-ee02-4383-8de4-80f7f999eeb6",
+    "ideas": "Health as a list of named parts, each with a plain value on the right (OK, Charged) and an info affordance for what it means."
+   },
+   {
+    "app": "Grab Driver",
+    "mobbin_url": "https://mobbin.com/screens/de6f8894-dd78-4ba3-a7a6-b7383db24950",
+    "ideas": "Problems first, with what to do, then a collapsible 'running smoothly' list of checks that passed."
+   },
+   {
+    "app": "Meta Quest",
+    "mobbin_url": "https://mobbin.com/screens/d2f52711-5793-472e-9ee0-0e21747aa467",
+    "ideas": "Freshness stated under the device ('Synced just now')."
+   }
+  ],
+  "applied": [
+   {
+    "url": "https://mobbin.com/screens/7765bb6f-a321-44b4-ab64-9196ee1aa8d4",
+    "idea": "Starlink: a one-word status as the hero with a colour dot, then two metric tiles, each with a number, a unit, a short sparkline and the window it covers, then plain rows.",
+    "where": "The hero verdict (\"Running well.\") with a 12 pt status dot. The Temperature tile, with a last-hour trace from temp_log captioned \"LAST HOUR\". The Frame rate tile, captioned \"LAST 5 SECONDS\" with a target rail in place of a sparkline, because there is no fps history. The checks list below them."
+   },
+   {
+    "url": "https://mobbin.com/screens/155f60ad-ee02-4383-8de4-80f7f999eeb6",
+    "idea": "Mercedes-Benz: health as a list of named parts, each with a plain value on the right and an info affordance.",
+    "where": "HealthRow: Power \"Steady\", Processor speed \"Full speed\", Panels \"Connected\", Picture updates \"Running\", Memory \"412 MB free\", Storage \"11 GB free\", Running for \"3 days, 4 hours\". The trailing info.circle expands a one or two sentence explanation inline instead of opening a popover."
+   },
+   {
+    "url": "https://mobbin.com/screens/de6f8894-dd78-4ba3-a7a6-b7383db24950",
+    "idea": "Grab Driver: problems first, each with what to do, then a collapsible list of the checks that passed.",
+    "where": "Act and watch findings render as CreativeConnectionNotices directly under the hero, most urgent first, each ending with the action (\"Turn the wall off at the plug for ten seconds, then on again.\", \"Use the power supply made for this Raspberry Pi and a short cable.\"). The passing rows fold into \"Other checks, all normal\" with a count, and are shown open as \"All checks\" when nothing is wrong."
+   },
+   {
+    "url": "https://mobbin.com/screens/d2f52711-5793-472e-9ee0-0e21747aa467",
+    "idea": "Meta Quest: freshness stated under the device (\"Synced just now\").",
+    "where": "The freshness line under the hero summary: \"Checked just now\" or \"Checked 25 seconds ago\", becoming \"Last reading 1 minute ago\" when stale or offline, driven by TimelineView. It is paired with the auto-refresh note in the footnote."
+   }
+  ]
+ },
+ "D07": {
+  "mobbin": [
+   {
+    "app": "FotMob",
+    "mobbin_url": "https://mobbin.com/screens/ea873817-50d9-4ba8-983c-0feb4f302698",
+    "ideas": "A connection test as ordered steps that tick off one by one, with the current step's progress shown."
+   },
+   {
+    "app": "Starlink",
+    "mobbin_url": "https://mobbin.com/screens/77305d30-a9e6-42fb-a030-7b706463605f",
+    "ideas": "Reachability per hop (this device, router, internet) so the owner sees where the chain breaks."
+   },
+   {
+    "app": "Eight Sleep",
+    "mobbin_url": "https://mobbin.com/screens/bb976239-e92e-4ab6-bc78-d1e5a7e57607",
+    "ideas": "Offline page in plain numbered recovery steps, then an action row to reconnect."
+   },
+   {
+    "app": "Rivian",
+    "mobbin_url": "https://mobbin.com/screens/d9e8b047-7e6b-4e58-b020-72f54994e740",
+    "ideas": "Label over value pairs for network facts, with one sentence on why each matters."
+   },
+   {
+    "app": "Craft",
+    "mobbin_url": "https://mobbin.com/screens/209d65ed-3bb0-4e91-a13a-7cae838be9a1",
+    "ideas": "Status with a timestamp and a single 'sync now' action at the top; history below it."
+   },
+   {
+    "app": "Quo",
+    "mobbin_url": "https://mobbin.com/screens/0a290bb8-a09e-4569-a5e6-d82ba3f1421d",
+    "ideas": "Each measurement named, explained in a few words, and graded in words as well as numbers."
+   }
+  ],
+  "applied": [
+   {
+    "url": "https://mobbin.com/screens/ea873817-50d9-4ba8-983c-0feb4f302698",
+    "idea": "FotMob: a connection test as ordered steps that tick off one by one, with the current step's progress shown.",
+    "where": "The From this phone to the wall section. ConnectionCheckRun publishes each row as running (ProgressView) then its result, with a 250 ms minimum per row. The summary reads \"Checking step n of 4\u2026\"."
+   },
+   {
+    "url": "https://mobbin.com/screens/77305d30-a9e6-42fb-a030-7b706463605f",
+    "idea": "Starlink: reachability per hop, so the owner sees where the chain breaks.",
+    "where": "The four hops: 01 This phone, 02 Local network, 03 Wall address, 04 The wall. They show passive status without a run and stop at the first broken hop, with the later hops marked \"Not checked\"."
+   },
+   {
+    "url": "https://mobbin.com/screens/bb976239-e92e-4ab6-bc78-d1e5a7e57607",
+    "idea": "Eight Sleep: the offline page in plain numbered recovery steps, then an action row to reconnect.",
+    "where": "The What to try section (Power, Same Wi-Fi, Give it a minute), numbered 01 to 03 in the Pictures row style. It is followed by the PrimaryButton \"Look for the wall again\" in the offline and no-wall states."
+   },
+   {
+    "url": "https://mobbin.com/screens/d9e8b047-7e6b-4e58-b020-72f54994e740",
+    "idea": "Rivian: label over value pairs for network facts, with one sentence on why each matters.",
+    "where": "Wall address facts: \"Network address\" (why: \"Can change when your router restarts.\") and \"Name on the network\" (why: \"Stays the same when the number changes.\"). These lead into the numeric-address suggestion."
+   },
+   {
+    "url": "https://mobbin.com/screens/209d65ed-3bb0-4e91-a13a-7cae838be9a1",
+    "idea": "Craft: status with a timestamp and a single sync-now action at the top, with history below.",
+    "where": "The hero's status line with \"Last response {relative}\" and the last-try reason, the one PrimaryButton directly after it, and the Recent section (LinkHistory) near the foot of the page."
+   },
+   {
+    "url": "https://mobbin.com/screens/0a290bb8-a09e-4569-a5e6-d82ba3f1421d",
+    "idea": "Quo: each measurement named, explained in a few words, and graded in words as well as numbers.",
+    "where": "Row 04's LatencyGrade (\"Quick, 38 ms\", \"Fine, 420 ms\", \"Slow, 1.9 s\" with \"Controls may feel late.\"). Every row carries a grade word plus a short detail, and colour is never the only cue because each row also has a glyph shape."
+   }
+  ]
+ },
+ "D08": {
+  "mobbin": [
+   {
+    "app": "Halide Mark III",
+    "mobbin_url": "https://mobbin.com/screens/01aaf3f2-6112-40ff-84a8-4fc7e7428105",
+    "ideas": "Product mark, then name and version set small in spaced capitals; one plain sentence about who made it."
+   },
+   {
+    "app": "Kino",
+    "mobbin_url": "https://mobbin.com/screens/833b6ee7-ed75-41ce-8c0b-864f74d35170",
+    "ideas": "Same pattern with a list of credits as quiet rows with an outward arrow."
+   },
+   {
+    "app": "Philips Hue",
+    "mobbin_url": "https://mobbin.com/screens/94125719-50c5-4bc7-8a98-3d08974878da",
+    "ideas": "Version with build in parentheses; a device identifier with a copy button."
+   },
+   {
+    "app": "Future Pro",
+    "mobbin_url": "https://mobbin.com/screens/9474fc11-d76d-47f7-b2fe-2e8f64368042",
+    "ideas": "Grouped rows under the version: support, links, legal."
+   }
+  ],
+  "applied": [
+   {
+    "url": "https://mobbin.com/screens/01aaf3f2-6112-40ff-84a8-4fc7e7428105",
+    "idea": "Halide Mark III: the product mark first, then the name and version in small spaced capitals, then one plain sentence about who made it.",
+    "where": "About masthead: RecordMark 52 pt, 'Tessera' in display 42, 'VERSION 1.0 (1)' in machine 10 tracking 1, then 'Designed and built by Jalen Edusei.'"
+   },
+   {
+    "url": "https://mobbin.com/screens/833b6ee7-ed75-41ce-8c0b-864f74d35170",
+    "idea": "Kino: credits as quiet rows with an outward arrow.",
+    "where": "The About Acknowledgements disclosure. Link rows (title, one dim line, trailing arrow.up.right) for the typefaces and the data services the wall actually uses, with the TMDB notice verbatim."
+   },
+   {
+    "url": "https://mobbin.com/screens/94125719-50c5-4bc7-8a98-3d08974878da",
+    "idea": "Philips Hue: the version with the build in parentheses, and a device identifier with a copy button.",
+    "where": "'1.0 (1)' in the App fact row and as the Settings row detail 'Version 1.0 (1)'. The wall address row has a 44 pt copy button, and 'Copy details' copies a plain support summary."
+   },
+   {
+    "url": "https://mobbin.com/screens/9474fc11-d76d-47f7-b2fe-2e8f64368042",
+    "idea": "Future Pro: grouped rows under the version (support, links, legal).",
+    "where": "The About section order under the masthead: Your wall and this app, Openings, Setup and tuning, Acknowledgements. Each is a flat hairline group, not a glass card. research-17 has no reference for a design picker, so DesignPage follows in-app precedent instead: FinishRow's 'choosing is looking' and PanelPage's pick-then-act button."
+   }
+  ]
+ },
+ "D09": {
+  "mobbin": [
+   {
+    "app": "Edits",
+    "mobbin_url": "https://mobbin.com/screens/4a99a819-33c7-4ae6-b17a-a84fa8eb5f6b",
+    "ideas": "Preview pinned above, a stack of labelled sliders with the current value at the right edge."
+   },
+   {
+    "app": "Halide Mark III",
+    "mobbin_url": "https://mobbin.com/screens/68bc4ec3-182e-4873-9557-222a490170c6",
+    "ideas": "Tick-rail controls with the value printed beside the icon; the default position is marked on the rail."
+   },
+   {
+    "app": "Kino",
+    "mobbin_url": "https://mobbin.com/screens/33eaebae-704c-4de4-a68e-5587ad7228b9",
+    "ideas": "Colour temperature as a tick rail with the value in a pill; auto versus fixed as a segmented choice."
+   },
+   {
+    "app": "GitHub",
+    "mobbin_url": "https://mobbin.com/screens/0ebeaa54-1434-437d-b12b-d04c3f244d48",
+    "ideas": "A live preview block at the top of a settings list; grouped sections below."
+   }
+  ],
+  "applied": [
+   {
+    "url": "https://mobbin.com/screens/4a99a819-33c7-4ae6-b17a-a84fa8eb5f6b",
+    "idea": "Edits: preview pinned above a stack of labelled sliders, current value at the right edge",
+    "where": "The preview sits at the top of the Picture tab, and a 56 pt pinned strip (thumbnail, what is on the wall, restart status) appears once the preview scrolls away. Every TuningSliderRow puts its title left and the value with unit right-aligned in machine type."
+   },
+   {
+    "url": "https://mobbin.com/screens/68bc4ec3-182e-4873-9557-222a490170c6",
+    "idea": "Halide Mark III: tick-rail controls with the value printed beside them and the default position marked on the rail",
+    "where": "TuningRail is a tick rail in the SpeedTicker language, with a faint default tick that the value snaps to within 2% of the range, and a Default X label plus a Use default link once a value moves off it."
+   },
+   {
+    "url": "https://mobbin.com/screens/33eaebae-704c-4de4-a68e-5587ad7228b9",
+    "idea": "Kino: value in a pill, and auto versus fixed as a segmented choice",
+    "where": "The Picture and Listening segmented tabs. Row addressing as a segmented choice of 0 to 7 instead of a slider. The PendingPill shows a restart knob's unapplied value while it is dragged."
+   },
+   {
+    "url": "https://mobbin.com/screens/0ebeaa54-1434-437d-b12b-d04c3f244d48",
+    "idea": "GitHub: a live preview block at the top of a settings list, with grouped sections below",
+    "where": "Overall page structure: masthead, status, preview and test patterns, then brain-described groups with a title, a one-line summary and a CHANGED count, instead of Glass cards."
+   }
+  ]
+ },
+ "E01": {
+  "mobbin": [
+   {
+    "app": "Spotify",
+    "mobbin_url": "https://mobbin.com/screens/d7a177a7-685c-4bba-a27a-cf2e4053ca06",
+    "ideas": "Small: artwork, then title and artist. Medium: artwork plus a row of recent items. Title truncates, never wraps into the art."
+   },
+   {
+    "app": "Neuecast",
+    "mobbin_url": "https://mobbin.com/screens/59b9102b-21e9-4af7-99b4-d27ab42b016a",
+    "ideas": "A small status word above the title (PLAYED) gives state without extra chrome."
+   },
+   {
+    "app": "MD Vinyl",
+    "mobbin_url": "https://mobbin.com/screens/7d35c941-3a8e-4034-85ed-8144f87ef5e4",
+    "ideas": "Object-like widget whose surface is the product itself; title and artist small at the top."
+   },
+   {
+    "app": "Philips Hue",
+    "mobbin_url": "https://mobbin.com/screens/b93b6eab-4895-43e5-9527-d4936f4f2c6b",
+    "ideas": "An in-app page explaining how to add the widget, with a picture of it on a home screen."
+   }
+  ],
+  "applied": [
+   {
+    "url": "https://mobbin.com/screens/d7a177a7-685c-4bba-a27a-cf2e4053ca06",
+    "idea": "Spotify: artwork first, then title and artist. The title truncates and never wraps into the art. The medium adds a row of recent items.",
+    "where": "The medium widget keeps text in its own padded column beside the panel (title lineLimit 2 with a tail, 1 at AX sizes) and never overlays the panel. The recents row was considered and not taken: that slot keeps the Art, Lamp and Off keys, which match the Dynamic Island, and replaying old records stays in the Archive."
+   },
+   {
+    "url": "https://mobbin.com/screens/59b9102b-21e9-4af7-99b4-d27ab42b016a",
+    "idea": "Neuecast: a small status word above the title gives state without extra chrome.",
+    "where": "The medium status line (Martian caps: On the wall, As of 9:41 PM, Phone preview, Queued for the wall, Not set up) and the same words as the small widget's single chip."
+   },
+   {
+    "url": "https://mobbin.com/screens/7d35c941-3a8e-4034-85ed-8144f87ef5e4",
+    "idea": "MD Vinyl: an object-like widget whose surface is the product itself, with small type.",
+    "where": "The small widget stays the full-bleed panel with no text while current. In the medium, the panel reaches three edges as a physical object. Type stays small and quiet (Martian 9, Technor 18, Switzer 12)."
+   },
+   {
+    "url": "https://mobbin.com/screens/b93b6eab-4895-43e5-9527-d4936f4f2c6b",
+    "idea": "Philips Hue: an in-app page explaining how to add the widget, with a picture of it.",
+    "where": "The new Settings page, Home Screen (WidgetsPage.swift). The picture is the real widget view rendered from the real snapshot at the real point size, with numbered steps, the installed status from WidgetCenter and a plain explanation of freshness and guest-code privacy."
+   }
+  ]
+ }
+}

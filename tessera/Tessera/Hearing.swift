@@ -77,7 +77,7 @@ struct HearingPage: View {
                 NavigationLink {
                     TeachPage(accent: accent)
                 } label: {
-                    SetupRow(title: "Teach the wall", subtitle: taughtNote) {
+                    SetupRow(title: "Song library", subtitle: taughtNote) {
                         Image(systemName: "chevron.right").foregroundStyle(mint)
                     }
                 }.buttonStyle(.plain)

@@ -18,12 +18,18 @@ struct IPodWallScreen: View {
     @State private var creation: String?
     @State private var zoomed = false
     @State private var wheelHint = "Turn the wheel to change the light"
+    /// Why the wheel's previous and next are dimmed, from the iPod.
+    @State private var musicNote: String?
     @State private var headerHeight: CGFloat = 70
     @State private var statusHeight: CGFloat = 44
     @State private var stoppingTimer = false
-    @State private var introDone = !IntroFlip.available || CommandLine.arguments.contains("-nointro")
-        || StingFilm.plays(UserDefaults.standard.string(forKey: "intro.style") ?? "film")
-    @AppStorage("intro.replay") private var replay = false
+    /// The iPod film plays at a cold launch only: a home made later in the
+    /// session (a design switch) finds OpeningLaunch settled and skips it.
+    @State private var introDone = OpeningLaunch.settled || CommandLine.arguments.contains("-nointro") || Motion.reduced
+        || OpeningStyle.kind(OpeningStyle.saved(UserDefaults.standard.string(forKey: OpeningStyle.key)), in: .ipod, assets: .bundled) != .iPodFilm
+    @AppStorage(OpeningReplay.key) private var replayRequest = 0
+    @AppStorage(OpeningStyle.key) private var introStyle = OpeningStyle.sting.rawValue
+    private var reduced: Bool { reducedMotion || Motion.forcedReduced }
 
     private var accent: Color { light.steadyAccent.toned(forDark: true) }
     private var isOff: Bool { light.isOff }
@@ -45,16 +51,21 @@ struct IPodWallScreen: View {
                         ZStack {
                             IPodView(light: light, dragLight: $dragLight, touching: $onPanel,
                                      onSetup: onSetup, onStudio: onStudio, onCreation: { creation = $0 }, onArchive: onArchive,
-                                     onZoom: { zoomed = true }, onHintChange: { wheelHint = $0 })
-                                .opacity(introDone || reducedMotion ? 1 : 0)
-                                .allowsHitTesting(introDone || reducedMotion)
-                            if !introDone && !reducedMotion {
+                                     onZoom: { zoomed = true }, onHintChange: { wheelHint = $0 },
+                                     onMusicNoteChange: { musicNote = $0 })
+                                .opacity(introDone || reduced ? 1 : 0)
+                                .allowsHitTesting(introDone || reduced)
+                            if !introDone && !reduced {
                                 IntroFlip {
                                     withAnimation(.easeOut(duration: 0.25)) { introDone = true }
                                 }
                                 .frame(width: IPodMetrics.bodyW, height: IPodMetrics.bodyH)
                                 .shadow(color: .black.opacity(0.5), radius: 30, y: 18)
                                 .allowsHitTesting(false)
+                                // One element, so a UI test can see the film play.
+                                .accessibilityElement(children: .ignore)
+                                .accessibilityLabel("Opening film")
+                                .accessibilityIdentifier("opening.ipod")
                             }
                         }
                         .frame(width: IPodMetrics.bodyW, height: IPodMetrics.bodyH)
@@ -81,13 +92,11 @@ struct IPodWallScreen: View {
                 .clipped()
             }
         }
-        .onChange(of: replay) { _, requested in
-            guard requested else { return }
-            replay = false
-            if !reducedMotion, IntroFlip.available,
-               !StingFilm.styles.contains(UserDefaults.standard.string(forKey: "intro.style") ?? "film") {
-                introDone = false
-            }
+        // A counter, so there is nothing to put back. The stings are the
+        // root's to replay. Only this home's own film plays here.
+        .onChange(of: replayRequest) { _, _ in
+            guard !reduced, OpeningStyle.kind(OpeningStyle.saved(introStyle), in: .ipod, assets: .bundled) == .iPodFilm else { return }
+            introDone = false
         }
         .onDisappear { onPanel = false; dragLight = nil }
         .sheet(isPresented: Binding(get: { creation != nil }, set: { if !$0 { creation = nil } })) {
@@ -151,18 +160,28 @@ struct IPodWallScreen: View {
         case .searching:
             statusLabel("Finding your wall", symbol: "antenna.radiowaves.left.and.right")
         case .standIn:
-            statusLabel("Preview on this phone", symbol: "iphone")
+            statusLabel("Preview on this phone", symbol: "iphone", note: musicNote)
         case .live:
-            statusLabel(wheelHint, symbol: isOff ? "moon.zzz" : "sun.max")
+            statusLabel(wheelHint, symbol: isOff ? "moon.zzz" : "sun.max", note: musicNote)
         }
     }
 
-    private func statusLabel(_ text: String, symbol: String) -> some View {
-        Label(text, systemImage: symbol)
-            .font(.ui(12)).foregroundStyle(Ink.ink.opacity(0.85))
-            .padding(.horizontal, 16).padding(.vertical, 11)
-            .background(Ink.ground.opacity(0.94), in: Capsule())
-            .padding(.horizontal, 20)
+    /// One line, or with a note under it: why the wheel's previous and next
+    /// are dimmed, the same words the Panel home puts under its keys.
+    private func statusLabel(_ text: String, symbol: String, note: String? = nil) -> some View {
+        VStack(spacing: 5) {
+            Label(text, systemImage: symbol)
+                .font(.ui(12)).foregroundStyle(Ink.ink.opacity(0.85))
+            if let note {
+                Text(note).font(.ui(11)).foregroundStyle(Ink.dim)
+                    .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("ipod.musicNote")
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 11)
+        .background(Ink.ground.opacity(0.94),
+                    in: note == nil ? AnyShape(Capsule()) : AnyShape(RoundedRectangle(cornerRadius: 20, style: .continuous)))
+        .padding(.horizontal, 20)
     }
 
     private var connectionDescription: String {
@@ -256,18 +275,7 @@ struct IPodWallScreen: View {
 
 // MARK: - Which design
 
-/// Three designs of the same room, one at a time: the panel (2D), the iPod,
-/// and the room itself in 3D. Chosen in Settings; nothing else changes.
-enum Design: String, CaseIterable {
-    case classic, ipod, room
-    var name: String {
-        switch self {
-        case .classic: "Panel"
-        case .ipod: "iPod"
-        case .room: "Room"
-        }
-    }
-}
+// Design, the openings and their rules live in HomeDesign.swift.
 
 struct WallScreen: View {
     @AppStorage("design") private var design = Design.room.rawValue
@@ -279,16 +287,24 @@ struct WallScreen: View {
     var onArchive: () -> Void = {}
 
     var body: some View {
-        switch Design(rawValue: design) ?? .room {
-        case .classic:
-            ClassicWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
-                              onSetup: onSetup, onStudio: onStudio)
-        case .room:
-            RoomWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
-                           onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
-        case .ipod:
-            IPodWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
-                           onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
+        Group {
+            switch Design(rawValue: design) ?? .room {
+            case .classic:
+                ClassicWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                                  onSetup: onSetup, onStudio: onStudio)
+            case .room:
+                RoomWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                               onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
+            case .ipod:
+                IPodWallScreen(light: light, dragLight: $dragLight, onPanel: $onPanel,
+                               onSetup: onSetup, onStudio: onStudio, onArchive: onArchive)
+            }
         }
+        // Here rather than in RootView: this body, which creates the first
+        // home and evaluates its @State (where each home decides whether its
+        // film plays), always runs before this onAppear, and this view keeps
+        // its identity across design switches. RootView's onAppear has no
+        // such order with the lazy pager's pages.
+        .onAppear { OpeningLaunch.settled = true }
     }
 }

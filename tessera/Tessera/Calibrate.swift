@@ -391,6 +391,8 @@ struct CalibrateScreen: View {
         case "guests": "The guest Wi-Fi code is on the wall. Hide it, then show the card."
         case "onboarding": "First-run setup is using the wall. Finish it, then show the card."
         case "calibration": "Another colour measurement is on the wall. It ends by itself within 5 minutes."
+        case "identify": "A short glow is on the wall. Try again in a few seconds."
+        case "tuning": "Panel tuning is showing a test pattern. Choose Your wall there, then show the card."
         default: "Another check is on the wall. Finish it, then show the card."
         }
     }

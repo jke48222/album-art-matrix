@@ -60,7 +60,9 @@ struct RootView: View {
     @Environment(\.accessibilityReduceMotion) private var reducedMotion
     @AppStorage("onboarded") private var onboarded = false
     @AppStorage("onboarding.again") private var onboardingAgain = false
-    @AppStorage("intro.replay") private var replay = false
+    /// Play it now on the About page: a counter, so a request can never be
+    /// left on (the old Bool latched on Panel, where no screen reset it).
+    @AppStorage(OpeningReplay.key) private var replayRequest = 0
     /// The room's colours, held steady. Reading them straight from the frame
     /// meant rainbow and the pattern modes strobed the whole interface: the
     /// swatches, the glyph rings and the background all chased the hue. The
@@ -72,16 +74,22 @@ struct RootView: View {
     @State private var marksHidden = false
     /// The Record sting as the opening, laid over everything until it is
     /// done; see StingOpening.swift. Off unless Settings chose it.
-    @AppStorage("intro.style") private var introStyle = "sting"
+    @AppStorage(OpeningStyle.key) private var introStyle = OpeningStyle.sting.rawValue
     @State private var sting: StingPhase = {
-        // once, for phones that had the film or the mark saved: this build's
-        // opening is the sting; Settings still offers the others
         let d = UserDefaults.standard
+        // The old replay switch, gone for good. Outside the migration below,
+        // which has already run on every existing phone, and harmless to
+        // repeat now that nothing reads the key.
+        d.removeObject(forKey: "intro.replay")
+        // Once, for phones that had the film or the mark saved: this build's
+        // opening is the sting, and About still offers the others.
         if !d.bool(forKey: "intro.sting.migrated") {
             d.set(true, forKey: "intro.sting.migrated")
-            if !StingFilm.styles.contains(d.string(forKey: "intro.style") ?? "") { d.set("sting", forKey: "intro.style") }
+            if !StingFilm.styles.contains(d.string(forKey: OpeningStyle.key) ?? "") { d.set(OpeningStyle.sting.rawValue, forKey: OpeningStyle.key) }
         }
-        return StingFilm.plays(d.string(forKey: "intro.style") ?? "sting") ? .film : .done
+        // Reduce Motion is read here too, so not even the first frame of the
+        // film is laid over the app before onAppear could take it down.
+        return StingFilm.plays(d.string(forKey: OpeningStyle.key) ?? OpeningStyle.sting.rawValue) && !Motion.reduced ? .film : .done
     }()
     @State private var stingKey = 0
     /// The glitch-in's progress; 1 whenever no opening is running.
@@ -228,19 +236,39 @@ struct RootView: View {
             glitch = 0
             DispatchQueue.main.async { withAnimation(.easeOut(duration: 0.9)) { glitch = 1 } }
         }
-        .onChange(of: replay) { _, on in
-            // the opening plays on the wall screen, so Settings steps aside
-            if on { router.dismiss() }
-            // the sting is the root's to replay; the screens' own openings
-            // put the switch back themselves
-            guard on, StingFilm.plays(introStyle) else { return }
-            replay = false
+        .onChange(of: replayRequest) { _, _ in
+            // The opening plays on the wall page, so Settings steps aside and
+            // the pager comes back from the Archive, where a room or iPod film
+            // would play unseen.
+            router.dismiss()
+            selectPage(0)
+            guard !(reducedMotion || Motion.forcedReduced) else { return }
+            // The stings are the root's to replay, whatever the design. The
+            // Room and iPod homes replay their own films on the same counter.
+            // Replay ignores -nointro, so tests can replay.
+            let design = Design(rawValue: self.design) ?? .room
+            guard OpeningStyle.kind(OpeningStyle.saved(introStyle), in: design, assets: .bundled).isSting else { return }
             stingKey += 1
             sting = .film
         }
         .onAppear {
+            #if DEBUG
+            // -about-reset: About's tuning row asks again, as on a phone that
+            // never opened it. Before Settings is presented below.
+            if CommandLine.arguments.contains("-about-reset") { UserDefaults.standard.removeObject(forKey: "tuning.unlocked") }
+            // -wall-side-reset: forget the size a wall once stated, so About
+            // can be captured as on a phone that never reached one.
+            if CommandLine.arguments.contains("-wall-side-reset") {
+                UserDefaults(suiteName: WallSnapshot.group)?.removeObject(forKey: "wall.side")
+            }
+            #endif
             wall.start()
-            if reducedMotion { sting = .done; glitch = 1 }
+            #if DEBUG
+            // -stand-in: this phone chosen over the wall, as About's "explore
+            // on this phone" state is reached by hand.
+            if CommandLine.arguments.contains("-stand-in") { wall.useStandIn() }
+            #endif
+            if reducedMotion || Motion.forcedReduced { sting = .done; glitch = 1 }
             if !onboarded && !CommandLine.arguments.contains("-nointro") { router.present(.onboarding) }
             #if DEBUG
             // `-settings` on the launch line opens Setup straight away, so a

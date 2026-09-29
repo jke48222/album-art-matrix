@@ -239,12 +239,9 @@ struct ClassicWallScreen: View {
         }
     }
 
-    private var faceName: String {
-        ["art": "Album art", "cd": "Spin", "ambient": "Lamp", "clock": "Clock",
-         "timer": "Timer", "off": "Off", "weather": "Weather", "lyrics": "Lyrics",
-         "nine": "Nine", "frame": "Your creation", "clip": "Clip", "ticker": "Words",
-         "game": "Game", "imagine": "Imagine", "video": "Video"][wall.state.mode] ?? "Wall"
-    }
+    /// One table with the Home Screen widget (Shared/WidgetReading.swift),
+    /// so the home and the widget name a face the same way.
+    private var faceName: String { WallFace.name(wall.state.mode) }
 
     private func skipMusic(previous: Bool) {
         guard MPMediaLibrary.authorizationStatus() == .authorized,
@@ -439,6 +436,20 @@ private struct MusicBar: View {
 
     var body: some View {
         VStack(spacing: 10) {
+            // Above the keys, so it is read before them: the keys sit at the
+            // foot of the first screen, where the fade and the page bar cover
+            // whatever comes after them, and dimmed keys with no reason in
+            // sight look broken.
+            if !authorized || !hasTrack {
+                Text(!authorized ? "Connect Apple Music in Settings for playback controls" : "Choose a song in Apple Music to play here")
+                    .font(.ui(12)).foregroundStyle(Ink.dim).multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityIdentifier("home.music.reason")
+            } else {
+                Text("Apple Music on this iPhone").font(.ui(11)).foregroundStyle(Ink.dim)
+                    .frame(maxWidth: .infinity)
+            }
             HStack(spacing: 32) {
                 key("backward.end.fill", title: "Previous track", primary: false) { music.skipToPreviousItem() }
                 key(playing ? "pause.fill" : "play.fill", title: playing ? "Pause Apple Music" : "Play Apple Music", primary: true) {
@@ -448,13 +459,6 @@ private struct MusicBar: View {
                 key("forward.end.fill", title: "Next track", primary: false) { music.skipToNextItem() }
             }
             .frame(maxWidth: .infinity)
-            if !authorized || !hasTrack {
-                Text(!authorized ? "Connect Apple Music in Settings for playback controls" : "Choose a song in Apple Music to play here")
-                    .font(.ui(12)).foregroundStyle(Ink.dim).multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text("Apple Music on this iPhone").font(.ui(11)).foregroundStyle(Ink.dim)
-            }
         }
         .onAppear { music.beginGeneratingPlaybackNotifications(); refresh() }
         .onDisappear { music.endGeneratingPlaybackNotifications() }

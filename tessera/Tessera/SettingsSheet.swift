@@ -14,6 +14,8 @@ struct SettingsSheet: View {
     @State private var services: WallServices?
     @State private var showCalibrate = false
     @State private var vitals: Vitals?
+    /// Read here only for the App design row's detail line.
+    @AppStorage("design") private var design = Design.room.rawValue
     @FocusState private var searching: Bool
     @State private var openedInitialRoute = false
     /// Next steps the owner closed. A suggestion that could not be dismissed
@@ -87,14 +89,18 @@ struct SettingsSheet: View {
             #endif
         }
         .task(id: "\(wall.host)|\(wall.link.isLive)") {
-            guard wall.link.isLive else { services = nil; vitals = nil; return }
+            // The last health reading outlives a dropped link, so Wall health
+            // can still show it offline. detail(_:) only uses it while live.
+            guard wall.link.isLive else { services = nil; return }
             let host = wall.host
             async let readServices = WallServices.seeded(host: host)
             async let readVitals = Vitals.read(host: host)
             let (freshServices, freshVitals) = await (readServices, readVitals)
             guard !Task.isCancelled, wall.host == host, wall.link.isLive else { return }
-            services = freshServices; vitals = freshVitals
+            services = freshServices; if let freshVitals { vitals = freshVitals }
         }
+        // Another address is another wall, so its reading does not carry over.
+        .onChange(of: wall.host) { _, _ in vitals = nil }
         .fullScreenCover(isPresented: $showCalibrate) {
             CalibrateScreen(accent: accent).environment(wall)
         }
@@ -143,7 +149,7 @@ struct SettingsSheet: View {
                 Rectangle().fill(warm.opacity(0.15)).frame(height: 1).padding(.horizontal, 20)
                 HStack(spacing: 0) {
                     Button {
-                        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { wall.lookForWallAgain() }
+                        if wall.offersLookAgain { wall.lookForWallAgain() }
                         else { path.append(suggestion.route) }
                     } label: {
                         HStack(spacing: 10) {
@@ -179,8 +185,8 @@ struct SettingsSheet: View {
     private var identityWords: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack(spacing: 6) {
-                Circle().fill(statusColor).frame(width: 6, height: 6)
-                Text(statusWord.uppercased()).font(.machine(8)).tracking(0.5).foregroundStyle(Ink.ink)
+                Circle().fill(wall.link.dot).frame(width: 6, height: 6)
+                Text(wall.link.word(resting: resting).uppercased()).font(.machine(8)).tracking(0.5).foregroundStyle(Ink.ink)
             }
             Text("Your wall").font(typeSize.isAccessibilitySize ? .ui(19, .semibold) : .displayMid(26)).foregroundStyle(Ink.ink)
             Text(wall.link.isLive ? "\(Panel.side) x \(Panel.side), \(resting ?? "\(Int((wall.state.brightness * 100).rounded()))% brightness")" : "\(wall.link.isStandIn ? "On this phone" : "Last frame, saved here")")
@@ -221,7 +227,13 @@ struct SettingsSheet: View {
                         .font(.ui(15, .semibold)).foregroundStyle(warm).frame(minHeight: 44)
                 }.padding(.vertical, 20)
             } else { routeList(results) }
-        }.accessibilityIdentifier("settings.results")
+        }
+        // A container, so the identifier names the results group only. On
+        // the bare VStack it was copied onto every child, which replaced
+        // each row's settings.route id and left the count and the rows
+        // indistinguishable to automation.
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("settings.results")
     }
 
     private func routeList(_ entries: [SettingsDestination]) -> some View {
@@ -285,13 +297,15 @@ struct SettingsSheet: View {
         case .imagine: ImaginePage(accent: accent)
         case .weather: WeatherPage(accent: accent)
         case .games: GamesPageWrapper(accent: accent)
+        case .design: DesignPage(accent: accent)
         case .lockScreen: LockScreenPage(accent: accent)
+        case .widgets: WidgetsPage(accent: accent)
         case .homeKit: HomeKitPage(accent: accent)
         case .guests: GuestsPage(accent: accent)
         case .colour: ColourPage(accent: accent, showCalibrate: $showCalibrate)
         case .panel: PanelPage(accent: accent)
         case .health: HealthPage(accent: accent, vitals: $vitals)
-        case .addresses: AddressesPage(accent: accent, onChange: {})
+        case .addresses: ConnectionPage(accent: accent, services: $services)
         case .about: AboutPage(accent: accent)
         }
     }
@@ -309,17 +323,6 @@ struct SettingsSheet: View {
         return nil
     }
 
-    private var statusWord: String {
-        switch wall.link {
-        case .live: resting.map { "Connected, \($0)" } ?? "Connected"
-        case .searching: "Finding the wall"
-        case .offline: "Offline"
-        case .standIn: "Phone preview"
-        }
-    }
-    private var statusColor: Color {
-        switch wall.link { case .live: Ink.moss; case .searching: warm; case .offline: Ink.signal; case .standIn: Ink.dim }
-    }
     /// The wall only uses the gains' ratio (it divides by the largest), so
     /// saved gains above 1 are judged the same way.
     private var corrected: Bool {
@@ -329,7 +332,7 @@ struct SettingsSheet: View {
     /// `id` nil means the step cannot be dismissed.
     private var suggestion: (title: String, symbol: String, route: SettingsDestination, id: String?)? {
         // Also while the owner chose this phone: that stand-in never probes.
-        if !wall.link.isLive && (!wall.link.isStandIn || wall.explicitStandIn) { return ("Look for your wall again", "arrow.clockwise", .addresses, nil) }
+        if wall.offersLookAgain { return ("Look for your wall again", "arrow.clockwise", .addresses, nil) }
         let dismissed = Set(dismissedSteps.split(separator: ",").map(String.init))
         // Any one music service is enough. Apple Music only while none is
         // linked, since Spotify, Last.fm or ListenBrainz already feed the wall.
@@ -353,6 +356,24 @@ struct SettingsSheet: View {
         Taps.detent(intensity: 0.3)
     }
     private func detail(_ item: SettingsDestination) -> String {
+        // These three describe the phone or the link itself, so they read
+        // the same offline.
+        switch item {
+        case .design: return Design(rawValue: design)?.name ?? "Room"
+        case .about:
+            // display() already names itself when there is no version number,
+            // which must not read "Version Build 1".
+            let version = AppVersion.display(Bundle.main.infoDictionary)
+            return version.hasPrefix("Version") || version.hasPrefix("Build") ? version : "Version " + version
+        case .addresses:
+            switch wall.link {
+            case .live: return wall.host
+            case .offline: return wall.outbox.isEmpty ? "Offline" : "Offline, " + wall.outbox.contents.count
+            case .searching: return "Looking for your wall"
+            case .standIn: return wall.explicitStandIn ? "Using this phone" : "No wall found"
+            }
+        default: break
+        }
         guard wall.link.isLive || wall.link.isStandIn else { return item.detail }
         switch item {
         // Rounded, as the identity line above rounds: truncating showed 0.29 as 28%.
@@ -387,9 +408,9 @@ struct SettingsSheet: View {
         case .lockScreen: return wall.live.enabled ? "Live Activity is on" : item.detail
         case .colour: return corrected ? "Your panel is calibrated" : item.detail
         case .health:
-            if let vitals, vitals.throttled?.now == true { return "Thermal throttling, open details" }
-            if let temperature = vitals?.tempC { return String(format: "%.0f°C, diagnostics", temperature) }
-            return item.detail
+            // Live only: an old reading must not label the phone preview.
+            guard wall.link.isLive, let vitals else { return item.detail }
+            return HealthReport(vitals: vitals).landingLine
         default: return item.detail
         }
     }
@@ -493,9 +514,9 @@ struct LockScreenPage: View {
     let accent: Color
 
     var body: some View {
-        SetupPage("Lock screen", blurb: "A small copy of the wall on the lock screen and in the Dynamic Island. It ends when the wall goes dark.") {
+        SetupPage("Lock Screen", blurb: "A small copy of the wall on the Lock Screen and in the Dynamic Island. It ends when the wall goes dark.") {
             SetupGroup("", note: nil) {
-                ToggleRow(title: "Show the wall on my lock screen", subtitle: nil,
+                ToggleRow(title: "Show the wall on my Lock Screen", subtitle: nil,
                           isOn: Binding(get: { wall.live.enabled },
                                         set: { wall.live.enabled = $0; Taps.detent(intensity: 0.5) }),
                           accent: accent)
@@ -517,7 +538,7 @@ struct WallThumb: View {
         ZStack {
             RoundedRectangle(cornerRadius: Round.control, style: .continuous)
                 .fill(Ink.sunk)
-            if let frame, let img = EmitterTile.render([UInt8](frame), cell: 3) {
+            if let frame, let img = EmitterTile.render(Self.thumbnail([UInt8](frame)), cell: 4) {
                 Image(uiImage: img)
                     .resizable()
                     .interpolation(.none)
@@ -536,6 +557,32 @@ struct WallThumb: View {
                 .padding(7)
         }
         .accessibilityLabel(live ? "Your wall, live" : "Your wall, not reachable")
+    }
+
+    /// 88 pt is 264 px at 3x, about 64 emitters at four pixels each. A
+    /// bigger wall is averaged down to 64 first, block by block: 192
+    /// emitters at cell 3 made 576 px shown in 264 with no smoothing, and
+    /// that beat against the lattice into a moire.
+    static func thumbnail(_ px: [UInt8]) -> [UInt8] {
+        guard let n = Panel.square(px.count), n > 64, n % 64 == 0 else { return px }
+        let k = n / 64
+        let area = k * k
+        var out = [UInt8](repeating: 0, count: 64 * 64 * 3)
+        for y in 0..<64 {
+            for x in 0..<64 {
+                var r = 0, g = 0, b = 0
+                for dy in 0..<k {
+                    var at = ((y * k + dy) * n + x * k) * 3
+                    for _ in 0..<k {
+                        r += Int(px[at]); g += Int(px[at + 1]); b += Int(px[at + 2])
+                        at += 3
+                    }
+                }
+                let o = (y * 64 + x) * 3
+                out[o] = UInt8(r / area); out[o + 1] = UInt8(g / area); out[o + 2] = UInt8(b / area)
+            }
+        }
+        return out
     }
 }
 
@@ -670,18 +717,6 @@ struct Chevron: View {
         Image(systemName: "chevron.right")
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(Ink.faint)
-    }
-}
-
-/// A value at the end of a row that leads somewhere.
-struct Value: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(text).font(.ui(14)).foregroundStyle(Ink.dim).lineLimit(1)
-            Chevron()
-        }
     }
 }
 
@@ -873,192 +908,8 @@ struct ChoicePage<T: Hashable>: View {
     }
 }
 
-// MARK: - The pages
-
-struct HealthPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    @Binding var vitals: Vitals?
-
-    var body: some View {
-        SetupPage("How it's doing",
-                  blurb: "The computer sits behind the panels. This is how it is doing.") {
-            SetupGroup("", note: nil) {
-                if let v = vitals {
-                    row("Drawing", v.fps > 0 ? String(format: "%.0f frames a second", v.fps) : "Idle")
-                    if let t = v.tempC {
-                        Rule()
-                        row("Temperature", String(format: "%.0f°C", t), warn: t >= 70)
-                    }
-                    if let th = v.throttled {
-                        Rule()
-                        row("Heat", th.now ? "Slowing itself down now"
-                            : th.ever ? "Ran hot once since it came on" : "Never ran hot", warn: th.now)
-                    }
-                    Rule()
-                    row("Awake for", v.uptime)
-                } else {
-                    SetupRow(title: "Asking the wall", subtitle: nil) { EmptyView() }
-                }
-            }
-            .padding(.top, -12)
-            Button("Check again") {
-                Task { vitals = await Vitals.read(host: wall.host) }
-            }
-            .buttonStyle(PressStyle(scale: 0.97))
-            .font(.ui(14, .medium))
-            .foregroundStyle(accent)
-        }
-    }
-
-    private func row(_ name: String, _ value: String, warn: Bool = false) -> some View {
-        SetupRow(title: name, subtitle: nil) {
-            Text(value).font(.ui(14)).foregroundStyle(warn ? Ink.signal : Ink.dim)
-                .multilineTextAlignment(.trailing)
-        }
-    }
-}
-
-struct AddressesPage: View {
-    @Environment(WallSession.self) private var wall
-    let accent: Color
-    var onChange: () -> Void
-
-    @State private var host = ""
-    @State private var services: WallServices?
-
-    var body: some View {
-        SetupPage("Addresses",
-                  blurb: "Tessera finds the wall by name on your network. Change this only if the name changed. A Mac is optional: it can pass along what the Mac itself is playing.") {
-            SetupGroup("The wall", note: "Answers on port 8788.") {
-                field("album-matrix.local:8788", text: $host, commit: commitHost)
-                Rule()
-                HStack(spacing: 16) {
-                    Button("Use this address") { commitHost() }
-                        .buttonStyle(PressStyle(scale: 0.97))
-                        .font(.ui(13, .semibold))
-                        .foregroundStyle(accent)
-                    Button("Look again") { wall.lookForWallAgain() }
-                        .buttonStyle(PressStyle(scale: 0.97))
-                        .font(.ui(13, .medium))
-                        .foregroundStyle(Ink.dim)
-                    Spacer()
-                    LinkChip(link: wall.link)
-                }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-            }
-            .padding(.top, -12)
-            NavigationLink { MacReporterPage(accent: accent, services: $services) } label: {
-                SetupRow(title: "Your Mac", subtitle: "Reporter connection and phone forwarding") { Image(systemName: "chevron.right") }
-            }.buttonStyle(.plain)
-
-        }
-        .onAppear {
-            host = wall.host
-
-        }
-    }
-
-    private func field(_ placeholder: String, text: Binding<String>, commit: @escaping () -> Void) -> some View {
-        TextField(placeholder, text: text)
-            .font(.machine(13))
-            .foregroundStyle(Ink.ink)
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-            .keyboardType(.URL)
-            .padding(.horizontal, 16)
-            .frame(minHeight: 56)
-            .onSubmit { commit() }
-    }
-
-    private func commitHost() {
-        let trimmed = host.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        wall.host = trimmed
-        Taps.commit()
-        // A plain poll is ignored while the owner has chosen the phone, so a
-        // new address has to leave that choice and look for the wall.
-        wall.lookForWallAgain()
-    }
-
-}
-
-struct AboutPage: View {
-    /// The room's own colour, so the tuning page's controls are lit the same
-    /// as everything else. Defaulted, because About is opened without it.
-    var accent: Color = Ink.moss
-    @AppStorage("design") private var design = Design.room.rawValue
-    @AppStorage("onboarding.again") private var onboardingAgain = false
-    @AppStorage("intro.replay") private var replay = false
-    /// Found once, open from then on. See the tap target at the foot of
-    /// this page.
-    @AppStorage("tuning.unlocked") private var tuningUnlocked = false
-    @AppStorage("intro.style") private var introStyle = "sting"
-
-    var body: some View {
-        SetupPage("Tessera",
-                  blurb: "A remote for a wall of \(Panel.lights) lights. The app talks to the wall directly. There is no account and nothing leaves your network.") {
-            SetupGroup("Design", note: "Three ways of showing the same room. Pick one.") {
-                ForEach(Array(Design.allCases.enumerated()), id: \.offset) { i, d in
-                    if i > 0 { Rule() }
-                    ChoiceRow(title: d.name,
-                              subtitle: d == .classic ? "The panel, full width, drag to dim."
-                                      : d == .ipod ? "Everything in an iPod, with a click wheel."
-                                      : "The room in 3D, lit by the wall.",
-                              value: d.rawValue, selected: design, accent: Ink.tile) { design = $0 }
-                }
-            }
-            .padding(.top, -12)
-            SetupGroup("Developer", note: "For trying the first run and the openings again.") {
-                SetupRow(title: "Show the first run", subtitle: "The setup steps, from the top.") {
-                    ActionPill(title: "Show") { onboardingAgain = true }
-                }
-                Rule()
-                SetupRow(title: "Play the opening", subtitle: "The opening, again.") {
-                    ActionPill(title: "Play") { replay = true }
-                }
-                Rule()
-                SetupRow(title: "Opening", subtitle: introStyle == "mark" ? "The mark builds on the wall and becomes the panel."
-                         : introStyle == "sting" ? "The Record sting, on black."
-                         : introStyle == "sting-room" ? "The Record sting in the room's light, then the app glitches in."
-                         : "The iPod or room film: the cover, the badge, the pull back.") {
-                    HStack(spacing: 6) {
-                        ActionPill(title: "Sting", filled: introStyle == "sting") { introStyle = "sting" }
-                        ActionPill(title: "In room", filled: introStyle == "sting-room") { introStyle = "sting-room" }
-                        ActionPill(title: "Film", filled: !["mark", "sting", "sting-room"].contains(introStyle)) { introStyle = "film" }
-                        ActionPill(title: "Mark", filled: introStyle == "mark") { introStyle = "mark" }
-                    }
-                }
-                if tuningUnlocked {
-                    Rule()
-                    NavigationLink {
-                        PanelTuningPage(accent: accent)
-                    } label: {
-                        SetupRow(title: "Panel tuning",
-                                 subtitle: "Every number that decides what the LEDs do.") {
-                            Value("Open")
-                        }
-                    }
-                    .buttonStyle(PressStyle(scale: 0.99))
-                }
-            }
-
-            // The way in to the tuning. Not a setting: these are the panel's
-            // own physics, and a wrong one makes the wall worse in ways that
-            // are hard to undo by eye. Five taps here opens it, and it stays
-            // open once it has been found.
-            Color.clear
-                .frame(height: 56)
-                .contentShape(Rectangle())
-                .onTapGesture(count: 5) {
-                    tuningUnlocked = true
-                    Taps.found()
-                }
-                .accessibilityHidden(true)
-        }
-    }
-}
+// MARK: - Wall health, Connection, About and App design: see HealthPage.swift,
+// ConnectionPage.swift, AboutPage.swift and DesignPage.swift
 
 /// A settings block: label, controls, and one honest sentence about what the
 /// thing does. Not a card, not a grouped list row.
@@ -1090,42 +941,6 @@ struct Section<Content: View>: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-
-// MARK: - Vitals
-
-/// One reading of /health. Absent numbers stay absent: a Mac-hosted brain has
-/// no thermometer and the row simply does not appear.
-struct Vitals {
-    let fps: Double
-    let tempC: Double?
-    let throttled: (now: Bool, ever: Bool)?
-    let uptime: String
-
-    static func read(host: String) async -> Vitals? {
-        guard let url = URL(string: "http://\(host)/health") else { return nil }
-        var req = URLRequest(url: url)
-        req.timeoutInterval = 4
-        guard let (data, resp) = try? await URLSession.shared.data(for: req),
-              (resp as? HTTPURLResponse)?.statusCode == 200,
-              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
-        else { return nil }
-
-        var th: (Bool, Bool)? = nil
-        if let t = json["throttled"] as? [String: Any] {
-            th = (t["now"] as? Bool ?? false, t["ever"] as? Bool ?? false)
-        }
-        let up = json["uptime_s"] as? Double ?? 0
-        let text: String = up >= 86400
-            ? String(format: "%.0fd %.0fh", up / 86400, up.truncatingRemainder(dividingBy: 86400) / 3600)
-            : up >= 3600 ? String(format: "%.0fh %.0fm", up / 3600, up.truncatingRemainder(dividingBy: 3600) / 60)
-            : String(format: "%.0f min", up / 60)
-        return Vitals(fps: json["fps"] as? Double ?? 0,
-                      tempC: json["temp_c"] as? Double,
-                      throttled: th,
-                      uptime: text)
     }
 }
 

@@ -8,7 +8,7 @@
 // reason is a real one: a widget button can only fire an intent the
 // extension itself contains. The mode intent conforms to LiveActivityIntent,
 // which makes the system run it IN THE APP'S PROCESS rather than in the
-// widget's — a widget extension is never allowed to touch the local network
+// widget's. A widget extension is never allowed to touch the local network
 // (TN3179), and the app is. It genuinely does update the Live Activity too,
 // so the conformance is not even a trick.
 
@@ -61,7 +61,8 @@ enum WallAddress {
     static func send(_ patch: [String: Any]) async throws {
         let routed = await MainActor.run { localRoute?(patch) ?? false }
         if routed {
-            WidgetCenter.shared.reloadAllTimelines()
+            // The session wrote the snapshot (queued, or a phone preview).
+            WidgetCenter.shared.reloadTimelines(ofKind: WallSnapshot.kind)
             return
         }
         guard let url = URL(string: "http://\(host)/state"),
@@ -73,10 +74,24 @@ enum WallAddress {
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.httpBody = body
         req.timeoutInterval = 5
-        _ = try await URLSession.shared.data(for: req)
-        // The widget shows the wall's mode; it just changed. Its provider
-        // fetches live state, so a reload is all the truth needs.
-        WidgetCenter.shared.reloadAllTimelines()
+        let (data, response) = try await URLSession.shared.data(for: req)
+        // The widget selects its key from the snapshot's mode, and the frame
+        // on record was taken before this change. So an accepted change marks
+        // the new mode and dims the old picture with its time, until the app
+        // or the widget's own read brings the wall's new frame. A patch the
+        // wall turned down changes nothing on record.
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        if (200..<300).contains(status), WallAcknowledgement.accepted(data) {
+            let mode = patch["mode"] as? String
+            let changesFace = mode != nil || patch["timer_min"] != nil
+            if changesFace {
+                WallSnapshot.Store.shared.update { record in
+                    if let mode { record.mode = mode }
+                    record.outdated = true
+                }
+            }
+        }
+        WidgetCenter.shared.reloadTimelines(ofKind: WallSnapshot.kind)
     }
 
     enum WallError: Error, CustomLocalizedStringResourceConvertible {

@@ -281,6 +281,36 @@ class _FrameTee:
     def __init__(self, sink, ctrl, size, halo=None):
         self._sink, self._ctrl, self._size = sink, ctrl, size
         self._halo = halo
+        # How many frames are handed to the sink a second, for /health. One
+        # tuple (window start, frames in it, last closed window's rate, last
+        # frame's time), replaced whole, so the HTTP thread reading it never
+        # pairs a new window's start with the old window's count.
+        self._clock = time.monotonic
+        self._win = (self._clock(), 0, 0.0, None)
+
+    def _count(self, now):
+        t0, n, rate, _last = self._win
+        if now - t0 >= 2.0:
+            rate, t0, n = n / (now - t0), now, 0
+        self._win = (t0, n + 1, rate, now)
+
+    def sent_rate(self, now=None) -> float:
+        """Frames handed to the panels a second over the last few seconds,
+        counted before the sink drops repeats. A still face sends nothing
+        and reads 0 once it has been still for four seconds. A window that
+        has run long without closing (a slow face) is read as it stands."""
+        now = self._clock() if now is None else now
+        t0, n, rate, last = self._win
+        if last is None or now - last >= 4.0:
+            return 0.0
+        span = now - t0
+        return n / span if span >= 4.0 else rate
+
+    def renderer_status(self):
+        """The Pi renderer sink's status(), or None for a sink without one
+        (the Mac's preview)."""
+        status = getattr(self._sink, "status", None)
+        return status() if status is not None else None
 
     def _open(self, raw: bytes, k: float, ink) -> bytes:
         """The frame with only a band around the middle showing, k of the
@@ -298,6 +328,7 @@ class _FrameTee:
         return f.tobytes()
 
     def show(self, rgb888: bytes, pre_wb_img=None):
+        self._count(self._clock())
         shown = pre_wb_img           # before the voice-opening mask replaces it
         # a face opening from the voice's line: the frames after a command
         # are unmasked from the middle outwards for a moment (art/horizon.py)
@@ -385,6 +416,7 @@ def main():
         "mode": "cd" if anim.get("mode") == "cd" else "art",
         "rpm": float(anim.get("rpm", 7.5)),
     }, frame_len=size * size * 3, wall=wall)
+    ctrl.fps_target = anim_fps           # /health: what pace() aims for
     # [features] in config.toml: a switch per feature, asked at the moment a
     # feature would act, so one thing can be tested at a time
     ctrl.features = Features(cfg)
@@ -509,6 +541,13 @@ def main():
                                   else f"no wake word ({wake.problem})"))
     halo = halo_mod.from_config(cfg)
     sink = _FrameTee(make_sink(cfg, args.sink, wall), ctrl, size, halo=halo)
+    # What /health and /tuning say about the panels: the renderer's
+    # attachment and restarts, read off the sink without its lock, and how
+    # many frames go to it. A preview sink has no renderer, so tuning
+    # reports it absent and never shows a restart.
+    ctrl.renderer_status = sink.renderer_status
+    ctrl.frames_sent_rate = sink.sent_rate
+    tune.renderer = getattr(getattr(sink, "_sink", None), "status", None)
     if halo is not None:
         print(f"[main] halo: {halo.count} LEDs")
 
@@ -630,6 +669,7 @@ def main():
         if tick - fps_since >= 5.0:
             fps_last = fps_count / (tick - fps_since)
             ctrl.fps_last = fps_last
+            ctrl.fps_at = tick             # /health says how old it is
             print(f"[main] {fps_last:.0f} fps sustained "
                   f"(target {anim_fps:.0f})")
             fps_count, fps_since = 0, tick
@@ -640,6 +680,7 @@ def main():
 
     while True:
         ctrl.loop_beat = time.monotonic()      # /health: the loop is alive
+        ctrl.sample_vitals()                   # a temperature a minute
         # ---- phone asked to re-show something from the journal ----------
         if ctrl.replay is not None:
             entry, ctrl.replay = ctrl.replay, None
@@ -811,6 +852,9 @@ def main():
             while time.monotonic() < poll_end and ctrl.replay is None \
                     and not ctrl.news.is_set():
                 routine = ctrl.tick_routines()
+                # A check's nearest-colour pick needs the ceiling too, and
+                # the ceiling can change while a tuning pattern is up.
+                art_pipeline.PANEL_CAP = int(ctrl.get()["panel_brightness"])
                 overlay = ctrl.display_session.render(tune.gains)
                 if overlay is not None:
                     # Not "source": that name is the music source chain.

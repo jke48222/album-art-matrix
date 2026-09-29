@@ -15,7 +15,7 @@ from compare_home import Feature, compose, load_font
 ROOT = Path(__file__).resolve().parents[2]
 BATCH = ROOT / "qa/batch-09"
 OUT = BATCH / "comparisons"
-FEATURES = [("teach", "F08", "Teach the wall"), ("shelf", "F09", "The shelf"),
+FEATURES = [("teach", "F08", "Song library"), ("shelf", "F09", "The shelf"),
             ("games", "G00", "Games"), ("wordle", "G01", "Wordle"), ("sudoku", "G02", "Sudoku")]
 PUZZLES = [("wordle-playing", "A word taking shape"), ("wordle-won", "A word found"),
            ("wordle-lost", "The answer, revealed"), ("sudoku-playing", "Every number has a place"),
