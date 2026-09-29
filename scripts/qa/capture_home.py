@@ -318,7 +318,23 @@ def main() -> int:
     parser.add_argument("--renderer-root", type=Path, help="Production renderer checkout for matched baseline captures")
     parser.add_argument("--brightness", type=float)
     parser.add_argument("--journal", choices=("empty", "recent"), default="empty")
+    parser.add_argument("--deps", metavar="KEY[,KEY]",
+                        help="Page keys from qa/deps.json (core is always included). Each capture then records "
+                             "\"sources\": {path: sha256}, so scripts/qa/stale_captures.py can tell when it is out of date.")
+    parser.add_argument("--allow-older-build", action="store_true",
+                        help="With --deps, capture even when a source is newer than the installed build. "
+                             "The capture then names those files and counts as stale.")
     args = parser.parse_args()
+    # Source identity, hashed once before anything is installed or launched:
+    # the files the installed build is taken to be made from. An unknown key
+    # or a listed file that is gone stops here, before the simulator is touched.
+    source_record = {}
+    if args.deps is not None:
+        from stale_captures import sources_record
+        try:
+            source_record = sources_record([key for key in args.deps.split(",") if key and key != "core"])
+        except (ValueError, FileNotFoundError) as error:
+            parser.error(f"--deps: {error}")
     valid = set(DEFAULT_STATES) | {"classic-wall", "room-paused", "ipod-paused", "room-offline", "ipod-offline",
                                  "room-long", "ipod-long", "room-large", "ipod-large"}
     if any(state not in valid for state in args.states):
@@ -342,6 +358,19 @@ def main() -> int:
         command("xcrun", "simctl", "install", args.simulator, str(args.app.resolve()))
     installed_app = Path(command("xcrun", "simctl", "get_app_container", args.simulator, args.bundle, "app", capture=True))
     installed_identity = app_identity(installed_app, "Actual installed simulator bundle, resolved by simctl get_app_container")
+    # A source edited after the installed code file was made stops the run:
+    # the capture would show the old code under the new hashes.
+    if source_record:
+        from stale_captures import newer_than
+        built = (installed_app / installed_identity["production_code_file"]).stat().st_mtime
+        late = newer_than(list(source_record["sources"]), built)
+        if late and not args.allow_older_build:
+            print(f"{len(late)} source files are newer than the installed build "
+                  f"({', '.join(late[:3])}{', ...' if len(late) > 3 else ''}); rebuild and install first, "
+                  "or pass --allow-older-build", file=sys.stderr, flush=True)
+            return 2
+        if late:
+            source_record["sources_newer_than_build"] = late
     actual = wall_snapshot(args.wall_host, output) if args.wall_host else None
     states = list(args.states)
     if actual is not None and "classic-wall" not in states:
@@ -583,6 +612,7 @@ def main() -> int:
                              "installed_app_identity": installed_identity,
                              "captured_at": datetime.now(timezone.utc).isoformat(),
                              "dynamic_type": "AX5" if variant == "large" else "large"})
+            captures[-1].update(source_record)
             print(image_path, flush=True)
     finally:
         server.shutdown()

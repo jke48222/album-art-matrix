@@ -9,5 +9,9 @@ small. They come back with:
     .venv/bin/python scripts/qa/render_widgets.py --app <Tessera.app> --out qa/batch-17/after/widgets
     .venv/bin/python scripts/qa/compare_batch17.py
 
-`scripts/qa/verify_batch17.py` checks that every capture came from one build.
+`scripts/qa/verify_batch17.py` checks that every capture records its source
+files and that none of them has changed since, and lists each capture's build.
+The sources in these manifests were added afterwards by
+`scripts/qa/stale_captures.py --backfill`, which vouches for them from git
+history; captures taken from now on record them when taken.
 validation.json records the builds, tests and deployment.

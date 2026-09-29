@@ -1,10 +1,26 @@
 #!/usr/bin/env python3
 """Batch 17 capture driver. Simulator 656AFBBD only, fixture port 65368 only.
 
-Usage: capture_batch17.py [--list] [--exact] [substring ...]
+Usage: capture_batch17.py [--list] [--exact] [--stale] [--allow-older-build] [substring ...]
 Runs every "after" case whose name contains one of the substrings (all when
 none). The "before" case is kept as it is and only runs when named with
 --before.
+
+--stale runs only the case folders scripts/qa/stale_captures.py reports as
+stale (a recorded source file changed) or unknown (no sources recorded), so
+a fix to one page recaptures that page's cases and nothing else:
+
+    .venv/bin/python scripts/qa/stale_captures.py qa/batch-17
+    .venv/bin/python scripts/qa/capture_batch17.py --stale
+
+Every "after" capture records "sources": {path: sha256} for the core files
+and its page's files in qa/deps.json, the page taken from the case name
+(health-warm is health, widgets-page is widgets). Before captures come from
+the old build, so they record none. A case stops before it launches when any
+of those files is newer than the installed build, since the screenshot would
+show the old code under the new hashes: rebuild and install first.
+--allow-older-build captures anyway (for a file touched but not changed);
+the capture then names the late files and stale_captures.py counts it stale.
 
 Final-build revision (2026-09-29): folds in retake1.py and retake2.py, follows
 the fixture changes in serve_setup.py (dropped and refused offline modes,
@@ -40,6 +56,7 @@ FIX = f"127.0.0.1:{PORT}"
 os.environ["DEVELOPER_DIR"] = "/Applications/Xcode-beta.app/Contents/Developer"
 sys.path.insert(0, str(ROOT / "scripts/qa"))
 from capture_home import app_identity  # noqa: E402
+from stale_captures import check_batch, deps, keys_for_case, newer_than, sources_record  # noqa: E402
 
 AX5 = "accessibility-extra-extra-extra-large"
 DYLIB = "Tessera.debug.dylib"
@@ -52,9 +69,47 @@ def sh(*args, capture=False, check=True, timeout=120):
     return r.stdout.strip()
 
 
+def installed_app():
+    return Path(sh("xcrun", "simctl", "get_app_container", SIM, BUNDLE, "app"))
+
+
 def identity():
-    app = Path(sh("xcrun", "simctl", "get_app_container", SIM, BUNDLE, "app"))
-    return app_identity(app, "Installed simulator bundle, resolved by simctl get_app_container")
+    return app_identity(installed_app(), "Installed simulator bundle, resolved by simctl get_app_container")
+
+
+def case_keys(case):
+    """The qa/deps.json page keys for a case folder name. A case no page
+    claims is an error, so a new page family cannot slip in unrecorded."""
+    keys = keys_for_case(case, deps())
+    if not keys:
+        raise RuntimeError(f"no page in qa/deps.json claims case {case!r}; add its page or an alias")
+    return keys
+
+
+# Set by --allow-older-build: capture even when a source is newer than the
+# installed build. Such a capture records the late files and counts as stale.
+ALLOW_OLDER = False
+
+
+def case_sources(root, case):
+    """The sources record for an after capture, or nothing for a before one
+    (those show the old build, not the files here).
+
+    A source edited after the installed build was made means the capture
+    would show the old code under the new hashes, so it stops the run unless
+    --allow-older-build is given."""
+    if root != "after":
+        return {}
+    record = sources_record(case_keys(case))
+    app = installed_app()
+    built = (app / app_identity(app, "")["production_code_file"]).stat().st_mtime
+    late = newer_than(list(record["sources"]), built)
+    if late and not ALLOW_OLDER:
+        raise RuntimeError(f"{case}: {len(late)} sources are newer than the installed build "
+                           f"({', '.join(late[:3])}); rebuild and install, or pass --allow-older-build")
+    if late:
+        record["sources_newer_than_build"] = late
+    return record
 
 
 # ---------------------------------------------------------------- fixture
@@ -183,6 +238,9 @@ def serve_case(root, case, variant="room-live", args=(), host=True, intro="none"
     """A capture against serve_setup.py on 65368. pre/post are lists of
     ("post", path, body) | ("sleep", s) | ("wait", path, n) | ("health_reads", n) | ("tuning_loaded",)."""
     folder = QA / root / case
+    # Before anything launches, so a case no page claims, or an unrebuilt
+    # app, stops here rather than after a new screenshot replaced the old one.
+    sources = case_sources(root, case)
     folder.mkdir(parents=True, exist_ok=True)
     large = variant.endswith("large") if large is None else large
     FIXTURE.start(side)
@@ -261,7 +319,8 @@ def serve_case(root, case, variant="room-live", args=(), host=True, intro="none"
                                                       "hostname", "session", "tuning", "frame", "requests")},
              "installed_app_identity": ident,
              "tessera_debug_dylib_sha256": ident["files_sha256"].get(DYLIB),
-             "captured_at": datetime.now(timezone.utc).isoformat()}
+             "captured_at": datetime.now(timezone.utc).isoformat(),
+             **sources}
     if port_closed:
         entry["qa_status_note"] = ("The fixture's port was closed at the screenshot (POST /qa/available as refused), "
                                    "so qa_status was read after it opened again.")
@@ -277,11 +336,19 @@ def serve_case(root, case, variant="room-live", args=(), host=True, intro="none"
     print(image, f"live={live}", flush=True)
 
 
-def home_case(root, case, states, args=(), setup="ready", intro="none", settle=5.0, extra=(), rename=None):
-    """A capture through capture_home.py, which binds its own port."""
+def home_case(root, case, states, args=(), setup="ready", intro="none", settle=5.0, extra=(), rename=None, keys=None):
+    """A capture through capture_home.py, which binds its own port. keys are
+    the qa/deps.json pages to record, taken from the case name unless given
+    (home_extra captures under a scratch name for a real case)."""
     folder = QA / root / case
     cmd = [PY, "scripts/qa/capture_home.py", "--simulator", SIM, "--output", str(folder),
            "--intro-style", intro, "--settle", str(settle), "--states", *states]
+    if keys is None and root == "after":
+        keys = case_keys(case)
+    if keys:
+        cmd += ["--deps", ",".join(keys)]
+        if ALLOW_OLDER:
+            cmd += ["--allow-older-build"]
     if setup:
         cmd += ["--setup-state", setup]
     cmd += list(extra)
@@ -315,7 +382,8 @@ def home_extra(root, case, state, newname, args=(), setup="ready", intro="none",
     name, without touching what is already there."""
     tmp = SCRATCH / "tmp-home"
     shutil.rmtree(tmp, ignore_errors=True)
-    home_case(str(tmp.parent), tmp.name, [state], args=args, setup=setup, intro=intro, settle=settle, extra=extra)
+    home_case(str(tmp.parent), tmp.name, [state], args=args, setup=setup, intro=intro, settle=settle, extra=extra,
+              keys=case_keys(case) if root == "after" else [])
     folder = QA / root / case
     folder.mkdir(parents=True, exist_ok=True)
     m = json.loads((tmp / "manifest.json").read_text())
@@ -604,17 +672,40 @@ def cases(include_before=False):
     return L
 
 
+def stale_folders():
+    """The after case folders whose captures are stale or unknown, and the
+    ones among them no case here writes (so they are named, not skipped)."""
+    result = check_batch(QA)
+    folders = {name for name in result["stale"] + result["unknown"] if name.startswith("after/")}
+    written = {name.split(":")[0] for name, _ in cases()}
+    return folders, sorted(folders - written)
+
+
 def main():
+    global ALLOW_OLDER
     argv = sys.argv[1:]
+    ALLOW_OLDER = "--allow-older-build" in argv
     L = cases(include_before="--before" in argv)
+    stale = None
+    if "--stale" in argv:
+        stale, orphans = stale_folders()
+        print(f"STALE {len(stale)} case folders: {', '.join(sorted(stale)) or 'none'}", flush=True)
+        for folder in orphans:
+            print(f"NOT HERE {folder}: stale, but no case in this driver writes it", flush=True)
     if "--list" in argv:
         for n, _ in L:
-            print(n)
+            if stale is None or n.split(":")[0] in stale:
+                print(n)
         return
     wanted = [a for a in argv if not a.startswith("--")]
     exact = "--exact" in argv
     try:
         for name, fn in L:
+            # A case entry is named after its folder ("after/health:offline"
+            # writes after/health), so a stale folder reruns every entry that
+            # writes it and the folder ends up from one build.
+            if stale is not None and name.split(":")[0] not in stale:
+                continue
             if wanted and not any((w == name) if exact else (w in name) for w in wanted):
                 continue
             print("CASE", name, flush=True)

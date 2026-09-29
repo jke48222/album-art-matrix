@@ -38,7 +38,58 @@
         "production_code_file": "Tessera.debug.dylib"
       },
       "captured_at": "2026-09-29T11:19:55.571259+00:00",
-      "dynamic_type": "large"
+      "dynamic_type": "large",
+      "source_keys": [
+        "health"
+      ],
+      "sources": {
+        "brain/control.py": "8b825841a3d6c325494cb8016f0fdaa424c641f4288a8aaa76632086adda2273",
+        "brain/display_session.py": "81977fac73433b39258a96f8e244b666432e31e69331ef8359ee76f9e3df3a82",
+        "brain/wall.py": "49469b408376756fcfbd0a21dd20d7476031b802c4a51d3edfce65e1ba6d019c",
+        "tessera/Info.plist": "030b9ca9fbea9d6fb9247dd581c152bacb0dc871cdfb634322b43fe93a8de8b7",
+        "tessera/Shared/Metrics.swift": "bb10abedb71218db85e979eb2ea858a107aa7c3ddbeaca40c6b90667bca0219e",
+        "tessera/Shared/Palette.swift": "b118573280e1844e3f4225027595f56d3ddc42f850dcdab8332324b7c79038df",
+        "tessera/Shared/Panel.swift": "ffb381c1b7193f4511f6f7f31e02dcb5fd339930caf6d4c27d62ba486b471dad",
+        "tessera/Shared/WallAcknowledgement.swift": "8719028d912ddad26aaa98913e682bca7c84ba1549ab92c05d9af3429fe36f61",
+        "tessera/Shared/WallFacts.swift": "c6fe93ff3f0faecca78a11c8f594b3ded4b63f97fed13d1e7662cd5d92ef6f1f",
+        "tessera/Shared/WallSnapshot.swift": "3585975225bfd406428f3f72c6325d0d4bff22e6a00d2968b852f274d3a02f44",
+        "tessera/Tessera.entitlements": "17ea0f457a5a2af82a40ffdfd8204c97c232e4355d540d7a13f7727e4685ba2d",
+        "tessera/Tessera.xcodeproj/project.pbxproj": "e1a0907ca7feeae0a1e6a8819b8946abec59a8b981c36e55e8cd3be9055ad04a",
+        "tessera/Tessera/AboutModels.swift": "6b38cefb26b06504a2c4af2d386a2f2ce7ca82d1573c64e8fa02a101c3dc7b75",
+        "tessera/Tessera/Assets.xcassets/": "fd9362d2961406151e0a3d3c64e4e0f1640a2ee698fc9d7690f916f74cc8a162",
+        "tessera/Tessera/ClaudePage.swift": "f7b1ab3930a1e0ff6312f3c2025109761999649d21eedbb1b4aea1f4123e9c74",
+        "tessera/Tessera/DeveloperKeys.swift": "30c2634c97793cd74df0ee06779e4ff122330fdd3213a27d95e55d0ed3a3655b",
+        "tessera/Tessera/FlightLog.swift": "2a73979a1417af9ed6f4d84705e266e5c9622572150a556683ff3a8d223bcb20",
+        "tessera/Tessera/Fonts/": "5cafa3f22116c60e0b8b3fb28258da93d9493e09dbd73ed5c89cb9bbaeba4b5f",
+        "tessera/Tessera/FrameView.swift": "43b2bd7164263469bcd4a80badfc1f7d64c288181af5dd08c40dd34a3886526a",
+        "tessera/Tessera/HealthPage.swift": "04c7e8d99fa772d8f057fc4cb8899b28121eb848d6d2d259b1c1aa31de02f8ee",
+        "tessera/Tessera/HomeDesign.swift": "7df3fa768fa2874136c7f08b9a8d35fef2dcd838f1ad146ecafee3c8e76fe6de",
+        "tessera/Tessera/HomeRouter.swift": "cbdc509d2ec8a9e9597c158cb6bb6a52fb6d40614b43ededb7c20b2ad0686835",
+        "tessera/Tessera/Icons.swift": "256db9e9f680d1aa99c786654df1f0a0e7acaf389aea7765786e5475593f7a1f",
+        "tessera/Tessera/IdlePolicy.swift": "14c77ba24c27e1ea7cc8f4564b3905a474b97dcdb366a357a901b0b71da5f8f5",
+        "tessera/Tessera/LinkRecords.swift": "f1fd4a887f1b93cd0cba3d9d603585bc88012ea97eb197f6a4d454a352430455",
+        "tessera/Tessera/Room.swift": "0f58d0db47a7466b28c239941cb5430ee078f915b88d68764487f562a1911d72",
+        "tessera/Tessera/RoomIntro.swift": "62b23ea07c81b4e513007343e90471c841f6ee77b91d797434a89caa0cc58bc8",
+        "tessera/Tessera/RootView.swift": "2121ced6f7a404f27938953015f2ecc1268a73a546515fd894e5d9d8574d1c10",
+        "tessera/Tessera/ServiceButtons.swift": "a459208328124a0a7361ca462836365525e7311fa18518010bc690ba32915a01",
+        "tessera/Tessera/Services.swift": "32d2c95d59c80ef99b7f235b5e1b37bee82a5911bf2fbb264891163f56ab30d4",
+        "tessera/Tessera/SettingsCatalog.swift": "48c40c6521b5e74ad1af7890412421a5b058fa7eaf486174967f8b0f7eb7ff69",
+        "tessera/Tessera/SettingsSheet.swift": "4e8563b7eed92b5708bd99ececa867946bf9208ac546d903bc6fb38694058c77",
+        "tessera/Tessera/StandIn.swift": "a695f2853c11f759ead4293e5aab4e568e8bd3063ad1c0743668fa1f816f8312",
+        "tessera/Tessera/StingOpening.swift": "06df6e5122232c32020e2bb6dadc4f5f8eba22d3cdb64b9e4a07596ff11f3b78",
+        "tessera/Tessera/TesseraApp.swift": "6df05a7c83353e1e81a63a2b1a2df7602b9b0ac4b82b57f889b1cc8abe5bb398",
+        "tessera/Tessera/Theme.swift": "a3d05bdbb48ef193b30ff9510e21d3d9b80c867317507aded067e99018f3788d",
+        "tessera/Tessera/TimeCompletionEntry.swift": "056ee2079b4d309184264b60813eb48fd74034a5dc52340c04a06186325fdb02",
+        "tessera/Tessera/TimeInput.swift": "2094fc3cb04a009e1517557921561e2189478b6f92a117e8c88952123d816752",
+        "tessera/Tessera/WallGrid.swift": "0ce38516a090ea552b56000569283568ec3247c3ec8c4aed967d2aa14d4ceecf",
+        "tessera/Tessera/WallLink.swift": "5c81165ea159ef2f7f49ea7dcbe57693e6489d877cd51b01897e09c67e97a366",
+        "tessera/Tessera/WallVitals.swift": "583c696670aa16de2fedd645e41af6f02be07969ea9e5f670354622fbc12186e"
+      },
+      "sources_backfilled": {
+        "at": "2026-09-29T23:33:40.064556+00:00",
+        "head": "c32fd43d1234a2ca9ee1b239c76ba0a115d7e76e",
+        "manifest_commit": "c32fd43d1234a2ca9ee1b239c76ba0a115d7e76e"
+      }
     }
   ],
   "installed_app_identity": {

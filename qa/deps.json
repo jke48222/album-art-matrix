@@ -1,0 +1,434 @@
+{
+  "about": [
+    "Which source files each screen family depends on, so a change reruns only what it affects.",
+    "Read by scripts/qa/stale_captures.py (capture freshness), scripts/qa/capture_home.py --deps and",
+    "scripts/qa/capture_batch17.py (recording sources), and scripts/qa/affected.py (what to rerun).",
+    "An entry ending in / is a folder: every file under it counts. An entry page:KEY pulls in that page's list."
+  ],
+  "rules": [
+    "core is what draws or feeds every captured screen. That is the app entry and the root view, with the room behind the sheet and its accent (Room, FrameView, and RoomIntro for Color.toned). It is the settings sheet chrome and catalogue, theme, icons, fonts and assets, and the wall session with the link-state files it reads on every poll. The settings landing's row details count too (AppVersion, IdlePolicy, TimeInput, HealthReport, Service), as do the Xcode project, Info.plist and entitlements, which every screen is built with.",
+    "A page also lists whatever hosts it or routes to it: the view that handles its launch hook (-about-page opens tuning from AboutPage, -service-page opens service pages from ServicesOverview) and any page its UI tests step into (HearingPage from the tuning tests).",
+    "core also holds the brain code behind every fixture wall: serve_setup.py runs the real ControlState, DisplaySession and Wall.",
+    "Deliberately not core: Components.swift (only the classic home, the studio and the workbenches use it) and the home screens behind the settings sheet (only a dimmed strip shows).",
+    "Also not core: the wall session's feature helpers (video, now playing push, journal, outbox, live activity). A page that shows one lists it.",
+    "A page lists the Swift files it renders, found by following its non-core project types. A reference that is only another page's view (a navigation destination) is not followed; a shared component that lives in another page's file (CreativeConnectionNotice in ClaudePage.swift, CalibrationLinkStyle in ColourPage.swift) brings that file in.",
+    "A page lists the brain files its fixture actually runs, not the brain feature behind the screen: captures and UI suites talk to fixture servers, so a brain change they cannot see is left to the brain tests.",
+    "QA harness files (fixture servers, capture drivers) are not sources. scripts/qa/affected.py warns when one changes."
+  ],
+  "core": [
+    "tessera/Tessera/TesseraApp.swift",
+    "tessera/Tessera/RootView.swift",
+    "tessera/Tessera/HomeRouter.swift",
+    "tessera/Tessera/HomeDesign.swift",
+    "tessera/Tessera/Room.swift",
+    "tessera/Tessera/FrameView.swift",
+    "tessera/Tessera/RoomIntro.swift",
+    "tessera/Tessera/StingOpening.swift",
+    "tessera/Tessera/SettingsSheet.swift",
+    "tessera/Tessera/SettingsCatalog.swift",
+    "tessera/Tessera/Theme.swift",
+    "tessera/Tessera/Icons.swift",
+    "tessera/Tessera/WallLink.swift",
+    "tessera/Tessera/StandIn.swift",
+    "tessera/Tessera/LinkRecords.swift",
+    "tessera/Tessera/WallGrid.swift",
+    "tessera/Tessera/Fonts/",
+    "tessera/Tessera/Assets.xcassets/",
+    "tessera/Shared/Palette.swift",
+    "tessera/Shared/Panel.swift",
+    "tessera/Shared/Metrics.swift",
+    "tessera/Shared/WallSnapshot.swift",
+    "tessera/Shared/WallFacts.swift",
+    "tessera/Shared/WallAcknowledgement.swift",
+    "brain/control.py",
+    "brain/display_session.py",
+    "brain/wall.py",
+    "tessera/Tessera/Services.swift",
+    "tessera/Tessera/DeveloperKeys.swift",
+    "tessera/Tessera/AboutModels.swift",
+    "tessera/Tessera/IdlePolicy.swift",
+    "tessera/Tessera/TimeInput.swift",
+    "tessera/Tessera/TimeCompletionEntry.swift",
+    "tessera/Tessera/ServiceButtons.swift",
+    "tessera/Tessera/WallVitals.swift",
+    "tessera/Tessera.xcodeproj/project.pbxproj",
+    "tessera/Info.plist",
+    "tessera/Tessera.entitlements"
+  ],
+  "aliases": {
+    "addresses": "connection",
+    "widgets-page": "widgets"
+  },
+  "pages": {
+    "pictures": [
+      "tessera/Tessera/PicturesPage.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "brain/services.py",
+      "brain/art/pipeline.py",
+      "tessera/Tessera/ServicesOverview.swift"
+    ],
+    "onboarding": [
+      "tessera/Tessera/Onboarding.swift",
+      "tessera/Tessera/OnboardingState.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift",
+      "brain/services.py"
+    ],
+    "colour": [
+      "tessera/Tessera/ColourPage.swift",
+      "tessera/Tessera/Calibrate.swift",
+      "tessera/Tessera/CalibrationMeasurement.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift",
+      "tessera/Tessera/Framing.swift",
+      "tessera/Tessera/MediaImport.swift",
+      "tessera/Tessera/Video.swift",
+      "tessera/Tessera/VideoHandoff.swift",
+      "tessera/Shared/VideoPicture.swift",
+      "brain/art/pipeline.py"
+    ],
+    "panel": [
+      "tessera/Tessera/PanelCheckPage.swift",
+      "tessera/Tessera/PanelDiagnostic.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "brain/art/pipeline.py"
+    ],
+    "guests": [
+      "tessera/Tessera/Guests.swift",
+      "tessera/Tessera/GuestQRCode.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift"
+    ],
+    "health": [
+      "tessera/Tessera/HealthPage.swift",
+      "tessera/Tessera/FlightLog.swift",
+      "tessera/Tessera/ClaudePage.swift"
+    ],
+    "connection": [
+      "tessera/Tessera/ConnectionPage.swift",
+      "tessera/Tessera/ConnectionModels.swift",
+      "tessera/Tessera/ConnectionProbe.swift",
+      "tessera/Tessera/Outbox.swift",
+      "tessera/Tessera/FlightLog.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "brain/services.py"
+    ],
+    "about": [
+      "tessera/Tessera/AboutPage.swift",
+      "tessera/Tessera/RecordMark.swift",
+      "tessera/Tessera/ColourPage.swift",
+      "brain/tuning.py",
+      "brain/art/pipeline.py"
+    ],
+    "design": [
+      "tessera/Tessera/DesignPage.swift",
+      "page:home"
+    ],
+    "tuning": [
+      "tessera/Tessera/PanelTuningPage.swift",
+      "tessera/Tessera/TuningRows.swift",
+      "tessera/Tessera/TuningStore.swift",
+      "tessera/Tessera/TuningPatterns.swift",
+      "tessera/Tessera/PanelDiagnostic.swift",
+      "tessera/Tessera/ColourPage.swift",
+      "tessera/Tessera/FlightLog.swift",
+      "tessera/Tessera/TemporaryWallDisplay.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "brain/tuning.py",
+      "brain/services.py",
+      "brain/art/pipeline.py",
+      "tessera/Tessera/AboutPage.swift",
+      "tessera/Tessera/Hearing.swift"
+    ],
+    "widgets": [
+      "tessera/Tessera/WidgetsPage.swift",
+      "tessera/Tessera/WidgetRenderHarness.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "tessera/Shared/WallWidgetViews.swift",
+      "tessera/Shared/WidgetReading.swift",
+      "tessera/Shared/WallIntents.swift",
+      "tessera/Shared/EmitterRaster.swift"
+    ],
+    "home": [
+      "tessera/Tessera/WallScreen.swift",
+      "tessera/Tessera/RoomScreen.swift",
+      "tessera/Tessera/ClassicWallScreen.swift",
+      "tessera/Tessera/IPod.swift",
+      "tessera/Tessera/IPodWheelInteraction.swift",
+      "tessera/Tessera/PanelInteraction.swift",
+      "tessera/Tessera/IntroFlip.swift",
+      "tessera/Tessera/RoomIntro2.swift",
+      "tessera/Tessera/DiveFilm.swift",
+      "tessera/Tessera/NowPlayingIdentity.swift",
+      "tessera/Tessera/Record.swift",
+      "tessera/Tessera/RecordLabel.swift",
+      "tessera/Tessera/RecordLabelStyles.swift",
+      "tessera/Tessera/RecordMark.swift",
+      "tessera/Tessera/RecordView.swift",
+      "tessera/Tessera/Needle.swift",
+      "tessera/Tessera/PressingPanel.swift",
+      "tessera/Tessera/PressingStore.swift",
+      "tessera/Tessera/Sleeve.swift",
+      "tessera/Tessera/Beats.swift",
+      "tessera/Tessera/ColourBar.swift",
+      "tessera/Tessera/Components.swift",
+      "tessera/Tessera/Archive.swift",
+      "tessera/Tessera/ControlCenter.swift",
+      "tessera/Tessera/LiveFinishRow.swift",
+      "tessera/Tessera/FinishSwatch.swift",
+      "tessera/Tessera/WallValueSlider.swift",
+      "tessera/Tessera/IdlePage.swift",
+      "tessera/Tessera/TickerWorkbench.swift",
+      "tessera/Tessera/TimeWorkbench.swift",
+      "tessera/Tessera/VideoWorkbench.swift",
+      "tessera/Tessera/Video.swift",
+      "tessera/Tessera/VideoHandoff.swift",
+      "tessera/Tessera/Framing.swift",
+      "tessera/Tessera/MediaImport.swift",
+      "tessera/Tessera/PixelFont.swift",
+      "tessera/Shared/VideoPicture.swift",
+      "tessera/Shared/WidgetReading.swift",
+      "brain/art/pipeline.py",
+      "brain/art/effects.py",
+      "brain/art/nine.py",
+      "brain/art/lyrics.py",
+      "brain/art/text_modes.py",
+      "brain/art/disc.py"
+    ],
+    "games": [
+      "tessera/Tessera/GamesHub.swift",
+      "tessera/Tessera/GameScreen.swift",
+      "tessera/Tessera/Games.swift",
+      "tessera/Tessera/GamesPlay.swift",
+      "tessera/Tessera/GamesBoards.swift",
+      "tessera/Tessera/GameModels.swift",
+      "tessera/Tessera/GameArtworkCanvas.swift",
+      "tessera/Tessera/GameArcadeLifecycle.swift",
+      "tessera/Tessera/GameClipTransport.swift",
+      "tessera/Tessera/GameCommandBuffer.swift",
+      "tessera/Tessera/GameSpeech.swift",
+      "tessera/Tessera/AskNotePages.swift",
+      "brain/games/__init__.py",
+      "brain/games/host.py",
+      "brain/games/board.py"
+    ],
+    "arcade": [
+      "tessera/Tessera/SnakeBoard.swift",
+      "tessera/Tessera/Snake.swift",
+      "tessera/Tessera/TetrisBoard.swift",
+      "tessera/Tessera/Patterns.swift",
+      "tessera/Tessera/PixelFont.swift",
+      "brain/games/arcade.py"
+    ],
+    "party-games": [
+      "tessera/Tessera/HeardleBoard.swift",
+      "tessera/Tessera/TwentyQBoard.swift",
+      "tessera/Tessera/QuizBoard.swift",
+      "tessera/Tessera/PictionaryBoard.swift",
+      "tessera/Tessera/PongBoard.swift",
+      "brain/games/heardle.py",
+      "brain/games/twentyq.py",
+      "brain/games/quiz.py",
+      "brain/games/pictionary.py",
+      "brain/games/arcade.py"
+    ],
+    "motion-games": [
+      "tessera/Tessera/ContextoBoard.swift",
+      "tessera/Tessera/SlidingBoard.swift",
+      "tessera/Tessera/RevealBoard.swift",
+      "tessera/Tessera/ReactionBoard.swift",
+      "tessera/Tessera/WhistleBirdBoard.swift",
+      "brain/games/contexto.py",
+      "brain/games/pictures.py",
+      "brain/games/reaction.py",
+      "brain/games/whistlebird.py"
+    ],
+    "music-services": [
+      "tessera/Tessera/ServicesOverview.swift",
+      "tessera/Tessera/SpotifyPage.swift",
+      "tessera/Tessera/SpotifyLink.swift",
+      "tessera/Tessera/AppleMusicPage.swift",
+      "tessera/Tessera/AppleMusicConnectionModels.swift"
+    ],
+    "device-services": [
+      "tessera/Tessera/ImagesPage.swift",
+      "tessera/Tessera/ImagineModels.swift",
+      "tessera/Tessera/PostersPage.swift",
+      "tessera/Tessera/MacReporterPage.swift",
+      "tessera/Tessera/AirPlayPage.swift",
+      "tessera/Tessera/HomeKitPage.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "brain/services.py",
+      "brain/homekit.py",
+      "tessera/Tessera/ServicesOverview.swift"
+    ],
+    "service-details": [
+      "tessera/Tessera/LastfmPage.swift",
+      "tessera/Tessera/ListenBrainzPage.swift",
+      "tessera/Tessera/OtherPlayersPage.swift",
+      "tessera/Tessera/ClaudePage.swift",
+      "tessera/Tessera/DiscogsPage.swift",
+      "tessera/Tessera/ShelfModels.swift",
+      "brain/services.py",
+      "tessera/Tessera/ServicesOverview.swift"
+    ]
+  },
+  "suites": {
+    "test_setup_ui.py": {
+      "pages": [
+        "about",
+        "design",
+        "connection",
+        "health",
+        "tuning",
+        "guests",
+        "panel",
+        "colour",
+        "pictures",
+        "onboarding"
+      ],
+      "classes": {
+        "SetupInteractionTests/AboutInteractionTests": [
+          "about",
+          "design"
+        ],
+        "SetupInteractionTests/ConnectionInteractionTests": [
+          "connection"
+        ],
+        "SetupInteractionTests/HealthInteractionTests": [
+          "health"
+        ],
+        "SetupInteractionTests/TuningInteractionTests": [
+          "tuning"
+        ],
+        "SetupInteractionTests/SetupInteractionTests": [
+          "guests",
+          "panel",
+          "colour",
+          "pictures",
+          "onboarding"
+        ]
+      },
+      "files": [
+        "scripts/qa/test_setup_ui.py",
+        "scripts/qa/setup-uitests/",
+        "scripts/qa/serve_setup.py",
+        "scripts/qa/setup_fixtures.py",
+        "scripts/qa/health_fixtures.json",
+        "scripts/qa/connections_fixtures.py",
+        "scripts/qa/device_services_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_widgets_ui.py": {
+      "pages": [
+        "widgets",
+        "home",
+        "panel"
+      ],
+      "classes": {
+        "WidgetsPageTests/WidgetsPageTests": [
+          "widgets",
+          "home",
+          "panel"
+        ]
+      },
+      "files": [
+        "scripts/qa/test_widgets_ui.py",
+        "scripts/qa/widgets-uitests/",
+        "scripts/qa/setup-uitests/SetupHarness.swift",
+        "scripts/qa/serve_setup.py",
+        "scripts/qa/setup_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_connections_arcade_ui.py": {
+      "pages": [
+        "games",
+        "arcade",
+        "music-services"
+      ],
+      "classes": {},
+      "files": [
+        "scripts/qa/test_connections_arcade_ui.py",
+        "scripts/qa/connections-uitests/",
+        "scripts/qa/serve_connections_arcade.py",
+        "scripts/qa/arcade_games_fixtures.py",
+        "scripts/qa/connections_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_device_services_ui.py": {
+      "pages": [
+        "device-services"
+      ],
+      "classes": {},
+      "files": [
+        "scripts/qa/test_device_services_ui.py",
+        "scripts/qa/device-services-uitests/",
+        "scripts/qa/serve_device_services.py",
+        "scripts/qa/device_services_fixtures.py",
+        "scripts/qa/connections_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_service_details_ui.py": {
+      "pages": [
+        "service-details"
+      ],
+      "classes": {},
+      "files": [
+        "scripts/qa/test_service_details_ui.py",
+        "scripts/qa/service-details-uitests/",
+        "scripts/qa/serve_service_details.py",
+        "scripts/qa/service_details_fixtures.py",
+        "scripts/qa/connections_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_party_games_ui.py": {
+      "pages": [
+        "games",
+        "party-games"
+      ],
+      "classes": {},
+      "files": [
+        "scripts/qa/test_party_games_ui.py",
+        "scripts/qa/party-uitests/",
+        "scripts/qa/serve_party_games.py",
+        "scripts/qa/party_games_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    },
+    "test_motion_games_ui.py": {
+      "pages": [
+        "games",
+        "motion-games"
+      ],
+      "classes": {},
+      "files": [
+        "scripts/qa/test_motion_games_ui.py",
+        "scripts/qa/uitests/",
+        "scripts/qa/serve_motion_games.py",
+        "scripts/qa/motion_games_fixtures.py",
+        "scripts/qa/capture_home.py"
+      ]
+    }
+  },
+  "brain_tests_core": [
+    "brain/control.py",
+    "brain/main.py",
+    "brain/__init__.py",
+    "brain/requirements.txt",
+    "brain/tests/conftest.py"
+  ],
+  "qa_harness": [
+    "scripts/qa/capture_home.py",
+    "scripts/qa/capture_batch17.py",
+    "scripts/qa/serve_setup.py",
+    "scripts/qa/setup_fixtures.py",
+    "scripts/qa/health_fixtures.json",
+    "scripts/qa/connections_fixtures.py",
+    "scripts/qa/device_services_fixtures.py",
+    "scripts/qa/service_details_fixtures.py"
+  ]
+}
