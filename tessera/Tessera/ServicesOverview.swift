@@ -1,6 +1,13 @@
 import SwiftUI
 
+private let servicesMint = Color(hex: 0xADD2C5)
+
 /// One route to each connection. The overview reads status; setup lives in its destination.
+///
+/// Rows, cards and sections are their own small views. Built inline in one
+/// body, the page was a single generic type so large that an unoptimised
+/// (Debug) build overflowed the iPhone's main-thread stack while SwiftUI
+/// instantiated it; the simulator's larger stack hid this.
 struct ServicesPage: View {
     @Environment(WallSession.self) private var wall
     @Environment(\.scenePhase) private var scene
@@ -16,7 +23,7 @@ struct ServicesPage: View {
     @State private var sourceHost = ""
     @State private var showPriority = false
     @State private var qaRoute: String?
-    private let mint = Color(hex: 0xADD2C5)
+    private let mint = servicesMint
     private var available: Bool { wall.link.isLive && checked && !failed }
     private var spotifyReady: Bool { services?.spotify.linked == true && !["expired", "refused", "unavailable", "rate_limited", "checking"].contains(services?.spotify.state ?? "") }
     /// A configured account stays ready while another source plays: the wall
@@ -54,16 +61,14 @@ struct ServicesPage: View {
                 connectionSummary
                 recommendation
                 featuredLayout {
-                    NavigationLink {
+                    FeaturedServiceLink(service: .appleMusic, detail: "From this iPhone", state: musicRefused ? "Permission needed" : musicConnected ? "Access allowed" : "Connect", ready: musicConnected, tint: Color(hex: 0xEBA19E)) {
                         AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused)
-                    } label: {
-                        featured(.appleMusic, detail: "From this iPhone", state: musicRefused ? "Permission needed" : musicConnected ? "Access allowed" : "Connect", ready: musicConnected, tint: Color(hex: 0xEBA19E))
-                    }.buttonStyle(PressStyle(scale: 0.985)).accessibilityIdentifier("services.appleMusic")
-                    NavigationLink { SpotifyPage(accent: accent, services: $services) } label: {
-                        featured(.spotify, detail: "Across your devices", state: spotifyStatus, ready: available && spotifyReady, tint: mint)
-                    }.buttonStyle(PressStyle(scale: 0.985)).accessibilityIdentifier("services.spotify")
+                    }.accessibilityIdentifier("services.appleMusic")
+                    FeaturedServiceLink(service: .spotify, detail: "Across your devices", state: spotifyStatus, ready: available && spotifyReady, tint: mint) {
+                        SpotifyPage(accent: accent, services: $services)
+                    }.accessibilityIdentifier("services.spotify")
                 }
-                section("More ways to listen", subtitle: "Other music sources, players and the room.") {
+                ServiceSection(title: "More ways to listen", subtitle: "Other music sources, players and the room.") {
                     destination("Last.fm", detail: available && lastfmReady ? services?.lastfm.user ?? "Connected" : "Listening from linked music players", status: journalStatus(lastfmReady, services?.lastfm.state), service: .lastfm) { LastfmPage(accent: accent, services: $services) }
                     Rule()
                     destination("ListenBrainz", detail: "Your listening journal and scrobbles", status: journalStatus(listenbrainzReady, services?.listenbrainz?.read_state), symbol: "waveform") { ListenBrainzPage(accent: accent, services: $services) }
@@ -77,24 +82,8 @@ struct ServicesPage: View {
                     Rule()
                     destination("Your Mac", detail: "Playback from the Mac reporter", status: state(services?.mac?.answering == true), symbol: "desktopcomputer") { MacReporterPage(accent: accent, services: $services) }
                 }
-                DisclosureGroup(isExpanded: $showPriority) {
-                    VStack(alignment: .leading, spacing: 15) {
-                        Text("Playing music takes priority over a paused source. For the same song, a player’s pause takes priority over a stale listening report.").font(.ui(14)).foregroundStyle(Ink.dim)
-                        if available, let order = services?.source_order, !order.isEmpty {
-                            ForEach(Array(order.enumerated()), id: \.offset) { index, name in
-                                HStack(alignment: .firstTextBaseline, spacing: 14) {
-                                    Text(String(format: "%02d", index + 1)).font(.machine(11)).foregroundStyle(mint)
-                                    Text(Self.sourceName(name)).font(.ui(14)).foregroundStyle(Ink.ink)
-                                }
-                            }
-                            Text("Your wall’s configured preference, in order.").font(.ui(12)).foregroundStyle(Ink.dim)
-                        } else {
-                            Text("Connect to the wall to read its source order.").font(.ui(13)).foregroundStyle(Ink.dim)
-                        }
-                    }.padding(.top, 14)
-                } label: { Label("How the wall chooses", systemImage: "arrow.triangle.branch").font(.ui(15, .medium)).foregroundStyle(Ink.ink) }
-                .tint(mint).padding(18).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 18))
-                section("Other connections", subtitle: "Questions, records, pictures and posters.") {
+                SourceOrderDisclosure(expanded: $showPriority, order: available ? (services?.source_order ?? []).map(Self.sourceName) : [])
+                ServiceSection(title: "Other connections", subtitle: "Questions, records, pictures and posters.") {
                     destination("Claude", detail: "Questions and conversations", status: available && services?.claude?.isOff == true ? "Off" : available && services?.claude?.problem != nil ? "Needs attention" : state(services?.claude?.isReady == true), symbol: "text.bubble") { ClaudePage(accent: accent, services: $services) }
                     Rule()
                     destination("Discogs", detail: "Your Discogs collection", status: available && services?.discogs?.syncing == true ? "Reading collection" : available && services?.discogs?.problem != nil ? "Needs attention" : state(services?.discogs?.token_set == true && !(services?.discogs?.user ?? "").isEmpty), symbol: "opticaldisc") { DiscogsPage(accent: accent, services: $services) }
@@ -121,19 +110,7 @@ struct ServicesPage: View {
         }
         #if DEBUG
         .navigationDestination(isPresented: Binding(get: { qaRoute != nil }, set: { if !$0 { qaRoute = nil } })) {
-            if qaRoute == "lastfm" { LastfmPage(accent: accent, services: $services) }
-            else if qaRoute == "listenbrainz" { ListenBrainzPage(accent: accent, services: $services) }
-            else if qaRoute == "otherPlayers" { OtherPlayersPage(accent: accent, services: $services) }
-            else if qaRoute == "claude" { ClaudePage(accent: accent, services: $services) }
-            else if qaRoute == "discogs" { DiscogsPage(accent: accent, services: $services) }
-            else if qaRoute == "pictures" { PicturesPage(accent: accent, services: $services) }
-            else if qaRoute == "posters" { PostersPage(accent: accent, services: $services) }
-            else if qaRoute == "images" { ImagesPage(accent: accent, services: $services) }
-            else if qaRoute == "airplay" { AirPlayPage(accent: accent, services: $services) }
-            else if qaRoute == "homekit" { HomeKitPage(accent: accent) }
-            else if qaRoute == "mac" { MacReporterPage(accent: accent, services: $services) }
-            else if qaRoute == "spotify" { SpotifyPage(accent: accent, services: $services) }
-            else { AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused) }
+            ServicesQARoute(route: qaRoute ?? "", accent: accent, services: $services, musicConnected: $musicConnected, musicRefused: $musicRefused)
         }
         .onAppear {
             let args = CommandLine.arguments
@@ -229,45 +206,8 @@ struct ServicesPage: View {
         case .appleMusic: "No listening source is ready yet. Start with the music on this iPhone."
         }
     }
-    private func featured(_ service: Service, detail: String, state: String, ready: Bool, tint: Color) -> some View {
-        VStack(alignment: .leading, spacing: 22) {
-            HStack(alignment: .top) {
-                ServiceMark(service: service, side: 48)
-                Spacer()
-                Image(systemName: "arrow.up.right").font(.system(size: 20, weight: .medium)).foregroundStyle(tint).accessibilityHidden(true)
-            }
-            VStack(alignment: .leading, spacing: 5) {
-                Text(service.name).font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
-                Text(detail).font(.ui(13)).foregroundStyle(Ink.dim)
-            }
-            Label(state, systemImage: ready ? "checkmark.circle.fill" : "arrow.right.circle")
-                .font(.ui(13, .medium)).foregroundStyle(tint).fixedSize(horizontal: false, vertical: true).frame(minHeight: typeSize.isAccessibilitySize ? 0 : 34, alignment: .topLeading)
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
-            .background(LinearGradient(colors: [tint.opacity(0.13), Ink.plaster], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 23))
-            .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(tint.opacity(0.15), lineWidth: 1))
-            .contentShape(RoundedRectangle(cornerRadius: 23)).accessibilityElement(children: .combine)
-    }
-    private func section<C: View>(_ title: String, subtitle: String, @ViewBuilder content: () -> C) -> some View {
-        VStack(alignment: .leading, spacing: 13) {
-            Text(title).font(.ui(19, .semibold)).foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
-            Text(subtitle).font(.ui(13)).foregroundStyle(Ink.dim)
-            VStack(spacing: 0, content: content).padding(.horizontal, 17).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 20))
-        }
-    }
-    private func destination<C: View>(_ title: String, detail: String, status: String, service: Service? = nil, symbol: String = "link", @ViewBuilder page: () -> C) -> some View {
-        NavigationLink(destination: page) {
-            HStack(alignment: .center, spacing: 13) {
-                if !typeSize.isAccessibilitySize {
-                    if let service { ServiceMark(service: service) } else { GlyphMark(symbol: symbol) }
-                }
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title).font(.ui(16, .medium)).foregroundStyle(Ink.ink)
-                    Text(detail).font(.ui(12)).foregroundStyle(Ink.dim)
-                    Text(status).font(.machine(9)).foregroundStyle(status == "Ready" ? mint : Ink.dim)
-                }.fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 2); Chevron()
-            }.padding(.vertical, 17).contentShape(Rectangle())
-        }.buttonStyle(PressStyle(scale: 0.99)).accessibilityElement(children: .combine)
+    private func destination<C: View>(_ title: String, detail: String, status: String, service: Service? = nil, symbol: String = "link", @ViewBuilder page: @escaping () -> C) -> ServiceRow<C> {
+        ServiceRow(title: title, detail: detail, status: status, service: service, symbol: symbol, page: page)
     }
     private func refresh() async {
         guard !refreshing else { return }
@@ -284,3 +224,128 @@ struct ServicesPage: View {
         ["phone": "This iPhone", "airplay": "AirPlay", "applemusic": "Apple Music / Mac reporter", "mac": "Mac reporter", "spotify": "Spotify", "lastfm": "Last.fm", "listenbrainz": "ListenBrainz", "ears": "The wall’s ears", "posters": "Film and TV recognition", "applemusic-account": "Apple Music account"][name] ?? name
     }
 }
+
+/// A large card for one of the two main music services.
+private struct FeaturedServiceLink<Page: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let service: Service
+    let detail: String
+    let state: String
+    let ready: Bool
+    let tint: Color
+    @ViewBuilder let page: () -> Page
+    var body: some View {
+        NavigationLink(destination: page) {
+            VStack(alignment: .leading, spacing: 22) {
+                HStack(alignment: .top) {
+                    ServiceMark(service: service, side: 48)
+                    Spacer()
+                    Image(systemName: "arrow.up.right").font(.system(size: 20, weight: .medium)).foregroundStyle(tint).accessibilityHidden(true)
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(service.name).font(.ui(20, .semibold)).foregroundStyle(Ink.ink)
+                    Text(detail).font(.ui(13)).foregroundStyle(Ink.dim)
+                }
+                Label(state, systemImage: ready ? "checkmark.circle.fill" : "arrow.right.circle")
+                    .font(.ui(13, .medium)).foregroundStyle(tint).fixedSize(horizontal: false, vertical: true).frame(minHeight: typeSize.isAccessibilitySize ? 0 : 34, alignment: .topLeading)
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                .background(LinearGradient(colors: [tint.opacity(0.13), Ink.plaster], startPoint: .topLeading, endPoint: .bottomTrailing), in: RoundedRectangle(cornerRadius: 23))
+                .overlay(RoundedRectangle(cornerRadius: 23).strokeBorder(tint.opacity(0.15), lineWidth: 1))
+                .contentShape(RoundedRectangle(cornerRadius: 23)).accessibilityElement(children: .combine)
+        }.buttonStyle(PressStyle(scale: 0.985))
+    }
+}
+
+/// A titled group of rows on a plaster card.
+private struct ServiceSection<Content: View>: View {
+    let title: String
+    let subtitle: String
+    @ViewBuilder let content: () -> Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: 13) {
+            Text(title).font(.ui(19, .semibold)).foregroundStyle(Ink.ink).accessibilityAddTraits(.isHeader)
+            Text(subtitle).font(.ui(13)).foregroundStyle(Ink.dim)
+            VStack(spacing: 0, content: content).padding(.horizontal, 17).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 20))
+        }
+    }
+}
+
+/// One row that opens a connection's own page.
+struct ServiceRow<Page: View>: View {
+    @Environment(\.dynamicTypeSize) private var typeSize
+    let title: String
+    let detail: String
+    let status: String
+    let service: Service?
+    let symbol: String
+    @ViewBuilder let page: () -> Page
+    var body: some View {
+        NavigationLink(destination: page) {
+            HStack(alignment: .center, spacing: 13) {
+                if !typeSize.isAccessibilitySize {
+                    if let service { ServiceMark(service: service) } else { GlyphMark(symbol: symbol) }
+                }
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(title).font(.ui(16, .medium)).foregroundStyle(Ink.ink)
+                    Text(detail).font(.ui(12)).foregroundStyle(Ink.dim)
+                    Text(status).font(.machine(9)).foregroundStyle(status == "Ready" ? servicesMint : Ink.dim)
+                }.fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 2); Chevron()
+            }.padding(.vertical, 17).contentShape(Rectangle())
+        }.buttonStyle(PressStyle(scale: 0.99)).accessibilityElement(children: .combine)
+    }
+}
+
+/// How the wall picks between sources, with its configured order when known.
+private struct SourceOrderDisclosure: View {
+    @Binding var expanded: Bool
+    /// Display names in the wall's order; empty when the wall has not answered.
+    let order: [String]
+    var body: some View {
+        DisclosureGroup(isExpanded: $expanded) {
+            VStack(alignment: .leading, spacing: 15) {
+                Text("Playing music takes priority over a paused source. For the same song, a player’s pause takes priority over a stale listening report.").font(.ui(14)).foregroundStyle(Ink.dim)
+                if !order.isEmpty {
+                    ForEach(Array(order.enumerated()), id: \.offset) { index, name in
+                        HStack(alignment: .firstTextBaseline, spacing: 14) {
+                            Text(String(format: "%02d", index + 1)).font(.machine(11)).foregroundStyle(servicesMint)
+                            Text(name).font(.ui(14)).foregroundStyle(Ink.ink)
+                        }
+                    }
+                    Text("Your wall’s configured preference, in order.").font(.ui(12)).foregroundStyle(Ink.dim)
+                } else {
+                    Text("Connect to the wall to read its source order.").font(.ui(13)).foregroundStyle(Ink.dim)
+                }
+            }.padding(.top, 14)
+        } label: { Label("How the wall chooses", systemImage: "arrow.triangle.branch").font(.ui(15, .medium)).foregroundStyle(Ink.ink) }
+        .tint(servicesMint).padding(18).background(Ink.plaster, in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+
+#if DEBUG
+/// The page a -service-page launch argument opens, for QA.
+private struct ServicesQARoute: View {
+    let route: String
+    let accent: Color
+    @Binding var services: WallServices?
+    @Binding var musicConnected: Bool
+    @Binding var musicRefused: Bool
+    var body: some View {
+        switch route {
+        case "lastfm": LastfmPage(accent: accent, services: $services)
+        case "listenbrainz": ListenBrainzPage(accent: accent, services: $services)
+        case "otherPlayers": OtherPlayersPage(accent: accent, services: $services)
+        case "claude": ClaudePage(accent: accent, services: $services)
+        case "discogs": DiscogsPage(accent: accent, services: $services)
+        case "pictures": PicturesPage(accent: accent, services: $services)
+        case "posters": PostersPage(accent: accent, services: $services)
+        case "images": ImagesPage(accent: accent, services: $services)
+        case "airplay": AirPlayPage(accent: accent, services: $services)
+        case "homekit": HomeKitPage(accent: accent)
+        case "mac": MacReporterPage(accent: accent, services: $services)
+        case "spotify": SpotifyPage(accent: accent, services: $services)
+        default: AppleMusicPage(accent: accent, musicConnected: $musicConnected, musicRefused: $musicRefused)
+        }
+    }
+}
+#endif
